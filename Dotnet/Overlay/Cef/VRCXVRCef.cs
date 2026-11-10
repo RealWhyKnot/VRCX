@@ -124,21 +124,21 @@ pFeatureLevel: null,
             }
 
             var textureDescription = new Texture2DDesc
+            {
+                Width = TOTAL_WIDTH,
+                Height = TOTAL_HEIGHT,
+                MipLevels = 1,
+                ArraySize = 1,
+                Format = Format.FormatB8G8R8A8Unorm,
+                SampleDesc = new SampleDesc
                 {
-                    Width = TOTAL_WIDTH,
-                    Height = TOTAL_HEIGHT,
-                    MipLevels = 1,
-                    ArraySize = 1,
-                    Format = Format.FormatB8G8R8A8Unorm,
-                    SampleDesc = new SampleDesc
-                    {
-                        Count = 1,
-                        Quality = 0,
-                    },
-                    BindFlags = (uint)BindFlag.ShaderResource,
-                    CPUAccessFlags = _isLegacy ? (uint)CpuAccessFlag.Write : (uint)CpuAccessFlag.None,
-                    Usage = _isLegacy ? Usage.Dynamic : Usage.Default,
-                };
+                    Count = 1,
+                    Quality = 0,
+                },
+                BindFlags = (uint)BindFlag.ShaderResource,
+                CPUAccessFlags = _isLegacy ? (uint)CpuAccessFlag.Write : (uint)CpuAccessFlag.None,
+                Usage = _isLegacy ? Usage.Dynamic : Usage.Default,
+            };
             SilkMarshal.ThrowHResult(_device.CreateTexture2D(in textureDescription, pInitialData: null, ref _sharedTexture));
 
 

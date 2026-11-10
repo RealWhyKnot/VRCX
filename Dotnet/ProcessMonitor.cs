@@ -1,7 +1,7 @@
-using Timer = System.Timers.Timer;
 using System.Diagnostics;
 using System.Timers;
 using NLog;
+using Timer = System.Timers.Timer;
 
 namespace VRCX;
 

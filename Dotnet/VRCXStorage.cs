@@ -1,6 +1,6 @@
-using Timer = System.Threading.Timer;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Timer = System.Threading.Timer;
 
 namespace VRCX;
 

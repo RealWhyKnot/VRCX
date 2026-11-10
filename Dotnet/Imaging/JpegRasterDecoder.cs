@@ -121,16 +121,14 @@ internal static class JpegRasterDecoder
 
     private static bool? ReadFrameMode(ReadOnlySpan<byte> segment)
     {
-        if (segment.Length < 6 || segment[0] != 8)
-        {
-            return null;
-        }
-        return segment[5] switch
-        {
-            1 => false,
-            3 when segment.Length >= 15 => ReadComponentMode(segment),
-            _ => null,
-        };
+        return segment.Length < 6 || segment[0] != 8
+            ? null
+            : segment[5] switch
+            {
+                1 => false,
+                3 when segment.Length >= 15 => ReadComponentMode(segment),
+                _ => null,
+            };
     }
 
     private static bool? ReadComponentMode(ReadOnlySpan<byte> segment)

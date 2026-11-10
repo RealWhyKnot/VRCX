@@ -1,8 +1,8 @@
-using VRCX.Imaging;
 using System.Security.Cryptography;
 using System.Text.Json;
 using librsync.net;
 using SkiaSharp;
+using VRCX.Imaging;
 
 namespace VRCX;
 
@@ -21,7 +21,7 @@ public partial class AppApi
     public byte[] ResizeImageToFitLimits(byte[] imageData, bool matchingDimensions, int maxWidth = 2000,
         int maxHeight = 2000, long maxSize = 10_000_000)
     {
-        using ImageRaster image = ImageRaster.Load(imageData);
+        using var image = ImageRaster.Load(imageData);
 
         if (image.Width > maxWidth)
         {
@@ -68,17 +68,8 @@ public partial class AppApi
             image.Resize(newWidth, newHeight);
         }
 
-        if (imageData.Length > maxSize)
-        {
-            throw new Exception("Failed to get image into target filesize.");
-        }
-
-        return imageData;
-
-        void SaveToFileToUpload()
-        {
-            imageData = image.EncodePng();
-        }
+        return imageData.Length > maxSize ? throw new Exception("Failed to get image into target filesize.") : imageData;
+        void SaveToFileToUpload() => imageData = image.EncodePng();
     }
 
     public byte[] ResizePrintImage(byte[] imageData)
@@ -86,7 +77,7 @@ public partial class AppApi
         const int desiredWidth = 1920;
         const int desiredHeight = 1080;
 
-        using ImageRaster image = ImageRaster.Load(imageData);
+        using var image = ImageRaster.Load(imageData);
 
         if (image.Height > image.Width)
         {
@@ -157,7 +148,7 @@ public partial class AppApi
     {
         string tempPath = path + ".temp";
         byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
-        using ImageRaster print = ImageRaster.Load(bytes);
+        using var print = ImageRaster.Load(bytes);
 
         if (!CropPrint(print))
         {
@@ -170,12 +161,12 @@ public partial class AppApi
         using (var newPngFile = new PNGFile(tempPath, writeAccess: true))
         {
 
-        List<PNGChunk> textChunks = oldPngFile.GetChunksOfType(PNGChunkTypeFilter.iTXt);
+            List<PNGChunk> textChunks = oldPngFile.GetChunksOfType(PNGChunkTypeFilter.iTXt);
 
-        for (int i = 0; i < textChunks.Count; i++)
-        {
-            newPngFile.WriteChunk(textChunks[i]);
-        }
+            for (int i = 0; i < textChunks.Count; i++)
+            {
+                newPngFile.WriteChunk(textChunks[i]);
+            }
 
         }
 

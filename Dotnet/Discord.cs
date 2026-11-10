@@ -1,8 +1,8 @@
-using Timer = System.Threading.Timer;
-using Button = DiscordRPC.Button;
 using System.Text;
 using DiscordRPC;
 using NLog;
+using Button = DiscordRPC.Button;
+using Timer = System.Threading.Timer;
 
 namespace VRCX;
 

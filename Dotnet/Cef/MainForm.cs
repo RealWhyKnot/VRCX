@@ -1,7 +1,7 @@
-using Timer = System.Windows.Forms.Timer;
 using CefSharp;
 using CefSharp.WinForms;
 using NLog;
+using Timer = System.Windows.Forms.Timer;
 
 namespace VRCX;
 

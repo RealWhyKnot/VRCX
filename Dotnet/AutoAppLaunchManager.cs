@@ -1,4 +1,3 @@
-using Timer = System.Timers.Timer;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -6,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Timers;
 using Microsoft.Win32;
 using NLog;
+using Timer = System.Timers.Timer;
 
 namespace VRCX;
 

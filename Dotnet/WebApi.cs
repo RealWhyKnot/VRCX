@@ -24,9 +24,9 @@ internal
 sealed class WebApi
 {
 #if LINUX
-    public Func<string, Task<string>> ExecuteJson => options => ExecuteJsonAsync(options);
+    public Func<string, Task<string>> ExecuteJson => ExecuteJsonAsync;
 
-    public Func<IDictionary<string, object>, Task<Tuple<int, string>>> Execute => options => ExecuteAsync(options);
+    public Func<IDictionary<string, object>, Task<Tuple<int, string>>> Execute => ExecuteAsync;
 #endif
 
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -351,7 +351,7 @@ binder: null,
         if (options.TryGetValue("cropWhiteBorder", out object? cropWhiteBorder) && (bool)cropWhiteBorder)
         {
             string? oldImageData = options["imageData"] as string;
-            using ImageRaster print = ImageRaster.Load(Convert.FromBase64String(oldImageData));
+            using var print = ImageRaster.Load(Convert.FromBase64String(oldImageData));
             if (Program.AppApiInstance.CropPrint(print))
             {
                 options["imageData"] = Convert.ToBase64String(print.EncodePng());
