@@ -1,5 +1,3 @@
-// VRChat API types live in the `vrchat` package
-export * from './vrcx';
+export * from "./vrcx";
 
-// Global Types
-export * from './globals';
+export * from "./globals";

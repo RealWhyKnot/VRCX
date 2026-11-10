@@ -1,147 +1,135 @@
 <template>
-    <Dialog
-        :open="sendInviteRequestResponseDialogVisible"
-        @update:open="(open) => (open ? null : cancelSendInviteRequestResponse())">
-        <DialogContent class="x-dialog sm:max-w-200">
-            <DialogHeader>
-                <DialogTitle>{{ t('dialog.invite_request_response_message.header') }}</DialogTitle>
-            </DialogHeader>
-            <template v-if="isLocalUserVrcPlusSupporter">
-                <input class="inviteImageUploadButton" type="file" accept="image/*" @change="inviteImageUpload" />
-            </template>
+  <Dialog :open="sendInviteRequestResponseDialogVisible" @update:open="(open) => (open ? null : cancelSendInviteRequestResponse())">
+    <DialogContent class="x-dialog sm:max-w-200">
+      <DialogHeader>
+        <DialogTitle>{{ t("dialog.invite_request_response_message.header") }}</DialogTitle>
+      </DialogHeader>
+      <template v-if="isLocalUserVrcPlusSupporter">
+        <input class="inviteImageUploadButton" type="file" accept="image/*" @change="inviteImageUpload" />
+      </template>
 
-            <DataTableLayout
-                style="margin-top: 8px"
-                :table="inviteRequestResponseTable"
-                :loading="false"
-                :show-pagination="false"
-                :on-row-click="handleInviteRequestResponseRowClick" />
+      <DataTableLayout
+        style="margin-top: 8px"
+        :table="inviteRequestResponseTable"
+        :loading="false"
+        :show-pagination="false"
+        :on-row-click="handleInviteRequestResponseRowClick"
+      />
 
-            <DialogFooter>
-                <Button variant="secondary" class="mr-2" @click="cancelSendInviteRequestResponse">
-                    {{ t('dialog.invite_request_response_message.cancel') }}
-                </Button>
-                <Button @click="refreshInviteMessageTableData('requestResponse')">
-                    {{ t('dialog.invite_request_response_message.refresh') }}
-                </Button>
-            </DialogFooter>
-            <EditAndSendInviteResponseDialog
-                :edit-and-send-invite-response-dialog="editAndSendInviteResponseDialog"
-                :send-invite-response-dialog="sendInviteResponseDialog"
-                @closeInviteDialog="closeInviteDialog"
-                @closeResponseConfirmDialog="closeResponseConfirmDialog" />
-            <SendInviteResponseConfirmDialog
-                :send-invite-response-dialog="sendInviteResponseDialog"
-                :send-invite-response-confirm-dialog="sendInviteResponseConfirmDialog"
-                @closeInviteDialog="closeInviteDialog"
-                @closeResponseConfirmDialog="closeResponseConfirmDialog" />
-        </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button variant="secondary" class="mr-2" @click="cancelSendInviteRequestResponse">
+          {{ t("dialog.invite_request_response_message.cancel") }}
+        </Button>
+        <Button @click="refreshInviteMessageTableData('requestResponse')">
+          {{ t("dialog.invite_request_response_message.refresh") }}
+        </Button>
+      </DialogFooter>
+      <EditAndSendInviteResponseDialog
+        :edit-and-send-invite-response-dialog="editAndSendInviteResponseDialog"
+        :send-invite-response-dialog="sendInviteResponseDialog"
+        @close-invite-dialog="closeInviteDialog"
+        @close-response-confirm-dialog="closeResponseConfirmDialog"
+      />
+      <SendInviteResponseConfirmDialog
+        :send-invite-response-dialog="sendInviteResponseDialog"
+        :send-invite-response-confirm-dialog="sendInviteResponseConfirmDialog"
+        @close-invite-dialog="closeInviteDialog"
+        @close-response-confirm-dialog="closeResponseConfirmDialog"
+      />
+    </DialogContent>
+  </Dialog>
 </template>
 
 <script setup>
-    import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-    import { computed, ref } from 'vue';
-    import { Button } from '@/components/ui/button';
-    import { DataTableLayout } from '@/components/ui/data-table';
-    import { storeToRefs } from 'pinia';
-    import { useI18n } from 'vue-i18n';
-    import { useVrcxVueTable } from '@/lib/table/useVrcxVueTable';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { computed, ref } from "vue";
+import { Button } from "@/components/ui/button";
+import { DataTableLayout } from "@/components/ui/data-table";
+import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
 
-    import { useGalleryStore, useInviteStore, useUserStore } from '../../../stores';
-    import { createColumns } from './sendInviteRequestResponseColumns.jsx';
+import { useGalleryStore, useInviteStore, useUserStore } from "../../../stores";
+import { createColumns } from "./sendInviteRequestResponseColumns.jsx";
 
-    import EditAndSendInviteResponseDialog from './EditAndSendInviteResponseDialog.vue';
-    import SendInviteResponseConfirmDialog from './SendInviteResponseConfirmDialog.vue';
+import EditAndSendInviteResponseDialog from "./EditAndSendInviteResponseDialog.vue";
+import SendInviteResponseConfirmDialog from "./SendInviteResponseConfirmDialog.vue";
 
-    const { t } = useI18n();
-    const inviteStore = useInviteStore();
-    const { refreshInviteMessageTableData } = inviteStore;
-    const { inviteRequestResponseMessageTable } = storeToRefs(inviteStore);
-    const galleryStore = useGalleryStore();
-    const { inviteImageUpload } = galleryStore;
-    const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
+const { t } = useI18n();
+const inviteStore = useInviteStore();
+const { refreshInviteMessageTableData } = inviteStore;
+const { inviteRequestResponseMessageTable } = storeToRefs(inviteStore);
+const galleryStore = useGalleryStore();
+const { inviteImageUpload } = galleryStore;
+const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 
-    const props = defineProps({
-        sendInviteResponseDialog: {
-            type: Object,
-            default: () => ({})
-        },
-        sendInviteRequestResponseDialogVisible: {
-            type: Boolean,
-            default: false
-        }
-    });
+const props = defineProps({
+  sendInviteResponseDialog: {
+    type: Object,
+    default: () => ({}),
+  },
+  sendInviteRequestResponseDialogVisible: {
+    type: Boolean,
+    default: false,
+  },
+});
 
-    const emit = defineEmits(['update:sendInviteRequestResponseDialogVisible', 'update:sendInviteResponseDialog']);
+const emit = defineEmits(["update:sendInviteRequestResponseDialogVisible", "update:sendInviteResponseDialog"]);
 
-    const editAndSendInviteResponseDialog = ref({
-        visible: false,
-        newMessage: ''
-    });
+const editAndSendInviteResponseDialog = ref({
+  visible: false,
+  newMessage: "",
+});
 
-    const sendInviteResponseConfirmDialog = ref({
-        visible: false
-    });
+const sendInviteResponseConfirmDialog = ref({
+  visible: false,
+});
 
-    const inviteRequestResponseRows = computed(() => inviteRequestResponseMessageTable.value?.data ?? []);
-    const inviteRequestResponseColumns = computed(() =>
-        createColumns({
-            onEdit: showEditAndSendInviteResponseDialog
-        })
-    );
+const inviteRequestResponseRows = computed(() => inviteRequestResponseMessageTable.value?.data ?? []);
+const inviteRequestResponseColumns = computed(() =>
+  createColumns({
+    onEdit: showEditAndSendInviteResponseDialog,
+  })
+);
 
-    const { table: inviteRequestResponseTable } = useVrcxVueTable({
-        persistKey: 'invite-request-response-message',
-        get data() {
-            return inviteRequestResponseRows.value;
-        },
-        columns: inviteRequestResponseColumns,
-        getRowId: (row) => String(row?.slot ?? ''),
-        enablePagination: false,
-        initialSorting: [{ id: 'slot', desc: false }]
-    });
+const { table: inviteRequestResponseTable } = useVrcxVueTable({
+  persistKey: "invite-request-response-message",
+  get data() {
+    return inviteRequestResponseRows.value;
+  },
+  columns: inviteRequestResponseColumns,
+  getRowId: (row) => String(row?.slot ?? ""),
+  enablePagination: false,
+  initialSorting: [{ id: "slot", desc: false }],
+});
 
-    /**
-     * @param row
-     */
-    function handleInviteRequestResponseRowClick(row) {
-        showSendInviteResponseConfirmDialog(row?.original);
-    }
+function handleInviteRequestResponseRowClick(row) {
+  showSendInviteResponseConfirmDialog(row?.original);
+}
 
-    /**
-     * @param row
-     */
-    function showEditAndSendInviteResponseDialog(row) {
-        emit('update:sendInviteResponseDialog', { ...props.sendInviteResponseDialog, messageSlot: row });
-        editAndSendInviteResponseDialog.value = {
-            newMessage: row.message,
-            visible: true
-        };
-    }
+function showEditAndSendInviteResponseDialog(row) {
+  emit("update:sendInviteResponseDialog", { ...props.sendInviteResponseDialog, messageSlot: row });
+  editAndSendInviteResponseDialog.value = {
+    newMessage: row.message,
+    visible: true,
+  };
+}
 
-    /**
-     * @param row
-     */
-    function showSendInviteResponseConfirmDialog(row) {
-        emit('update:sendInviteResponseDialog', { ...props.sendInviteResponseDialog, messageSlot: row });
-        sendInviteResponseConfirmDialog.value.visible = true;
-    }
+function showSendInviteResponseConfirmDialog(row) {
+  emit("update:sendInviteResponseDialog", { ...props.sendInviteResponseDialog, messageSlot: row });
+  sendInviteResponseConfirmDialog.value.visible = true;
+}
 
-    function closeInviteDialog() {
-        cancelSendInviteRequestResponse();
-    }
+function closeInviteDialog() {
+  cancelSendInviteRequestResponse();
+}
 
-    function closeResponseConfirmDialog() {
-        sendInviteResponseConfirmDialog.value.visible = false;
-        editAndSendInviteResponseDialog.value.visible = false;
-    }
+function closeResponseConfirmDialog() {
+  sendInviteResponseConfirmDialog.value.visible = false;
+  editAndSendInviteResponseDialog.value.visible = false;
+}
 
-    // function refreshInviteMessageTableData(...arg) {
-    //     inviteMessagesRequest.refreshInviteMessageTableData(arg);
-    // }
-
-    function cancelSendInviteRequestResponse() {
-        emit('update:sendInviteRequestResponseDialogVisible', false);
-    }
+function cancelSendInviteRequestResponse() {
+  emit("update:sendInviteRequestResponseDialogVisible", false);
+}
 </script>

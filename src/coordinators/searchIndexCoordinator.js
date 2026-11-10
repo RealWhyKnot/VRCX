@@ -1,103 +1,75 @@
-import { watch } from 'vue';
+import { watch } from "vue";
 
-import { useSearchIndexStore } from '../stores/searchIndex';
-import { watchState } from '../services/watchState';
+import { useSearchIndexStore } from "../stores/searchIndex";
+import { watchState } from "../services/watchState";
 
-/**
- * @param {object} ctx
- */
 export function syncFriendSearchIndex(ctx) {
-    useSearchIndexStore().syncFriend(ctx);
+  useSearchIndexStore().syncFriend(ctx);
 }
 
-/**
- * @param {string} id
- */
 export function removeFriendSearchIndex(id) {
-    useSearchIndexStore().removeFriend(id);
+  useSearchIndexStore().removeFriend(id);
 }
 
 export function clearFriendSearchIndex() {
-    useSearchIndexStore().clearFriends();
+  useSearchIndexStore().clearFriends();
 }
 
-/**
- * @param {object} ref
- */
 export function syncAvatarSearchIndex(ref) {
-    useSearchIndexStore().upsertAvatar(ref);
+  useSearchIndexStore().upsertAvatar(ref);
 }
 
-/**
- * @param {string} id
- */
 export function removeAvatarSearchIndex(id) {
-    useSearchIndexStore().removeAvatar(id);
+  useSearchIndexStore().removeAvatar(id);
 }
 
 export function clearAvatarSearchIndex() {
-    useSearchIndexStore().clearAvatars();
+  useSearchIndexStore().clearAvatars();
 }
 
-/**
- * @param {object} ref
- */
 export function syncWorldSearchIndex(ref) {
-    useSearchIndexStore().upsertWorld(ref);
+  useSearchIndexStore().upsertWorld(ref);
 }
 
-/**
- * @param {string} id
- */
 export function removeWorldSearchIndex(id) {
-    useSearchIndexStore().removeWorld(id);
+  useSearchIndexStore().removeWorld(id);
 }
 
 export function clearWorldSearchIndex() {
-    useSearchIndexStore().clearWorlds();
+  useSearchIndexStore().clearWorlds();
 }
 
-/**
- * @param {object} ref
- */
 export function syncGroupSearchIndex(ref) {
-    useSearchIndexStore().upsertGroup(ref);
+  useSearchIndexStore().upsertGroup(ref);
 }
 
-/**
- * @param {string} id
- */
 export function removeGroupSearchIndex(id) {
-    useSearchIndexStore().removeGroup(id);
+  useSearchIndexStore().removeGroup(id);
 }
 
 export function clearGroupSearchIndex() {
-    useSearchIndexStore().clearGroups();
+  useSearchIndexStore().clearGroups();
 }
 
 export function rebuildFavoriteSearchIndex() {
-    useSearchIndexStore().rebuildFavoritesFromStore();
+  useSearchIndexStore().rebuildFavoritesFromStore();
 }
 
 export function clearFavoriteSearchIndex() {
-    useSearchIndexStore().clearFavorites();
+  useSearchIndexStore().clearFavorites();
 }
 
-/**
- * Registers a single login-state watcher that clears the entire search index
- * on every login/logout transition, so individual stores don't need to.
- */
 export function resetSearchIndexOnLogin() {
-    const searchIndexStore = useSearchIndexStore();
-    watch(
-        () => watchState.isLoggedIn,
-        () => {
-            searchIndexStore.clearFriends();
-            searchIndexStore.clearAvatars();
-            searchIndexStore.clearWorlds();
-            searchIndexStore.clearGroups();
-            searchIndexStore.clearFavorites();
-        },
-        { flush: 'sync' }
-    );
+  const searchIndexStore = useSearchIndexStore();
+  watch(
+    () => watchState.isLoggedIn,
+    () => {
+      searchIndexStore.clearFriends();
+      searchIndexStore.clearAvatars();
+      searchIndexStore.clearWorlds();
+      searchIndexStore.clearGroups();
+      searchIndexStore.clearFavorites();
+    },
+    { flush: "sync" }
+  );
 }

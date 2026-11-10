@@ -1,9 +1,9 @@
-import { createApp } from 'vue';
+import { createApp } from "vue";
 
-import { i18n } from '../plugins/i18n';
-import { initPlugins } from '../plugins';
+import { i18n } from "../plugins/i18n";
+import { initPlugins } from "../plugins";
 
-import Vr from './Vr.vue';
+import Vr from "./Vr.vue";
 
 window.isVrOverlay = true;
 await initPlugins(true);
@@ -11,4 +11,4 @@ await initPlugins(true);
 const vr = createApp(Vr);
 vr.use(i18n);
 
-vr.mount('#root');
+vr.mount("#root");

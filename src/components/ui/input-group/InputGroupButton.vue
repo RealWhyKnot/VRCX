@@ -1,22 +1,18 @@
 <script setup>
-    import { Button } from '@/components/ui/button';
-    import { cn } from '@/lib/utils';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-    import { inputGroupButtonVariants } from '.';
+import { inputGroupButtonVariants } from ".";
 
-    const props = defineProps({
-        size: { type: null, required: false, default: 'xs' },
-        variant: { type: null, required: false, default: 'ghost' },
-        class: { type: null, required: false }
-    });
+const props = defineProps({
+  size: { type: null, required: false, default: "xs" },
+  variant: { type: null, required: false, default: "ghost" },
+  class: { type: null, required: false },
+});
 </script>
 
 <template>
-    <Button
-        type="button"
-        :data-size="props.size"
-        :variant="props.variant"
-        :class="cn(inputGroupButtonVariants({ size: props.size }), props.class)">
-        <slot />
-    </Button>
+  <Button type="button" :data-size="props.size" :variant="props.variant" :class="cn(inputGroupButtonVariants({ size: props.size }), props.class)">
+    <slot />
+  </Button>
 </template>

@@ -1,7 +1,7 @@
 export {};
 
-declare module 'vue' {
-    interface ComponentCustomProps {
-        onClick?: (event: MouseEvent) => void;
-    }
+declare module "vue" {
+  type ComponentCustomProps = {
+    onClick?: (event: MouseEvent) => void;
+  };
 }

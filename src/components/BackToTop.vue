@@ -1,213 +1,187 @@
 <script setup>
-    import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-    import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-    import { ArrowUp } from 'lucide-vue-next';
-    import { Button } from '@/components/ui/button';
-    import { useI18n } from 'vue-i18n';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowUp } from "lucide-vue-next";
+import { Button } from "@/components/ui/button";
+import { useI18n } from "vue-i18n";
 
-    const props = defineProps({
-        // scroll DOM ref
-        target: { type: [String, Object], default: null },
-        // @tanstack/virtual instance
-        virtualizer: { type: [Object], default: null },
+const props = defineProps({
+  target: { type: [String, Object], default: null },
 
-        bottom: { type: Number, default: 20 },
-        right: { type: Number, default: 20 },
+  virtualizer: { type: [Object], default: null },
 
-        visibilityHeight: { type: Number, default: 400 },
+  bottom: { type: Number, default: 20 },
+  right: { type: Number, default: 20 },
 
-        behavior: {
-            type: String,
-            default: 'smooth',
-            validator: (value) => value === 'auto' || value === 'smooth'
-        },
+  visibilityHeight: { type: Number, default: 400 },
 
-        tooltip: { type: Boolean, default: true },
-        tooltipText: { type: String, default: 'Back to top' },
+  behavior: {
+    type: String,
+    default: "smooth",
+    validator: (value) => value === "auto" || value === "smooth",
+  },
 
-        teleport: { type: Boolean, default: true },
-        teleportTo: { type: [Boolean, String, Object], default: null }
-    });
+  tooltip: { type: Boolean, default: true },
+  tooltipText: { type: String, default: "Back to top" },
 
-    const visible = ref(false);
-    const { t } = useI18n();
-    let containerEl = null;
+  teleport: { type: Boolean, default: true },
+  teleportTo: { type: [Boolean, String, Object], default: null },
+});
 
-    function resolveElement(target) {
-        if (!target) return null;
-        if (typeof target === 'string') return document.querySelector(target);
-        if (typeof target === 'object') {
-            if ('value' in target) return target.value;
-            if ('$el' in target) return target.$el;
-        }
-        return target;
-    }
+const visible = ref(false);
+const { t } = useI18n();
+let containerEl = null;
 
-    function getVirtualizer() {
-        if (!props.virtualizer) return null;
-        return 'value' in props.virtualizer ? props.virtualizer.value : props.virtualizer;
-    }
+function resolveElement(target) {
+  if (!target) return null;
+  if (typeof target === "string") return document.querySelector(target);
+  if (typeof target === "object") {
+    if ("value" in target) return target.value;
+    if ("$el" in target) return target.$el;
+  }
+  return target;
+}
 
-    function getScrollTop() {
-        if (!containerEl || typeof containerEl.scrollTop !== 'number') {
-            return window.scrollY || document.documentElement.scrollTop || 0;
-        }
-        return containerEl.scrollTop || 0;
-    }
+function getVirtualizer() {
+  if (!props.virtualizer) return null;
+  return "value" in props.virtualizer ? props.virtualizer.value : props.virtualizer;
+}
 
-    function handleScroll() {
-        visible.value = getScrollTop() >= props.visibilityHeight;
-    }
+function getScrollTop() {
+  if (!containerEl || typeof containerEl.scrollTop !== "number") {
+    return window.scrollY || document.documentElement.scrollTop || 0;
+  }
+  return containerEl.scrollTop || 0;
+}
 
-    function scrollToTop() {
-        const behavior = props.behavior === 'auto' ? 'auto' : 'smooth';
-        const v = getVirtualizer();
-        if (v?.scrollToIndex) {
-            v.scrollToIndex(0, { align: 'start', behavior: 'auto' });
-            return;
-        }
-        const target = containerEl || resolveElement(props.target);
-        if (target && typeof target.scrollTo === 'function') {
-            target.scrollTo({ top: 0, behavior });
-            return;
-        }
-        window.scrollTo({ top: 0, behavior });
-    }
+function handleScroll() {
+  visible.value = getScrollTop() >= props.visibilityHeight;
+}
 
-    function bind() {
-        containerEl = resolveElement(props.target);
+function scrollToTop() {
+  const behavior = props.behavior === "auto" ? "auto" : "smooth";
+  const v = getVirtualizer();
+  if (v?.scrollToIndex) {
+    v.scrollToIndex(0, { align: "start", behavior: "auto" });
+    return;
+  }
+  const target = containerEl || resolveElement(props.target);
+  if (target && typeof target.scrollTo === "function") {
+    target.scrollTo({ top: 0, behavior });
+    return;
+  }
+  window.scrollTo({ top: 0, behavior });
+}
 
-        const target = containerEl && typeof containerEl.addEventListener === 'function' ? containerEl : window;
-        target.addEventListener('scroll', handleScroll, { passive: true });
-        handleScroll();
-    }
+function bind() {
+  containerEl = resolveElement(props.target);
 
-    function unbind() {
-        const target = containerEl || window;
-        target.removeEventListener('scroll', handleScroll);
-    }
+  const target = containerEl && typeof containerEl.addEventListener === "function" ? containerEl : window;
+  target.addEventListener("scroll", handleScroll, { passive: true });
+  handleScroll();
+}
 
-    onMounted(() => {
-        bind();
-    });
+function unbind() {
+  const target = containerEl || window;
+  target.removeEventListener("scroll", handleScroll);
+}
 
-    watch(
-        () => props.target,
-        () => {
-            unbind();
-            bind();
-        }
-    );
+onMounted(() => {
+  bind();
+});
 
-    onBeforeUnmount(() => {
-        unbind();
-    });
+watch(
+  () => props.target,
+  () => {
+    unbind();
+    bind();
+  }
+);
 
-    const teleportTarget = computed(() => {
-        if (props.teleportTo !== null && props.teleportTo !== undefined) {
-            if (props.teleportTo === true) return 'body';
-            if (props.teleportTo === false) return null;
-            return resolveElement(props.teleportTo);
-        }
-        return props.teleport ? 'body' : null;
-    });
+onBeforeUnmount(() => {
+  unbind();
+});
 
-    const isBodyTeleport = computed(() => teleportTarget.value === 'body' || teleportTarget.value === document.body);
+const teleportTarget = computed(() => {
+  if (props.teleportTo !== null && props.teleportTo !== undefined) {
+    if (props.teleportTo === true) return "body";
+    if (props.teleportTo === false) return null;
+    return resolveElement(props.teleportTo);
+  }
+  return props.teleport ? "body" : null;
+});
 
-    const wrapperStyle = computed(
-        () =>
-            `position:${isBodyTeleport.value ? 'fixed' : 'absolute'}; right:${props.right}px; bottom:${props.bottom}px; z-index:50;`
-    );
+const isBodyTeleport = computed(() => teleportTarget.value === "body" || teleportTarget.value === document.body);
+
+const wrapperStyle = computed(() => `position:${isBodyTeleport.value ? "fixed" : "absolute"}; right:${props.right}px; bottom:${props.bottom}px; z-index:50;`);
 </script>
 
 <template>
-    <Teleport v-if="teleportTarget" :to="teleportTarget">
-        <Transition name="back-to-top">
-            <div v-if="visible" :style="wrapperStyle">
-                <Tooltip v-if="tooltip">
-                    <TooltipTrigger as-child>
-                        <Button
-                            size="icon"
-                            variant="secondary"
-                            class="rounded-full shadow"
-                            :ariaLabel="t('accessibility.back_to_top')"
-                            @click="scrollToTop">
-                            <ArrowUp class="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                        {{ tooltipText }}
-                    </TooltipContent>
-                </Tooltip>
-
-                <Button
-                    v-else
-                    size="icon"
-                    variant="secondary"
-                    class="rounded-full shadow"
-                    :ariaLabel="t('accessibility.back_to_top')"
-                    @click="scrollToTop">
-                    <ArrowUp class="h-4 w-4" />
-                </Button>
-            </div>
-        </Transition>
-    </Teleport>
-
-    <Transition v-else name="back-to-top">
-        <div v-if="visible" :style="wrapperStyle">
-            <Tooltip v-if="tooltip">
-                <TooltipTrigger as-child>
-                    <Button
-                        size="icon"
-                        variant="secondary"
-                        class="rounded-full shadow"
-                        :ariaLabel="t('accessibility.back_to_top')"
-                        @click="scrollToTop">
-                        <ArrowUp class="h-4 w-4" />
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                    {{ tooltipText }}
-                </TooltipContent>
-            </Tooltip>
-
-            <Button
-                v-else
-                size="icon"
-                variant="secondary"
-                class="rounded-full shadow"
-                :ariaLabel="t('accessibility.back_to_top')"
-                @click="scrollToTop">
-                <ArrowUp class="h-4 w-4" />
+  <Teleport v-if="teleportTarget" :to="teleportTarget">
+    <Transition name="back-to-top">
+      <div v-if="visible" :style="wrapperStyle">
+        <Tooltip v-if="tooltip">
+          <TooltipTrigger as-child>
+            <Button size="icon" variant="secondary" class="rounded-full shadow" :aria-label="t('accessibility.back_to_top')" @click="scrollToTop">
+              <ArrowUp class="h-4 w-4" />
             </Button>
-        </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {{ tooltipText }}
+          </TooltipContent>
+        </Tooltip>
+
+        <Button v-else size="icon" variant="secondary" class="rounded-full shadow" :aria-label="t('accessibility.back_to_top')" @click="scrollToTop">
+          <ArrowUp class="h-4 w-4" />
+        </Button>
+      </div>
     </Transition>
+  </Teleport>
+
+  <Transition v-else name="back-to-top">
+    <div v-if="visible" :style="wrapperStyle">
+      <Tooltip v-if="tooltip">
+        <TooltipTrigger as-child>
+          <Button size="icon" variant="secondary" class="rounded-full shadow" :aria-label="t('accessibility.back_to_top')" @click="scrollToTop">
+            <ArrowUp class="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {{ tooltipText }}
+        </TooltipContent>
+      </Tooltip>
+
+      <Button v-else size="icon" variant="secondary" class="rounded-full shadow" :aria-label="t('accessibility.back_to_top')" @click="scrollToTop">
+        <ArrowUp class="h-4 w-4" />
+      </Button>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
-    .back-to-top-enter-active,
-    .back-to-top-leave-active {
-        transition:
-            opacity 160ms ease,
-            transform 160ms ease;
-    }
+.back-to-top-enter-active,
+.back-to-top-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
 
-    .back-to-top-enter-from,
-    .back-to-top-leave-to {
-        opacity: 0;
-        transform: translateY(6px);
-    }
+.back-to-top-enter-from,
+.back-to-top-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
 
-    .back-to-top-enter-to,
-    .back-to-top-leave-from {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.back-to-top-enter-to,
+.back-to-top-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-    @media (prefers-reduced-motion: reduce) {
-        .back-to-top-enter-active,
-        .back-to-top-leave-active {
-            transition: none;
-        }
-    }
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top-enter-active,
+  .back-to-top-leave-active {
+    transition: none;
+  }
+}
 </style>

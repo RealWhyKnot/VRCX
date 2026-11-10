@@ -1,5 +1,5 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld('electronAPI', {
-    onUpdateImage: (callback) => ipcRenderer.on('update-image', (event, base64) => callback(base64))
+contextBridge.exposeInMainWorld("electronAPI", {
+  onUpdateImage: (callback) => ipcRenderer.on("update-image", (event, base64) => callback(base64)),
 });

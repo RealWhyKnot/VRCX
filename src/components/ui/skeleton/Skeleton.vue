@@ -1,11 +1,11 @@
 <script setup>
-    import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
-    const props = defineProps({
-        class: { type: null, required: false }
-    });
+const props = defineProps({
+  class: { type: null, required: false },
+});
 </script>
 
 <template>
-    <div data-slot="skeleton" :class="cn('animate-pulse rounded-md bg-primary/10', props.class)" />
+  <div data-slot="skeleton" :class="cn('animate-pulse rounded-md bg-primary/10', props.class)" />
 </template>

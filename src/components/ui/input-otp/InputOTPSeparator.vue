@@ -1,18 +1,18 @@
 <script setup>
-    import { MinusIcon } from 'lucide-vue-next';
-    import { useForwardProps } from 'reka-ui';
+import { MinusIcon } from "lucide-vue-next";
+import { useForwardProps } from "reka-ui";
 
-    const props = defineProps({
-        class: { type: null, required: false }
-    });
+const props = defineProps({
+  class: { type: null, required: false },
+});
 
-    const forwarded = useForwardProps(props);
+const forwarded = useForwardProps(props);
 </script>
 
 <template>
-    <div data-slot="input-otp-separator" role="separator" v-bind="forwarded">
-        <slot>
-            <MinusIcon />
-        </slot>
-    </div>
+  <div data-slot="input-otp-separator" role="separator" v-bind="forwarded">
+    <slot>
+      <MinusIcon />
+    </slot>
+  </div>
 </template>

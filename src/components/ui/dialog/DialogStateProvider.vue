@@ -1,15 +1,15 @@
 <script setup>
-    import { provide, toRef } from 'vue';
+import { provide, toRef } from "vue";
 
-    import { DIALOG_OPEN_INJECTION_KEY } from './context';
+import { DIALOG_OPEN_INJECTION_KEY } from "./context";
 
-    const props = defineProps({
-        open: { type: Boolean, required: true }
-    });
+const props = defineProps({
+  open: { type: Boolean, required: true },
+});
 
-    provide(DIALOG_OPEN_INJECTION_KEY, toRef(props, 'open'));
+provide(DIALOG_OPEN_INJECTION_KEY, toRef(props, "open"));
 </script>
 
 <template>
-    <slot />
+  <slot />
 </template>

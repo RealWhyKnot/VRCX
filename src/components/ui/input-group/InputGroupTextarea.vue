@@ -1,19 +1,15 @@
 <script setup>
-    import { Textarea } from '@/components/ui/textarea';
-    import { cn } from '@/lib/utils';
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
-    const props = defineProps({
-        class: { type: null, required: false }
-    });
+const props = defineProps({
+  class: { type: null, required: false },
+});
 </script>
 
 <template>
-    <Textarea
-        data-slot="input-group-control"
-        :class="
-            cn(
-                'flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent break-all',
-                props.class
-            )
-        " />
+  <Textarea
+    data-slot="input-group-control"
+    :class="cn('flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent break-all', props.class)"
+  />
 </template>

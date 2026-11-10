@@ -1,15 +1,15 @@
-cd $PSScriptRoot
+Set-Location $PSScriptRoot
 
-$BuildDir = "../build"
-$ObjDir = "../Dotnet/obj"
-$OldObjDir = "../Dotnet/obj1"
+$BuildDir = '../build'
+$ObjDir = '../Dotnet/obj'
+$OldObjDir = '../Dotnet/obj1'
 
 function CleanDir {
     param (
         $Path
     )
 
-    Get-ChildItem -Path $Path -File -Recurse | % {
+    Get-ChildItem -Path $Path -File -Recurse | ForEach-Object {
         Write-Host "Deleting '$($_.FullName)'"
         Remove-Item $_
     }
@@ -31,4 +31,4 @@ if (Test-Path $OldObjDir) {
     CleanDir $OldObjDir
 }
 
-Write-Host "Done."
+Write-Host 'Done.'
