@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+shopt -s inherit_errexit
+
+root=$(git rev-parse --show-toplevel)
+cd "${root}"
+
+uv run --frozen python -B .github/lint/style_check.py
+uv run --frozen typos --config .github/lint/typos.toml .
+uv run --frozen zizmor --offline --quiet .
+gitleaks git --no-banner --redact --log-opts="--branches --not --remotes" .
+timeout 600 pwsh -NoProfile -File .github/lint/Invoke-PSLint.ps1
+npm run typecheck
+npm run lint
+npm run lint:css
+npm run format:check
+timeout 600 dotnet restore VRCX.slnx -p:Platform=x64 --locked-mode
+timeout 600 dotnet format VRCX.slnx --verify-no-changes --no-restore
+timeout 600 dotnet build VRCX.slnx -c Release -p:Platform=x64 --no-restore
+timeout 600 dotnet run .github/lint/CSharpStyle.cs -- .
+if [[ ${OSTYPE} == msys* || ${OSTYPE} == cygwin* ]]; then
+  windows_root=$(pwd -W)
+  MSYS_NO_PATHCONV=1 timeout 180 wsl --distribution "${LINT_WSL_DISTRO:?Set LINT_WSL_DISTRO to your lint distro}" \
+    --cd "${windows_root}" -- bash .githooks/check-shell
+else
+  bash .githooks/check-shell
+fi
+timeout 600 npm test
+exit 0

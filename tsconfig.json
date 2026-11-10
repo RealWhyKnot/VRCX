@@ -1,17 +1,21 @@
 {
-    "files": [],
-    "references": [
-        {
-            "path": "./tsconfig.app.json"
-        },
-        {
-            "path": "./tsconfig.node.json"
-        }
-    ],
-    "compilerOptions": {
-        "paths": {
-            "*": ["./*"],
-            "@/*": ["./src/*"]
-        }
-    }
+  "include": ["src/**/*", "src-electron/**/*", "build-scripts/**/*", "*.config.js", "vitest.setup.js"],
+  "compilerOptions": {
+    "module": "preserve",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "checkJs": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "allowJs": true,
+    "types": ["vite/client", "vitest/globals", "node"],
+    "jsxImportSource": "vue",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "target": "ESNext",
+    "jsx": "preserve",
+    "forceConsistentCasingInFileNames": true
+  },
+  "extends": "./.github/lint/tsconfig.base.json"
 }

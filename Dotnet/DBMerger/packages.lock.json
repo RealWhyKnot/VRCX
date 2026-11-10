@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "AsyncFixer": {
+        "type": "Direct",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "OOHNlH7GF39qk0Pv4cIQWA99hUh3nujDgGE2nADPpw88lD7s2qwlxEhuJIBfstC8ng3B1yY6SQy2JW/tddlMAQ=="
+      },
+      "Meziantou.Analyzer": {
+        "type": "Direct",
+        "requested": "[3.0.322, )",
+        "resolved": "3.0.322",
+        "contentHash": "aaynUqEHHeD0v1/RDW/Rq3d/gRkF8bRKJcvblhvuvyTAB+hGuzgFl4pBD9g6jGu+VqMWPinEGqu4hzG12TtnqQ=="
+      },
+      "Microsoft.VisualStudio.Threading.Analyzers": {
+        "type": "Direct",
+        "requested": "[18.12.1, )",
+        "resolved": "18.12.1",
+        "contentHash": "sQt7NpnselT1gP1a7bTfhmfHYV0jbavst/8mOoWTMSjXhXzWPssqgBoIwrxNsgJUa7XQzD2raSRMAFfmlepxNw=="
+      },
+      "NLog": {
+        "type": "Direct",
+        "requested": "[6.2.2, )",
+        "resolved": "6.2.2",
+        "contentHash": "Hoxigm/d7wY/+y4y2ILF2ERSojhxgLd8ASBZQbrnm52jB5NHkF4AWW5tZzMxJ/HTOp0bLwClGOokrA31iSXuMA=="
+      },
+      "SourceGear.sqlite3": {
+        "type": "Direct",
+        "requested": "[3.53.4, )",
+        "resolved": "3.53.4",
+        "contentHash": "aXPX39R0Vgivhi95Z82TRenG56bSOs+Hnt8h1GV0nmfuRaANObd3LC44eoZwszmQqALjaV3ZnBQRej8m5E0L4Q=="
+      },
+      "System.CommandLine": {
+        "type": "Direct",
+        "requested": "[2.0.13, )",
+        "resolved": "2.0.13",
+        "contentHash": "TIO2lMV+sSP7WW7pD/oCRHD9ENWY+jqwXmYzgks3R46cEdDzwjQOAhsiBn+M3EegfGjgTpa2h+eIrcU+AM2k6A=="
+      },
+      "System.Data.SQLite": {
+        "type": "Direct",
+        "requested": "[2.0.4, )",
+        "resolved": "2.0.4",
+        "contentHash": "iiawN8l6QBzLZTK2BQRyq/1XmvDONghjvXoDhkkQgPTG8bRIsmIxJV1+Lc75fviNgMnjAE3wxReVJAF7P1hkoQ=="
+      }
+    },
+    "net10.0/win-arm64": {
+      "SourceGear.sqlite3": {
+        "type": "Direct",
+        "requested": "[3.53.4, )",
+        "resolved": "3.53.4",
+        "contentHash": "aXPX39R0Vgivhi95Z82TRenG56bSOs+Hnt8h1GV0nmfuRaANObd3LC44eoZwszmQqALjaV3ZnBQRej8m5E0L4Q=="
+      }
+    },
+    "net10.0/win-x64": {
+      "SourceGear.sqlite3": {
+        "type": "Direct",
+        "requested": "[3.53.4, )",
+        "resolved": "3.53.4",
+        "contentHash": "aXPX39R0Vgivhi95Z82TRenG56bSOs+Hnt8h1GV0nmfuRaANObd3LC44eoZwszmQqALjaV3ZnBQRej8m5E0L4Q=="
+      }
+    }
+  }
+}

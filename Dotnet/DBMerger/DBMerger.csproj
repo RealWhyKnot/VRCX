@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <Import Project="..\Platform.props" />
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 	<PropertyGroup>
 		<OutputPath>..\..\build\DBMerger\</OutputPath>
 	</PropertyGroup>
@@ -20,7 +22,6 @@
 		<ResourceLanguages>en</ResourceLanguages>
 		<SatelliteResourceLanguages>en-US;en</SatelliteResourceLanguages>
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
-		<!-- Fix fail fast exception -->
 		<CETCompat>false</CETCompat>
 	</PropertyGroup>
 
@@ -56,4 +57,5 @@
 		<PackageReference Include="System.Data.SQLite" Version="2.0.4" />
 		<PackageReference Include="System.CommandLine" Version="2.0.13" />
 	</ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

@@ -1,6 +1,5 @@
 <Project>
   <PropertyGroup>
-    <!-- Set each project to have a separate folder under obj\ and bin\ -->
     <BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <BaseOutputPath>bin\$(MSBuildProjectName)\</BaseOutputPath>
   </PropertyGroup>
@@ -10,8 +9,6 @@
     <IsLinux>$([MSBuild]::IsOsPlatform('Linux'))</IsLinux>
     <IsOSX>$([MSBuild]::IsOsPlatform('OSX'))</IsOSX>
   </PropertyGroup>
-
-  <!-- Platform-specific Runtime Identifiers -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == '' and $(IsWindows) and '$(Platform)'=='x64'">
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

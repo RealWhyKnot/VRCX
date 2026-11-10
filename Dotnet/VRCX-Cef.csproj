@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <Import Project="Platform.props" />
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <OutputPath>..\build\Cef\</OutputPath>
   </PropertyGroup>
@@ -29,10 +31,8 @@
     <Company>VRCX</Company>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <!-- Fix fail fast exception -->
     <CETCompat>false</CETCompat>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <WarningLevel>0</WarningLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -120,11 +120,8 @@
   </Target>
 
   <ItemGroup>
-    <!-- old obj file path might still exist-->
     <Content Remove="obj1\**" />
     <Compile Remove="obj1\**" />
-
-    <!-- new obj file path, see Directory.Build.props -->
     <Content Remove="obj\VRCX-Electron\**" />
     <Compile Remove="obj\VRCX-Electron\**" />
     <Content Remove="AppApi\Electron\**" />
@@ -136,4 +133,5 @@
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="$(IsWindows)">
     <Exec Command="&quot;$(ProjectDir)..\build-scripts\make-junction.cmd&quot;" />
   </Target>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

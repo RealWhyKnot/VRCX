@@ -1,0 +1,252 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build (vYYYY.M.D.N or vYYYY.M.D.N-beta)
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate ${{ inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Resolve tag
+        id: tag
+        uses: RealWhyKnot/workflows/resolve-tag@v1
+        with:
+          tag: ${{ inputs.tag || github.ref_name }}
+          tag-pattern: '^v\d{4}\.\d+\.\d+\.\d+(-beta)?$'
+      - name: Wait for CI
+        uses: RealWhyKnot/workflows/wait-for-ci@v1
+        with:
+          sha: ${{ steps.tag.outputs.sha }}
+          workflow: ci.yml
+      - name: Validate release version sequence
+        uses: RealWhyKnot/workflows/version-sequence@v1
+        with:
+          tag: ${{ steps.tag.outputs.tag }}
+
+  windows:
+    name: Build Windows
+    runs-on: windows-latest
+    timeout-minutes: 60
+    needs: validate
+    permissions:
+      contents: read
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Restore dependencies
+        run: npm ci
+      - name: Set version
+        shell: pwsh
+        run: |
+          ./.github/scripts/Set-ReleaseVersion.ps1 -Version $env:RELEASE_VERSION
+          if ($LASTEXITCODE -ne 0) { throw "version update failed ($LASTEXITCODE)" }
+      - name: Build html
+        run: npm run prod
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet build Dotnet/VRCX-Cef.csproj -c Release -p:Platform=x64 --runtime win-x64 --self-contained
+          if ($LASTEXITCODE -ne 0) { throw "build failed ($LASTEXITCODE)" }
+      - name: Install NSIS
+        uses: RealWhyKnot/workflows/setup-nsis@v1
+        with:
+          version: "3.12"
+      - name: Installer
+        shell: pwsh
+        run: |
+          makensis Installer/installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "installer build failed ($LASTEXITCODE)" }
+          $assets = Join-Path $env:GITHUB_WORKSPACE 'build/assets'
+          $null = New-Item -ItemType Directory -Path $assets -Force
+          Move-Item -LiteralPath Installer/VRCX_Setup_x64.exe -Destination "$assets/VRCX_$($env:RELEASE_VERSION)_Setup_x64.exe"
+      - name: Make zip
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:GITHUB_WORKSPACE "build/assets/VRCX_$($env:RELEASE_VERSION).zip"
+          Push-Location -LiteralPath build/Cef
+          try {
+              7z a -tzip $archive . -mx=7
+              if ($LASTEXITCODE -ne 0) { throw "archive failed ($LASTEXITCODE)" }
+          } finally {
+              Pop-Location
+          }
+      - name: Checksums
+        id: checksums
+        uses: RealWhyKnot/workflows/checksums@v1
+        with:
+          archives: |
+            build/assets/*.exe
+            build/assets/*.zip
+          contents: build/Cef
+          sidecar: "true"
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: build/assets
+          if-no-files-found: error
+          retention-days: 14
+
+  electron:
+    name: Build ${{ matrix.rid }}
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 60
+    needs: validate
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: ubuntu-latest
+            rid: linux-x64
+            arch: x64
+            extension: AppImage
+          - image: ubuntu-latest
+            rid: linux-arm64
+            arch: arm64
+            extension: AppImage
+          - image: macos-latest
+            rid: osx-x64
+            arch: x64
+            extension: dmg
+          - image: macos-latest
+            rid: osx-arm64
+            arch: arm64
+            extension: dmg
+    env:
+      RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      BUILD_ARCH: ${{ matrix.arch }}
+      BUILD_RID: ${{ matrix.rid }}
+      PACKAGE_EXTENSION: ${{ matrix.extension }}
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Restore dependencies
+        run: npm ci
+      - name: Set version
+        shell: pwsh
+        run: |
+          ./.github/scripts/Set-ReleaseVersion.ps1 -Version $env:RELEASE_VERSION
+          if ($LASTEXITCODE -ne 0) { throw "version update failed ($LASTEXITCODE)" }
+      - name: Build
+        shell: bash
+        run: dotnet build Dotnet/VRCX-Electron.csproj -c Release -p:Platform="${BUILD_ARCH}" --runtime "${BUILD_RID}"
+      - name: Build html
+        run: npm run prod
+      - name: Package
+        shell: bash
+        run: |
+          node build-scripts/download-dotnet-runtime.js --arch="${BUILD_ARCH}"
+          npx electron-builder --config electron-builder.config.js --"${BUILD_ARCH}" --publish never
+          node build-scripts/patch-node-api-dotnet.js --arch="${BUILD_ARCH}"
+          mv -- "build/VRCX_Version.${PACKAGE_EXTENSION}" "build/VRCX_${RELEASE_VERSION}_${BUILD_ARCH}.${PACKAGE_EXTENSION}"
+      - name: Checksums
+        uses: RealWhyKnot/workflows/checksums@v1
+        with:
+          archives: build/VRCX_${{ env.RELEASE_VERSION }}_${{ matrix.arch }}.${{ matrix.extension }}
+          contents: build/Electron/${{ matrix.rid }}
+          manifest-suffix: .${{ matrix.extension }}.integrity.tsv
+          sidecar: "true"
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.rid }}
+          path: |
+            build/VRCX_${{ env.RELEASE_VERSION }}_${{ matrix.arch }}.${{ matrix.extension }}
+            build/VRCX_${{ env.RELEASE_VERSION }}_${{ matrix.arch }}.${{ matrix.extension }}.integrity.tsv
+            build/VRCX_${{ env.RELEASE_VERSION }}_${{ matrix.arch }}.${{ matrix.extension }}.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [validate, windows, electron]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ needs.validate.outputs.tag }}
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: assets
+      - name: Build the changelog
+        id: changelog
+        uses: RealWhyKnot/workflows/release-notes@v1
+        with:
+          tag: ${{ needs.validate.outputs.tag }}
+          title: VRCX ${{ needs.validate.outputs.tag }}
+      - name: Publish release
+        uses: RealWhyKnot/workflows/publish-release@v1
+        with:
+          tag: ${{ needs.validate.outputs.tag }}
+          notes-file: ${{ steps.changelog.outputs.file }}
+          prerelease: ${{ needs.validate.outputs.prerelease }}
+          draft-first: "true"
+          assets: assets/*

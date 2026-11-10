@@ -1,4 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <Import Project="Platform.props" />
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
     <OutputPath>..\build\Electron\$(RuntimeIdentifier)\</OutputPath>
   </PropertyGroup>
@@ -29,7 +31,6 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <WarningLevel>0</WarningLevel>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -105,4 +106,5 @@
       <HintPath>libs\librsync.net.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

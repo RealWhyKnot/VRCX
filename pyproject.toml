@@ -1,0 +1,7 @@
+[project]
+name = "vrcx-checks"
+version = "0.0.0"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = ["typos==1.52.0", "zizmor==1.32.0"]
