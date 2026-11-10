@@ -10,15 +10,39 @@ export type Json<T> = T extends Date
         ? { [K in keyof T]: Json<T[K]> }
         : T;
 
-export type moderations = {
+export type Moderations = {
   isBlocked: boolean;
   isMuted: boolean;
   isAvatarInteractionDisabled: boolean;
   isChatBoxMuted: boolean;
 };
 
+export type ParsedLocation = {
+  tag: string;
+  isOffline: boolean;
+  isPrivate: boolean;
+  isTraveling: boolean;
+  isRealInstance: boolean;
+  worldId: string;
+  instanceId: string;
+  instanceName: string;
+  accessType: string;
+  accessTypeName: string;
+  region: string;
+  shortName: string;
+  userId: string | null;
+  hiddenId: string | null;
+  privateId: string | null;
+  friendsId: string | null;
+  groupId: string | null;
+  groupAccessType: string | null;
+  canRequestInvite: boolean;
+  strict: boolean;
+  ageGate: boolean;
+};
+
 export type VrcxUser = {
-  $location: {};
+  $location: Partial<ParsedLocation>;
   $location_at: number;
   $online_for: number;
   $travelingToTime: number;
@@ -44,7 +68,7 @@ export type VrcxUser = {
   $customTagColour: string;
   $friendNumber: number;
   $lastFetch: number;
-  $moderations: moderations;
+  $moderations: Moderations;
   $memo: string;
   $platform: string;
 } & Json<User>;
@@ -55,7 +79,7 @@ export type VrcxCurrentUser = {
   $location_at?: number;
   $travelingToTime?: number;
   $previousAvatarSwapTime?: number | null;
-  $homeLocation?: {};
+  $homeLocation?: Partial<ParsedLocation>;
   $isVRCPlus?: boolean;
   $isModerator?: boolean;
   $isTroll?: boolean;
@@ -157,7 +181,7 @@ export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
   body?: string;
-  params?: any;
+  params?: unknown;
   customMsg?: string;
   inviteId?: string;
   uploadImage?: boolean;
@@ -177,8 +201,8 @@ export type WebApiOptions = {
   url: string;
 } & RequestOptions;
 
-export type TableFilter = {
+export type TableFilter<Row = unknown, Value = unknown> = {
   prop: string | string[];
-  value: any;
-  filterFn?: (row: any, filter: TableFilter) => boolean;
+  value: Value;
+  filterFn?: (row: Row, filter: TableFilter<Row, Value>) => boolean;
 };

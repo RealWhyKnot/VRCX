@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from "vitest";
 vi.mock("../../plugins/router.js", () => ({
   router: { beforeEach: vi.fn(), push: vi.fn() },
   initRouter: vi.fn(),

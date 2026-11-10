@@ -12,7 +12,7 @@
   </Alert>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { MessageSquareWarning } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
@@ -20,10 +20,5 @@ import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 const { t } = useI18n();
 
-defineProps({
-  featureName: {
-    type: String,
-    required: true,
-  },
-});
+defineProps<{ featureName: string }>();
 </script>

@@ -40,6 +40,19 @@ body {
   --vr-font-sm: 16px;
   --vr-font-base: 18px;
   --vr-font-lg: 20px;
+  --vr-webkit-scrollbar-track-background: rgb(0 0 0 / 10%);
+  --vr-webkit-scrollbar-thumb-background: rgb(0 0 0 / 25%);
+  --vr-body-input-textarea-select-button-text-shadow: #000;
+  --vr-x-app-type-color: #fff;
+  --vr-np-progress-bar-background: rgb(255 255 255 / 60%);
+  --vr-np-progress-bar-background-2: rgb(255 255 255 / 90%);
+  --vr-x-friend-item-nth-child-even-background: rgb(255 255 255 / 1.5%);
+  --vr-hud-timeout-feed-color: #ed1b24;
+  --vr-tracker-warning-color: #fcfb00;
+  --vr-tracker-error-color: #fd4444;
+  --vr-x-containerbottom-first-of-type-background: rgb(255 255 255 / 1%);
+  --layer-vr-wrist: 20;
+  --layer-vr-headset: 10;
 }
 
 body {
@@ -68,7 +81,7 @@ body {
 .noty_theme__relax.noty_bar .noty_body,
 .noty_theme__sunset.noty_bar .noty_body {
   font-size: 30px;
-  text-shadow: 1px 1px 1px rgb(0 0 0 / 10%);
+  text-shadow: 1px 1px 1px var(--vr-noty-body-noty-body-text-shadow);
 }
 
 .noty_theme__relax.noty_bar .noty_buttons,
@@ -78,83 +91,83 @@ body {
 
 .noty_theme__relax.noty_type__alert,
 .noty_theme__relax.noty_type__notification {
-  color: #444;
-  background-color: #fff;
-  border: 2px solid #dedede;
+  color: var(--vr-alert-notification-color);
+  background-color: var(--vr-alert-notification-background-color);
+  border: 2px solid var(--vr-alert-notification-border);
 }
 
 .noty_theme__relax.noty_type__warning {
-  color: #826200;
-  background-color: #ffeaa8;
-  border: 2px solid #ffc237;
+  color: var(--vr-warning-color);
+  background-color: var(--vr-warning-background-color);
+  border: 2px solid var(--vr-warning-border);
 }
 
 .noty_theme__relax.noty_type__warning .noty_buttons {
-  border-color: #dfaa30;
+  border-color: var(--vr-warning-noty-buttons-border-color);
 }
 
 .noty_theme__relax.noty_type__error {
-  color: #fff;
-  background-color: #ff8181;
-  border: 2px solid #e25353;
+  color: var(--vr-error-color);
+  background-color: var(--vr-error-background-color);
+  border: 2px solid var(--vr-error-border);
 }
 
 .noty_theme__relax.noty_type__error .noty_buttons {
-  border-color: #8b0000;
+  border-color: var(--vr-error-noty-buttons-border-color);
 }
 
 .noty_theme__relax.noty_type__info,
 .noty_theme__relax.noty_type__information {
-  color: #fff;
-  background-color: #78c5e7;
-  border: 2px solid #3badd6;
+  color: var(--vr-info-information-color);
+  background-color: var(--vr-info-information-background-color);
+  border: 2px solid var(--vr-info-information-border);
 }
 
 .noty_theme__relax.noty_type__info .noty_buttons,
 .noty_theme__relax.noty_type__information .noty_buttons {
-  border-color: #0b90c4;
+  border-color: var(--vr-info-noty-buttons-information-noty-buttons-border-color);
 }
 
 .noty_theme__relax.noty_type__success {
-  color: #006400;
-  background-color: #bcf5bc;
-  border: 2px solid #7cdd77;
+  color: var(--vr-success-color);
+  background-color: var(--vr-success-background-color);
+  border: 2px solid var(--vr-success-border);
 }
 
 .noty_theme__relax.noty_type__success .noty_buttons {
-  border-color: #50c24e;
+  border-color: var(--vr-success-noty-buttons-border-color);
 }
 
 .noty_theme__sunset.noty_type__alert,
 .noty_theme__sunset.noty_type__notification {
-  color: #fff;
-  background-color: #073b4c;
+  color: var(--vr-alert-notification-color-2);
+  background-color: var(--vr-alert-notification-background-color-2);
 }
 
 .noty_theme__sunset.noty_type__alert .noty_progressbar,
 .noty_theme__sunset.noty_type__notification .noty_progressbar {
-  background-color: #fff;
+  background-color: var(--vr-alert-noty-progressbar-notification-noty-progressbar-background-color);
 }
 
 .noty_theme__sunset.noty_type__warning {
-  color: #fff;
-  background-color: #ffd166;
+  color: var(--vr-warning-color-2);
+  background-color: var(--vr-warning-background-color-2);
 }
 
 .noty_theme__sunset.noty_type__error {
-  color: #fff;
-  background-color: #ef476f;
+  color: var(--vr-error-color);
+  background-color: var(--vr-error-background-color-2);
 }
 
 .noty_theme__sunset.noty_type__info,
 .noty_theme__sunset.noty_type__information {
-  color: #fff;
-  background-color: #118ab2;
+  color: var(--vr-info-information-color);
+  background-color: var(--vr-info-information-background-color-2);
 }
 
 .noty_theme__sunset.noty_type__success {
-  color: #fff;
-  background-color: #06d6a0;
+  color: var(--vr-success-color-2);
+  background-color: var(--vr-success-background-color-2);
 }
 
 .noty_theme__sunset.noty_type__error .noty_progressbar {
@@ -189,12 +202,12 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(0 0 0 / 10%);
+  background: var(--vr-webkit-scrollbar-track-background);
   border-radius: 16px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(0 0 0 / 25%);
+  background: var(--vr-webkit-scrollbar-thumb-background);
   border-radius: 16px;
 }
 
@@ -206,12 +219,12 @@ button {
   font-family: var(--font-western), var(--font-symbol), var(--font-primary-cjk), var(--font-fallback-cjk);
   line-height: normal;
   text-shadow:
-    #000 0 0 3px,
-    #000 0 0 3px,
-    #000 0 0 3px,
-    #000 0 0 3px,
-    #000 0 0 3px,
-    #000 0 0 3px;
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px,
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px,
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px,
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px,
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px,
+    var(--vr-body-input-textarea-select-button-text-shadow) 0 0 3px;
   overflow: hidden;
 }
 
@@ -225,7 +238,7 @@ button {
 }
 
 .x-app-type {
-  color: #fff;
+  color: var(--vr-x-app-type-color);
   width: 1024px;
   height: 1536px;
   position: relative;
@@ -239,7 +252,7 @@ button {
   width: 512px;
   height: 510px;
   margin-bottom: 2px;
-  z-index: 20;
+  z-index: var(--layer-vr-wrist);
   display: flex;
   flex-direction: column;
   border-radius: var(--vr-radius);
@@ -253,7 +266,7 @@ button {
   left: 0;
   width: 1024px;
   height: 1024px;
-  z-index: 10;
+  z-index: var(--layer-vr-headset);
 }
 
 .background {
@@ -296,7 +309,7 @@ button {
 .np-progress-bar {
   width: 0%;
   height: 3px;
-  background: linear-gradient(90deg, rgb(255 255 255 / 60%), rgb(255 255 255 / 90%));
+  background: linear-gradient(90deg, var(--vr-np-progress-bar-background), var(--vr-np-progress-bar-background-2));
   border-radius: 2px;
 }
 
@@ -326,7 +339,7 @@ button {
 }
 
 .x-friend-item:nth-child(even) {
-  background: rgb(255 255 255 / 1.5%);
+  background: var(--vr-x-friend-item-nth-child-even-background);
 }
 
 .x-friend-item .time {
@@ -485,7 +498,7 @@ i.x-user-status.busy {
   position: absolute;
   bottom: 150px;
   right: 0;
-  color: #ed1b24;
+  color: var(--vr-hud-timeout-feed-color);
 }
 
 .hud-timeout svg {
@@ -495,7 +508,7 @@ i.x-user-status.busy {
 }
 
 .tracker-warning {
-  color: #fcfb00;
+  color: var(--vr-tracker-warning-color);
 }
 
 .tracker-warning img {
@@ -503,7 +516,7 @@ i.x-user-status.busy {
 }
 
 .tracker-error {
-  color: #fd4444;
+  color: var(--vr-tracker-error-color);
 }
 
 .tracker-error img {
@@ -536,7 +549,7 @@ i.x-user-status.busy {
 
 .x-containerbottom:first-of-type {
   padding: 6px 10px 4px;
-  background: rgb(255 255 255 / 1%);
+  background: var(--vr-x-containerbottom-first-of-type-background);
 }
 
 .x-friend-item .lucide {

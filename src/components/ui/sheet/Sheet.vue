@@ -1,12 +1,15 @@
-<script setup>
+<script setup lang="ts">
+import type { DialogRootProps } from "reka-ui";
+import type { DialogRootEmits } from "reka-ui";
+
 import { DialogRoot, useForwardPropsEmits } from "reka-ui";
 
-const props = defineProps({
-  open: { type: Boolean, required: false },
-  defaultOpen: { type: Boolean, required: false },
-  modal: { type: Boolean, required: false },
-});
-const emits = defineEmits(["update:open"]);
+const props = defineProps<{
+  open?: DialogRootProps["open"];
+  defaultOpen?: DialogRootProps["defaultOpen"];
+  modal?: DialogRootProps["modal"];
+}>();
+const emits = defineEmits<Pick<DialogRootEmits, "update:open">>();
 
 const forwarded = useForwardPropsEmits(props, emits);
 </script>

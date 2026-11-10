@@ -1,13 +1,13 @@
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const { spawnSync } = require("child_process");
-const { getArchAndPlatform } = require("./utils");
-const { pipeline } = require("stream/promises");
-const { unlink, copyFile, rename } = require("node:fs/promises");
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
+import { getArchAndPlatform } from "./utils.js";
+import { pipeline } from "node:stream/promises";
+import { unlink, copyFile, rename } from "node:fs/promises";
 
 const DOTNET_VERSION = "10.0.8";
-const DOTNET_RUNTIME_DIR = path.join(__dirname, "..", "build", "Electron", "dotnet-runtime");
+const DOTNET_RUNTIME_DIR = path.join(import.meta.dirname, "..", "build", "Electron", "dotnet-runtime");
 
 const DOTNET_CACHE_DIR = path.join(os.homedir(), ".cache", "vrcx-build", "dotnet-cache");
 
@@ -46,10 +46,11 @@ async function extractTarGz(tarGzPath, extractDir) {
   return new Promise((resolve, reject) => {
     const tar = spawnSync("tar", ["-xzf", tarGzPath, "-C", extractDir, "--strip-components=1"], {
       stdio: "inherit",
+      windowsHide: true,
     });
 
     if (tar.status === 0) {
-      resolve();
+      resolve(undefined);
     } else {
       reject(new Error(`tar extraction failed with status ${tar.status}`));
     }
@@ -60,10 +61,11 @@ async function extractZip(zipPath, extractDir) {
   return new Promise((resolve, reject) => {
     const tar = spawnSync("tar", ["-xf", zipPath, "-C", extractDir], {
       stdio: "inherit",
+      windowsHide: true,
     });
 
     if (tar.status === 0) {
-      resolve();
+      resolve(undefined);
     } else {
       reject(new Error(`zip extraction failed with status ${tar.status}`));
     }
@@ -75,7 +77,7 @@ async function downloadDotnetRuntime(arch, platform) {
     throw new Error("Architecture and platform must be specified");
   }
 
-  let dotnetPlatform = "";
+  let dotnetPlatform;
   if (platform === "linux") {
     dotnetPlatform = "linux";
   } else if (platform === "darwin") {

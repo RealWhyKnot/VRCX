@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { getFriendsSortFunction, isFriendOnline, sortStatus } from "../friend";
 
 describe("Friend Utils", () => {

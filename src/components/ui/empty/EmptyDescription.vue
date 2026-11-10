@@ -1,9 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils";
 
-defineProps({
-  class: { type: null, required: false },
-});
+defineProps<{ class?: unknown }>();
 </script>
 
 <template>

@@ -6,28 +6,31 @@ declare global {
   const LINUX: boolean;
 
   interface Window {
-    $pinia: any;
-    $coordinators: any;
-    $bridge: any;
+    $pinia: Record<string, import("pinia").StoreGeneric>;
+    $coordinators: Record<string, unknown>;
+    $bridge: {
+      updateIsGameRunning: (typeof import("../coordinators/gameCoordinator"))["runUpdateIsGameRunningFlow"];
+      updateIsHmdAfk: (typeof import("../coordinators/gameCoordinator"))["runUpdateIsHmdAfkFlow"];
+      addGameLogEvent: (typeof import("../coordinators/gameLogCoordinator"))["addGameLogEvent"];
+    };
     $vr: any;
     $debug: AppDebug;
-    AppApi: AppApi;
-    AppApiVr: AppApiVr;
-    WebApi: WebApi;
-    VRCXStorage: VRCXStorage;
-    SQLite: SQLite;
-    LogWatcher: LogWatcher;
-    Discord: Discord;
-    AssetBundleManager: AssetBundleManager;
-    webApiService: webApiService;
-    request: any;
-    utils: any;
-    dayjs: any;
-    configRepository: any;
-    database: any;
-    gameLogService: any;
-    crypto: any;
-    sqliteService: any;
+    AppApi: typeof AppApi;
+    AppApiVr: typeof AppApiVr;
+    WebApi: typeof WebApi;
+    VRCXStorage: typeof VRCXStorage;
+    SQLite: typeof SQLite;
+    LogWatcher: typeof LogWatcher;
+    Discord: typeof Discord;
+    AssetBundleManager: typeof AssetBundleManager;
+    webApiService: typeof webApiService;
+    request: typeof import("../api");
+    utils: typeof import("../shared/utils");
+    dayjs: (typeof import("dayjs"))["default"];
+    configRepository: (typeof import("../services/config.js"))["default"];
+    database: (typeof import("../services/database"))["database"];
+    gameLogService: (typeof import("../services/gameLog.js"))["default"];
+    sqliteService: (typeof import("../services/sqlite.js"))["default"];
     isVrOverlay: boolean;
     interopApi: {
       callDotNetMethod: (className: any, methodName: any, args: any) => Promise<any>;
@@ -38,15 +41,15 @@ declare global {
       getNoUpdater: () => Promise<boolean>;
       setTrayIconNotification: (notify: boolean) => Promise<void>;
       setThemeSource: (source: "system" | "light" | "dark") => Promise<void>;
-      onSystemThemeChanged: (Function: (event: any, isDark: boolean) => void) => () => void;
+      onSystemThemeChanged: (listener: (event: import("electron").IpcRendererEvent, isDark: boolean) => void) => () => void;
       openFileDialog: () => Promise<string>;
       openDirectoryDialog: () => Promise<string>;
       desktopNotification: (displayName: string, body?: string, image?: string) => Promise<void>;
-      onWindowPositionChanged: (Function: (event: any, position: { x: number; y: number }) => void) => () => void;
-      onWindowSizeChanged: (Function: (event: any, size: { width: number; height: number }) => void) => () => void;
-      onWindowStateChange: (Function: (event: any, state: { windowState: any }) => void) => () => void;
-      onBrowserFocus: (Function: (event: any) => void) => () => void;
-      onBrowserBlur: (Function: (event: any) => void) => () => void;
+      onWindowPositionChanged: (listener: (event: import("electron").IpcRendererEvent, position: { x: number; y: number }) => void) => () => void;
+      onWindowSizeChanged: (listener: (event: import("electron").IpcRendererEvent, size: { width: number; height: number }) => void) => () => void;
+      onWindowStateChange: (listener: (event: import("electron").IpcRendererEvent, state: "0" | "1" | "2") => void) => () => void;
+      onBrowserFocus: (listener: (event: import("electron").IpcRendererEvent) => void) => () => void;
+      onBrowserBlur: (listener: (event: import("electron").IpcRendererEvent) => void) => () => void;
       restartApp: () => Promise<void>;
       getOverlayWindow: () => Promise<boolean>;
       updateVr: (active: boolean, hmdOverlay: boolean, wristOverlay: boolean, menuButton: boolean, overlayHand: number) => Promise<void>;
@@ -56,7 +59,7 @@ declare global {
     };
   }
 
-  interface AppDebug {
+  type AppDebug = {
     debug: boolean;
     debugWebSocket: boolean;
     debugUserDiff: boolean;
@@ -73,7 +76,7 @@ declare global {
     endpointDomainVrchat: string;
     websocketDomain: string;
     websocketDomainVrchat: string;
-  }
+  };
 
   const CefSharp: {
     PostMessage: (message: any) => void;

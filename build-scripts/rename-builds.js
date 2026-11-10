@@ -1,8 +1,8 @@
-const fs = require("fs");
-const path = require("path");
-const { getArchAndPlatform } = require("./utils");
+import fs from "node:fs";
+import path from "node:path";
+import { getArchAndPlatform } from "./utils.js";
 
-const rootDir = path.join(__dirname, "..");
+const rootDir = path.join(import.meta.dirname, "..");
 const versionFilePath = path.join(rootDir, "Version");
 const buildDir = path.join(rootDir, "build");
 

@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { computeDisabledContentSettings, createDefaultInstanceRef } from "../instanceTransforms";
 
 describe("computeDisabledContentSettings", () => {

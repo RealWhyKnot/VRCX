@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { generateEmojiStyle, getEmojiFileName, getPrintFileName, getPrintLocalDate } from "../gallery";
 
 describe("Gallery Utils", () => {

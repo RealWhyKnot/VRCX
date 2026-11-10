@@ -255,7 +255,7 @@ function handlePipeline(args) {
       });
       break;
 
-    case "friend-online":
+    case "friend-online": {
       const $location = parseLocation(content.location);
       const $travelingToLocation = parseLocation(content.travelingToLocation);
       if (content?.user?.id) {
@@ -279,6 +279,7 @@ function handlePipeline(args) {
         runUpdateFriendFlow(content.userId, "online");
       }
       break;
+    }
 
     case "friend-active":
       if (content?.user?.id) {
@@ -303,7 +304,7 @@ function handlePipeline(args) {
       }
       break;
 
-    case "friend-offline":
+    case "friend-offline": {
       const offlineJson = {
         id: content.userId,
         platform: content.platform,
@@ -319,12 +320,13 @@ function handlePipeline(args) {
 
       applyUser(offlineJson);
       break;
+    }
 
     case "friend-update":
       applyUser(content.user);
       break;
 
-    case "friend-location":
+    case "friend-location": {
       const $location1 = parseLocation(content.location);
       const $travelingToLocation1 = parseLocation(content.travelingToLocation);
       if (!content?.user?.id) {
@@ -355,6 +357,7 @@ function handlePipeline(args) {
       applyUser(locationJson);
 
       break;
+    }
 
     case "user-update":
       applyCurrentUser(content.user);
@@ -376,12 +379,13 @@ function handlePipeline(args) {
       onGroupLeft(content.groupId);
       break;
 
-    case "group-role-updated":
+    case "group-role-updated": {
       const groupId = content.role.groupId;
       groupRequest.getGroup({ groupId, includeRoles: true }).then((args) => applyGroup(args.json));
       console.log("group-role-updated", content);
 
       break;
+    }
 
     case "group-member-updated":
       var member = content.member;
@@ -455,7 +459,7 @@ function handlePipeline(args) {
       }
       break;
 
-    case "instance-closed":
+    case "instance-closed": {
       const noty = {
         type: "instance.closed",
         location: content.instanceLocation,
@@ -469,6 +473,7 @@ function handlePipeline(args) {
       notificationStore.appendNotificationTableEntry(noty);
       sharedFeedStore.addEntry(noty);
       break;
+    }
 
     case "economy-update":
       userStore.setCurrentUserCredits(content?.walletBalance);

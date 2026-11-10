@@ -2,16 +2,16 @@
   <span>{{ text }}</span>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { timeToText } from "../shared/utils";
 
 import * as workerTimers from "worker-timers";
 
-const props = defineProps({
-  datetime: { type: String, default: "" },
-  hours: { type: Number, default: 1 },
+const props = withDefaults(defineProps<{ datetime?: string; hours?: number }>(), {
+  datetime: "",
+  hours: 1,
 });
 
 const text = ref("");

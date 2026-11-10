@@ -1,36 +1,80 @@
+:root {
+  --notification-alert-notification-color: #2f2f2f;
+  --notification-alert-notification-background-color: #fff;
+  --notification-alert-notification-border-bottom: #d1d1d1;
+  --notification-warning-color: #fff;
+  --notification-warning-background-color: #ffae42;
+  --notification-warning-border-bottom: #e89f3c;
+  --notification-error-color: #fff;
+  --notification-error-background-color: #de636f;
+  --notification-error-border-bottom: #ca5a65;
+  --notification-info-information-color: #fff;
+  --notification-info-information-background-color: #7f7eff;
+  --notification-info-information-border-bottom: #7473e8;
+  --notification-success-color: #fff;
+  --notification-success-background-color: #afc765;
+  --notification-success-border-bottom: #a0b55c;
+  --vr-noty-body-noty-body-text-shadow: rgb(0 0 0 / 10%);
+  --vr-alert-notification-color: #444;
+  --vr-alert-notification-background-color: #fff;
+  --vr-alert-notification-border: #dedede;
+  --vr-warning-color: #826200;
+  --vr-warning-background-color: #ffeaa8;
+  --vr-warning-border: #ffc237;
+  --vr-warning-noty-buttons-border-color: #dfaa30;
+  --vr-error-color: #fff;
+  --vr-error-background-color: #ff8181;
+  --vr-error-border: #e25353;
+  --vr-error-noty-buttons-border-color: #8b0000;
+  --vr-info-information-color: #fff;
+  --vr-info-information-background-color: #78c5e7;
+  --vr-info-information-border: #3badd6;
+  --vr-info-noty-buttons-information-noty-buttons-border-color: #0b90c4;
+  --vr-success-color: #006400;
+  --vr-success-background-color: #bcf5bc;
+  --vr-success-border: #7cdd77;
+  --vr-success-noty-buttons-border-color: #50c24e;
+  --vr-alert-notification-color-2: #fff;
+  --vr-alert-notification-background-color-2: #073b4c;
+  --vr-alert-noty-progressbar-notification-noty-progressbar-background-color: #fff;
+  --vr-warning-color-2: #fff;
+  --vr-warning-background-color-2: #ffd166;
+  --vr-error-background-color-2: #ef476f;
+  --vr-info-information-background-color-2: #118ab2;
+  --vr-success-color-2: #fff;
+  --vr-success-background-color-2: #06d6a0;
+}
+
 .animate__animated {
   animation-duration: 1s;
   animation-fill-mode: both;
 }
 
 @keyframes bounceInLeft {
-  0%,
-  60%,
-  75%,
-  90%,
-  100% {
-    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
-  }
-
   0% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     opacity: 0;
     transform: translate3d(-3000px, 0, 0) scaleX(3);
   }
 
   60% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     opacity: 1;
     transform: translate3d(25px, 0, 0) scaleX(1);
   }
 
   75% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     transform: translate3d(-10px, 0, 0) scaleX(0.98);
   }
 
   90% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     transform: translate3d(5px, 0, 0) scaleX(0.995);
   }
 
   100% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     transform: translate3d(0, 0, 0);
   }
 }
@@ -110,32 +154,32 @@
 
 .noty_theme__mint.noty_type__alert,
 .noty_theme__mint.noty_type__notification {
-  color: #2f2f2f;
-  background-color: #fff;
-  border-bottom: 1px solid #d1d1d1;
+  color: var(--notification-alert-notification-color);
+  background-color: var(--notification-alert-notification-background-color);
+  border-bottom: 1px solid var(--notification-alert-notification-border-bottom);
 }
 
 .noty_theme__mint.noty_type__warning {
-  color: #fff;
-  background-color: #ffae42;
-  border-bottom: 1px solid #e89f3c;
+  color: var(--notification-warning-color);
+  background-color: var(--notification-warning-background-color);
+  border-bottom: 1px solid var(--notification-warning-border-bottom);
 }
 
 .noty_theme__mint.noty_type__error {
-  color: #fff;
-  background-color: #de636f;
-  border-bottom: 1px solid #ca5a65;
+  color: var(--notification-error-color);
+  background-color: var(--notification-error-background-color);
+  border-bottom: 1px solid var(--notification-error-border-bottom);
 }
 
 .noty_theme__mint.noty_type__info,
 .noty_theme__mint.noty_type__information {
-  color: #fff;
-  background-color: #7f7eff;
-  border-bottom: 1px solid #7473e8;
+  color: var(--notification-info-information-color);
+  background-color: var(--notification-info-information-background-color);
+  border-bottom: 1px solid var(--notification-info-information-border-bottom);
 }
 
 .noty_theme__mint.noty_type__success {
-  color: #fff;
-  background-color: #afc765;
-  border-bottom: 1px solid #a0b55c;
+  color: var(--notification-success-color);
+  background-color: var(--notification-success-background-color);
+  border-bottom: 1px solid var(--notification-success-border-bottom);
 }

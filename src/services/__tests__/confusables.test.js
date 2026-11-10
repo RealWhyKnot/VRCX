@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import removeConfusables, { removeWhitespace } from "../confusables.js";
 
 describe("removeConfusables", () => {

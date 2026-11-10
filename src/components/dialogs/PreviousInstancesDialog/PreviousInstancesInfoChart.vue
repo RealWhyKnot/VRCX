@@ -7,7 +7,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineOptions({ name: "PreviousInstancesInfoChart" });
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -20,6 +20,7 @@ import { useAppearanceSettingsStore, useGameLogStore, useUserStore } from "../..
 import { timeToText } from "../../../shared/utils";
 
 import * as echarts from "echarts";
+import type { BarSeriesOption, EChartsOption, EChartsType, ECElementEvent, TooltipComponentFormatterCallbackParams } from "echarts";
 import { showUserDialog } from "../../../coordinators/userCoordinator";
 import InstanceActivityTooltip from "@/views/Charts/components/InstanceActivityTooltip.jsx";
 import { renderToHtml } from "@/lib/utils";
@@ -30,18 +31,22 @@ const { gameLogIsFriend, gameLogIsFavorite } = useGameLogStore();
 
 const BAR_WIDTH = 12;
 
-const props = defineProps({
-  chartData: {
-    type: Array,
-    required: true,
-  },
-});
+type ChartActivity = {
+  created_at: string;
+  time: number;
+  user_id: string;
+  display_name: string;
+  userId?: string;
+  isFriend?: boolean;
+  isFavorite?: boolean;
+};
 
-const chartRef = ref(null);
-const chartContainerRef = ref(null);
-let echartsInstance = null;
-const usersFirstActivity = ref(null);
-const resizeObserver = ref(null);
+const props = defineProps<{ chartData: ChartActivity[] | null | undefined }>();
+
+const chartRef = ref<HTMLDivElement | null>(null);
+let echartsInstance: EChartsType | null = null;
+const usersFirstActivity = ref<{ user_id: string }[]>([]);
+const resizeObserver = ref<ResizeObserver | null>(null);
 
 const processedData = computed(() => {
   if (!props.chartData || props.chartData.length === 0) return [];
@@ -50,8 +55,8 @@ const processedData = computed(() => {
     joinTime: dayjs(item.created_at).subtract(item.time, "millisecond"),
     leaveTime: dayjs(item.created_at),
     time: item.time < 0 ? 0 : item.time,
-    isFriend: item.user_id === currentUser.value.id ? null : gameLogIsFriend(item),
-    isFavorite: item.user_id === currentUser.value.id ? null : gameLogIsFavorite(item),
+    isFriend: item.user_id === currentUser.value.id ? null : Boolean(gameLogIsFriend(item)),
+    isFavorite: item.user_id === currentUser.value.id ? null : Boolean(gameLogIsFavorite(item)),
   }));
 });
 
@@ -181,7 +186,7 @@ async function initEcharts() {
       echartsInstance.off("click");
 
       const options = getNewOption();
-      if (options?.series && options.series.length > 0) {
+      if (Array.isArray(options.series) && options.series.length > 0) {
         echartsInstance.clear();
         echartsInstance.setOption(options, { notMerge: true });
         echartsInstance.on("click", "yAxis", handleClickYAxisLabel);
@@ -206,14 +211,14 @@ async function initEcharts() {
   setTimeout(afterInit, 50);
 }
 
-function handleClickYAxisLabel(params) {
+function handleClickYAxisLabel(params: ECElementEvent) {
   const userData = usersFirstActivity.value[params.dataIndex];
   if (userData?.user_id) {
     showUserDialog(userData.user_id);
   }
 }
 
-function getNewOption() {
+function getNewOption(): EChartsOption {
   const data = processedData.value;
   if (data.length === 0) {
     return {
@@ -225,7 +230,9 @@ function getNewOption() {
     };
   }
 
-  if (!startTimeStamp.value || !endTimeStamp.value) {
+  const startTimestamp = startTimeStamp.value;
+  const endTimestamp = endTimeStamp.value;
+  if (!startTimestamp || !endTimestamp) {
     return {
       title: {
         text: "Invalid timestamp data",
@@ -235,27 +242,26 @@ function getNewOption() {
     };
   }
 
-  const userGroupedEntries = new Map();
-  const uniqueUserEntries = [];
+  type ProcessedActivity = (typeof data)[number];
+  type ActivitySegment = { offset: number; time: number; tail: number; entry: ProcessedActivity };
+  const userGroupedEntries = new Map<string, ActivitySegment[]>();
+  const uniqueUserEntries: ProcessedActivity[] = [];
 
   const sortedData = [...data].sort((a, b) => {
     const timeDiff = Math.abs(a.joinTime.diff(b.joinTime, "second"));
-    return timeDiff < 3 ? a.leaveTime - b.leaveTime : a.joinTime - b.joinTime;
+    return timeDiff < 3 ? a.leaveTime.valueOf() - b.leaveTime.valueOf() : a.joinTime.valueOf() - b.joinTime.valueOf();
   });
 
   for (const entry of sortedData) {
-    if (!userGroupedEntries.has(entry.user_id)) {
-      userGroupedEntries.set(entry.user_id, []);
+    let elements = userGroupedEntries.get(entry.user_id);
+    if (!elements) {
+      elements = [];
+      userGroupedEntries.set(entry.user_id, elements);
       uniqueUserEntries.push(entry);
     }
-    const elements = userGroupedEntries.get(entry.user_id);
-    const offset = Math.max(
-      0,
-      elements.length === 0
-        ? entry.joinTime.valueOf() - startTimeStamp.value
-        : entry.joinTime.valueOf() - startTimeStamp.value - elements[elements.length - 1].tail
-    );
-    const tail = elements.length === 0 ? offset + entry.time : elements[elements.length - 1].tail + offset + entry.time;
+    const previousTail = elements.at(-1)?.tail ?? 0;
+    const offset = Math.max(0, entry.joinTime.valueOf() - startTimestamp - previousTail);
+    const tail = previousTail + offset + entry.time;
     const element = { offset, time: entry.time, tail, entry };
     elements.push(element);
   }
@@ -263,7 +269,7 @@ function getNewOption() {
 
   const generateSeries = () => {
     const maxEntryCount = Math.max(...Array.from(userGroupedEntries.values()).map((entries) => entries.length));
-    const placeholderSeries = (seriesData) => {
+    const placeholderSeries = (seriesData: number[]): BarSeriesOption => {
       return {
         name: "Placeholder",
         type: "bar",
@@ -281,7 +287,7 @@ function getNewOption() {
         data: seriesData,
       };
     };
-    const timeSeries = (seriesData) => {
+    const timeSeries = (seriesData: number[]): BarSeriesOption => {
       return {
         name: "Time",
         type: "bar",
@@ -301,30 +307,28 @@ function getNewOption() {
       };
     };
 
-    const series = Array(maxEntryCount)
-      .fill(0)
-      .flatMap((_, index) => {
-        return [
-          placeholderSeries(
-            uniqueUserEntries.map((entry) => {
-              const element = userGroupedEntries.get(entry.user_id)[index];
-              return element ? element.offset : 0;
-            })
-          ),
-          timeSeries(
-            uniqueUserEntries.map((entry) => {
-              const element = userGroupedEntries.get(entry.user_id)[index];
-              return element ? element.time : 0;
-            })
-          ),
-        ];
-      });
+    const series = Array.from({ length: maxEntryCount }, (_, index) => {
+      return [
+        placeholderSeries(
+          uniqueUserEntries.map((entry) => {
+            const element = userGroupedEntries.get(entry.user_id)?.[index];
+            return element ? element.offset : 0;
+          })
+        ),
+        timeSeries(
+          uniqueUserEntries.map((entry) => {
+            const element = userGroupedEntries.get(entry.user_id)?.[index];
+            return element ? element.time : 0;
+          })
+        ),
+      ];
+    }).flat();
 
     return series;
   };
 
-  const friendOrFavIcon = (display_name) => {
-    const foundItem = data.find((item) => item.display_name === display_name);
+  const friendOrFavIcon = (displayName: string) => {
+    const foundItem = data.find((item) => item.display_name === displayName);
 
     if (!foundItem) {
       return "";
@@ -339,13 +343,14 @@ function getNewOption() {
     return "";
   };
 
-  const getTooltip = (params) => {
-    const isTimeSeries = params.seriesIndex % 2 === 1;
-    if (!isTimeSeries) return "";
+  const getTooltip = (params: TooltipComponentFormatterCallbackParams) => {
+    if (Array.isArray(params)) return "";
+    const seriesIndex = params.seriesIndex;
+    if (seriesIndex === undefined || seriesIndex % 2 !== 1) return "";
 
     const userData = uniqueUserEntries[params.dataIndex];
-    const targetEntryIndex = Math.floor(params.seriesIndex / 2);
-    const instanceData = userGroupedEntries.get(userData?.user_id)?.[targetEntryIndex]?.entry;
+    const targetEntryIndex = Math.floor(seriesIndex / 2);
+    const instanceData = userData && userGroupedEntries.get(userData.user_id)?.[targetEntryIndex]?.entry;
 
     if (!instanceData) return "";
 
@@ -359,13 +364,14 @@ function getNewOption() {
         joinTime: dayjs(instanceData.joinTime).format(format),
         leaveTime: dayjs(instanceData.leaveTime).format(format),
         duration: timeToText(instanceData.time, true),
-      })
+      }),
+      undefined
     );
   };
 
   const format = dtHour12.value ? "hh:mm A" : "HH:mm";
 
-  const echartsOption = {
+  const echartsOption: EChartsOption = {
     tooltip: {
       trigger: "item",
       axisPointer: {
@@ -383,9 +389,9 @@ function getNewOption() {
       axisLabel: {
         interval: 0,
         formatter: (value) => {
-          const MAX_LENGTH = 20;
+          const maxLength = 20;
           const len = value.length;
-          return `${friendOrFavIcon(value)} ${len > MAX_LENGTH ? `${value.substring(0, MAX_LENGTH)}...` : value}`;
+          return `${friendOrFavIcon(value)} ${len > maxLength ? `${value.substring(0, maxLength)}...` : value}`;
         },
       },
       inverse: true,
@@ -395,10 +401,11 @@ function getNewOption() {
     xAxis: {
       type: "value",
       min: 0,
-      max: endTimeStamp.value - startTimeStamp.value,
+      max: endTimestamp - startTimestamp,
       axisLine: { show: true },
       axisLabel: {
-        formatter: (value) => dayjs(value + startTimeStamp.value).format(format),
+        formatter: (value: number | string) =>
+          dayjs(typeof value === "string" ? value + String(startTimeStamp.value) : value + Number(startTimeStamp.value)).format(format),
       },
       splitLine: { lineStyle: { type: "dashed" } },
     },

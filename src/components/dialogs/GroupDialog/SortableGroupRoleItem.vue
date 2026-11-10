@@ -1,18 +1,21 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import { GripVertical } from "lucide-vue-next";
 import { useSortable } from "@dnd-kit/vue/sortable";
 
-const props = defineProps({
-  id: { type: String, required: true },
-  index: { type: Number, required: true },
-  group: { type: String, default: undefined },
-  draggable: { type: Boolean, default: true },
-  disabled: { type: Boolean, default: false },
-});
+const props = withDefaults(
+  defineProps<{
+    id: string;
+    index: number;
+    group?: string | undefined;
+    draggable?: boolean;
+    disabled?: boolean;
+  }>(),
+  { group: undefined, draggable: true, disabled: false }
+);
 
-const element = ref(null);
-const handle = ref(null);
+const element = ref<HTMLDivElement | null>(null);
+const handle = ref<HTMLDivElement | null>(null);
 
 const { isDragSource } = useSortable({
   id: computed(() => props.id),

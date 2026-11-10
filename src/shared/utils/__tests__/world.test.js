@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from "vitest";
 import { isRpcWorld } from "../world";
 
 vi.mock("../../../views/Feed/Feed.vue", () => ({

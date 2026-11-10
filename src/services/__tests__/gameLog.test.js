@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { LogWatcherService } from "../gameLog.js";
 
 const svc = new LogWatcherService();

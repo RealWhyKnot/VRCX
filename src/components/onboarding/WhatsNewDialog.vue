@@ -25,7 +25,7 @@
         <div
           v-for="(feature, index) in whatsNewDialog.items"
           :key="feature.key"
-          class="flex h-full animate-[featureAppear_0.4s_ease-out_both] cursor-default flex-col items-center rounded-[10px] border border-transparent bg-muted/50 px-2 py-3.5 pb-3 text-center transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-muted/80 hover:shadow-[0_4px_16px_hsl(from_var(--primary)_h_s_l/0.08)]"
+          class="flex h-full animate-[feature-appear_0.4s_ease-out_both] cursor-default flex-col items-center rounded-[10px] border border-transparent bg-muted/50 px-2 py-3.5 pb-3 text-center transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-muted/80 hover:shadow-[0_4px_16px_hsl(from_var(--primary)_h_s_l/0.08)]"
           :style="{ animationDelay: `${0.1 + index * 0.1}s` }"
         >
           <div
@@ -151,7 +151,7 @@ function handleDismiss() {
 </script>
 
 <style>
-@keyframes featureAppear {
+@keyframes feature-appear {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.95);

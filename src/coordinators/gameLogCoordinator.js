@@ -165,7 +165,7 @@ export async function addGameLogEntry(gameLog, location) {
         instanceStore.applyGroupDialogInstances();
       }
       break;
-    case "location":
+    case "location": {
       instanceStore.addInstanceJoinHistory(locationStore.lastLocation.location, gameLog.dt);
       const worldName = replaceBioSymbols(gameLog.worldName);
       if (gameStore.isGameRunning) {
@@ -195,7 +195,8 @@ export async function addGameLogEntry(gameLog, location) {
       });
       persistedEntryPromise = gameLogStore.addGamelogLocationToDatabase(entry);
       break;
-    case "player-joined":
+    }
+    case "player-joined": {
       const joinTime = Date.parse(gameLog.dt);
       const userMap = {
         displayName: gameLog.displayName,
@@ -228,7 +229,8 @@ export async function addGameLogEntry(gameLog, location) {
       entry = createJoinLeaveEntry("OnPlayerJoined", gameLog.dt, gameLog.displayName, location, userId);
       persistedEntryPromise = database.addGamelogJoinLeaveToDatabase(entry);
       break;
-    case "player-left":
+    }
+    case "player-left": {
       const ref1 = locationStore.lastLocation.playerList.get(userId);
       if (typeof ref1 === "undefined") {
         break;
@@ -244,6 +246,7 @@ export async function addGameLogEntry(gameLog, location) {
       entry = createJoinLeaveEntry("OnPlayerLeft", gameLog.dt, gameLog.displayName, location, userId, time);
       persistedEntryPromise = database.addGamelogJoinLeaveToDatabase(entry);
       break;
+    }
     case "portal-spawn":
       if (vrcxStore.ipcEnabled && gameStore.isGameRunning) {
         break;
@@ -265,12 +268,13 @@ export async function addGameLogEntry(gameLog, location) {
       gameLogStore.setLastVideoUrl(gameLog.videoUrl);
       await gameLogStore.addGameLogVideo(gameLog, location, userId);
       break;
-    case "video-sync":
+    case "video-sync": {
       const timestamp = gameLog.timestamp.replace(/,/g, "");
       if (gameLogStore.nowPlaying.playing) {
         gameLogStore.nowPlaying.offset = parseInt(timestamp, 10);
       }
       break;
+    }
     case "resource-load-string":
     case "resource-load-image":
       if (!generalSettingsStore.logResourceLoad || gameLogStore.lastResourceloadUrl === gameLog.resourceUrl) {
@@ -298,7 +302,7 @@ export async function addGameLogEntry(gameLog, location) {
         }
       }
       break;
-    case "avatar-change":
+    case "avatar-change": {
       if (!gameStore.isGameRunning) {
         break;
       }
@@ -321,7 +325,8 @@ export async function addGameLogEntry(gameLog, location) {
         displayName: gameLog.displayName,
       };
       break;
-    case "vrcx":
+    }
+    case "vrcx": {
       const type = gameLog.data.substr(0, gameLog.data.indexOf(" "));
       if (type === "VideoPlay(VRDancing)") {
         await gameLogStore.addGameLogVRDancing(gameLog, location);
@@ -331,7 +336,8 @@ export async function addGameLogEntry(gameLog, location) {
         await gameLogStore.addGameLogPopcornPalace(gameLog, location);
       }
       break;
-    case "photon-id":
+    }
+    case "photon-id": {
       if (!gameStore.isGameRunning || !watchState.isFriendsLoaded) {
         break;
       }
@@ -351,6 +357,7 @@ export async function addGameLogEntry(gameLog, location) {
         instanceStore.getCurrentInstanceUserList();
       }
       break;
+    }
     case "notification":
       break;
     case "event":

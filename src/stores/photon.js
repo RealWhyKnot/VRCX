@@ -692,7 +692,7 @@ export const usePhotonStore = defineStore("Photon", () => {
           platform: user42.platform,
         });
         break;
-      case 255:
+      case 255: {
         const id255 = safeParseInt(data.Parameters[254]);
         if (id255 === null) break;
         if (typeof data.Parameters[249] !== "undefined") {
@@ -737,6 +737,7 @@ export const usePhotonStore = defineStore("Photon", () => {
         }
         startLobbyWatcherLoop();
         break;
+      }
       case 254:
         photonId = data.Parameters[254];
         photonUserLeave(photonId, gameLogDate);
@@ -843,7 +844,7 @@ export const usePhotonStore = defineStore("Photon", () => {
           });
         }
         break;
-      case 43:
+      case 43: {
         photonId = data.Parameters[254];
         var text = data.Parameters[245];
         if (photonLobbyCurrentUser.value === photonId) {
@@ -874,6 +875,7 @@ export const usePhotonStore = defineStore("Photon", () => {
         notificationStore.queueGameLogNoty(entry);
         gameLogStore.addGameLog(entry);
         break;
+      }
       case 70:
         if (data.Parameters[245][0] === 20) {
           const portalId = data.Parameters[245][1];
@@ -935,7 +937,7 @@ export const usePhotonStore = defineStore("Photon", () => {
           });
         }
         break;
-      case 71:
+      case 71: {
         photonId = data.Parameters[254];
         if (photonId === photonLobbyCurrentUser.value) {
           return;
@@ -960,6 +962,7 @@ export const usePhotonStore = defineStore("Photon", () => {
           fileId,
         });
         break;
+      }
     }
   }
 

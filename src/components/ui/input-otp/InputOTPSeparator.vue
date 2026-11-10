@@ -1,10 +1,9 @@
-<script setup>
+<script setup lang="ts">
+import type { HTMLAttributes } from "vue";
 import { MinusIcon } from "lucide-vue-next";
 import { useForwardProps } from "reka-ui";
 
-const props = defineProps({
-  class: { type: null, required: false },
-});
+const props = defineProps<{ class?: HTMLAttributes extends { class?: infer Value } ? Value : never }>();
 
 const forwarded = useForwardProps(props);
 </script>

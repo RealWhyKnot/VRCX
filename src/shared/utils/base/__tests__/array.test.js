@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { removeFromArray, arraysMatch, moveArrayItem, replaceReactiveObject } from "../array";
 
 describe("Array Utils", () => {

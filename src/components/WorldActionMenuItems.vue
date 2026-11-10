@@ -24,7 +24,7 @@
   <slot name="append" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { ExternalLink, Flag, LineChart, MessageSquare, Share2 } from "lucide-vue-next";
@@ -34,38 +34,34 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  variant: {
-    type: String,
-    default: "context",
-  },
-  canOpenInstanceInGame: {
-    type: Boolean,
-    default: false,
-  },
-  showViewDetails: {
-    type: Boolean,
-    default: true,
-  },
-  showShare: {
-    type: Boolean,
-    default: false,
-  },
-  showNewInstance: {
-    type: Boolean,
-    default: true,
-  },
-  showSelfInvite: {
-    type: Boolean,
-    default: true,
-  },
-  showPreviousInstances: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    variant?: string;
+    canOpenInstanceInGame?: boolean;
+    showViewDetails?: boolean;
+    showShare?: boolean;
+    showNewInstance?: boolean;
+    showSelfInvite?: boolean;
+    showPreviousInstances?: boolean;
+  }>(),
+  {
+    variant: "context",
+    canOpenInstanceInGame: false,
+    showViewDetails: true,
+    showShare: false,
+    showNewInstance: true,
+    showSelfInvite: true,
+    showPreviousInstances: false,
+  }
+);
 
-defineEmits(["view-details", "share", "new-instance", "self-invite", "show-previous-instances"]);
+defineEmits<{
+  "view-details": [];
+  share: [];
+  "new-instance": [];
+  "self-invite": [];
+  "show-previous-instances": [];
+}>();
 
 const selfInviteLabel = computed(() =>
   props.canOpenInstanceInGame ? t("dialog.world.actions.new_instance_and_open_ingame") : t("dialog.world.actions.new_instance_and_self_invite")

@@ -2,18 +2,23 @@ import { reactive, ref } from "vue";
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("vue-sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-  createI18n: () => ({
-    global: { t: (key) => key, locale: require("vue").ref("en") },
-    install: vi.fn(),
-  }),
-}));
-vi.mock("../../../../plugins/router", () => {
-  const { ref: vRef } = require("vue");
+vi.mock("vue-i18n", async () => {
+  const vue = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key) => key,
+      locale: vue.ref("en"),
+    }),
+    createI18n: () => ({
+      global: { t: (key) => key, locale: vue.ref("en") },
+      install: vi.fn(),
+    }),
+  };
+});
+vi.mock("../../../../plugins/router", async () => {
+  const vue = await import("vue");
+
+  const { ref: vRef } = vue;
   return {
     router: {
       beforeEach: vi.fn(),
@@ -26,8 +31,10 @@ vi.mock("../../../../plugins/router", () => {
   };
 });
 vi.mock("vue-router", async (importOriginal) => {
+  const vue = await import("vue");
+
   const actual = await importOriginal();
-  const { ref: vRef } = require("vue");
+  const { ref: vRef } = vue;
   return {
     ...actual,
     useRouter: vi.fn(() => ({

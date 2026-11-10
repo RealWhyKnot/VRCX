@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from "vitest";
 import { hasGroupModerationPermission, hasGroupPermission, mergeGroupMemberSearchResults } from "../group";
 
 vi.mock("../../../views/Feed/Feed.vue", () => ({

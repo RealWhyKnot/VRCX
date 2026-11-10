@@ -1266,7 +1266,7 @@ export const useNotificationStore = defineStore("Notification", () => {
       case "user":
         showUserDialog(data[1]);
         break;
-      case "event":
+      case "event": {
         const ids = data[1].split(",");
         if (ids.length < 2) {
           console.error("Invalid event notification link:", data[1]);
@@ -1276,6 +1276,7 @@ export const useNotificationStore = defineStore("Notification", () => {
         showGroupDialog(ids[0]);
 
         break;
+      }
       case "openNotificationLink":
       case "OpenSafetyCenter":
       default:

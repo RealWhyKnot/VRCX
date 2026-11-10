@@ -10,8 +10,10 @@ vi.mock("../../../../api", () => ({
   },
   userRequest: {},
 }));
-vi.mock("../../../../plugins/router", () => {
-  const { ref } = require("vue");
+vi.mock("../../../../plugins/router", async () => {
+  const vue = await import("vue");
+
+  const { ref } = vue;
   return {
     router: {
       beforeEach: vi.fn(),
@@ -24,8 +26,10 @@ vi.mock("../../../../plugins/router", () => {
   };
 });
 vi.mock("vue-router", async (importOriginal) => {
+  const vue = await import("vue");
+
   const actual = await importOriginal();
-  const { ref } = require("vue");
+  const { ref } = vue;
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -78,16 +82,19 @@ vi.mock("../../../../services/request", () => ({
   $throw: vi.fn(),
   failedGetRequests: new Map(),
 }));
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-  createI18n: () => ({
-    global: { t: (key) => key, locale: require("vue").ref("en") },
-    install: vi.fn(),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const vue = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key) => key,
+      locale: vue.ref("en"),
+    }),
+    createI18n: () => ({
+      global: { t: (key) => key, locale: vue.ref("en") },
+      install: vi.fn(),
+    }),
+  };
+});
 vi.mock("worker-timers", () => ({
   setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
   clearTimeout: (id) => globalThis.clearTimeout(id),
@@ -484,7 +491,7 @@ describe("useGroupMembers", () => {
 
   describe("setGroupMemberFilter", () => {
     test("does not reload when filter unchanged", async () => {
-      const { markRaw } = require("vue");
+      const { markRaw } = await import("vue");
       const filter = markRaw(FILTER_EVERYONE);
       const groupDialog = createGroupDialog();
 

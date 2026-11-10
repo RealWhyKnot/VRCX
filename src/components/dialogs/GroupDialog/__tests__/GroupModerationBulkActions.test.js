@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-  createI18n: () => ({
-    global: { t: (key) => key, locale: require("vue").ref("en") },
-    install: vi.fn(),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const vue = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key) => key,
+      locale: vue.ref("en"),
+    }),
+    createI18n: () => ({
+      global: { t: (key) => key, locale: vue.ref("en") },
+      install: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("../../../../shared/utils", () => ({
   hasGroupPermission: vi.fn((_group, permission) => {

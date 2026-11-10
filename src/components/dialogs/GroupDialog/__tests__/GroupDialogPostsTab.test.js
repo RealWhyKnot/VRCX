@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
 
-vi.mock("vue-i18n", () => {
-  const { ref } = require("vue");
+vi.mock("vue-i18n", async () => {
+  const vue = await import("vue");
+
+  const { ref } = vue;
   return {
     useI18n: () => ({
       t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
@@ -16,8 +18,10 @@ vi.mock("vue-i18n", () => {
   };
 });
 
-vi.mock("../../../../plugins/router", () => {
-  const { ref } = require("vue");
+vi.mock("../../../../plugins/router", async () => {
+  const vue = await import("vue");
+
+  const { ref } = vue;
   return {
     router: {
       beforeEach: vi.fn(),
@@ -30,8 +34,10 @@ vi.mock("../../../../plugins/router", () => {
   };
 });
 vi.mock("vue-router", async (importOriginal) => {
+  const vue = await import("vue");
+
   const actual = await importOriginal();
-  const { ref } = require("vue");
+  const { ref } = vue;
   return {
     ...actual,
     useRouter: vi.fn(() => ({

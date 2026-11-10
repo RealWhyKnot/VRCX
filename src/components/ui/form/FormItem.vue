@@ -1,13 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils";
 import { provide } from "vue";
 import { useId } from "reka-ui";
 
 import { FORM_ITEM_INJECTION_KEY } from "./injectionKeys";
 
-const props = defineProps({
-  class: { type: null, required: false },
-});
+const props = defineProps<{ class?: unknown }>();
 
 const id = useId();
 provide(FORM_ITEM_INJECTION_KEY, id);

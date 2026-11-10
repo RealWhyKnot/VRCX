@@ -1,11 +1,14 @@
-<script setup>
+<script setup lang="ts">
+import type { DropdownMenuSubProps } from "reka-ui";
+import type { DropdownMenuSubEmits } from "reka-ui";
+
 import { DropdownMenuSub, useForwardPropsEmits } from "reka-ui";
 
-const props = defineProps({
-  defaultOpen: { type: Boolean, required: false },
-  open: { type: Boolean, required: false },
-});
-const emits = defineEmits(["update:open"]);
+const props = defineProps<{
+  defaultOpen?: DropdownMenuSubProps["defaultOpen"];
+  open?: DropdownMenuSubProps["open"];
+}>();
+const emits = defineEmits<Pick<DropdownMenuSubEmits, "update:open">>();
 
 const forwarded = useForwardPropsEmits(props, emits);
 </script>

@@ -1,6 +1,6 @@
-const fs = require("fs");
-const path = require("path");
-const { getArchAndPlatform } = require("./utils");
+import fs from "node:fs";
+import path from "node:path";
+import { getArchAndPlatform } from "./utils.js";
 
 function patchFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -47,7 +47,7 @@ function patchNodeApiDotNet(arch, platform) {
     platformName += "-arm64";
   }
 
-  const postBuildPath = path.join(__dirname, `./../build/${platformName}-unpacked/resources/app.asar.unpacked/node_modules/node-api-dotnet/init.js`);
+  const postBuildPath = path.join(import.meta.dirname, `./../build/${platformName}-unpacked/resources/app.asar.unpacked/node_modules/node-api-dotnet/init.js`);
   console.log("Patching post-build init.js...");
   patchFile(postBuildPath);
 }

@@ -1,15 +1,15 @@
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-const rootDir = path.join(__dirname, "..");
+const rootDir = path.join(import.meta.dirname, "..");
 const frontendLicensePath = path.join(rootDir, "build", "html", ".vite", "license.md");
 const outputDir = path.join(rootDir, "build", "html", "licenses");
 const outputManifestPath = path.join(outputDir, "third-party-licenses.json");
 const outputNoticePath = path.join(outputDir, "THIRD_PARTY_NOTICES.txt");
 const dotnetDir = path.join(rootDir, "Dotnet");
-const nugetCacheDir = process.env.NUGET_PACKAGES || path.join(os.homedir(), ".nuget", "packages");
-const overridesPath = path.join(__dirname, "licenses", "nuget-overrides.json");
+const nugetCacheDir = process.env["NUGET_PACKAGES"] || path.join(os.homedir(), ".nuget", "packages");
+const overridesPath = path.join(import.meta.dirname, "licenses", "nuget-overrides.json");
 
 const nugetOverrides = JSON.parse(fs.readFileSync(overridesPath, "utf8"));
 

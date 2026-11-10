@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { sanitizeUserJson, computeTrustLevel, computeUserPlatform, diffObjectProps, createDefaultUserRef } from "../userTransforms";
 
 describe("sanitizeUserJson", () => {

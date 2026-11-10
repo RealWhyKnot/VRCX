@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+
 import { i18n } from "./src/plugins/i18n";
 
 import en from "./src/localization/en.json";
@@ -13,15 +15,15 @@ globalThis.Discord = new Proxy({}, { get: () => noopAsync });
 globalThis.AssetBundleManager = new Proxy({}, { get: () => noopAsync });
 
 globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
 };
 
 globalThis.speechSynthesis = {
   getVoices: () => [],
-  cancel: () => {},
-  speak: () => {},
+  cancel: vi.fn(),
+  speak: vi.fn(),
 };
 
 Object.defineProperty(window, "matchMedia", {
@@ -55,8 +57,9 @@ if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localSto
 globalThis.Notification = class {
   static permission = "denied";
   static requestPermission = vi.fn().mockResolvedValue("denied");
-  constructor() {}
-  close() {}
+  close() {
+    return undefined;
+  }
 };
 
 vi.mock("worker-timers", () => ({

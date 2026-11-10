@@ -1,12 +1,19 @@
-<script setup>
+<script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false, default: "a" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    asChild?: PrimitiveProps["asChild"];
+    as?: PrimitiveProps["as"];
+    class?: unknown;
+  }>(),
+  {
+    as: "a",
+  }
+);
 </script>
 
 <template>

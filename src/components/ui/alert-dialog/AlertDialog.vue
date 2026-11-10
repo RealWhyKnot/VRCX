@@ -1,13 +1,10 @@
-<script setup>
+<script setup lang="ts">
 import { AlertDialogRoot, useForwardPropsEmits } from "reka-ui";
 
 import AlertDialogStateProvider from "./AlertDialogStateProvider.vue";
 
-const props = defineProps({
-  open: { type: Boolean, required: false },
-  defaultOpen: { type: Boolean, required: false },
-});
-const emits = defineEmits(["update:open"]);
+const props = defineProps<{ open?: boolean; defaultOpen?: boolean }>();
+const emits = defineEmits<{ "update:open": [value: boolean] }>();
 
 const forwarded = useForwardPropsEmits(props, emits);
 </script>

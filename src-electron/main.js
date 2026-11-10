@@ -8,17 +8,17 @@ const os = require("os");
 function dotnetSetup() {
   const bundledDotNetPath = path.join(process.resourcesPath, "dotnet-runtime");
   if (fs.existsSync(bundledDotNetPath)) {
-    process.env.DOTNET_ROOT = bundledDotNetPath;
-    process.env.PATH = `${bundledDotNetPath}${path.delimiter}${process.env.PATH}`;
+    process.env["DOTNET_ROOT"] = bundledDotNetPath;
+    process.env["PATH"] = `${bundledDotNetPath}${path.delimiter}${process.env["PATH"]}`;
   } else if (process.platform === "darwin") {
     const dotnetPath = path.join("/usr/local/share/dotnet");
     const dotnetPathArm = path.join("/usr/local/share/dotnet/x64");
     if (fs.existsSync(dotnetPathArm)) {
-      process.env.DOTNET_ROOT = dotnetPathArm;
-      process.env.PATH = `${dotnetPathArm}${path.delimiter}${process.env.PATH}`;
+      process.env["DOTNET_ROOT"] = dotnetPathArm;
+      process.env["PATH"] = `${dotnetPathArm}${path.delimiter}${process.env["PATH"]}`;
     } else if (fs.existsSync(dotnetPath)) {
-      process.env.DOTNET_ROOT = dotnetPath;
-      process.env.PATH = `${dotnetPath}${path.delimiter}${process.env.PATH}`;
+      process.env["DOTNET_ROOT"] = dotnetPath;
+      process.env["PATH"] = `${dotnetPath}${path.delimiter}${process.env["PATH"]}`;
     }
   }
 
@@ -42,7 +42,7 @@ let trayIcon = null;
 
 let trayIconNotify = null;
 
-let appImagePath = process.env.APPIMAGE;
+let appImagePath = process.env["APPIMAGE"];
 const args = process.argv.slice(1);
 const noInstall = args.includes("--no-install");
 const noDesktop = args.includes("--no-desktop");
@@ -619,26 +619,26 @@ function getElectronUserDataPath() {
     return path.join(getVRCXPath(), electronUserData);
   }
   if (process.platform === "darwin") {
-    return path.join(process.env.HOME, "Library/Caches/VRCX", electronUserData);
+    return path.join(process.env["HOME"], "Library/Caches/VRCX", electronUserData);
   }
 
-  let cacheHome = process.env.XDG_CACHE_HOME;
+  let cacheHome = process.env["XDG_CACHE_HOME"];
   if (!cacheHome) {
-    cacheHome = path.join(process.env.HOME, ".cache");
+    cacheHome = path.join(process.env["HOME"], ".cache");
   }
   return path.join(cacheHome, "VRCX", electronUserData);
 }
 
 function getVRCXPath() {
   if (process.platform === "win32") {
-    return path.join(process.env.APPDATA, "VRCX");
+    return path.join(process.env["APPDATA"], "VRCX");
   } else if (process.platform === "darwin") {
-    return path.join(process.env.HOME, "Library/Application Support/VRCX");
+    return path.join(process.env["HOME"], "Library/Application Support/VRCX");
   }
 
-  let configHome = process.env.XDG_CONFIG_HOME;
+  let configHome = process.env["XDG_CONFIG_HOME"];
   if (!configHome) {
-    configHome = path.join(process.env.HOME, ".config");
+    configHome = path.join(process.env["HOME"], ".config");
   }
   return path.join(configHome, "VRCX");
 }
@@ -660,7 +660,7 @@ function getVersion() {
 
     const version = versionFile.split("-");
     console.log("Version:", versionFile);
-    if (version.length > 0 && version[version.length - 1].length == 7) {
+    if (version.length > 0 && version[version.length - 1].length === 7) {
       return `VRCX (Linux) Nightly ${versionFile}`;
     } else {
       return `VRCX (Linux) ${versionFile}`;
@@ -674,9 +674,9 @@ function getVersion() {
 function isDotNetInstalled() {
   let dotnetPath;
 
-  if (process.env.DOTNET_ROOT) {
+  if (process.env["DOTNET_ROOT"]) {
     const dotnetExe = process.platform === "win32" ? "dotnet.exe" : "dotnet";
-    dotnetPath = path.join(process.env.DOTNET_ROOT, dotnetExe);
+    dotnetPath = path.join(process.env["DOTNET_ROOT"], dotnetExe);
     if (!fs.existsSync(dotnetPath)) {
       dotnetPath = "dotnet";
     }
@@ -688,6 +688,7 @@ function isDotNetInstalled() {
 
   const result = spawnSync(dotnetPath, ["--list-runtimes"], {
     encoding: "utf-8",
+    windowsHide: true,
   });
   if (result.error) {
     console.error("Error checking .NET runtimes:", result.error);
@@ -699,7 +700,7 @@ function isDotNetInstalled() {
 function tryCopyFromWinePrefix() {
   try {
     if (!fs.existsSync(getVRCXPath())) {
-      const userName = process.env.USER || process.env.USERNAME;
+      const userName = process.env["USER"] || process.env["USERNAME"];
       const oldPath = path.join(homePath, ".local/share/vrcx/drive_c/users", userName, "AppData/Roaming/VRCX");
       const newPath = getVRCXPath();
       if (fs.existsSync(oldPath)) {

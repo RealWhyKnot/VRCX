@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { cn } from "@/lib/utils";
 
 import { useCarousel } from "./useCarousel";
@@ -7,9 +7,7 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  class: { type: null, required: false },
-});
+const props = defineProps<{ class?: unknown }>();
 
 const { carouselRef, orientation } = useCarousel();
 </script>

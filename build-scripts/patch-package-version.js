@@ -1,7 +1,7 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
-const rootDir = path.join(__dirname, "..");
+const rootDir = path.join(import.meta.dirname, "..");
 const versionFilePath = path.resolve(rootDir, "Version");
 const packageJsonPath = path.resolve(rootDir, "package.json");
 
@@ -14,7 +14,7 @@ try {
     version = version.substring(0, index).replaceAll("-", ".");
   }
   if (!version || version === "Nightly Build") {
-    version = new Date().toISOString().split("T")[0].replaceAll("-", ".");
+    version = new Date().toISOString().slice(0, 10).replaceAll("-", ".");
   }
 } catch (err) {
   console.error("Error reading Version file:", err);

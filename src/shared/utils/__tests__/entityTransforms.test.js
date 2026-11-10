@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { sanitizeEntityJson, createDefaultFavoriteGroupRef, createDefaultFavoriteCachedRef } from "../entityTransforms";
 
 describe("sanitizeEntityJson", () => {

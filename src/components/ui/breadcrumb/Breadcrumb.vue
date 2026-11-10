@@ -1,7 +1,7 @@
-<script setup>
-const props = defineProps({
-  class: { type: null, required: false },
-});
+<script setup lang="ts">
+import type { HTMLAttributes } from "vue";
+
+const props = defineProps<{ class?: HTMLAttributes extends { class?: infer Value } ? Value : never }>();
 </script>
 
 <template>

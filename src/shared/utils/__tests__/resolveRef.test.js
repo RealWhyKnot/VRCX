@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { resolveRef } from "../resolveRef";
 
 describe("resolveRef", () => {

@@ -1,10 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: { type: null, required: false },
-});
+const props = defineProps<{ class?: unknown }>();
 </script>
 
 <template>

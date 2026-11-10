@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from "vitest";
 import { findUserByDisplayName } from "../user";
 
 vi.mock("../../../views/Feed/Feed.vue", () => ({

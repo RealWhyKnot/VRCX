@@ -2,22 +2,27 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { flushPromises, shallowMount } from "@vue/test-utils";
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => {
-    const { ref } = require("vue");
-    return {
-      t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
-      locale: ref("en"),
-    };
-  },
-  createI18n: () => ({
-    global: { t: (key) => key },
-    install: vi.fn(),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const vue = await import("vue");
+  return {
+    useI18n: () => {
+      const { ref } = vue;
+      return {
+        t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+        locale: ref("en"),
+      };
+    },
+    createI18n: () => ({
+      global: { t: (key) => key },
+      install: vi.fn(),
+    }),
+  };
+});
 
-vi.mock("../../../../plugins/router", () => {
-  const { ref } = require("vue");
+vi.mock("../../../../plugins/router", async () => {
+  const vue = await import("vue");
+
+  const { ref } = vue;
   return {
     router: {
       beforeEach: vi.fn(),
@@ -31,8 +36,10 @@ vi.mock("../../../../plugins/router", () => {
 });
 
 vi.mock("vue-router", async (importOriginal) => {
+  const vue = await import("vue");
+
   const actual = await importOriginal();
-  const { ref } = require("vue");
+  const { ref } = vue;
   return {
     ...actual,
     useRouter: vi.fn(() => ({

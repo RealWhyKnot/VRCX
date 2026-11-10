@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import security, { hexToUint8Array, stdAESKey, uint8ArrayToHex } from "../security.js";
 
 describe("hexToUint8Array", () => {

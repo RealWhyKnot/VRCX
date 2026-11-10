@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { changeLogRemoveLinks, commaNumber, escapeTag, escapeTagRecursive, localeIncludes, replaceBioSymbols, textToHex } from "../string";
 
 describe("String Utils", () => {

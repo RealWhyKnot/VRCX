@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
+shopt -s inherit_errexit
 source /etc/os-release 2>/dev/null || {
   echo "This script requires /etc/os-release to detect the operating system." >&2
   exit 1
@@ -17,7 +18,8 @@ case "${ID:-}" in
     echo "Installing Ubuntu dependencies"
     cd ~/
     sudo apt-get install dotnet-sdk-10.0 7zip
-    wget -q --show-progress https://github.com/PowerShell/PowerShell/releases/download/v7.6.4/powershell_7.6.4-1.deb_amd64.deb
+    wget -q --show-progress \
+      https://github.com/PowerShell/PowerShell/releases/download/v7.6.4/powershell_7.6.4-1.deb_amd64.deb
     sudo dpkg -i powershell_7.6.4-1.deb_amd64.deb
     sudo apt-get install -f
     rm powershell_7.6.4-1.deb_amd64.deb

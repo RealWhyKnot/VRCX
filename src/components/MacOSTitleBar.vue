@@ -10,7 +10,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted } from "vue";
 
 const isMacOS = computed(() => {

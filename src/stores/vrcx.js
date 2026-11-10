@@ -240,7 +240,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           }
         });
         break;
-      case "Noty":
+      case "Noty": {
         if (photonStore.photonLoggingEnabled || (state.externalNotifierVersion && state.externalNotifierVersion > 21)) {
           return;
         }
@@ -255,6 +255,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           gameLogStore.addGameLog(persistedEntry);
         }
         break;
+      }
       case "External": {
         const displayName = data.DisplayName ?? "";
         const notify = data.notify ?? true;
@@ -511,7 +512,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
       case "group":
         showGroupDialog(commandArg);
         break;
-      case "local-favorite-world":
+      case "local-favorite-world": {
         console.log("local-favorite-world", commandArg);
         const [id, group] = commandArg.split(":");
         if (!id || !group) {
@@ -523,7 +524,8 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           addLocalWorldFavorite(id, group);
         });
         break;
-      case "local-favorite-avatar":
+      }
+      case "local-favorite-avatar": {
         console.log("local-favorite-avatar", commandArg);
         const [avatarIdFav, avatarGroup] = commandArg.split(":");
         if (!avatarIdFav || !avatarGroup) {
@@ -535,10 +537,11 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           addLocalAvatarFavorite(avatarIdFav, avatarGroup);
         });
         break;
+      }
       case "addavatardb":
         avatarProviderStore.addAvatarProvider(input.replace("addavatardb/", ""));
         break;
-      case "switchavatar":
+      case "switchavatar": {
         const avatarId = commandArg;
         const regexAvatarId = /avtr_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
         if (!avatarId.match(regexAvatarId) || avatarId.length !== 41) {
@@ -556,7 +559,8 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           shouldFocusWindow = false;
         }
         break;
-      case "import":
+      }
+      case "import": {
         const type = args[1];
         if (!type) break;
         const data = input.replace(`import/${type}/`, "");
@@ -571,6 +575,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
           favoriteStore.showFriendImportDialog();
         }
         break;
+      }
     }
     if (shouldFocusWindow) {
       AppApi.FocusWindow();

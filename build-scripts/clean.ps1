@@ -1,34 +1,40 @@
-Set-Location $PSScriptRoot
+#!/usr/bin/env pwsh
+[CmdletBinding()]
+param()
+
+function Clear-BuildDirectory {
+    [CmdletBinding()]
+    [OutputType([void])]
+    param (
+        [Parameter(Mandatory)][string] $Path
+    )
+
+    Get-ChildItem -LiteralPath $Path -File -Recurse | ForEach-Object {
+        Write-Host "Deleting '$($_.FullName)'"
+        Remove-Item -LiteralPath $_
+    }
+}
+
+Set-Location -LiteralPath $PSScriptRoot
 
 $BuildDir = '../build'
 $ObjDir = '../Dotnet/obj'
 $OldObjDir = '../Dotnet/obj1'
 
-function CleanDir {
-    param (
-        $Path
-    )
-
-    Get-ChildItem -Path $Path -File -Recurse | ForEach-Object {
-        Write-Host "Deleting '$($_.FullName)'"
-        Remove-Item $_
-    }
-}
-
-
-if (Test-Path $BuildDir) {
+if (Test-Path -LiteralPath $BuildDir) {
     Write-Host "Removing '$BuildDir"
-    CleanDir $BuildDir
+    Clear-BuildDirectory -Path $BuildDir
 }
 
-if (Test-Path $ObjDir) {
+if (Test-Path -LiteralPath $ObjDir) {
     Write-Host "Removing '$ObjDir"
-    CleanDir $ObjDir
+    Clear-BuildDirectory -Path $ObjDir
 }
 
-if (Test-Path $OldObjDir) {
+if (Test-Path -LiteralPath $OldObjDir) {
     Write-Host "Removing '$OldObjDir"
-    CleanDir $OldObjDir
+    Clear-BuildDirectory -Path $OldObjDir
 }
 
 Write-Host 'Done.'
+exit 0
