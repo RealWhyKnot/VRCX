@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
@@ -7,15 +7,8 @@ namespace VRCX
 {
     partial class MainForm
     {
-        /// <summary>
-        ///     필수 디자이너 변수입니다.
-        /// </summary>
         private IContainer components = null;
 
-        /// <summary>
-        ///     사용 중인 모든 리소스를 정리합니다.
-        /// </summary>
-        /// <param name="disposing">관리되는 리소스를 삭제해야 하면 true이고, 그렇지 않으면 false입니다.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -26,12 +19,7 @@ namespace VRCX
             base.Dispose(disposing);
         }
 
-        #region Windows Form 디자이너에서 생성한 코드
 
-        /// <summary>
-        ///     디자이너 지원에 필요한 메서드입니다.
-        ///     이 메서드의 내용을 코드 편집기로 수정하지 마세요.
-        /// </summary>
         private void InitializeComponent()
         {
             this.components = new Container();
@@ -46,9 +34,6 @@ namespace VRCX
 
             this.TrayMenu.SuspendLayout();
             this.SuspendLayout();
-            //
-            // TrayMenu
-            //
             this.TrayMenu.Items.Add(this.TrayMenu_Open);
             this.TrayMenu.Items.Add(this.TrayMenu_DevTools);
             if (Program.LaunchDebug)
@@ -58,49 +43,28 @@ namespace VRCX
 
             this.TrayMenu.Name = "TrayMenu";
             this.TrayMenu.Size = new Size(132, 54);
-            //
-            // TrayMenu_Open
-            //
             this.TrayMenu_Open.Name = "TrayMenu_Open";
             this.TrayMenu_Open.Size = new Size(131, 22);
             this.TrayMenu_Open.Text = "Open";
             this.TrayMenu_Open.Click += new EventHandler(this.TrayMenu_Open_Click);
-            //
-            // TrayMenu_DevTools
-            //
             this.TrayMenu_DevTools.Name = "TrayMenu_DevTools";
             this.TrayMenu_DevTools.Size = new Size(131, 22);
             this.TrayMenu_DevTools.Text = "DevTools";
             this.TrayMenu_DevTools.Click += new EventHandler(this.TrayMenu_DevTools_Click);
-            //
-            // TrayMenu_ForceCrash
-            //
             this.TrayMenu_ForceCrash.Name = "TrayMenu_ForceCrash";
             this.TrayMenu_ForceCrash.Size = new Size(131, 22);
             this.TrayMenu_ForceCrash.Text = "Force Crash";
             this.TrayMenu_ForceCrash.Click += new EventHandler(this.TrayMenu_ForceCrash_Click);
-            //
-            // TrayMenu_Separator
-            //
             this.TrayMenu_Separator.Name = "TrayMenu_Separator";
             this.TrayMenu_Separator.Size = new Size(128, 6);
-            //
-            // TrayMenu_Quit
-            //
             this.TrayMenu_Quit.Name = "TrayMenu_Quit";
             this.TrayMenu_Quit.Size = new Size(131, 22);
             this.TrayMenu_Quit.Text = "Quit VRCX";
             this.TrayMenu_Quit.Click += new EventHandler(this.TrayMenu_Quit_Click);
-            //
-            // TrayIcon
-            //
             this.TrayIcon.ContextMenuStrip = this.TrayMenu;
             this.TrayIcon.Text = "VRCX";
             this.TrayIcon.Visible = true;
             this.TrayIcon.MouseClick += new MouseEventHandler(this.TrayIcon_MouseClick);
-            //
-            // MainForm
-            //
             this.AutoScaleDimensions = new SizeF(96F, 96F);
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.ClientSize = new Size(842, 561);
@@ -117,7 +81,6 @@ namespace VRCX
             this.ResumeLayout(false);
         }
 
-        #endregion
 
         private ContextMenuStrip TrayMenu;
         private ToolStripMenuItem TrayMenu_Open;

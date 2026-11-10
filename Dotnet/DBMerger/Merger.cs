@@ -1,42 +1,49 @@
-using System;
-using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Globalization;
-using System.Linq;
 using System.Text.RegularExpressions;
 using NLog;
 
 namespace DBMerger;
 
-public partial class Merger(SQLiteConnection dbConn, string oldDBName, string newDBName, Config config)
+internal sealed partial class Merger
 {
-    // C#'s iso date string has millionths of a second but the db stores
-    // dates with only thousands of a second, so define our own format
+
     private const string JSDateTimeFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz";
 
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-    private static readonly Regex userIDRegex = UserIDRegex();
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    private static readonly Regex UserIdPattern = UserIDRegex();
 
-    // This list of table names will be slowly emptied by specific
-    // handlers until only unrecognied tables are left
-    private List<string> unMergedTables;
+    private List<string> _unMergedTables = [];
+
+    private readonly SQLiteConnection _dbConn;
+    private readonly string _oldDBName;
+    private readonly string _newDBName;
+    private readonly Config _config;
+
+    public Merger(SQLiteConnection dbConn, string oldDBName, string newDBName, Config config)
+    {
+        _dbConn = dbConn;
+        _oldDBName = oldDBName;
+        _newDBName = newDBName;
+        _config = config;
+    }
 
     public void Merge()
     {
-        logger.Info("Starting merge process...");
+        Logger.Info(CultureInfo.InvariantCulture, "Starting merge process...");
 
-        logger.Debug("Creating transaction for databases");
-        var transaction = dbConn.BeginTransaction();
+        Logger.Debug(CultureInfo.InvariantCulture, "Creating transaction for databases");
+        SQLiteTransaction transaction = _dbConn.BeginTransaction();
         try
         {
             MergeInternal();
 
-            logger.Debug("Committing changes to database");
+            Logger.Debug(CultureInfo.InvariantCulture, "Committing changes to database");
             transaction.Commit();
         }
         catch
         {
-            logger.Warn("Encoutered error! Rolling back changes to databases");
+            Logger.Warn(CultureInfo.InvariantCulture, "Encoutered error! Rolling back changes to databases");
             transaction.Rollback();
 
             throw;
@@ -46,106 +53,95 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
             transaction.Dispose();
         }
 
-        logger.Info("Optimizing database size...");
-        SqliteExtensions.ExecuteNonQuery(dbConn, "VACUUM new_db;");
-        logger.Info("Merge completed without any major issues!");
+        Logger.Info(CultureInfo.InvariantCulture, "Optimizing database size...");
+        SqliteExtensions.ExecuteNonQuery(_dbConn, "VACUUM new_db;");
+        Logger.Info(CultureInfo.InvariantCulture, "Merge completed without any major issues!");
     }
 
     private void MergeInternal()
     {
-        unMergedTables = SqliteExtensions.ReadStrings(dbConn, $"SELECT name FROM {oldDBName}.sqlite_schema WHERE type='table';");
+        _unMergedTables = SqliteExtensions.ReadStrings(_dbConn, $"SELECT name FROM {_oldDBName}.sqlite_schema WHERE type='table';");
 
-        // Holds sensitive information. Burn it with fire so no sensitive
-        // data gets leaked
-        unMergedTables.Remove("cookies");
-        // remove sqlite reserved tables
-        unMergedTables.RemoveAll(table => table.StartsWith("sqlite_"));
+        _unMergedTables.Remove("cookies");
 
-        // Get any tables in the old db that arent in the new db
-        logger.Info("Creating tables not present on new database that are present on old database...");
-        var newDBTables = SqliteExtensions.ReadStrings(dbConn, $"SELECT name FROM {newDBName}.sqlite_schema WHERE type='table';").ToHashSet();
-        for (int i = 0; i < unMergedTables.Count; i++)
+        _unMergedTables.RemoveAll(table => table.StartsWith("sqlite_", StringComparison.Ordinal));
+
+        Logger.Info(CultureInfo.InvariantCulture, "Creating tables not present on new database that are present on old database...");
+        var newDBTables = SqliteExtensions.ReadStrings(_dbConn, $"SELECT name FROM {_newDBName}.sqlite_schema WHERE type='table';").ToHashSet(StringComparer.Ordinal);
+        for (int i = 0; i < _unMergedTables.Count; i++)
         {
-            var table = unMergedTables[i];
-            if (newDBTables.Contains(table) || table == "configs")
+            string table = _unMergedTables[i];
+            if (newDBTables.Contains(table) || string.Equals(table, "configs", StringComparison.Ordinal))
             {
                 continue;
             }
-            unMergedTables.RemoveAt(i);
+            _unMergedTables.RemoveAt(i);
             i--;
 
-            // Then just tack them on
-            // Get command to create the table
-            logger.Info($"Adding table: {table}...");
-            var createQuery = SqliteExtensions.ReadScalarString(dbConn, $"SELECT sql FROM {oldDBName}.sqlite_schema WHERE type='table' AND name=@p0;", table);
+            Logger.Info(CultureInfo.InvariantCulture, $"Adding table: {table}...");
+            string createQuery = SqliteExtensions.ReadScalarString(_dbConn, $"SELECT sql FROM {_oldDBName}.sqlite_schema WHERE type='table' AND name=@p0;", table) ?? throw new InvalidDataException("Table definition is missing.");
 
-            // Insert name of new database into create table query
-            createQuery = createQuery[..13] + newDBName + "." + createQuery[13..];
-            logger.Debug($"Using command: {createQuery}");
-            SqliteExtensions.ExecuteNonQuery(dbConn, createQuery);
+            createQuery = createQuery[..13] + _newDBName + "." + createQuery[13..];
+            Logger.Debug(CultureInfo.InvariantCulture, $"Using command: {createQuery}");
+            SqliteExtensions.ExecuteNonQuery(_dbConn, createQuery);
 
-            // Then add the rows
-            logger.Debug("Addings rows to table");
-            SqliteExtensions.ExecuteNonQuery(dbConn, $"INSERT INTO {newDBName}.{table} SELECT * FROM {oldDBName}.{table};");
+            Logger.Debug(CultureInfo.InvariantCulture, "Addings rows to table");
+            SqliteExtensions.ExecuteNonQuery(_dbConn, $"INSERT INTO {_newDBName}.{table} SELECT * FROM {_oldDBName}.{table};");
         }
 
-        logger.Info("Merging memos into new database...");
+        Logger.Info(CultureInfo.InvariantCulture, "Merging memos into new database...");
         MergeMemos();
 
-        logger.Info("Merging favorites into new database...");
+        Logger.Info(CultureInfo.InvariantCulture, "Merging favorites into new database...");
         MergeFavorites();
 
-        logger.Info("Merging avatar and world cache into new database...");
+        Logger.Info(CultureInfo.InvariantCulture, "Merging avatar and world cache into new database...");
         MergeCaches();
 
-        logger.Info("Merging gamelog into new database...");
+        Logger.Info(CultureInfo.InvariantCulture, "Merging gamelog into new database...");
         MergeGamelog();
 
-        logger.Info("Merging user feed tables into new database...");
+        Logger.Info(CultureInfo.InvariantCulture, "Merging user feed tables into new database...");
         MergeUsers();
 
-        if (config.ImportConfig)
+        if (_config.ImportConfig)
         {
-            logger.Info("Importing config from old database...");
+            Logger.Info(CultureInfo.InvariantCulture, "Importing _config from old database...");
             ImportConfig();
         }
         else
         {
-            unMergedTables.Remove("configs");
+            _unMergedTables.Remove("configs");
         }
         ResetDatabaseVersion();
 
-        foreach (var table in unMergedTables)
+        foreach (string table in _unMergedTables)
         {
-            logger.Warn("Found unmerged table: " + table);
+            Logger.Warn(CultureInfo.InvariantCulture, "Found unmerged table: " + table);
         }
     }
 
     private void MergeMemos()
     {
         MergeTable(
-            table => table.EndsWith("memos"),
+            table => table.EndsWith("memos", StringComparison.Ordinal),
             [0],
             (old, existing) =>
             {
                 if (existing == null)
                 {
-                    logger.Trace("Inserting new memo");
+                    Logger.Trace(CultureInfo.InvariantCulture, "Inserting new memo");
                     return old;
                 }
 
-                logger.Trace("Replacing memo");
+                Logger.Trace(CultureInfo.InvariantCulture, "Replacing memo");
 
-                // Pick newer edited_at time
-                var oldDateTime = DateTime.Parse((string)old[1]);
-                var newDateTime = DateTime.Parse((string)existing[1]);
-                old[1] = oldDateTime > newDateTime ? oldDateTime : newDateTime;
-                old[1] = ((DateTime)old[1]).ToString(JSDateTimeFormat);
+                var oldDateTime = DateTime.Parse(ReadText(old[1]), CultureInfo.InvariantCulture);
+                var newDateTime = DateTime.Parse(ReadText(existing[1]), CultureInfo.InvariantCulture);
+                DateTime updatedDateTime = oldDateTime > newDateTime ? oldDateTime : newDateTime;
+                old[1] = updatedDateTime.ToString(JSDateTimeFormat, CultureInfo.InvariantCulture);
 
-                // Don't concatenate memos if they're the exact same or
-                // the new memo ends with the old one (suggesting import
-                // has already been run)
-                old[2] = existing[2] == old[2] || ((string)existing[2]).EndsWith((string)old[2])
+                old[2] = existing[2] == old[2] || ReadText(existing[2]).EndsWith(ReadText(old[2]), StringComparison.Ordinal)
                     ? existing[2] : old[2] + "\n" + existing[2];
 
                 return old;
@@ -156,47 +152,47 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
     private void MergeFavorites()
     {
         MergeTable(
-            table => table == "favorite_print",
+            table => string.Equals(table, "favorite_print", StringComparison.Ordinal),
             [1, 2],
             (old, existing) =>
             {
                 if (existing == null)
                 {
-                    logger.Trace("Inserting new print favorite");
+                    Logger.Trace(CultureInfo.InvariantCulture, "Inserting new print favorite");
                     old[0] = null;
                     return old;
                 }
-    
-                logger.Trace("Replacing print favorite");
-    
-                var oldDateTime = DateTime.Parse((string)old[2]);
-                var newDateTime = DateTime.Parse((string)existing[2]);
-                var updatedDateTime = oldDateTime < newDateTime ? oldDateTime : newDateTime;
+
+                Logger.Trace(CultureInfo.InvariantCulture, "Replacing print favorite");
+
+                var oldDateTime = DateTime.Parse(ReadText(old[2]), CultureInfo.InvariantCulture);
+                var newDateTime = DateTime.Parse(ReadText(existing[2]), CultureInfo.InvariantCulture);
+                DateTime updatedDateTime = oldDateTime < newDateTime ? oldDateTime : newDateTime;
                 existing[2] = updatedDateTime;
-    
+
                 return existing;
             }
         );
-    
+
         MergeTable(
-            table => table.StartsWith("favorite_") && table != "favorite_print",
+            table => table.StartsWith("favorite_", StringComparison.Ordinal) && !string.Equals(table, "favorite_print", StringComparison.Ordinal),
             [2, 3],
             (old, existing) =>
             {
                 if (existing == null)
                 {
-                    logger.Trace("Inserting new favorite");
+                    Logger.Trace(CultureInfo.InvariantCulture, "Inserting new favorite");
                     old[0] = null;
                     return old;
                 }
-    
-                logger.Trace("Replacing favorite");
-    
-                var oldDateTime = DateTime.Parse((string)old[1]);
-                var newDateTime = DateTime.Parse((string)existing[1]);
-                var updatedDateTime = oldDateTime < newDateTime ? oldDateTime : newDateTime;
+
+                Logger.Trace(CultureInfo.InvariantCulture, "Replacing favorite");
+
+                var oldDateTime = DateTime.Parse(ReadText(old[1]), CultureInfo.InvariantCulture);
+                var newDateTime = DateTime.Parse(ReadText(existing[1]), CultureInfo.InvariantCulture);
+                DateTime updatedDateTime = oldDateTime < newDateTime ? oldDateTime : newDateTime;
                 existing[1] = updatedDateTime;
-    
+
                 return existing;
             }
         );
@@ -205,22 +201,20 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
     private void MergeCaches()
     {
         MergeTable(
-            table => table.StartsWith("cache_"),
+            table => table.StartsWith("cache_", StringComparison.Ordinal),
             [0],
             (old, existing) =>
             {
                 if (existing == null)
                 {
-                    logger.Trace("Inserting new cache entry");
+                    Logger.Trace(CultureInfo.InvariantCulture, "Inserting new cache entry");
                     return old;
                 }
 
-                logger.Trace("Replacing cache entry");
+                Logger.Trace(CultureInfo.InvariantCulture, "Replacing cache entry");
 
-                // old and existing have the same pk, so pick the newer
-                // cache entry
-                var oldDateTime = DateTime.Parse((string)old[1]);
-                var newDateTime = DateTime.Parse((string)existing[1]);
+                var oldDateTime = DateTime.Parse(ReadText(old[1]), CultureInfo.InvariantCulture);
+                var newDateTime = DateTime.Parse(ReadText(existing[1]), CultureInfo.InvariantCulture);
 
                 return oldDateTime > newDateTime ? old : existing;
             }
@@ -229,397 +223,118 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
 
     private void MergeGamelog()
     {
-        // While this could be handled throw a single query, I would like to
-        // log anything determined to be a duplicate in case this doens't
-        // work
+
         MergeTable(
-            table => table.StartsWith("gamelog_") && table != "gamelog_join_leave",
-            // These tables can be merged just fine by checking the created
-            // date and first col of information because we just need to
-            // know if 2 rows are the same
+            table => table.StartsWith("gamelog_", StringComparison.Ordinal) && !string.Equals(table, "gamelog_join_leave", StringComparison.Ordinal),
+
             [1, 2],
-            // Literally just place back in what's already there
-            // created_at times should be pretty consistent, so we can trust
-            // that no duplicates will be created
+
             (old, existing) =>
             {
                 if (existing != null)
                 {
-                    logger.Trace("Determined these rows to be the same: ");
-                    logger.Trace(string.Join(", ", old));
-                    logger.Trace(string.Join(", ", existing));
+                    Logger.Trace(CultureInfo.InvariantCulture, "Determined these rows to be the same: ");
+                    Logger.Trace(CultureInfo.InvariantCulture, string.Join(", ", old));
+                    Logger.Trace(CultureInfo.InvariantCulture, string.Join(", ", existing));
                 }
                 old[0] = null;
-                // Return existing over old so we know that pk is unique
+
                 return existing ?? old;
             },
-            table => SortTable(dbConn, newDBName, table, 1)
+            table => SortTable(_dbConn, _newDBName, table, 1)
         );
 
         MergeTable(
-            table => table == "gamelog_join_leave",
+            table => string.Equals(table, "gamelog_join_leave", StringComparison.Ordinal),
             [1, 3],
             (old, existing) =>
             {
                 if (existing != null)
                 {
-                    logger.Trace("Determined these rows to be the same: ");
-                    logger.Trace(string.Join(", ", old));
-                    logger.Trace(string.Join(", ", existing));
+                    Logger.Trace(CultureInfo.InvariantCulture, "Determined these rows to be the same: ");
+                    Logger.Trace(CultureInfo.InvariantCulture, string.Join(", ", old));
+                    Logger.Trace(CultureInfo.InvariantCulture, string.Join(", ", existing));
                 }
                 old[0] = null;
                 return existing ?? old;
             },
-            table => SortTable(dbConn, newDBName, table, 1)
+            table => SortTable(_dbConn, _newDBName, table, 1)
         );
-    }
-
-    private void MergeUsers()
-    {
-        MergeTable(
-            table => userIDRegex.IsMatch(table) &&
-                     (table.EndsWith("_notifications") || table.EndsWith("_moderation")),
-            [0],
-            (old, existing) =>
-            {
-                if (existing == null)
-                {
-                    logger.Trace("Inserting new feed entry");
-                    return old;
-                }
-
-                logger.Trace("Replacing feed entry");
-
-                // old and existing have the same pk, so pick the newer
-                // cache entry
-                var oldDateTime = DateTime.Parse((string)old[1]);
-                var newDateTime = DateTime.Parse((string)existing[1]);
-
-                return oldDateTime > newDateTime ? old : existing;
-            }
-        );
-
-        MergeTable(
-            table => userIDRegex.IsMatch(table) && table.EndsWith("_avatar_history"),
-            [0],
-            (old, existing) =>
-            {
-                if (existing == null)
-                {
-                    logger.Trace("Inserting new avatar feed entry");
-                    return old;
-                }
-
-                logger.Trace("Replacing avatar feed entry");
-
-                // old and existing have the same pk, so pick the newer
-                // cache entry
-                var oldDateTime = DateTime.Parse((string)old[1]);
-                var newDateTime = DateTime.Parse((string)existing[1]);
-
-                // Make sure to combine time values if they exist
-                if (existing.Length < 3)
-                {
-                    return oldDateTime > newDateTime ? old : existing;
-                }
-                var oldAvatarTime = (old.Length >= 3 && old[2] != null) ? Convert.ToInt64(old[2]) : 0L;
-                var newAvatarTime = (existing.Length >= 3 && existing[2] != null) ? Convert.ToInt64(existing[2]) : 0L;
-
-                if (oldDateTime <= newDateTime)
-                {
-                    old.CopyTo(existing, 0);
-                }
-                existing[2] = oldAvatarTime + newAvatarTime;
-
-                logger.Trace(
-                    "Combined avatar time: {} + {} = {}",
-                    oldAvatarTime, newAvatarTime, oldAvatarTime + newAvatarTime
-                );
-
-                return existing;
-            }
-        );
-
-        var overlappingTables = new List<string>();
-        DateTime? oldestInNewTables = null;
-        DateTime? newestInOldTables = null;
-        for (int i = 0; i < unMergedTables.Count; i++)
-        {
-            // All other feed tables shouldve been merged, so just by
-            // matching user we should get all the rest of the user tables
-            string table = unMergedTables[i];
-            if (!userIDRegex.IsMatch(table))
-            {
-                continue;
-            }
-            unMergedTables.RemoveAt(i);
-            i--;
-
-            // Skip friend log current for obvious reasons
-            // Skip notes and mutual friends since they aren't time based
-            // Skip activity tables, they're only used for cache data
-            if (table.EndsWith("_friend_log_current") || table.EndsWith("_notes") ||
-                table.EndsWith("_mutual_graph_friends") || table.EndsWith("_mutual_graph_links") || table.EndsWith("_mutual_graph_meta") ||
-                table.Contains("_activity_"))
-            {
-                continue;
-            }
-
-            logger.Debug($"Merging table `{table}` into new database");
-
-            List<string> colNames = GetTableColumnNames(dbConn, oldDBName, table);
-
-            // Find min value of new db table and max value of old db table
-            var oldestInNew = SqliteExtensions.ReadScalarString(dbConn, $"SELECT MIN({colNames[1]}) FROM {newDBName}.{table};");
-            DateTime? oldestInNewDT = oldestInNew != null ? DateTime.Parse(oldestInNew) : null;
-            var newestInOld = SqliteExtensions.ReadScalarString(dbConn, $"SELECT MAX({colNames[1]}) FROM {oldDBName}.{table};");
-            DateTime? newestInOldDT = newestInOld != null ? DateTime.Parse(newestInOld) : null;
-
-            // If either tables are empty or the oldest value in the new
-            // table is still newer than the newest value in the old
-            // (the tables don't overlap in time at all)
-            if (newestInOldDT == null || oldestInNewDT == null || oldestInNewDT > newestInOldDT)
-            {
-                logger.Debug($"User tables {table} has no overlap");
-                // Then we can just combine them since there is no data
-                // overlap
-                var columnsClause = string.Join(", ", colNames.Skip(1));
-                SqliteExtensions.ExecuteNonQuery(
-                    dbConn,
-                    $"INSERT INTO {newDBName}.{table}({columnsClause})" +
-                        $"SELECT {columnsClause} FROM {oldDBName}.{table};"
-                );
-                SortTable(dbConn, newDBName, table, 1);
-            }
-            else
-            {
-                // I don't think people will actually care to choose a date
-                // for every single overlapping database
-                // Although it could easily be argued that people would want
-                // per user overlap control
-                logger.Debug($"User tables {table} has overlap");
-                if (oldestInNewTables == null || oldestInNewDT < oldestInNewTables)
-                {
-                    oldestInNewTables = oldestInNewDT;
-                }
-                if (newestInOldTables == null || newestInOldDT > newestInOldTables)
-                {
-                    newestInOldTables = newestInOldDT;
-                }
-                overlappingTables.Add(table);
-            }
-        }
-
-        if (overlappingTables.Count > 0)
-        {
-            // The datetimes should not be null here since there are
-            // overlapping tables
-            MergeUsersOverlap(overlappingTables, oldestInNewTables.Value, newestInOldTables.Value);
-        }
-    }
-
-    private void MergeUsersOverlap(List<string> tables, DateTime oldestInNew, DateTime newestInOld)
-    {
-        PrintOverlapWarning(tables, oldestInNew, newestInOld);
-
-        string userInput = null;
-        bool datetimeParsed;
-        DateTime cutoffTime;
-        do
-        {
-            if (userInput != null)
-            {
-                logger.Error("Unrecognized input: " + userInput);
-            }
-
-            userInput = Console.ReadLine();
-            datetimeParsed = DateTime.TryParseExact(
-                userInput, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out cutoffTime
-            );
-        }
-        while (userInput != "keep old" && userInput != "keep new" && !datetimeParsed);
-
-        // If user wants to keep new one then do nothing
-        if (userInput == "keep new")
-        {
-            logger.Info("Keeping new");
-            return;
-        }
-        if (userInput == "keep old")
-        {
-            logger.Info("Keeping old");
-
-            // For old we just delete all rows from new and reinsert rows
-            // from old
-            foreach (var table in tables)
-            {
-                logger.Debug($"Deleting all rows in new database's {table}");
-                SqliteExtensions.ExecuteNonQuery(dbConn, $"DELETE FROM {newDBName}.{table}");
-
-                logger.Debug($"Adding rows from old database's {table}");
-                SqliteExtensions.ExecuteNonQuery(dbConn, $"INSERT INTO {newDBName}.{table} SELECT * FROM {oldDBName}.{table};");
-
-                SortTable(dbConn, newDBName, table, 1);
-            }
-            return;
-        }
-
-        // Else we do the cutoff
-        var cutoffStr = cutoffTime.ToString(JSDateTimeFormat);
-        logger.Info("Merging at date: " + cutoffTime.ToString("yyyy-MM-dd HH:mm:ss"));
-        foreach (var table in tables)
-        {
-            // Get column names from old db in case newdb has columns
-            // old db doesn't
-            var colNames = GetTableColumnNames(dbConn, oldDBName, table);
-
-            // Cutoff data in new db thats older than cutoff
-            logger.Debug($"Deleting rows in new database's {table} older than cutoff");
-            SqliteExtensions.ExecuteNonQuery(dbConn, $"DELETE FROM {newDBName}.{table} WHERE {colNames[1]} < @p0;", cutoffStr);
-
-            // Insert old rows in to the new db
-            logger.Debug($"Adding rows from old database's {table} older than cutoff");
-            var columnsClause = string.Join(", ", colNames.Skip(1));
-            SqliteExtensions.ExecuteNonQuery(
-                dbConn,
-                $"INSERT INTO {newDBName}.{table}({columnsClause})" +
-                    $"SELECT {columnsClause} FROM {oldDBName}.{table} " +
-                        $"WHERE {colNames[1]} < @p0;",
-                cutoffStr
-            );
-
-            SortTable(dbConn, newDBName, table, 1);
-        }
-    }
-
-    private void PrintOverlapWarning(List<string> tables, DateTime oldestInNew, DateTime newestInOld)
-    {
-        var overlap = newestInOld - oldestInNew;
-        var overlapString = $"{overlap.Days} days, {overlap.Hours} hours";
-
-        logger.Warn(new string('=', 100));
-        logger.Warn("WARNING:".PadLeft(46));
-        logger.Warn("The merger has is unable to automatically merge the following USER FEED tables:");
-        foreach (var table in tables)
-        {
-            logger.Warn(table);
-        }
-        logger.Warn("");
-        logger.Warn("This is because these USER FEED tables contain overlap that can't be resolved:");
-        logger.Warn("old database".PadRight(64, '-') + "|");
-        logger.Warn(("|" + " new database".PadLeft(64, '-')).PadLeft(100));
-        logger.Warn($"overlap ({overlapString})".PadRight(35) + "|" + new string('-', 28) + "|");
-        logger.Warn("cutoff (^)".PadLeft(49));
-        logger.Warn("");
-        logger.Warn("Please choose a cutoff date and time. Data in the old USER FEED tables after this date");
-        logger.Warn("will be discarded, and data in the new USER FEED tables before this date will be discarded as well.");
-        logger.Warn("The remaining data will then be spliced together.");
-        logger.Warn("Your input should be in this format: `YYYY-MM-DD HH:MM:SS`");
-        logger.Warn("");
-        logger.Warn("Alternatively, you can enter `keep new` to discard the old data or `keep old` to discard new data.");
-        logger.Warn("");
-        logger.Warn("Again, this only affects USER FEED tables, all other tables are merged properly.");
-        logger.Warn("To read more about this process please check the VRCX wiki: <woops>");
-        logger.Warn(new string('=', 100));
     }
 
     private void ImportConfig()
     {
-        unMergedTables.Remove("configs");
+        _unMergedTables.Remove("configs");
 
-        // Skip saved credentials to avoid accidentally exposing sensitive
-        // information somehow
         SqliteExtensions.ExecuteNonQuery(
-            dbConn,
-            $"INSERT OR REPLACE INTO {newDBName}.configs " +
-                $"SELECT * FROM {oldDBName}.configs " +
-                    $"WHERE key!=@p0;",
-            "config:savedcredentials"
+            _dbConn,
+            $"INSERT OR REPLACE INTO {_newDBName}.configs " +
+                $"SELECT * FROM {_oldDBName}.configs " +
+                    "WHERE key!=@p0;",
+            "_config:savedcredentials"
         );
     }
 
     private void ResetDatabaseVersion()
     {
-        // Tell VRCX to add in any missing fields that the merger may have
-        // missed, just as a precaution
+
         SqliteExtensions.ExecuteNonQuery(
-            dbConn,
-            $"INSERT OR REPLACE INTO {newDBName}.configs VALUES (@p0, 0)",
-            "config:vrcx_databaseversion"
+            _dbConn,
+            $"INSERT OR REPLACE INTO {_newDBName}.configs VALUES (@p0, 0)",
+            "_config:vrcx_databaseversion"
         );
     }
 
-    /// <summary>
-    /// A method that automates various processes of merging.
-    ///
-    /// It first finds a table that matches the `tableMatcher` predicate,
-    /// then removes it from `unMergedTables`.
-    /// Then it loops over every row in the old database table, checking if
-    /// the row exists in the new table. It does this by checking if the
-    /// column indices passed into `colIndicesToMatch` are the same.
-    /// Then for each row, it calls `rowTransformer`, passing in the old
-    /// rows and existing new rows. `rowTransformer` should return the row
-    /// to insert into the new database or null.
-    /// </summary>
-    /// <param name="tableMatcher">A predicate to check if a table is one to edit</param>
-    /// <param name="colIndicesToMatch">The column indices to match to see if old and new rows are the same</param>
-    /// <param name="rowTransformer">An func called on every row</param>
-    /// <param name="finalizer">An action called once all rows have been iterated</param>
     private void MergeTable(
         Predicate<string> tableMatcher,
         int[] colIndicesToMatch,
-        Func<object[], object[], object[]> rowTransformer,
-        Action<string> finalizer = null
+        Func<object?[], object?[]?, object?[]> rowTransformer,
+        Action<string>? finalizer = null
     )
     {
-        for (int i = 0; i < unMergedTables.Count; i++)
+        for (int i = 0; i < _unMergedTables.Count; i++)
         {
-            // Find table that we want to merge
-            string table = unMergedTables[i];
+
+            string table = _unMergedTables[i];
             if (!tableMatcher(table))
             {
                 continue;
             }
-            unMergedTables.RemoveAt(i);
+            _unMergedTables.RemoveAt(i);
             i--;
 
-            logger.Debug($"Merging table `{table}` into new database");
+            Logger.Debug(CultureInfo.InvariantCulture, $"Merging table `{table}` into new database");
 
-            // Prepare queries
-            var colNames = GetTableColumnNames(dbConn, newDBName, table);
+            List<string> colNames = GetTableColumnNames(_dbConn, _newDBName, table);
 
-            var valuesClause = string.Join(',', Enumerable.Range(0, colNames.Count).Select(index => $"@p{index}"));
-            var insertQuery = $"INSERT INTO {newDBName}.{table} VALUES ({valuesClause});";
+            string valuesClause = string.Join(',', Enumerable.Range(0, colNames.Count).Select(index => $"@p{index}"));
+            string insertQuery = $"INSERT INTO {_newDBName}.{table} VALUES ({valuesClause});";
 
-            var whereClause = string.Join(" AND ", colIndicesToMatch.Select((columnIndex, parameterIndex) => colNames[columnIndex] + $"=@p{parameterIndex}"));
-            var existsQuery = $"DELETE FROM {newDBName}.{table} WHERE {whereClause} RETURNING *;";
+            string whereClause = string.Join(" AND ", colIndicesToMatch.Select((columnIndex, parameterIndex) => colNames[columnIndex] + $"=@p{parameterIndex}"));
+            string existsQuery = $"DELETE FROM {_newDBName}.{table} WHERE {whereClause} RETURNING *;";
 
-            // Loop over every row on table in old database
-            using var rowsCommand = SqliteExtensions.CreateCommand(dbConn, $"SELECT * FROM {oldDBName}.{table};");
-            using var rowsReader = rowsCommand.ExecuteReader();
+            using SQLiteCommand rowsCommand = SqliteExtensions.CreateCommand(_dbConn, $"SELECT * FROM {_oldDBName}.{table};");
+            using SQLiteDataReader rowsReader = rowsCommand.ExecuteReader();
             while (rowsReader.Read())
             {
-                var oldRow = new object[rowsReader.FieldCount];
+                object?[] oldRow = new object?[rowsReader.FieldCount];
                 for (int columnIndex = 0; columnIndex < rowsReader.FieldCount; columnIndex++)
                 {
                     oldRow[columnIndex] = rowsReader.IsDBNull(columnIndex) ? null : rowsReader.GetValue(columnIndex);
                 }
 
-                // Find existing row (if it exists at all) and remove it
-                object[] colsToMatch = colIndicesToMatch.Select(columnIndex => oldRow[columnIndex]).ToArray();
-                var existingRow = SqliteExtensions.ReadFirstRow(dbConn, existsQuery, colsToMatch);
+                object?[] colsToMatch = [.. colIndicesToMatch.Select(columnIndex => oldRow[columnIndex])];
+                object?[]? existingRow = SqliteExtensions.ReadFirstRow(_dbConn, existsQuery, colsToMatch);
 
-                // Insert new row in place of the existing row
-                var newRow = rowTransformer(oldRow, existingRow);
+                object?[] newRow = rowTransformer(oldRow, existingRow);
                 if (newRow.Length < colNames.Count)
                 {
-                    // Row count may not match between old and new db, so
-                    // just add null data
-                    var temp = new object[colNames.Count];
+
+                    object?[] temp = new object?[colNames.Count];
                     newRow.CopyTo(temp, 0);
                     newRow = temp;
                 }
-                using var insertCommand = SqliteExtensions.CreateCommand(dbConn, insertQuery, newRow);
+                using SQLiteCommand insertCommand = SqliteExtensions.CreateCommand(_dbConn, insertQuery, newRow);
                 insertCommand.ExecuteNonQuery();
             }
 
@@ -628,31 +343,29 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
     }
 
     private static List<string> GetTableColumnNames(SQLiteConnection conn, string db, string table)
-        => SqliteExtensions.ReadStrings(conn, $"SELECT name FROM pragma_table_info(@p0, @p1);", table, db);
+        => SqliteExtensions.ReadStrings(conn, "SELECT name FROM pragma_table_info(@p0, @p1);", table, db);
 
     private static void SortTable(SQLiteConnection conn, string db, string table, int sortCol, bool isDesc = false)
     {
-        logger.Debug($"Sorting table {db}.{table}");
+        Logger.Debug(CultureInfo.InvariantCulture, $"Sorting table {db}.{table}");
 
-        // Just to ensure name is unique
-        var time = DateTime.Now.Ticks;
-        var newTableName = table + time.ToString();
-        logger.Debug($"Creating new table: " + newTableName);
+        long time = DateTime.Now.Ticks;
+        string newTableName = table + time.ToString(CultureInfo.InvariantCulture);
+        Logger.Debug(CultureInfo.InvariantCulture, "Creating new table: " + newTableName);
 
-        // Split create query into words
-        var createQuery = SqliteExtensions.ReadScalarString(conn, $"SELECT sql FROM {db}.sqlite_schema WHERE type='table' AND name=@p0;", table);
-        var words = createQuery.Split(' ');
-        // Third word is table name
+        string createQuery = SqliteExtensions.ReadScalarString(conn, $"SELECT sql FROM {db}.sqlite_schema WHERE type='table' AND name=@p0;", table) ?? throw new InvalidDataException("Table definition is missing.");
+        string[] words = createQuery.Split(' ');
+
         words[2] = db + "." + newTableName;
         createQuery = string.Join(' ', words);
 
-        logger.Debug("Creating table with command: " + createQuery);
+        Logger.Debug(CultureInfo.InvariantCulture, "Creating table with command: " + createQuery);
         SqliteExtensions.ExecuteNonQuery(conn, createQuery);
 
-        logger.Debug("Adding rows...");
-        var colNames = GetTableColumnNames(conn, db, table);
-        // Skip pks so they get reassigned
-        var selectClause = string.Join(',', colNames.Skip(1));
+        Logger.Debug(CultureInfo.InvariantCulture, "Adding rows...");
+        List<string> colNames = GetTableColumnNames(conn, db, table);
+
+        string selectClause = string.Join(',', colNames.Skip(1));
         SqliteExtensions.ExecuteNonQuery(
             conn,
             $"INSERT INTO {db}.{newTableName} ({selectClause}) " +
@@ -660,11 +373,13 @@ public partial class Merger(SQLiteConnection dbConn, string oldDBName, string ne
                     $"ORDER BY {colNames[sortCol]} {(isDesc ? "DESC" : "ASC")};"
         );
 
-        logger.Debug("Dropping old and renaming");
+        Logger.Debug(CultureInfo.InvariantCulture, "Dropping old and renaming");
         SqliteExtensions.ExecuteNonQuery(conn, $"DROP TABLE {db}.{table}");
         SqliteExtensions.ExecuteNonQuery(conn, $"ALTER TABLE {db}.{newTableName} RENAME TO {table}");
     }
 
-    [GeneratedRegex("^([A-Za-z0-9]{10}|usr[0-9A-Fa-f]{32})")]
+    private static string ReadText(object? value) => value as string ?? throw new InvalidDataException("Database value is not text.");
+
+    [GeneratedRegex("^([A-Za-z0-9]{10}|usr[0-9A-Fa-f]{32})", RegexOptions.ExplicitCapture, 1000)]
     private static partial Regex UserIDRegex();
 }

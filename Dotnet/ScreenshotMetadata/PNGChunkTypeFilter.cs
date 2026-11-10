@@ -1,11 +1,11 @@
 namespace VRCX;
 
-public enum PNGChunkTypeFilter
+internal enum PNGChunkTypeFilter
 {
     UNKNOWN,
     IHDR,
     sRGB,
     iTXt,
     IDAT,
-    IEND
+    IEND,
 }

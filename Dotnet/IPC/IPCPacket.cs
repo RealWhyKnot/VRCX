@@ -1,9 +1,8 @@
-namespace VRCX
+namespace VRCX;
+
+internal sealed class IPCPacket
 {
-    public class IPCPacket
-    {
-        public string Type { get; set; }
-        public string Data { get; set; }
-        public string MsgType { get; set; }
-    }
+    public string? Type { get; set; }
+    public string? Data { get; set; }
+    public string? MsgType { get; set; }
 }

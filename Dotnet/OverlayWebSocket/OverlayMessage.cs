@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace VRCX;
 
-public class OverlayMessage
+internal sealed class OverlayMessage
 {
     public OverlayMessageType Type { get; set; }
 

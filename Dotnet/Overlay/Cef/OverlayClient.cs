@@ -1,18 +1,14 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Threading.Tasks;
 using NLog;
 using VRCX.Overlay;
 using Websocket.Client;
 
 namespace VRCX;
 
-[SuppressMessage("Interoperability", "CA1416:Validate platform compatibility")]
-public static class OverlayClient
+internal static class OverlayClient
 {
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     private static readonly Uri WebsocketUri = new("ws://127.0.0.1:34582");
     private static WebsocketClient? _websocketClient;
@@ -23,10 +19,12 @@ public static class OverlayClient
         Connected &&
         OverlayProgram.VRCXVRInstance.IsActive();
 
-    public static async Task Init()
+    public static Task InitAsync()
     {
         if (_websocketClient != null)
-            return;
+        {
+            return Task.CompletedTask;
+        }
 
         var clientFactory = new Func<ClientWebSocket>(() =>
         {
@@ -39,43 +37,44 @@ public static class OverlayClient
         {
             Name = "VRCX Overlay Client",
             ReconnectTimeout = null,
-            ErrorReconnectTimeout = TimeSpan.FromMilliseconds(300)
+            ErrorReconnectTimeout = TimeSpan.FromMilliseconds(300),
         };
 
         _websocketClient.ReconnectionHappened.Subscribe(info =>
         {
-            logger.Info("Connection happened, type: {0}", info?.Type.ToString());
+            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Connection happened, type: {0}", info?.Type.ToString());
             var message = new OverlayMessage
             {
                 Type = OverlayMessageType.OverlayConnected,
-                Data = "VRCX Overlay Client Connected"
+                Data = "VRCX Overlay Client Connected",
             };
             _websocketClient.Send(JsonSerializer.Serialize(message));
         });
         _websocketClient.DisconnectionHappened.Subscribe(info =>
         {
-            logger.Info("Disconnection happened, type: {0}", info?.Type.ToString());
+            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Disconnection happened, type: {0}", info?.Type.ToString());
         });
         _websocketClient.MessageReceived.Subscribe(msg =>
         {
             try
             {
-                var message = JsonSerializer.Deserialize<OverlayMessage>(msg.Text!);
+                OverlayMessage? message = JsonSerializer.Deserialize<OverlayMessage>(msg.Text!);
                 HandleMessage(message);
             }
             catch (Exception e)
             {
-                logger.Error(e, "Error handling message");
+                Logger.Error(e, "Error handling message");
             }
         });
 
         _websocketClient.Start();
-        logger.Info("VRCX overlay client initialized");
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX overlay client initialized");
+        return Task.CompletedTask;
     }
 
     private static void HandleMessage(OverlayMessage message)
     {
-        logger.Trace("Message received: {0}", message.Type.ToString());
+        Logger.Trace(System.Globalization.CultureInfo.InvariantCulture, "Message received: {0}", message.Type.ToString());
         switch (message.Type)
         {
             case OverlayMessageType.OverlayConnected:
@@ -86,36 +85,42 @@ public static class OverlayClient
                 break;
 
             case OverlayMessageType.UpdateVars:
-                var overlayVars = message.OverlayVars;
+                OverlayVars? overlayVars = message.OverlayVars;
                 if (overlayVars == null)
                 {
-                    logger.Error("UpdateVars is null");
+                    Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "UpdateVars is null");
                     return;
                 }
                 OverlayProgram.VRCXVRInstance.SetActive(overlayVars.Active, overlayVars.HmdOverlay, overlayVars.WristOverlay,
                     overlayVars.MenuButton, overlayVars.OverlayHand);
                 break;
-
+            case OverlayMessageType.IsHmdAfk:
+                break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
 
     }
 
-    public static async Task Exit()
+    public static Task ExitAsync()
     {
         if (_websocketClient == null)
-            return;
+        {
+            return Task.CompletedTask;
+        }
 
         _websocketClient.Stop(WebSocketCloseStatus.NormalClosure, "Exiting");
         _websocketClient.Dispose();
         _websocketClient = null;
+        return Task.CompletedTask;
     }
 
     public static void SendMessage(OverlayMessage message)
     {
         if (_websocketClient == null || !_websocketClient.IsRunning)
+        {
             return;
+        }
 
         _websocketClient.Send(JsonSerializer.Serialize(message));
     }

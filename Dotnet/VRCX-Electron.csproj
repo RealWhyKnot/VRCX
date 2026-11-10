@@ -15,6 +15,7 @@
     <ApplicationVersion>1.0.0.*</ApplicationVersion>
     <ApplicationIcon>..\images\VRCX.ico</ApplicationIcon>
     <AssemblyName>VRCX-Electron</AssemblyName>
+    <RootNamespace>VRCX</RootNamespace>
     <AssemblyTitle>VRCX</AssemblyTitle>
     <Product>VRCX</Product>
     <Copyright>vrcx-team, pypy, natsumi</Copyright>
@@ -31,6 +32,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -71,8 +73,14 @@
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NLog" Version="6.2.2" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+    <PackageReference Include="TiffLibrary" Version="0.6.65" />
+    <PackageReference Include="JpegLibrary" Version="0.4.32" />
+    <PackageReference Include="Pfim" Version="0.11.4" />
+    <PackageReference Include="QoiSharp" Version="1.0.0" />
+    <PackageReference Include="SkiaSharp" Version="4.155.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.155.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.155.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="4.155.0" />
     <PackageReference Include="SourceGear.sqlite3" Version="3.53.4" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.13" />
     <PackageReference Condition="'$(RuntimeIdentifier)'=='linux-arm64'" Include="System.Data.SQLite" Version="2.0.3" />

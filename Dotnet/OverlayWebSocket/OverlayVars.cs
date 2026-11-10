@@ -1,6 +1,6 @@
 namespace VRCX;
 
-public class OverlayVars
+internal sealed class OverlayVars
 {
     public bool Active { get; set; }
     public bool HmdOverlay { get; set; }

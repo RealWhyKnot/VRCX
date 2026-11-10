@@ -1,202 +1,216 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace VRCX
+namespace VRCX;
+
+public partial class AppApiElectron
 {
-    public partial class AppApiElectron
+    public override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
     {
-        public override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
+
+    }
+
+
+
+
+    public override void CheckGameRunning()
+    {
+    }
+
+    public override bool IsGameRunning()
+    {
+        Process[] processes = Process.GetProcessesByName("VRChat.exe");
+        bool isGameRunning = processes.Length > 0;
+        foreach (Process process in processes)
         {
-            // unused
+            process.Dispose();
         }
 
-        /// <summary>
-        /// for Cef only, checks if VRChat and SteamVR are currently running and updates the browser using JavaScript with the results.
-        /// </summary>
-        public override void CheckGameRunning()
-        {
-        }
+        return isGameRunning;
+    }
 
-        public override bool IsGameRunning()
+    public override bool IsSteamVRRunning()
+    {
+        string[] processNames = ["vrmonitor", "monado-service"];
+        foreach (string? name in processNames)
         {
-            var processes = Process.GetProcessesByName("VRChat.exe");
-            var isGameRunning = processes.Length > 0;
-            foreach (var process in processes)
-                process.Dispose();
-
-            return isGameRunning;
-        }
-
-        public override bool IsSteamVRRunning()
-        {
-            var processNames = new[] { "vrmonitor", "monado-service" };
-            foreach (var name in processNames)
+            Process[] processes = Process.GetProcessesByName(name);
+            bool isSteamVRRunning = processes.Length > 0;
+            foreach (Process process in processes)
             {
-                var processes = Process.GetProcessesByName(name);
-                var isSteamVRRunning = processes.Length > 0;
-                foreach (var process in processes)
-                    process.Dispose();
-
-                if (isSteamVRRunning)
-                    return true;
+                process.Dispose();
             }
 
-            // Check for wivrn-server (requires full scan)
-            var allProcesses = Process.GetProcesses();
-            var isRunning = allProcesses.Any(process => process.ProcessName.EndsWith("wivrn-server"));
-            foreach (var process in allProcesses)
-                process.Dispose();
-
-            return isRunning;
-        }
-
-        public override int QuitGame()
-        {
-            var processes = Process.GetProcessesByName("VRChat.exe");
-            if (processes.Length == 1)
-                processes[0].Kill();
-            foreach (var process in processes)
-                process.Dispose();
-
-            return processes.Length;
-        }
-
-        public override bool StartGame(string arguments)
-        {
-            try
+            if (isSteamVRRunning)
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "steam",
-                    Arguments = $"-applaunch 438100 {arguments}",
-                    UseShellExecute = false,
-                })?.Dispose();
-                return true; // Steam accepted launch command (no exception thrown)
-            }
-            catch (Exception e)
-            {
-                logger.Error($"Failed to start VRChat: {e.Message}, attempting to start via Steam path.");
-            }
-
-            try
-            {
-                var steamPath = _steamPath;
-                if (string.IsNullOrEmpty(steamPath))
-                {
-                    logger.Error("Steam path could not be determined.");
-                    return false;
-                }
-
-                var steamExecutable = Path.Join(steamPath, "steam.sh");
-                if (!File.Exists(steamExecutable))
-                {
-                    logger.Error("Steam executable not found.");
-                    return false;
-                }
-
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = steamExecutable,
-                    Arguments = $"-applaunch 438100 {arguments}",
-                    UseShellExecute = false,
-                })?.Dispose();
-
                 return true;
             }
-            catch (Exception ex)
+        }
+
+
+        Process[] allProcesses = Process.GetProcesses();
+        bool isRunning = allProcesses.Any(process => process.ProcessName.EndsWith("wivrn-server", StringComparison.Ordinal));
+        foreach (Process process in allProcesses)
+        {
+            process.Dispose();
+        }
+
+        return isRunning;
+    }
+
+    public override int QuitGame()
+    {
+        Process[] processes = Process.GetProcessesByName("VRChat.exe");
+        if (processes.Length == 1)
+        {
+            processes[0].Kill();
+        }
+
+        foreach (Process process in processes)
+        {
+            process.Dispose();
+        }
+
+        return processes.Length;
+    }
+
+    public override bool StartGame(string arguments)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
             {
-                logger.Error($"Failed to start VRChat: {ex.Message}");
+                FileName = "steam",
+                Arguments = $"-applaunch 438100 {arguments}",
+                UseShellExecute = false,
+            })?.Dispose();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to start VRChat: {e.Message}, attempting to start via Steam path.");
+        }
+
+        try
+        {
+            string steamPath = _steamPath;
+            if (string.IsNullOrEmpty(steamPath))
+            {
+                Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Steam path could not be determined.");
                 return false;
             }
-        }
 
-        public override bool StartGameFromPath(string path, string arguments)
+            string steamExecutable = Path.Join(steamPath, "steam.sh");
+            if (!File.Exists(steamExecutable))
+            {
+                Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Steam executable not found.");
+                return false;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = steamExecutable,
+                Arguments = $"-applaunch 438100 {arguments}",
+                UseShellExecute = false,
+            })?.Dispose();
+
+            return true;
+        }
+        catch (Exception ex)
         {
-            // This method is not used
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to start VRChat: {ex.Message}");
             return false;
         }
+    }
 
-        public override Task<bool> TryOpenInstanceInVrc(string launchUrl)
+    public override bool StartGameFromPath(string path, string arguments) =>
+
+        false;
+
+    public override Task<bool> TryOpenInstanceInVrcAsync(string launchUrl)
+    {
+        try
         {
-            try
+            int pid = FindVRChatPid();
+            if (pid <= 0)
             {
-                var pid = FindVRChatPid();
-                if (pid <= 0)
-                    return Task.FromResult(false);
-
-                var launchExe = Path.Join(_vrcInstallPath, "launch.exe");
-                if (!File.Exists(launchExe))
-                {
-                    logger.Error($"TryOpenInstanceInVrc: launch.exe not found at {launchExe}");
-                    return Task.FromResult(false);
-                }
-
-                // attach=1 tells launch.exe to forward into the running client instead of cold-starting
-                var url = launchUrl.Contains("attach=1") ? launchUrl : launchUrl + "&attach=1";
-
-                // enter the running game's user + mount namespaces (we own the pressure-vessel
-                // userns, so no privilege is required), re-import its environment, then run
-                // launch.exe inside the container so it reaches VRChat's URL pipe
-                const string inner =
-                    "while IFS= read -r -d '' kv; do export \"$kv\"; done < \"/proc/$1/environ\"; exec wine \"$2\" \"$3\"";
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "nsenter",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-                foreach (var arg in new[]
-                         {
-                             "-t", pid.ToString(), "-U", "-m", "--preserve-credentials", "--",
-                             "/bin/bash", "-c", inner, "_", pid.ToString(), launchExe, url
-                         })
-                    psi.ArgumentList.Add(arg);
-
-                // launch.exe hands the deeplink to the running client, then exits on wine's
-                // own schedule and its exit code is not a reliable success signal, so a clean
-                // spawn is treated as success. Gating on the exit code would race the frontend
-                // self-invite fallback and fire both. stdout/stderr are left un-redirected so
-                // wine log spam cannot fill an undrained pipe and stall the forward.
-                using var process = Process.Start(psi);
-                return Task.FromResult(process != null);
-            }
-            catch (Exception e)
-            {
-                logger.Error($"TryOpenInstanceInVrc failed: {e.Message}");
                 return Task.FromResult(false);
             }
-        }
 
-        private static int FindVRChatPid()
-        {
-            var processes = Process.GetProcessesByName("VRChat.exe");
-            try
+            string launchExe = Path.Join(_vrcInstallPath, "launch.exe");
+            if (!File.Exists(launchExe))
             {
-                // prefer the VRChat whose environment points at the 438100 compat prefix
-                foreach (var process in processes)
+                Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"TryOpenInstanceInVrc: launch.exe not found at {launchExe}");
+                return Task.FromResult(false);
+            }
+
+
+            string url = launchUrl.Contains("attach=1") ? launchUrl : launchUrl + "&attach=1";
+
+
+
+
+            const string inner =
+                "while IFS= read -r -d '' kv; do export \"$kv\"; done < \"/proc/$1/environ\"; exec wine \"$2\" \"$3\"";
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "nsenter",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (string? arg in new[]
+                     {
+                         "-t", pid.ToString(System.Globalization.CultureInfo.InvariantCulture), "-U", "-m", "--preserve-credentials", "--",
+                         "/bin/bash", "-c", inner, "_", pid.ToString(System.Globalization.CultureInfo.InvariantCulture), launchExe, url,
+                     })
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+
+
+
+
+
+            using var process = Process.Start(psi);
+            return Task.FromResult(process != null);
+        }
+        catch (Exception e)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"TryOpenInstanceInVrc failed: {e.Message}");
+            return Task.FromResult(false);
+        }
+    }
+
+    private static int FindVRChatPid()
+    {
+        Process[] processes = Process.GetProcessesByName("VRChat.exe");
+        try
+        {
+
+            foreach (Process process in processes)
+            {
+                try
                 {
-                    try
+                    string environ = File.ReadAllText($"/proc/{process.Id}/environ");
+                    if (environ.Contains("compatdata/438100"))
                     {
-                        var environ = File.ReadAllText($"/proc/{process.Id}/environ");
-                        if (environ.Contains("compatdata/438100"))
-                            return process.Id;
-                    }
-                    catch
-                    {
-                        // unreadable environ, skip
+                        return process.Id;
                     }
                 }
+                catch
+                {
 
-                return processes.Length > 0 ? processes[0].Id : -1;
+                }
             }
-            finally
+
+            return processes.Length > 0 ? processes[0].Id : -1;
+        }
+        finally
+        {
+            foreach (Process process in processes)
             {
-                foreach (var process in processes)
-                    process.Dispose();
+                process.Dispose();
             }
         }
     }

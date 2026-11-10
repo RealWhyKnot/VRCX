@@ -1,10 +1,8 @@
-using System.Collections.Generic;
-
 namespace VRCX;
 
 public abstract partial class AppApiVr
 {
-    public static AppApiVr Instance;
+    public static AppApiVr? Instance;
     public abstract void Init();
     public abstract void VrInit();
     public abstract void ToggleSystemMonitor(bool enabled);

@@ -1,20 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+namespace VRCX;
 
-namespace VRCX
+internal class WinformBase : Form
 {
-    public class WinformBase : Form
+    protected override void OnHandleCreated(EventArgs e)
     {
-        protected override void OnHandleCreated(EventArgs e)
+        if (!DesignMode)
         {
-            if (!DesignMode)
-                WinformThemer.SetThemeToGlobal(this);
-            base.OnHandleCreated(e);
+            WinformThemer.SetThemeToGlobal(this);
         }
+
+        base.OnHandleCreated(e);
     }
 }

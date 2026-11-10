@@ -1,33 +1,28 @@
-using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 using CefSharp;
 using CefSharp.Enums;
 using CefSharp.OffScreen;
 using CefSharp.Structs;
-using NLog;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using Range = CefSharp.Structs.Range;
 
 namespace VRCX;
 
-public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
+internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
 {
-    // new
+
     private ComPtr<ID3D11Device1> _device1;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
     private ComPtr<ID3D11Query> _query;
     private ComPtr<ID3D11Texture2D> _renderTarget;
 
-    // legacy
+
     private readonly bool _isLegacy;
     private readonly ReaderWriterLockSlim _paintBufferLock = new();
     private GCHandle _paintBuffer;
     private int _width;
     private int _height;
-
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
     public OffScreenBrowser(string address, int width, int height, bool isLegacy)
         : base(address, automaticallyCreateBrowser: false)
@@ -43,7 +38,7 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         var browserSettings = new BrowserSettings()
         {
             DefaultEncoding = "UTF-8",
-            WindowlessFrameRate = !_isLegacy ? 60 : 24
+            WindowlessFrameRate = !_isLegacy ? 60 : 24,
         };
 
         RenderProcessMessageHandler = PlatformRenderProcessMessageHandler.Instance;
@@ -56,7 +51,7 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         JavascriptObjectRepository.Register("AppApiVr", AppApiVr.Instance);
     }
 
-    // new
+
     public void UpdateRender(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, ComPtr<ID3D11Texture2D> renderTarget)
     {
         _device1.Dispose();
@@ -65,21 +60,24 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         _renderTarget = renderTarget;
 
         _query.Dispose();
-        device.CreateQuery(new QueryDesc
+        var queryDescription = new QueryDesc
         {
             Query = Query.Event,
-            MiscFlags = 0
-        }, ref _query);
+            MiscFlags = 0,
+        };
+        device.CreateQuery(in queryDescription, ref _query);
     }
 
-    // legacy
+
     public void RenderToTexture(ComPtr<ID3D11DeviceContext> deviceContext, ComPtr<ID3D11Texture2D> texture)
     {
-        // Safeguard against uninitialized texture
+
         unsafe
         {
             if ((IntPtr)texture.Handle == IntPtr.Zero)
+            {
                 return;
+            }
         }
 
         _paintBufferLock.EnterReadLock();
@@ -87,7 +85,9 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         {
             if (_width <= 0 ||
                 _height <= 0)
+            {
                 return;
+            }
 
             MappedSubresource mappedSubresource = default;
             deviceContext.Map(texture, 0, Map.WriteDiscard, 0, ref mappedSubresource);
@@ -95,10 +95,10 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
             {
                 if ((IntPtr)mappedSubresource.PData != IntPtr.Zero)
                 {
-                    var sourcePtr = _paintBuffer.AddrOfPinnedObject();
-                    var destinationPtr = (IntPtr)mappedSubresource.PData;
-                    var pitch = _width * 4;
-                    var rowPitch = mappedSubresource.RowPitch;
+                    nint sourcePtr = _paintBuffer.AddrOfPinnedObject();
+                    nint destinationPtr = (IntPtr)mappedSubresource.PData;
+                    int pitch = _width * 4;
+                    uint rowPitch = mappedSubresource.RowPitch;
                     if (pitch == rowPitch)
                     {
                         WinApi.RtlCopyMemory(
@@ -109,7 +109,7 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
                     }
                     else
                     {
-                        for (var y = _height; y > 0; --y)
+                        for (int y = _height; y > 0; --y)
                         {
                             WinApi.RtlCopyMemory(
                                 destinationPtr,
@@ -136,12 +136,14 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         RenderHandler = null;
         base.Dispose();
 
-        // legacy
+
         _paintBufferLock.EnterWriteLock();
         try
         {
             if (_paintBuffer.IsAllocated)
+            {
                 _paintBuffer.Free();
+            }
         }
         finally
         {
@@ -154,7 +156,7 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
     {
         return new ScreenInfo
         {
-            DeviceScaleFactor = 1.0F
+            DeviceScaleFactor = 1.0F,
         };
     }
 
@@ -165,33 +167,42 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         return false;
     }
 
-    Rect IRenderHandler.GetViewRect()
-    {
-        return new Rect(0, 0, Size.Width, Size.Height);
-    }
+    Rect IRenderHandler.GetViewRect() => new(0, 0, Size.Width, Size.Height);
 
-    // new
-    void IRenderHandler.OnAcceleratedPaint(PaintElementType type, Rect dirtyRect, AcceleratedPaintInfo paintInfo)
+
+    public void OnAcceleratedPaint(PaintElementType type, Rect dirtyRect, AcceleratedPaintInfo paintInfo)
     {
         if (_isLegacy)
+        {
             return;
+        }
 
         if (type != PaintElementType.View)
+        {
             return;
+        }
 
         unsafe
         {
             if ((IntPtr)_device1.Handle == IntPtr.Zero)
+            {
                 return;
+            }
 
             if ((IntPtr)_deviceContext.Handle == IntPtr.Zero)
+            {
                 return;
+            }
 
             if ((IntPtr)_query.Handle == IntPtr.Zero)
+            {
                 return;
+            }
 
             if ((IntPtr)_renderTarget.Handle == IntPtr.Zero)
+            {
                 return;
+            }
 
             using ComPtr<ID3D11Texture2D> cefTexture =
                 _device1.OpenSharedResource1<ID3D11Texture2D>(paintInfo.SharedTextureHandle.ToPointer());
@@ -214,14 +225,18 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
     {
     }
 
-    // legacy
-    void IRenderHandler.OnPaint(PaintElementType type, Rect dirtyRect, IntPtr buffer, int width, int height)
+
+    public void OnPaint(PaintElementType type, Rect dirtyRect, IntPtr buffer, int width, int height)
     {
         if (!_isLegacy)
+        {
             return;
+        }
 
         if (type != PaintElementType.View)
+        {
             return;
+        }
 
         _paintBufferLock.EnterWriteLock();
         try
@@ -265,10 +280,7 @@ public class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
     {
     }
 
-    bool IRenderHandler.StartDragging(IDragData dragData, DragOperationsMask mask, int x, int y)
-    {
-        return false;
-    }
+    public bool StartDragging(IDragData dragData, DragOperationsMask mask, int x, int y) => false;
 
     void IRenderHandler.UpdateDragCursor(DragOperationsMask operation)
     {

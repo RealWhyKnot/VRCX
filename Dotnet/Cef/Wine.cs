@@ -1,23 +1,22 @@
-using System;
 using System.Runtime.InteropServices;
 
-namespace VRCX
-{
-    public static class Wine
-    {
-        [DllImport("ntdll.dll")]
-        private static extern IntPtr wine_get_version();
+namespace VRCX.Cef;
 
-        public static bool GetIfWine()
+internal static partial class Wine
+{
+    [LibraryImport("ntdll.dll", EntryPoint = "wine_get_version")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial IntPtr GetVersion();
+
+    public static bool GetIfWine()
+    {
+        try
         {
-            // wine_get_version should be guaranteed to exist exclusively in Wine envs,
-            // unlike some other suggestions like checking Wine registry keys 
-            try
-            {
-                wine_get_version();
-                return true;
-            }
-            catch { return false; }
+            return GetVersion() != IntPtr.Zero;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
         }
     }
 }

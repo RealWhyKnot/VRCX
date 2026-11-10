@@ -1,208 +1,213 @@
-using System;
-using System.IO;
-using System.Threading;
 using NLog;
 
-namespace VRCX
+namespace VRCX;
+
+public sealed class SystemMonitorElectron
 {
-    public class SystemMonitorElectron
+    public static readonly SystemMonitorElectron Instance;
+    public float CpuUsage;
+    public double UpTime;
+    private bool _enabled;
+    private long _lastTotalTime;
+    private long _lastIdleTime;
+    private bool _firstReading = true;
+    private Thread? _thread;
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+    static SystemMonitorElectron()
     {
-        public static readonly SystemMonitorElectron Instance;
-        public float CpuUsage;
-        public double UpTime;
-        private bool _enabled;
-        private long _lastTotalTime;
-        private long _lastIdleTime;
-        private bool _firstReading = true; // Add this flag
-        private Thread _thread;
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        Instance = new SystemMonitorElectron();
+    }
 
-        static SystemMonitorElectron()
+    public void Init()
+    {
+    }
+
+    public void Start(bool enabled)
+    {
+        if (enabled == _enabled)
         {
-            Instance = new SystemMonitorElectron();
+            return;
         }
 
-        public void Init()
+        _enabled = enabled;
+        if (enabled)
         {
+            StartThread();
         }
-
-        public void Start(bool enabled)
-        {
-            if (enabled == _enabled)
-                return;
-
-            _enabled = enabled;
-            if (enabled)
-                StartThread();
-            else
-                Exit();
-        }
-
-        internal void Exit()
-        {
-            CpuUsage = 0;
-            UpTime = 0;
-            _firstReading = true; // Reset flag
-            try
-            {
-                if (_thread != null)
-                {
-                    _thread.Interrupt();
-                    _thread.Join();
-                    _thread = null;
-                }
-            }
-            catch (ThreadInterruptedException)
-            {
-            }
-        }
-
-        private void StartThread()
+        else
         {
             Exit();
-
-            try
-            {
-                ReadCpuInfo();
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to initialize CPU monitoring: {ex}");
-                return;
-            }
-
-            _thread = new Thread(ThreadProc)
-            {
-                IsBackground = true
-            };
-            _thread.Start();
         }
+    }
 
-        private void ThreadProc()
+    internal void Exit()
+    {
+        CpuUsage = 0;
+        UpTime = 0;
+        _firstReading = true;
+        try
         {
-            try
+            if (_thread != null)
             {
-                while (_enabled)
-                {
-                    UpdateMetrics();
-                    Thread.Sleep(1000);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Warn($"SystemMonitor thread exception: {ex}");
-            }
-
-            Exit();
-        }
-
-        private void UpdateMetrics()
-        {
-            try
-            {
-                CpuUsage = GetCpuUsage();
-                UpTime = GetUptime();
-            }
-            catch (Exception ex)
-            {
-                logger.Warn($"Error updating metrics: {ex}");
+                _thread.Interrupt();
+                _thread.Join();
+                _thread = null;
             }
         }
-
-        private float GetCpuUsage()
+        catch (ThreadInterruptedException)
         {
-            try
+        }
+    }
+
+    private void StartThread()
+    {
+        Exit();
+
+        try
+        {
+            ReadCpuInfo();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to initialize CPU monitoring: {ex}");
+            return;
+        }
+
+        _thread = new Thread(ThreadProc)
+        {
+            IsBackground = true,
+        };
+        _thread.Start();
+    }
+
+    private void ThreadProc()
+    {
+        try
+        {
+            while (_enabled)
             {
-                var cpuInfo = ReadCpuInfo();
-                if (cpuInfo == null) return 0;
+                UpdateMetrics();
+                Thread.Sleep(1000);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"SystemMonitor thread exception: {ex}");
+        }
 
-                var totalTime = cpuInfo.Value.TotalTime;
-                var idleTime = cpuInfo.Value.IdleTime;
+        Exit();
+    }
 
-                // Skip the first reading to establish baseline
-                if (_firstReading)
-                {
-                    _lastTotalTime = totalTime;
-                    _lastIdleTime = idleTime;
-                    _firstReading = false;
-                    return 0; // Return 0 for first reading
-                }
+    private void UpdateMetrics()
+    {
+        try
+        {
+            CpuUsage = GetCpuUsage();
+            UpTime = GetUptime();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error updating metrics: {ex}");
+        }
+    }
 
-                var totalTimeDiff = totalTime - _lastTotalTime;
-                var idleTimeDiff = idleTime - _lastIdleTime;
-
-                if (totalTimeDiff > 0)
-                {
-                    var cpuUsage = 100.0f * (1.0f - (float)idleTimeDiff / totalTimeDiff);
-                    _lastTotalTime = totalTime;
-                    _lastIdleTime = idleTime;
-
-                    // Clamp to reasonable range
-                    return Math.Max(0, Math.Min(100, cpuUsage));
-                }
-
+    private float GetCpuUsage()
+    {
+        try
+        {
+            (long TotalTime, long IdleTime)? cpuInfo = ReadCpuInfo();
+            if (cpuInfo == null)
+            {
                 return 0;
             }
-            catch (Exception ex)
+
+            long totalTime = cpuInfo.Value.TotalTime;
+            long idleTime = cpuInfo.Value.IdleTime;
+
+
+            if (_firstReading)
             {
-                logger.Warn($"Error reading CPU usage: {ex}");
+                _lastTotalTime = totalTime;
+                _lastIdleTime = idleTime;
+                _firstReading = false;
                 return 0;
             }
-        }
 
-        private double GetUptime()
-        {
-            try
+            long totalTimeDiff = totalTime - _lastTotalTime;
+            long idleTimeDiff = idleTime - _lastIdleTime;
+
+            if (totalTimeDiff > 0)
             {
-                var uptimeContent = File.ReadAllText("/proc/uptime");
-                var parts = uptimeContent.Split(' ');
-                if (parts.Length > 0 && double.TryParse(parts[0], out var uptimeSeconds))
-                {
-                    return TimeSpan.FromSeconds(uptimeSeconds).TotalMilliseconds;
-                }
+                float cpuUsage = 100.0f * (1.0f - ((float)idleTimeDiff / totalTimeDiff));
+                _lastTotalTime = totalTime;
+                _lastIdleTime = idleTime;
+
+
+                return Math.Max(0, Math.Min(100, cpuUsage));
             }
-            catch (Exception ex)
-            {
-                logger.Warn($"Error reading uptime: {ex}");
-            }
+
             return 0;
         }
-
-        private (long TotalTime, long IdleTime)? ReadCpuInfo()
+        catch (Exception ex)
         {
-            try
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading CPU usage: {ex}");
+            return 0;
+        }
+    }
+
+    private double GetUptime()
+    {
+        try
+        {
+            string uptimeContent = File.ReadAllText("/proc/uptime");
+            string[] parts = uptimeContent.Split(' ');
+            if (parts.Length > 0 && double.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, out double uptimeSeconds))
             {
-                var statContent = File.ReadAllText("/proc/stat");
-                var lines = statContent.Split('\n');
+                return TimeSpan.FromSeconds(uptimeSeconds).TotalMilliseconds;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading uptime: {ex}");
+        }
+        return 0;
+    }
 
-                foreach (var line in lines)
+    private (long TotalTime, long IdleTime)? ReadCpuInfo()
+    {
+        try
+        {
+            string statContent = File.ReadAllText("/proc/stat");
+            string[] lines = statContent.Split('\n');
+
+            foreach (string line in lines)
+            {
+                if (line.StartsWith("cpu ", StringComparison.Ordinal))
                 {
-                    if (line.StartsWith("cpu "))
+                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 5)
                     {
-                        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 5)
-                        {
-                            // CPU time values: user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice
-                            var user = long.Parse(parts[1]);
-                            var nice = long.Parse(parts[2]);
-                            var system = long.Parse(parts[3]);
-                            var idle = long.Parse(parts[4]);
-                            var iowait = parts.Length > 5 ? long.Parse(parts[5]) : 0;
-                            var irq = parts.Length > 6 ? long.Parse(parts[6]) : 0;
-                            var softirq = parts.Length > 7 ? long.Parse(parts[7]) : 0;
-                            var steal = parts.Length > 8 ? long.Parse(parts[8]) : 0;
 
-                            var totalTime = user + nice + system + idle + iowait + irq + softirq + steal;
-                            return (totalTime, idle);
-                        }
+                        long user = long.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+                        long nice = long.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+                        long system = long.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+                        long idle = long.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
+                        long iowait = parts.Length > 5 ? long.Parse(parts[5], System.Globalization.CultureInfo.InvariantCulture) : 0;
+                        long irq = parts.Length > 6 ? long.Parse(parts[6], System.Globalization.CultureInfo.InvariantCulture) : 0;
+                        long softirq = parts.Length > 7 ? long.Parse(parts[7], System.Globalization.CultureInfo.InvariantCulture) : 0;
+                        long steal = parts.Length > 8 ? long.Parse(parts[8], System.Globalization.CultureInfo.InvariantCulture) : 0;
+
+                        long totalTime = user + nice + system + idle + iowait + irq + softirq + steal;
+                        return (totalTime, idle);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                logger.Warn($"Error reading /proc/stat: {ex}");
-            }
-            return null;
         }
+        catch (Exception ex)
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading /proc/stat: {ex}");
+        }
+        return null;
     }
 }

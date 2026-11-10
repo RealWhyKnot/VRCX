@@ -1,9 +1,9 @@
 namespace VRCX;
 
-public enum OverlayMessageType
+internal enum OverlayMessageType
 {
     OverlayConnected,
     JsFunctionCall,
     UpdateVars,
-    IsHmdAfk
+    IsHmdAfk,
 }

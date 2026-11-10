@@ -1,67 +1,60 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO.Pipes;
-using System.Threading.Tasks;
 
-namespace VRCX
+namespace VRCX;
+
+internal sealed class IPCServer
 {
-    public class IPCServer
+    public static readonly IPCServer Instance;
+    public static readonly ConcurrentDictionary<IPCClient, byte> Clients = new();
+
+    static IPCServer()
     {
-        public static readonly IPCServer Instance;
-        public static readonly ConcurrentDictionary<IPCClient, byte> Clients = new();
+        Instance = new IPCServer();
+    }
 
-        static IPCServer()
+    public void Init() => new IPCServer().CreateIPCServer();
+
+    public static void Send(IPCPacket ipcPacket)
+    {
+        foreach (KeyValuePair<IPCClient, byte> client in Clients)
         {
-            Instance = new IPCServer();
+            client.Key?.Send(ipcPacket);
+        }
+    }
+
+    public static string GetIpcName()
+    {
+        int hash = 0;
+        foreach (char c in Environment.UserName)
+        {
+            hash += c;
+        }
+        return $"vrcx-ipc-{hash}";
+    }
+
+    public void CreateIPCServer()
+    {
+        var ipcServer = new NamedPipeServerStream(GetIpcName(), PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        ipcServer.BeginWaitForConnection(DoAccept, ipcServer);
+    }
+
+    private void DoAccept(IAsyncResult asyncResult)
+    {
+        var ipcServer = (NamedPipeServerStream)asyncResult.AsyncState;
+
+        try
+        {
+            ipcServer.EndWaitForConnection(asyncResult);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
 
-        public void Init()
-        {
-            new IPCServer().CreateIPCServer();
-        }
-
-        public static void Send(IPCPacket ipcPacket)
-        {
-            foreach (var client in Clients)
-            {
-                client.Key?.Send(ipcPacket);
-            }
-        }
-
-        public static string GetIpcName()
-        {
-            var hash = 0;
-            foreach (var c in Environment.UserName)
-            {
-                hash += c;
-            }
-            return $"vrcx-ipc-{hash}";
-        }
-
-        public void CreateIPCServer()
-        {
-            var ipcServer = new NamedPipeServerStream(GetIpcName(), PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-            ipcServer.BeginWaitForConnection(DoAccept, ipcServer);
-        }
-
-        private void DoAccept(IAsyncResult asyncResult)
-        {
-            var ipcServer = (NamedPipeServerStream)asyncResult.AsyncState;
-
-            try
-            {
-                ipcServer.EndWaitForConnection(asyncResult);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            var ipcClient = new IPCClient(ipcServer);
-            Clients.TryAdd(ipcClient, 0);
-            ipcClient.BeginRead();
-            CreateIPCServer();
-        }
+        var ipcClient = new IPCClient(ipcServer);
+        Clients.TryAdd(ipcClient, 0);
+        ipcClient.BeginRead();
+        CreateIPCServer();
     }
 }

@@ -1,18 +1,13 @@
-using System.Collections.Generic;
 using CefSharp;
 using CefSharp.Enums;
 
-namespace VRCX
-{
-    public class CefNoopDragHandler : IDragHandler
-    {
-        bool IDragHandler.OnDragEnter(IWebBrowser chromiumWebBrowser, IBrowser browser, IDragData dragData, DragOperationsMask mask)
-        {
-            return true;
-        }
+namespace VRCX;
 
-        void IDragHandler.OnDraggableRegionsChanged(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IList<DraggableRegion> regions)
-        {
-        }
+internal sealed class CefNoopDragHandler : IDragHandler
+{
+    public bool OnDragEnter(IWebBrowser chromiumWebBrowser, IBrowser browser, IDragData dragData, DragOperationsMask mask) => true;
+
+    void IDragHandler.OnDraggableRegionsChanged(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IList<DraggableRegion> regions)
+    {
     }
 }

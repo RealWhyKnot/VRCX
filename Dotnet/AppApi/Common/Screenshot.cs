@@ -1,7 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -16,18 +13,20 @@ public partial class AppApi
 
     public string GetExtraScreenshotData(string path, bool carouselCache)
     {
-        var fileName = Path.GetFileNameWithoutExtension(path);
+        string fileName = Path.GetFileNameWithoutExtension(path);
         var metadata = new JObject();
 
-        if (!File.Exists(path) || !path.EndsWith(".png"))
+        if (!File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal))
+        {
             return null;
+        }
 
-        var files = Directory.GetFiles(Path.GetDirectoryName(path), "*.png");
+        string[] files = Directory.GetFiles(Path.GetDirectoryName(path), "*.png");
 
-        // Add previous/next file paths to metadata so the screenshot viewer carousel can request metadata for next/previous images in directory
+
         if (carouselCache)
         {
-            var index = Array.IndexOf(files, path);
+            int index = Array.IndexOf(files, path);
             if (index > 0)
             {
                 metadata.Add("previousFilePath", files[index - 1]);
@@ -38,17 +37,17 @@ public partial class AppApi
             }
         }
 
-        using var png = new PNGFile(path, false);
+        using var png = new PNGFile(path, writeAccess: false);
         metadata.Add("fileResolution", PNGHelper.ReadResolution(png));
 
-        var creationDate = File.GetCreationTime(path);
-        metadata.Add("creationDate", creationDate.ToString("yyyy-MM-dd HH:mm:ss"));
+        DateTime creationDate = File.GetCreationTime(path);
+        metadata.Add("creationDate", creationDate.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
 
-        var fileSizeBytes = new FileInfo(path).Length;
-        metadata.Add("fileSizeBytes", fileSizeBytes.ToString());
+        long fileSizeBytes = new FileInfo(path).Length;
+        metadata.Add("fileSizeBytes", fileSizeBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         metadata.Add("fileName", fileName);
         metadata.Add("filePath", path);
-        metadata.Add("fileSize", $"{(fileSizeBytes / 1024f / 1024f).ToString("0.00")} MB");
+        metadata.Add("fileSize", $"{fileSizeBytes / 1024f / 1024f:0.00} MB");
 
         return metadata.ToString(Formatting.Indented);
     }
@@ -56,29 +55,29 @@ public partial class AppApi
     public string GetScreenshotMetadata(string path)
     {
         if (string.IsNullOrEmpty(path))
+        {
             return null;
+        }
 
-
-        var metadata = ScreenshotHelper.GetScreenshotMetadata(path);
+        ScreenshotMetadata? metadata = ScreenshotHelper.GetScreenshotMetadata(path);
 
         if (metadata == null)
         {
             var obj = new JObject
             {
                 { "sourceFile", path },
-                { "error", "Screenshot contains no metadata." }
+                { "error", "Screenshot contains no metadata." },
             };
 
             return obj.ToString(Formatting.Indented);
         }
-        ;
 
         if (metadata.Error != null)
         {
             var obj = new JObject
             {
                 { "sourceFile", path },
-                { "error", metadata.Error }
+                { "error", metadata.Error },
             };
 
             return obj.ToString(Formatting.Indented);
@@ -88,8 +87,8 @@ public partial class AppApi
         {
             ContractResolver = new DefaultContractResolver
             {
-                NamingStrategy = new CamelCaseNamingStrategy() // This'll serialize our .net property names to their camelCase equivalents. Ex; "FileName" -> "fileName"
-            }
+                NamingStrategy = new CamelCaseNamingStrategy(),
+            },
         });
     }
 
@@ -98,71 +97,77 @@ public partial class AppApi
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        var searchPath = GetVRChatPhotosLocation();
-        var screenshots = ScreenshotHelper.FindScreenshots(searchQuery, searchPath, (ScreenshotHelper.ScreenshotSearchType)searchType);
+        string searchPath = GetVRChatPhotosLocation();
+        List<ScreenshotMetadata> screenshots = ScreenshotHelper.FindScreenshots(searchQuery, searchPath, (ScreenshotHelper.ScreenshotSearchType)searchType);
 
-        JArray json = new JArray();
+        JArray json = [];
 
-        foreach (var screenshot in screenshots)
+        foreach (ScreenshotMetadata screenshot in screenshots)
         {
             json.Add(screenshot.SourceFile);
         }
 
         stopwatch.Stop();
 
-        logger.Info($"FindScreenshotsBySearch took {stopwatch.ElapsedMilliseconds}ms to complete.");
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"FindScreenshotsBySearch took {stopwatch.ElapsedMilliseconds}ms to complete.");
 
         return json.ToString();
     }
 
     public string GetLastScreenshot()
     {
-        // Get the last screenshot taken by VRChat
-        var path = GetVRChatPhotosLocation();
-        if (!Directory.Exists(path))
-            return null;
 
-        // exclude folder names that contain "Prints", "Stickers" or "Emoji"
-        var imageFiles = Directory.GetFiles(path, "*.png", SearchOption.AllDirectories)
+        string path = GetVRChatPhotosLocation();
+        if (!Directory.Exists(path))
+        {
+            return null;
+        }
+
+
+        IEnumerable<string> imageFiles = Directory.GetFiles(path, "*.png", SearchOption.AllDirectories)
             .Where(x => !ScreenshotRegex().IsMatch(x));
-        var lastScreenshot = imageFiles.OrderByDescending(Directory.GetCreationTime).FirstOrDefault();
+        string? lastScreenshot = imageFiles.OrderByDescending(Directory.GetCreationTime).FirstOrDefault();
 
         return lastScreenshot;
     }
 
     public bool DeleteScreenshotMetadata(string path)
     {
-        if (string.IsNullOrEmpty(path) || !File.Exists(path) || !path.EndsWith(".png"))
+        if (string.IsNullOrEmpty(path) || !File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal))
+        {
             return false;
+        }
 
         try
         {
-            ScreenshotHelper.DeleteTextMetadata(path, true);
+            ScreenshotHelper.DeleteTextMetadata(path, deleteVRChatMetadata: true);
             return true;
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Failed to delete screenshot metadata for {0}", path);
+            Logger.Error(ex, "Failed to delete screenshot metadata for {0}", path);
             return false;
         }
     }
 
     public void DeleteAllScreenshotMetadata()
     {
-        var path = GetVRChatPhotosLocation();
+        string path = GetVRChatPhotosLocation();
         if (!Directory.Exists(path))
+        {
             return;
+        }
 
-        var imageFiles = Directory.GetFiles(path, "*.png", SearchOption.AllDirectories);
-        foreach (var file in imageFiles)
+        string[] imageFiles = Directory.GetFiles(path, "*.png", SearchOption.AllDirectories);
+        foreach (string file in imageFiles)
         {
             try
             {
-                ScreenshotHelper.DeleteTextMetadata(file, true);
+                ScreenshotHelper.DeleteTextMetadata(file, deleteVRChatMetadata: true);
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "Failed to delete screenshot metadata for {0}", file);
+                Logger.Error(ex, "Failed to delete screenshot metadata for {0}", file);
             }
         }
     }

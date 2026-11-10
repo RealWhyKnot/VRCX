@@ -1,29 +1,26 @@
-using System;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using NLog;
 
 namespace VRCX.Overlay;
 
 internal static class OverlayProgram
 {
-    private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    public static VRCXVRInterface VRCXVRInstance;
+    public static VRCXVRInterface? VRCXVRInstance;
 
     public static void OverlayMain()
     {
-        logger.Info("VRCX Overlay starting...");
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay starting...");
         CefService.Instance.Init();
         AppApiVr.Instance = new AppApiVrCef();
-        var isLegacy = VRCXStorage.Instance.Get("VRCX_DisableVrOverlayGpuAcceleration") == "true";
+        bool isLegacy = string.Equals(VRCXStorage.Instance.Get("VRCX_DisableVrOverlayGpuAcceleration"), "true", StringComparison.Ordinal);
         VRCXVRInstance = new VRCXVRCef(isLegacy);
         VRCXVRInstance.Init();
 
-        OverlayClient.Init();
+        OverlayClient.InitAsync();
 
-        logger.Info("VRCX Overlay started...");
-        QuitProcess();
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay started...");
+        QuitProcessAsync();
         ApplicationConfiguration.Initialize();
         var context = new ApplicationContext();
         Application.Run(context);
@@ -32,14 +29,14 @@ internal static class OverlayProgram
 
     private static void Exit()
     {
-        logger.Info("VRCX Overlay exiting...");
-        // CefService.Instance.Exit();
-        OverlayClient.Exit();
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay exiting...");
+
+        OverlayClient.ExitAsync();
         VRCXVRInstance.Exit();
         Environment.Exit(0);
     }
 
-    private static async Task QuitProcess()
+    private static async Task QuitProcessAsync()
     {
         await Task.Delay(5000);
         while (Program.LaunchDebug ?

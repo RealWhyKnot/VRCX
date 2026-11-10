@@ -1,577 +1,683 @@
-using System;
-using System.Collections.Generic;
+using Timer = System.Timers.Timer;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Timers;
 using Microsoft.Win32;
 using NLog;
 
-namespace VRCX
+namespace VRCX;
+
+
+
+
+internal sealed partial class AutoAppLaunchManager
 {
-    /// <summary>
-    /// The class responsible for launching user-defined applications when VRChat opens/closes.
-    /// </summary>
-    public class AutoAppLaunchManager
+    public static AutoAppLaunchManager Instance { get; private set; }
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    public const string VRChatProcessName = "VRChat";
+
+    public bool Enabled = false;
+
+    public bool KillChildrenOnExit = true;
+    public bool RunProcessOnce = true;
+    public readonly string AppShortcutDirectory;
+    public readonly string AppShortcutDesktop;
+    public readonly string AppShortcutVR;
+
+    private readonly DateTime startTime = DateTime.Now;
+    private readonly Dictionary<string, HashSet<int>> startedProcesses = [];
+    private readonly Timer childUpdateTimer;
+    private int timerTicks = 0;
+    private static readonly byte[] shortcutSignatureBytes = [0x4C, 0x00, 0x00, 0x00];
+    private static readonly byte[] urlShortcutHeader = "[{000214A0-0000-0000-C000-000000000046}]"u8.ToArray();
+
+    private const uint TH32CS_SNAPPROCESS = 2;
+
+
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+
+    [DllImport("kernel32.dll")]
+    public static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+    [DllImport("kernel32.dll")]
+    public static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct PROCESSENTRY32 : IEquatable<PROCESSENTRY32>
     {
-        public static AutoAppLaunchManager Instance { get; private set; }
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-        public static readonly string VRChatProcessName = "VRChat";
+        public uint dwSize;
+        public uint cntUsage;
+        public uint th32ProcessID;
+        public IntPtr th32DefaultHeapID;
+        public uint th32ModuleID;
+        public uint cntThreads;
+        public uint th32ParentProcessID;
+        public int pcPriClassBase;
+        public uint dwFlags;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szExeFile;
 
-        public bool Enabled = false;
-        /// <summary> Whether or not to kill child processes when VRChat closes. </summary>
-        public bool KillChildrenOnExit = true;
-        public bool RunProcessOnce = true;
-        public readonly string AppShortcutDirectory;
-        public readonly string AppShortcutDesktop;
-        public readonly string AppShortcutVR;
+        public override readonly bool Equals(object? obj) => obj is PROCESSENTRY32 other && Equals(other);
 
-        private DateTime startTime = DateTime.Now;
-        private Dictionary<string, HashSet<int>> startedProcesses = new();
-        private readonly Timer childUpdateTimer;
-        private int timerTicks = 0;
-        private static readonly byte[] shortcutSignatureBytes = { 0x4C, 0x00, 0x00, 0x00 }; // signature for ShellLinkHeader
-        private static readonly byte[] urlShortcutHeader = "[{000214A0-0000-0000-C000-000000000046}]"u8.ToArray(); // .url file header
-
-        private const uint TH32CS_SNAPPROCESS = 2;
-
-        // Requires access rights 'PROCESS_QUERY_INFORMATION' and 'PROCESS_VM_READ'
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
-
-        [DllImport("kernel32.dll")]
-        public static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32.dll")]
-        public static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct PROCESSENTRY32
+        public override readonly int GetHashCode()
         {
-            public uint dwSize;
-            public uint cntUsage;
-            public uint th32ProcessID;
-            public IntPtr th32DefaultHeapID;
-            public uint th32ModuleID;
-            public uint cntThreads;
-            public uint th32ParentProcessID;
-            public int pcPriClassBase;
-            public uint dwFlags;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-            public string szExeFile;
+            var hash = new HashCode();
+            hash.Add(dwSize);
+            hash.Add(cntUsage);
+            hash.Add(th32ProcessID);
+            hash.Add(th32DefaultHeapID);
+            hash.Add(th32ModuleID);
+            hash.Add(cntThreads);
+            hash.Add(th32ParentProcessID);
+            hash.Add(pcPriClassBase);
+            hash.Add(dwFlags);
+            hash.Add(szExeFile, StringComparer.Ordinal);
+            return hash.ToHashCode();
+        }
+
+        public static bool operator ==(PROCESSENTRY32 left, PROCESSENTRY32 right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(PROCESSENTRY32 left, PROCESSENTRY32 right)
+        {
+            return !(left == right);
+        }
+
+        public readonly bool Equals(PROCESSENTRY32 other) =>
+            dwSize == other.dwSize &&
+            cntUsage == other.cntUsage &&
+            th32ProcessID == other.th32ProcessID &&
+            th32DefaultHeapID == other.th32DefaultHeapID &&
+            th32ModuleID == other.th32ModuleID &&
+            cntThreads == other.cntThreads &&
+            th32ParentProcessID == other.th32ParentProcessID &&
+            pcPriClassBase == other.pcPriClassBase &&
+            dwFlags == other.dwFlags &&
+            string.Equals(szExeFile, other.szExeFile, StringComparison.Ordinal);
+    }
+    static AutoAppLaunchManager()
+    {
+        Instance = new AutoAppLaunchManager();
+    }
+
+    public AutoAppLaunchManager()
+    {
+        AppShortcutDirectory = Path.Join(Program.AppDataDirectory, "startup");
+        AppShortcutDesktop = Path.Join(AppShortcutDirectory, "desktop");
+        AppShortcutVR = Path.Join(AppShortcutDirectory, "vr");
+
+        Directory.CreateDirectory(AppShortcutDirectory);
+        Directory.CreateDirectory(AppShortcutDesktop);
+        Directory.CreateDirectory(AppShortcutVR);
+
+        ProcessMonitor.Instance.ProcessStarted += OnProcessStarted;
+        ProcessMonitor.Instance.ProcessExited += OnProcessExited;
+
+        childUpdateTimer = new Timer
+        {
+            Interval = 60000,
         };
+        childUpdateTimer.Elapsed += ChildUpdateTimer_Elapsed;
+    }
 
-        static AutoAppLaunchManager()
+    private void OnProcessExited(MonitoredProcess monitoredProcess)
+    {
+        if (!monitoredProcess.HasName(VRChatProcessName))
         {
-            Instance = new AutoAppLaunchManager();
+            return;
         }
 
-        public AutoAppLaunchManager()
+        lock (startedProcesses)
         {
-            AppShortcutDirectory = Path.Join(Program.AppDataDirectory, "startup");
-            AppShortcutDesktop = Path.Join(AppShortcutDirectory, "desktop");
-            AppShortcutVR = Path.Join(AppShortcutDirectory, "vr");
+            if (KillChildrenOnExit)
+            {
+                childUpdateTimer.Stop();
 
-            Directory.CreateDirectory(AppShortcutDirectory);
-            Directory.CreateDirectory(AppShortcutDesktop);
-            Directory.CreateDirectory(AppShortcutVR);
+                KillChildProcesses();
+            }
+            else
+            {
+                UpdateChildProcesses();
+            }
+        }
+    }
 
-            ProcessMonitor.Instance.ProcessStarted += OnProcessStarted;
-            ProcessMonitor.Instance.ProcessExited += OnProcessExited;
-
-            childUpdateTimer = new Timer();
-            childUpdateTimer.Interval = 60000;
-            childUpdateTimer.Elapsed += ChildUpdateTimer_Elapsed;
+    [SupportedOSPlatform("windows")]
+    private void OnProcessStarted(MonitoredProcess monitoredProcess)
+    {
+        if (!Enabled || !monitoredProcess.HasName(VRChatProcessName) || monitoredProcess.Process.StartTime < startTime)
+        {
+            return;
         }
 
-        private void OnProcessExited(MonitoredProcess monitoredProcess)
+
+        lock (startedProcesses)
         {
-            if (!monitoredProcess.HasName(VRChatProcessName))
+            if (KillChildrenOnExit)
+            {
+                KillChildProcesses();
+            }
+            else
+            {
+                UpdateChildProcesses();
+            }
+
+            (List<string>? shortcutFiles, List<string>? steamIds) = FindShortcutFiles(AppShortcutDirectory);
+            (List<string>? platformShortcutFiles, List<string>? platformSteamIds) = FindShortcutFiles(Program.AppApiInstance.IsSteamVRRunning() ? AppShortcutVR : AppShortcutDesktop);
+            shortcutFiles.AddRange(platformShortcutFiles);
+            steamIds.AddRange(platformSteamIds);
+            foreach (string? file in shortcutFiles)
+            {
+                if (RunProcessOnce && IsProcessRunning(file))
+                {
+                    continue;
+                }
+
+                if (IsChildProcessRunning(file))
+                {
+                    continue;
+                }
+
+                StartChildProcess(file);
+            }
+            foreach (string? steamId in steamIds)
+            {
+                StartSteamGameAsync(steamId);
+            }
+
+            if (shortcutFiles.Count == 0 && steamIds.Count == 0)
+            {
                 return;
-
-            lock (startedProcesses)
-            {
-                if (KillChildrenOnExit)
-                {
-                    childUpdateTimer.Stop();
-
-                    KillChildProcesses();
-                }
-                else
-                    UpdateChildProcesses();
             }
+
+            timerTicks = 0;
+            childUpdateTimer.Interval = 1000;
+            childUpdateTimer.Start();
         }
+    }
 
-        [SupportedOSPlatform("windows")]
-        private void OnProcessStarted(MonitoredProcess monitoredProcess)
+
+
+
+    private void KillChildProcesses()
+    {
+        UpdateChildProcesses();
+
+
+        Parallel.ForEach(startedProcesses.ToArray(), pair =>
         {
-            if (!Enabled || !monitoredProcess.HasName(VRChatProcessName) || monitoredProcess.Process.StartTime < startTime)
-                return;
-
-            // Start auto start processes
-            lock (startedProcesses)
+            HashSet<int> processes = pair.Value;
+            int[] pids = [.. processes];
+            foreach (int pid in pids)
             {
-                if (KillChildrenOnExit)
-                    KillChildProcesses();
-                else
-                    UpdateChildProcesses();
-
-                var (shortcutFiles, steamIds) = FindShortcutFiles(AppShortcutDirectory);
-                var (platformShortcutFiles, platformSteamIds) = FindShortcutFiles(Program.AppApiInstance.IsSteamVRRunning() ? AppShortcutVR : AppShortcutDesktop);
-                shortcutFiles.AddRange(platformShortcutFiles);
-                steamIds.AddRange(platformSteamIds);
-                foreach (var file in shortcutFiles)
+                if (!WinApi.HasProcessExited(pid))
                 {
-                    if (RunProcessOnce && IsProcessRunning(file))
-                        continue;
-
-                    if (IsChildProcessRunning(file))
-                        continue;
-
-                    StartChildProcess(file);
+                    KillProcessTree(pid);
                 }
-                foreach (var steamId in steamIds)
-                {
-                    StartSteamGame(steamId);
-                }
-
-                if (shortcutFiles.Count == 0 && steamIds.Count == 0)
-                    return;
-
-                timerTicks = 0;
-                childUpdateTimer.Interval = 1000;
-                childUpdateTimer.Start();
             }
-        }
+        });
 
-        /// <summary>
-        /// Kills all running child processes.
-        /// </summary>
-        private void KillChildProcesses()
+        startedProcesses.Clear();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    public static List<int> FindChildProcesses(int pid, bool recursive = true)
+    {
+        List<int> pids = [];
+
+        IntPtr snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == IntPtr.Zero)
         {
-            UpdateChildProcesses(); // Ensure the list contains all current child processes.
-
-            // Stop auto start processes
-            Parallel.ForEach(startedProcesses.ToArray(), pair =>
-            {
-                var processes = pair.Value;
-                var pids = processes.ToArray();
-                foreach (var pid in pids)
-                {
-                    if (!WinApi.HasProcessExited(pid))
-                        KillProcessTree(pid);
-                }
-            });
-
-            startedProcesses.Clear();
-        }
-
-        // TODO: Proper error handling for winapi calls.
-        // Will fail if process is protected, has admin rights, user account is limited(?), or process is dead
-        // catch win32exceptions
-
-        // This is a recursive function that kills a process and all of its children.
-        // It uses the CreateToolhelp32Snapshot winapi func to get a snapshot of all running processes, loops through them with Process32First/Process32Next, and kills any processes that have the given pid as their parent.
-
-        /// <summary>
-        /// Returns the child processes of a process.
-        /// </summary>
-        /// <param name="pid">The process ID of the parent process.</param>
-        public static List<int> FindChildProcesses(int pid, bool recursive = true)
-        {
-            List<int> pids = new List<int>();
-
-            IntPtr snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-            if (snapshot == IntPtr.Zero)
-            {
-                return pids;
-            }
-
-            PROCESSENTRY32 procEntry = new PROCESSENTRY32();
-            procEntry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32));
-
-            if (Process32First(snapshot, ref procEntry))
-            {
-                do
-                {
-                    if (procEntry.th32ParentProcessID == pid)
-                    {
-                        pids.Add((int)procEntry.th32ProcessID);
-
-                        if (recursive) // Recursively find child processes
-                            pids.AddRange(FindChildProcesses((int)procEntry.th32ProcessID));
-                    }
-                }
-                while (Process32Next(snapshot, ref procEntry));
-            }
-
             return pids;
         }
 
-        /// <summary>
-        /// Kills a process and all of its child processes.
-        /// </summary>
-        /// <param name="pid">The process ID of the parent process.</param>
-        public static void KillProcessTree(int pid)
+        var procEntry = new PROCESSENTRY32
         {
-            var pids = FindChildProcesses(pid);
-            pids.Add(pid); // Kill parent
+            dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32)),
+        };
 
-            foreach (var p in pids)
+        if (Process32First(snapshot, ref procEntry))
+        {
+            do
             {
-                try
+                if (procEntry.th32ParentProcessID == pid)
                 {
-                    using var proc = Process.GetProcessById(p);
-                    if (proc.HasExited)
-                        continue;
+                    pids.Add((int)procEntry.th32ProcessID);
 
-                    // breaks some apps
-                    // if (proc.CloseMainWindow())
-                    //     continue;
-                    //
-                    // if (proc.WaitForExit(1000))
-                    //     continue;
-
-                    proc.Kill();
-                }
-                catch
-                {
+                    if (recursive)
+                    {
+                        pids.AddRange(FindChildProcesses((int)procEntry.th32ProcessID));
+                    }
                 }
             }
+            while (Process32Next(snapshot, ref procEntry));
         }
 
-        /// <summary>
-        /// Starts a new child process.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        private void StartChildProcess(string path)
+        return pids;
+    }
+
+
+
+
+
+    public static void KillProcessTree(int pid)
+    {
+        List<int> pids = FindChildProcesses(pid);
+        pids.Add(pid);
+
+        foreach (int p in pids)
         {
             try
             {
-                var process = new Process();
-                process.StartInfo = new ProcessStartInfo(path)
+                using var proc = Process.GetProcessById(p);
+                if (proc.HasExited)
                 {
-                    UseShellExecute = true
-                };
-                process.Start();
-                if (process.Id != 0)
-                    startedProcesses.Add(path, new HashSet<int>() { process.Id });
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex);
-            }
-        }
-
-        /// <summary>
-        /// Updates the child processes list.
-        /// Removes any processes that have exited.
-        /// </summary>
-        private void UpdateChildProcesses()
-        {
-            foreach (var pair in startedProcesses.ToArray())
-            {
-                var processes = pair.Value;
-                foreach (var pid in processes.ToArray())
-                {
-                    bool recursiveChildSearch = processes.Count == 1; // Disable recursion when this list may already contain the entire process tree
-                    var childProcesses = FindChildProcesses(pid, recursiveChildSearch);
-
-                    foreach (int childPid in childProcesses) // Monitor child processes
-                        processes.Add(childPid); // HashSet will prevent duplication
-
-                    if (WinApi.HasProcessExited(pid))
-                        processes.Remove(pid);
-                }
-
-                if (processes.Count == 0) // All processes associated with the shortcut have exited.
-                    startedProcesses.Remove(pair.Key);
-            }
-        }
-
-        /// <summary>
-        /// Checks to see if a given file matches a current running child process.
-        /// </summary>
-        /// <param name="path">The path.</param>
-        /// <returns>
-        ///   <c>true</c> if child process running; otherwise, <c>false</c>.
-        /// </returns>
-        private bool IsChildProcessRunning(string path)
-        {
-            return startedProcesses.ContainsKey(path);
-        }
-
-        private bool IsProcessRunning(string filePath)
-        {
-            try
-            {
-                var processName = Path.GetFileNameWithoutExtension(filePath);
-                var processes = Process.GetProcessesByName(processName);
-                var isProcessRunning = processes.Length != 0;
-                foreach (var process in processes)
-                    process.Dispose();
-
-                return isProcessRunning;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Error checking if process is running: {0}", filePath);
-                return false;
-            }
-        }
-
-        public void Init()
-        {
-            // What are you lookin at? :eyes:
-        }
-
-        public void Exit()
-        {
-            childUpdateTimer.Stop();
-
-            Enabled = false;
-
-            // people thought this behavior was a bug
-            // lock (startedProcesses)
-            //     KillChildProcesses();
-        }
-
-        private void ChildUpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            lock (startedProcesses)
-                UpdateChildProcesses();
-
-            if (timerTicks < 5)
-            {
-                timerTicks++;
-
-                if (timerTicks == 5)
-                    childUpdateTimer.Interval = 60000;
-            }
-        }
-
-        /// <summary>
-        /// Finds windows shortcut files in a given folder.
-        /// </summary>
-        /// <param name="folderPath">The folder path.</param>
-        /// <returns>An array of shortcut paths. If none, then empty.</returns>
-        private static Tuple<List<string>, List<string>> FindShortcutFiles(string folderPath)
-        {
-            var directoryInfo = new DirectoryInfo(folderPath);
-            var files = directoryInfo.GetFiles();
-            var shortcuts = new List<string>();
-            var steamIds = new List<string>();
-
-            foreach (var file in files)
-            {
-                if (IsShortcutFile(file.FullName))
-                {
-                    shortcuts.Add(file.FullName);
-                    continue;
-                }
-                if (IsUrlShortcutFile(file.FullName))
-                {
-                    try
-                    {
-                        const string urlPrefix = "URL=steam://rungameid/";
-                        var lines = File.ReadAllLines(file.FullName);
-                        var urlLine = lines.FirstOrDefault(l => l.StartsWith(urlPrefix));
-                        if (urlLine == null)
-                            continue;
-
-                        var appId = urlLine[urlPrefix.Length..].Trim();
-                        steamIds.Add(appId);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex, "Error reading shortcut file: {0}", file.FullName);
-                    }
-                }
-            }
-
-            return new Tuple<List<string>, List<string>>(shortcuts, steamIds);
-        }
-
-
-
-        /// <summary>
-        /// Determines whether the specified file path is a shortcut by checking the file header.
-        /// </summary>
-        /// <param name="filePath">The file path.</param>
-        /// <returns><c>true</c> if the given file path is a shortcut, otherwise <c>false</c></returns>
-        private static bool IsShortcutFile(string filePath)
-        {
-            var headerBytes = new byte[4];
-            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            if (fileStream.Length < 4)
-                return false;
-            fileStream.ReadExactly(headerBytes, 0, 4);
-
-            return headerBytes.SequenceEqual(shortcutSignatureBytes);
-        }
-
-        private static bool IsUrlShortcutFile(string filePath)
-        {
-            var headerBytes = new byte[urlShortcutHeader.Length];
-            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            if (fileStream.Length < headerBytes.Length)
-                return false;
-            fileStream.ReadExactly(headerBytes, 0, headerBytes.Length);
-
-            return headerBytes.SequenceEqual(urlShortcutHeader);
-        }
-
-        // Steam shortcuts
-
-        [SupportedOSPlatform("windows")]
-        public async Task StartSteamGame(string appId)
-        {
-            try
-            {
-                var process = new Process();
-                process.StartInfo = new ProcessStartInfo($"steam://launch/{appId}")
-                {
-                    UseShellExecute = true
-                };
-                process.Start();
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Error starting steam game with appid {0}", appId);
-            }
-
-            var appDirPath = GetPathWithAppId(appId);
-            if (appDirPath == null)
-                return;
-
-            // wait for Steam to start the process
-            const int retryLimit = 10;
-            for (var i = 0; i < retryLimit; i++)
-            {
-                // find running process from path
-                var processes = Process.GetProcesses();
-                var foundProcess = processes.FirstOrDefault(p =>
-                {
-                    try
-                    {
-                        return !p.HasExited &&
-                               p.MainModule?.FileName != null &&
-                               p.MainModule.FileName.StartsWith(appDirPath, StringComparison.OrdinalIgnoreCase);
-                    }
-                    catch
-                    {
-                        return false;
-                    }
-                });
-                if (foundProcess?.MainModule?.FileName == null)
-                {
-                    await Task.Delay(1000);
                     continue;
                 }
 
-                var processPath = foundProcess.MainModule.FileName;
-                logger.Info("Found process for appid {0}: {1} (PID: {2})", appId, processPath, foundProcess.Id);
-                lock (startedProcesses)
-                {
-                    startedProcesses.Add(processPath, new HashSet<int>() { foundProcess.Id });
-                }
 
-                return;
-            }
-            logger.Error("Failed to find process for appid {0} after starting. Steam may have failed to launch the game or it may have taken too long to start.", appId);
-        }
 
-        [SupportedOSPlatform("windows")]
-        private static string? GetPathWithAppId(string appId)
-        {
-            string? steamPath = null;
-            try
-            {
-                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam");
-                if (key?.GetValue("InstallPath") is string path)
-                    steamPath = path;
+
+
+
+
+
+                proc.Kill();
             }
             catch
             {
-                // Ignored
+            }
+        }
+    }
+
+
+
+
+
+    private void StartChildProcess(string path)
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo(path)
+                {
+                    UseShellExecute = true,
+                },
+            };
+            process.Start();
+            if (process.Id != 0)
+            {
+                startedProcesses.Add(path, [process.Id]);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, ex);
+        }
+    }
+
+
+
+
+
+    private void UpdateChildProcesses()
+    {
+        foreach (KeyValuePair<string, HashSet<int>> pair in startedProcesses.ToArray())
+        {
+            HashSet<int> processes = pair.Value;
+            foreach (int pid in processes.ToArray())
+            {
+                bool recursiveChildSearch = processes.Count == 1;
+                List<int> childProcesses = FindChildProcesses(pid, recursiveChildSearch);
+
+                foreach (int childPid in childProcesses)
+                {
+                    processes.Add(childPid);
+                }
+
+                if (WinApi.HasProcessExited(pid))
+                {
+                    processes.Remove(pid);
+                }
             }
 
-            if (steamPath == null)
+            if (processes.Count == 0)
+            {
+                startedProcesses.Remove(pair.Key);
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+    private bool IsChildProcessRunning(string path) => startedProcesses.ContainsKey(path);
+
+    private bool IsProcessRunning(string filePath)
+    {
+        try
+        {
+            string processName = Path.GetFileNameWithoutExtension(filePath);
+            Process[] processes = Process.GetProcessesByName(processName);
+            bool isProcessRunning = processes.Length != 0;
+            foreach (Process process in processes)
+            {
+                process.Dispose();
+            }
+
+            return isProcessRunning;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Error checking if process is running: {0}", filePath);
+            return false;
+        }
+    }
+
+    public void Init()
+    {
+
+    }
+
+    public void Exit()
+    {
+        childUpdateTimer.Stop();
+
+        Enabled = false;
+
+
+
+
+    }
+
+    private void ChildUpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
+    {
+        lock (startedProcesses)
+        {
+            UpdateChildProcesses();
+        }
+
+        if (timerTicks < 5)
+        {
+            timerTicks++;
+
+            if (timerTicks == 5)
+            {
+                childUpdateTimer.Interval = 60000;
+            }
+        }
+    }
+
+
+
+
+
+
+    private static Tuple<List<string>, List<string>> FindShortcutFiles(string folderPath)
+    {
+        var directoryInfo = new DirectoryInfo(folderPath);
+        FileInfo[] files = directoryInfo.GetFiles();
+        var shortcuts = new List<string>();
+        var steamIds = new List<string>();
+
+        foreach (FileInfo file in files)
+        {
+            if (IsShortcutFile(file.FullName))
+            {
+                shortcuts.Add(file.FullName);
+                continue;
+            }
+            if (IsUrlShortcutFile(file.FullName))
             {
                 try
                 {
-                    using var key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
-                    if (key?.GetValue("SteamPath") is string path)
-                        steamPath = path.Replace("/", "\\");
+                    const string urlPrefix = "URL=steam://rungameid/";
+                    string[] lines = File.ReadAllLines(file.FullName);
+                    string? urlLine = lines.FirstOrDefault(l => l.StartsWith(urlPrefix, StringComparison.Ordinal));
+                    if (urlLine == null)
+                    {
+                        continue;
+                    }
+
+                    string appId = urlLine[urlPrefix.Length..].Trim();
+                    steamIds.Add(appId);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "Error reading shortcut file: {0}", file.FullName);
+                }
+            }
+        }
+
+        return new Tuple<List<string>, List<string>>(shortcuts, steamIds);
+    }
+
+
+
+
+
+
+
+
+    private static bool IsShortcutFile(string filePath)
+    {
+        byte[] headerBytes = new byte[4];
+        using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        if (fileStream.Length < 4)
+        {
+            return false;
+        }
+
+        fileStream.ReadExactly(headerBytes, 0, 4);
+
+        return headerBytes.SequenceEqual(shortcutSignatureBytes);
+    }
+
+    private static bool IsUrlShortcutFile(string filePath)
+    {
+        byte[] headerBytes = new byte[urlShortcutHeader.Length];
+        using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        if (fileStream.Length < headerBytes.Length)
+        {
+            return false;
+        }
+
+        fileStream.ReadExactly(headerBytes, 0, headerBytes.Length);
+
+        return headerBytes.SequenceEqual(urlShortcutHeader);
+    }
+
+
+
+    [SupportedOSPlatform("windows")]
+    public async Task StartSteamGameAsync(string appId)
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo($"steam://launch/{appId}")
+                {
+                    UseShellExecute = true,
+                },
+            };
+            process.Start();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Error starting steam game with appid {0}", appId);
+        }
+
+        string? appDirPath = GetPathWithAppId(appId);
+        if (appDirPath == null)
+        {
+            return;
+        }
+
+
+        const int retryLimit = 10;
+        for (int i = 0; i < retryLimit; i++)
+        {
+
+            Process[] processes = Process.GetProcesses();
+            Process? foundProcess = processes.FirstOrDefault(p =>
+            {
+                try
+                {
+                    return !p.HasExited &&
+                           p.MainModule?.FileName != null &&
+                           p.MainModule.FileName.StartsWith(appDirPath, StringComparison.OrdinalIgnoreCase);
                 }
                 catch
                 {
-                    // Ignored
+                    return false;
                 }
+            });
+            if (foundProcess?.MainModule?.FileName == null)
+            {
+                await Task.Delay(1000);
+                continue;
             }
 
-            if (steamPath == null)
+            string processPath = foundProcess.MainModule.FileName;
+            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Found process for appid {0}: {1} (PID: {2})", appId, processPath, foundProcess.Id);
+            lock (startedProcesses)
             {
-                logger.Error("Cant find Steam install path");
-                return null;
-            }
-            var libraryFoldersVdfPath = Path.Join(steamPath, @"config\libraryfolders.vdf");
-            if (!File.Exists(libraryFoldersVdfPath))
-            {
-                logger.Error("Cant find Steam libraryfolders.vdf");
-                return null;
+                startedProcesses.Add(processPath, [foundProcess.Id]);
             }
 
-            var libraryFolders = new List<string>();
-            foreach (var line in File.ReadLines(libraryFoldersVdfPath))
+            return;
+        }
+        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Failed to find process for appid {0} after starting. Steam may have failed to launch the game or it may have taken too long to start.", appId);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string? GetPathWithAppId(string appId)
+    {
+        string? steamPath = null;
+        try
+        {
+            using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Valve\Steam");
+            if (key?.GetValue("InstallPath") is string path)
             {
-                if (!line.Contains("\"path\""))
-                    continue;
-
-                var parts = line.Split("\t");
-                if (parts.Length < 4)
-                    continue;
-
-                var basePath = parts[4].Replace("\"", "").Replace(@"\\", @"\");
-                var path = Path.Join(basePath, @"steamapps");
-                if (Directory.Exists(path))
-                    libraryFolders.Add(path);
+                steamPath = path;
             }
+        }
+        catch
+        {
 
-            foreach (var libraryPath in libraryFolders)
+        }
+
+        if (steamPath == null)
+        {
+            try
             {
-                var appManifestFiles = Directory.GetFiles(libraryPath, "appmanifest_*.acf");
-                foreach (var file in appManifestFiles)
+                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
+                if (key?.GetValue("SteamPath") is string path)
                 {
-                    try
-                    {
-                        var acf = File.ReadAllText(file);
-                        var idMatch = Regex.Match(acf, @"""appid""\s+""(\d+)""");
-                        var dirMatch = Regex.Match(acf, @"""installdir""\s+""([^""]+)""");
-                        if (!idMatch.Success || !dirMatch.Success)
-                            continue;
-
-                        var foundAppId = idMatch.Groups[1].Value;
-                        if (foundAppId != appId)
-                            continue;
-
-                        var fullPath = Path.Join(libraryPath, "common", dirMatch.Groups[1].Value);
-                        if (Directory.Exists(fullPath))
-                            return fullPath;
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
+                    steamPath = path.Replace("/", "\\");
                 }
             }
+            catch
+            {
 
-            logger.Error("Could not find install dir for appid {0}", appId);
+            }
+        }
+
+        if (steamPath == null)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam install path");
             return null;
         }
+        string libraryFoldersVdfPath = Path.Join(steamPath, @"config\libraryfolders.vdf");
+        if (!File.Exists(libraryFoldersVdfPath))
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam libraryfolders.vdf");
+            return null;
+        }
+
+        var libraryFolders = new List<string>();
+        foreach (string line in File.ReadLines(libraryFoldersVdfPath))
+        {
+            if (!line.Contains("\"path\""))
+            {
+                continue;
+            }
+
+            string[] parts = line.Split("\t");
+            if (parts.Length < 4)
+            {
+                continue;
+            }
+
+            string basePath = parts[4].Replace("\"", "").Replace(@"\\", @"\");
+            string path = Path.Join(basePath, @"steamapps");
+            if (Directory.Exists(path))
+            {
+                libraryFolders.Add(path);
+            }
+        }
+
+        foreach (string libraryPath in libraryFolders)
+        {
+            string[] appManifestFiles = Directory.GetFiles(libraryPath, "appmanifest_*.acf");
+            foreach (string file in appManifestFiles)
+            {
+                try
+                {
+                    string acf = File.ReadAllText(file);
+                    Match idMatch = MyRegex().Match(acf);
+                    Match dirMatch = MyRegex1().Match(acf);
+                    if (!idMatch.Success || !dirMatch.Success)
+                    {
+                        continue;
+                    }
+
+                    string foundAppId = idMatch.Groups[1].Value;
+                    if (!string.Equals(foundAppId, appId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string fullPath = Path.Join(libraryPath, "common", dirMatch.Groups[1].Value);
+                    if (Directory.Exists(fullPath))
+                    {
+                        return fullPath;
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Could not find install dir for appid {0}", appId);
+        return null;
     }
+
+    [GeneratedRegex(@"""appid""\s+""(\d+)""")]
+    private static partial Regex MyRegex();
+    [GeneratedRegex(@"""installdir""\s+""([^""]+)""")]
+    private static partial Regex MyRegex1();
 }

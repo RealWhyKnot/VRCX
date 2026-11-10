@@ -1,92 +1,101 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 
-namespace VRCX
+namespace VRCX;
+
+public partial class AppApi
 {
-    public partial class AppApi
+    public Dictionary<string, short> GetVRChatModerations(string currentUserId)
     {
-        public Dictionary<string, short> GetVRChatModerations(string currentUserId)
+
+
+        string filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
+        if (!File.Exists(filePath))
         {
-            // 004 = hideAvatar
-            // 005 = showAvatar
-            var filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
-            if (!File.Exists(filePath))
-                return null;
-
-            var output = new Dictionary<string, short>();
-            using var reader = new StreamReader(filePath);
-            string line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                var index = line.IndexOf(' ');
-                if (index <= 0)
-                    continue;
-
-                var userId = line.Substring(0, index);
-                var type = short.Parse(line.Substring(line.Length - 3));
-                output.Add(userId, type);
-            }
-
-            return output;
+            return null;
         }
 
-        public short GetVRChatUserModeration(string currentUserId, string userId)
+        var output = new Dictionary<string, short>(StringComparer.Ordinal);
+        using var reader = new StreamReader(filePath);
+        string line;
+        while ((line = reader.ReadLine()) != null)
         {
-            var filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
-            if (!File.Exists(filePath))
-                return 0;
-
-            using var reader = new StreamReader(filePath);
-            string line;
-            while ((line = reader.ReadLine()) != null)
+            int index = line.IndexOf(' ');
+            if (index <= 0)
             {
-                var index = line.IndexOf(' ');
-                if (index <= 0)
-                    continue;
-
-                if (userId == line.Substring(0, index))
-                {
-                    return short.Parse(line.Substring(line.Length - 3));
-                }
+                continue;
             }
 
+            string userId = line[..index];
+            short type = short.Parse(line[^3..], System.Globalization.CultureInfo.InvariantCulture);
+            output.Add(userId, type);
+        }
+
+        return output;
+    }
+
+    public short GetVRChatUserModeration(string currentUserId, string userId)
+    {
+        string filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
+        if (!File.Exists(filePath))
+        {
             return 0;
         }
 
-        public bool SetVRChatUserModeration(string currentUserId, string userId, int type)
+        using var reader = new StreamReader(filePath);
+        string line;
+        while ((line = reader.ReadLine()) != null)
         {
-            var filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
-            if (!File.Exists(filePath))
-                return false;
-
-            var lines = File.ReadAllLines(filePath).ToList();
-            var index = lines.FindIndex(x => x.StartsWith(userId));
-            if (index >= 0)
-                lines.RemoveAt(index);
-
-            if (type != 0)
+            int index = line.IndexOf(' ');
+            if (index <= 0)
             {
-                var sb = new StringBuilder(userId);
-                while (sb.Length < 64)
-                    sb.Append(' ');
-
-                sb.Append(type.ToString("000"));
-                lines.Add(sb.ToString());
+                continue;
             }
 
-            try
+            if (string.Equals(userId, line[..index], StringComparison.Ordinal))
             {
-                File.WriteAllLines(filePath, lines);
+                return short.Parse(line[^3..], System.Globalization.CultureInfo.InvariantCulture);
             }
-            catch (Exception)
-            {
-                return false;
-            }
-
-            return true;
         }
+
+        return 0;
+    }
+
+    public bool SetVRChatUserModeration(string currentUserId, string userId, int type)
+    {
+        string filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
+        if (!File.Exists(filePath))
+        {
+            return false;
+        }
+
+        List<string> lines = [.. File.ReadAllLines(filePath)];
+        int index = lines.FindIndex(x => x.StartsWith(userId, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            lines.RemoveAt(index);
+        }
+
+        if (type != 0)
+        {
+            var sb = new StringBuilder(userId);
+            while (sb.Length < 64)
+            {
+                sb.Append(' ');
+            }
+
+            sb.Append(type.ToString("000", System.Globalization.CultureInfo.InvariantCulture));
+            lines.Add(sb.ToString());
+        }
+
+        try
+        {
+            File.WriteAllLines(filePath, lines);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+
+        return true;
     }
 }

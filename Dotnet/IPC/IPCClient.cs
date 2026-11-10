@@ -1,6 +1,4 @@
-using System;
 using System.Globalization;
-using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using Newtonsoft.Json;
@@ -10,106 +8,106 @@ using CefSharp;
 #endif
 
 
-namespace VRCX
+namespace VRCX;
+
+internal sealed class IPCClient
 {
-    public class IPCClient
+    private static readonly UTF8Encoding noBomEncoding = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false);
+    private readonly NamedPipeServerStream _ipcServer;
+    private readonly byte[] _recvBuffer = new byte[1024 * 8];
+    private readonly MemoryStream memoryStream;
+    private readonly byte[] packetBuffer = new byte[1024 * 1024];
+    private readonly JsonSerializer serializer = new();
+    private string _currentPacket;
+
+    public IPCClient(NamedPipeServerStream ipcServer)
     {
-        private static readonly UTF8Encoding noBomEncoding = new UTF8Encoding(false, false);
-        private readonly NamedPipeServerStream _ipcServer;
-        private readonly byte[] _recvBuffer = new byte[1024 * 8];
-        private readonly MemoryStream memoryStream;
-        private readonly byte[] packetBuffer = new byte[1024 * 1024];
-        private readonly Newtonsoft.Json.JsonSerializer serializer = new Newtonsoft.Json.JsonSerializer();
-        private string _currentPacket;
+        memoryStream = new MemoryStream(packetBuffer);
+        serializer.Culture = CultureInfo.InvariantCulture;
+        serializer.Formatting = Formatting.None;
 
-        public IPCClient(NamedPipeServerStream ipcServer)
+        _ipcServer = ipcServer;
+    }
+
+    public void BeginRead() => _ipcServer.BeginRead(_recvBuffer, 0, _recvBuffer.Length, OnRead, _ipcServer);
+
+    public void Send(IPCPacket ipcPacket)
+    {
+        try
         {
-            memoryStream = new MemoryStream(packetBuffer);
-            serializer.Culture = CultureInfo.InvariantCulture;
-            serializer.Formatting = Formatting.None;
-
-            _ipcServer = ipcServer;
-        }
-
-        public void BeginRead()
-        {
-            _ipcServer.BeginRead(_recvBuffer, 0, _recvBuffer.Length, OnRead, _ipcServer);
-        }
-
-        public void Send(IPCPacket ipcPacket)
-        {
-            try
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using (var streamWriter = new StreamWriter(memoryStream, noBomEncoding, 65535, leaveOpen: true))
+            using (var writer = new JsonTextWriter(streamWriter))
             {
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                using (var streamWriter = new StreamWriter(memoryStream, noBomEncoding, 65535, true))
-                using (var writer = new JsonTextWriter(streamWriter))
-                {
-                    serializer.Serialize(writer, ipcPacket);
-                    streamWriter.Write((char)0x00);
-                    streamWriter.Flush();
-                }
-
-                var length = (int)memoryStream.Position;
-                _ipcServer?.BeginWrite(packetBuffer, 0, length, OnSend, null);
+                serializer.Serialize(writer, ipcPacket);
+                streamWriter.Write((char)0x00);
+                streamWriter.Flush();
             }
-            catch
+
+            int length = (int)memoryStream.Position;
+            _ipcServer?.BeginWrite(packetBuffer, 0, length, OnSend, state: null);
+        }
+        catch
+        {
+            IPCServer.Clients.TryRemove(this, out _);
+        }
+    }
+
+    private void OnRead(IAsyncResult asyncResult)
+    {
+        try
+        {
+            int bytesRead = _ipcServer.EndRead(asyncResult);
+
+            if (bytesRead <= 0)
             {
                 IPCServer.Clients.TryRemove(this, out _);
+                _ipcServer.Close();
+                return;
             }
-        }
 
-        private void OnRead(IAsyncResult asyncResult)
-        {
-            try
+            _currentPacket += Encoding.UTF8.GetString(_recvBuffer, 0, bytesRead);
+
+            if (_currentPacket[^1] == (char)0x00)
             {
-                var bytesRead = _ipcServer.EndRead(asyncResult);
+                string[] packets = _currentPacket.Split((char)0x00);
 
-                if (bytesRead <= 0)
+                foreach (string packet in packets)
                 {
-                    IPCServer.Clients.TryRemove(this, out _);
-                    _ipcServer.Close();
-                    return;
-                }
-
-                _currentPacket += Encoding.UTF8.GetString(_recvBuffer, 0, bytesRead);
-
-                if (_currentPacket[_currentPacket.Length - 1] == (char)0x00)
-                {
-                    var packets = _currentPacket.Split((char)0x00);
-
-                    foreach (var packet in packets)
+                    if (string.IsNullOrEmpty(packet))
                     {
-                        if (string.IsNullOrEmpty(packet))
-                            continue;
-
-#if !LINUX
-                        if (MainForm.Instance?.Browser != null && !MainForm.Instance.Browser.IsLoading && MainForm.Instance.Browser.CanExecuteJavascriptInMainFrame)
-                            MainForm.Instance.Browser.ExecuteScriptAsync("window?.$pinia?.vrcx.ipcEvent", packet);
-#endif
+                        continue;
                     }
 
-                    _currentPacket = string.Empty;
+#if !LINUX
+                    if (MainForm.Instance?.Browser != null && !MainForm.Instance.Browser.IsLoading && MainForm.Instance.Browser.CanExecuteJavascriptInMainFrame)
+                    {
+                        MainForm.Instance.Browser.ExecuteScriptAsync("window?.$pinia?.vrcx.ipcEvent", packet);
+                    }
+#endif
                 }
+
+                _currentPacket = string.Empty;
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            BeginRead();
         }
-
-        public static void OnSend(IAsyncResult asyncResult)
+        catch (Exception e)
         {
-            var ipcClient = (NamedPipeClientStream)asyncResult.AsyncState;
-            ipcClient?.EndWrite(asyncResult);
+            Console.WriteLine(e);
         }
 
-        public static void Close(IAsyncResult asyncResult)
-        {
-            var ipcClient = (NamedPipeClientStream)asyncResult.AsyncState;
-            ipcClient?.EndWrite(asyncResult);
-            ipcClient?.Close();
-        }
+        BeginRead();
+    }
+
+    public static void OnSend(IAsyncResult asyncResult)
+    {
+        var ipcClient = (NamedPipeClientStream)asyncResult.AsyncState;
+        ipcClient?.EndWrite(asyncResult);
+    }
+
+    public static void Close(IAsyncResult asyncResult)
+    {
+        var ipcClient = (NamedPipeClientStream)asyncResult.AsyncState;
+        ipcClient?.EndWrite(asyncResult);
+        ipcClient?.Close();
     }
 }

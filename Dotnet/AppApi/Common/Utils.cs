@@ -1,14 +1,13 @@
-using System.IO;
 using System.Text.RegularExpressions;
 
 namespace VRCX;
 
 public partial class AppApi
 {
-    private static readonly Regex _folderRegex = new Regex(string.Format(@"([{0}]*\.+$)|([{0}]+)",
+    private static readonly Regex _folderRegex = new(string.Format(System.Globalization.CultureInfo.InvariantCulture, @"([{0}]*\.+$)|([{0}]+)",
         Regex.Escape(new string(Path.GetInvalidPathChars()))));
 
-    private static readonly Regex _fileRegex = new Regex(string.Format(@"([{0}]*\.+$)|([{0}]+)",
+    private static readonly Regex _fileRegex = new(string.Format(System.Globalization.CultureInfo.InvariantCulture, @"([{0}]*\.+$)|([{0}]+)",
         Regex.Escape(new string(Path.GetInvalidFileNameChars()))));
 
     private static string MakeValidFileName(string name)

@@ -1,354 +1,363 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace VRCX
+namespace VRCX;
+
+public partial class AppApiElectron
 {
-    public partial class AppApiElectron
+    public static string _homeDirectory;
+    public static string _steamPath;
+    public static string _steamUserdataPath;
+    public static string _vrcPrefixPath;
+    public static string _vrcAppDataPath;
+    public static string _vrcCrashesPath;
+    public static string _vrcInstallPath;
+
+    static AppApiElectron()
     {
-        public static string _homeDirectory;
-        public static string _steamPath;
-        public static string _steamUserdataPath;
-        public static string _vrcPrefixPath;
-        public static string _vrcAppDataPath;
-        public static string _vrcCrashesPath;
-        public static string _vrcInstallPath;
+        const string vrchatAppid = "438100";
+        _homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        _steamUserdataPath = Path.Join(_homeDirectory, ".steam/steam/userdata");
+        _steamPath = Path.Join(_homeDirectory, ".local/share/Steam");
 
-        static AppApiElectron()
+        string flatpakSteamPath = Path.Join(_homeDirectory, ".var/app/com.valvesoftware.Steam/.local/share/Steam");
+        if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(flatpakSteamPath))
         {
-            const string vrchatAppid = "438100";
-            _homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            _steamUserdataPath = Path.Join(_homeDirectory, ".steam/steam/userdata");
-            _steamPath = Path.Join(_homeDirectory, ".local/share/Steam");
-
-            var flatpakSteamPath = Path.Join(_homeDirectory, ".var/app/com.valvesoftware.Steam/.local/share/Steam");
-            if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(flatpakSteamPath))
-            {
-                logger.Info("Flatpak Steam detected.");
-                _steamPath = flatpakSteamPath;
-            }
-
-            var legacySteamPath = Path.Join(_homeDirectory, ".steam/steam");
-            if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(legacySteamPath))
-            {
-                logger.Info("Legacy Steam path detected.");
-                _steamPath = legacySteamPath;
-            }
-
-            if (!IsValidSteamPath(_steamPath))
-            {
-                logger.Error("No valid Steam library found.");
-            }
-
-            var libraryFoldersVdfPath = Path.Join(_steamPath, "config/libraryfolders.vdf");
-            var vrcLibraryPath = GetLibraryWithAppId(libraryFoldersVdfPath, vrchatAppid);
-            if (string.IsNullOrEmpty(vrcLibraryPath))
-            {
-                logger.Warn("Falling back to default VRChat path as libraryfolders.vdf was not found OR libraryfolders.vdf does not contain VRChat's appid (438100)");
-                vrcLibraryPath = _steamPath;
-            }
-            logger.Info($"Using steam library path {vrcLibraryPath}");
-            _vrcPrefixPath = Path.Join(vrcLibraryPath, $"steamapps/compatdata/{vrchatAppid}/pfx");
-            _vrcInstallPath = Path.Join(vrcLibraryPath, "steamapps/common/VRChat");
-            _vrcAppDataPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat");
-            _vrcCrashesPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/Local/Temp/VRChat/VRChat/Crashes");
+            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Flatpak Steam detected.");
+            _steamPath = flatpakSteamPath;
         }
 
-        private static bool IsValidSteamPath(string path)
+        string legacySteamPath = Path.Join(_homeDirectory, ".steam/steam");
+        if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(legacySteamPath))
         {
-            return File.Exists(Path.Join(path, "config/libraryfolders.vdf"));
+            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Legacy Steam path detected.");
+            _steamPath = legacySteamPath;
         }
 
-        private static string? GetLibraryWithAppId(string libraryFoldersVdfPath, string appId)
+        if (!IsValidSteamPath(_steamPath))
         {
-            if (!File.Exists(libraryFoldersVdfPath))
-                return null;
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "No valid Steam library found.");
+        }
 
-            string? libraryPath = null;
-            foreach (var line in File.ReadLines(libraryFoldersVdfPath))
-            {
-                // Assumes line will be \t\t"path"\t\t"pathToLibrary"
-                if (line.Contains("\"path\""))
-                {
-                    var parts = line.Split("\t");
-                    if (parts.Length < 4)
-                        continue;
+        string libraryFoldersVdfPath = Path.Join(_steamPath, "config/libraryfolders.vdf");
+        string? vrcLibraryPath = GetLibraryWithAppId(libraryFoldersVdfPath, vrchatAppid);
+        if (string.IsNullOrEmpty(vrcLibraryPath))
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Falling back to default VRChat path as libraryfolders.vdf was not found OR libraryfolders.vdf does not contain VRChat's appid (438100)");
+            vrcLibraryPath = _steamPath;
+        }
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Using steam library path {vrcLibraryPath}");
+        _vrcPrefixPath = Path.Join(vrcLibraryPath, $"steamapps/compatdata/{vrchatAppid}/pfx");
+        _vrcInstallPath = Path.Join(vrcLibraryPath, "steamapps/common/VRChat");
+        _vrcAppDataPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat");
+        _vrcCrashesPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/Local/Temp/VRChat/VRChat/Crashes");
+    }
 
-                    libraryPath = parts[4].Replace("\"", "");
-                }
+    private static bool IsValidSteamPath(string path) => File.Exists(Path.Join(path, "config/libraryfolders.vdf"));
 
-                if (line.Contains($"\"{appId}\"") && Directory.Exists(libraryPath))
-                    return libraryPath;
-            }
-
+    private static string? GetLibraryWithAppId(string libraryFoldersVdfPath, string appId)
+    {
+        if (!File.Exists(libraryFoldersVdfPath))
+        {
             return null;
         }
 
-        public override string GetVRChatAppDataLocation()
+        string? libraryPath = null;
+        foreach (string line in File.ReadLines(libraryFoldersVdfPath))
         {
-            return _vrcAppDataPath;
-        }
 
-        public override string GetVRChatCacheLocation()
-        {
-            var defaultPath = Path.Join(GetVRChatAppDataLocation(), "Cache-WindowsPlayer");
-            try
+            if (line.Contains("\"path\""))
             {
-                var json = ReadConfigFile();
-                if (string.IsNullOrEmpty(json))
-                    return defaultPath;
-
-                var obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-                if (obj["cache_directory"] == null)
-                    return defaultPath;
-
-                var cacheDir = (string)obj["cache_directory"];
-                if (string.IsNullOrEmpty(cacheDir))
-                    return defaultPath;
-
-                var cachePath = Path.Join(cacheDir, "Cache-WindowsPlayer");
-                if (!Directory.Exists(cacheDir))
-                    return defaultPath;
-
-                return cachePath;
-            }
-            catch (Exception e)
-            {
-                logger.Error($"Error reading VRChat config file for cache location: {e}");
-            }
-            return defaultPath;
-        }
-
-        public override string GetVRChatPhotosLocation()
-        {
-            var defaultPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/Pictures/VRChat");
-            try
-            {
-                var json = ReadConfigFile();
-                if (string.IsNullOrEmpty(json))
-                    return defaultPath;
-
-                var obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-                if (obj["picture_output_folder"] == null)
-                    return defaultPath;
-
-                var photosDir = (string)obj["picture_output_folder"];
-                if (string.IsNullOrEmpty(photosDir) || !Directory.Exists(photosDir))
-                    return defaultPath;
-
-                return photosDir;
-            }
-            catch (Exception e)
-            {
-                logger.Error($"Error reading VRChat config file for photos location: {e}");
-            }
-            return defaultPath;
-        }
-
-        public override string GetUGCPhotoLocation(string path = "")
-        {
-            if (string.IsNullOrEmpty(path))
-            {
-                return GetVRChatPhotosLocation();
-            }
-
-            try
-            {
-                if (!Directory.Exists(path))
+                string[] parts = line.Split("\t");
+                if (parts.Length < 4)
                 {
-                    Directory.CreateDirectory(path);
-                }
-                return path;
-            }
-            catch (Exception e)
-            {
-                logger.Error(e);
-                return GetVRChatPhotosLocation();
-            }
-        }
-
-        private string GetSteamUserdataPathFromRegistry()
-        {
-            // TODO: Fix Steam userdata path, for now just get the first folder
-            if (Directory.Exists(_steamUserdataPath))
-            {
-                var steamUserDirs = Directory.GetDirectories(_steamUserdataPath);
-                if (steamUserDirs.Length > 0)
-                {
-                    return steamUserDirs[0];
-                }
-            }
-            return string.Empty;
-        }
-
-        public override string GetVRChatScreenshotsLocation()
-        {
-            // program files steam userdata screenshots
-            return Path.Join(_steamUserdataPath, "760/remote/438100/screenshots");
-        }
-
-        public override bool OpenVrcxAppDataFolder()
-        {
-            var path = Program.AppDataDirectory;
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override bool OpenVrcAppDataFolder()
-        {
-            var path = _vrcAppDataPath;
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override bool OpenVrcPhotosFolder()
-        {
-            var path = GetVRChatPhotosLocation();
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override bool OpenUGCPhotosFolder(string ugcPath = "")
-        {
-            var path = GetUGCPhotoLocation(ugcPath);
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override bool OpenVrcScreenshotsFolder()
-        {
-            var path = GetVRChatScreenshotsLocation();
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override bool OpenCrashVrcCrashDumps()
-        {
-            var path = _vrcCrashesPath;
-            if (!Directory.Exists(path))
-                return false;
-
-            OpenFolderAndSelectItem(path, true);
-            return true;
-        }
-
-        public override void OpenShortcutFolder()
-        {
-            var path = AutoAppLaunchManager.Instance.AppShortcutDirectory;
-            if (!Directory.Exists(path))
-                return;
-
-            OpenFolderAndSelectItem(path, true);
-        }
-
-        public override void OpenFolderAndSelectItem(string path, bool isFolder = false)
-        {
-            if (!File.Exists(path) && !Directory.Exists(path))
-                return;
-
-            string directoryPath = isFolder ? path : Path.GetDirectoryName(path);
-            var commandAttempt = new Dictionary<string, string>
-            {
-                { "nautilus", $"\"{path}\"" },
-                { "nemo", $"\"{path}\"" },
-                { "thunar", $"\"{path}\"" },
-                { "caja", $"--select \"{path}\"" },
-                { "pcmanfm-qt", $"\"{directoryPath}\"" },
-                { "pcmanfm", $"\"{directoryPath}\"" },
-                { "dolphin", $"--select \"{path}\"" },
-                { "konqueror", $"--select \"{path}\"" },
-                { "xdg-open", $"\"{directoryPath}\"" }
-            };
-
-            foreach (var command in commandAttempt)
-            {
-                if (!IsCommandAvailable(command.Key))
                     continue;
+                }
 
-                try
-                {
-                    var process = new Process
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = command.Key,
-                            Arguments = command.Value,
-                            UseShellExecute = false,
-                            RedirectStandardError = true,
-                            RedirectStandardOutput = true,
-                            CreateNoWindow = true,
-                        }
-                    };
-                    process.Start();
-                    return; // Assume first successful start is enough
-                }
-                catch
-                {
-                    // Ignore and try next
-                }
+                libraryPath = parts[4].Replace("\"", "");
+            }
+
+            if (line.Contains($"\"{appId}\"") && Directory.Exists(libraryPath))
+            {
+                return libraryPath;
             }
         }
 
-        private bool IsCommandAvailable(string command)
+        return null;
+    }
+
+    public override string GetVRChatAppDataLocation() => _vrcAppDataPath;
+
+    public override string GetVRChatCacheLocation()
+    {
+        string defaultPath = Path.Join(GetVRChatAppDataLocation(), "Cache-WindowsPlayer");
+        try
         {
+            string json = ReadConfigFile();
+            if (string.IsNullOrEmpty(json))
+            {
+                return defaultPath;
+            }
+
+            JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
+            if (obj["cache_directory"] == null)
+            {
+                return defaultPath;
+            }
+
+            string? cacheDir = (string)obj["cache_directory"];
+            if (string.IsNullOrEmpty(cacheDir))
+            {
+                return defaultPath;
+            }
+
+            string cachePath = Path.Join(cacheDir, "Cache-WindowsPlayer");
+            return !Directory.Exists(cacheDir) ? defaultPath : cachePath;
+        }
+        catch (Exception e)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for cache location: {e}");
+        }
+        return defaultPath;
+    }
+
+    public override string GetVRChatPhotosLocation()
+    {
+        string defaultPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/Pictures/VRChat");
+        try
+        {
+            string json = ReadConfigFile();
+            if (string.IsNullOrEmpty(json))
+            {
+                return defaultPath;
+            }
+
+            JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
+            if (obj["picture_output_folder"] == null)
+            {
+                return defaultPath;
+            }
+
+            string? photosDir = (string)obj["picture_output_folder"];
+            return string.IsNullOrEmpty(photosDir) || !Directory.Exists(photosDir) ? defaultPath : photosDir;
+        }
+        catch (Exception e)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for photos location: {e}");
+        }
+        return defaultPath;
+    }
+
+    public override string GetUGCPhotoLocation(string path = "")
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return GetVRChatPhotosLocation();
+        }
+
+        try
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            return path;
+        }
+        catch (Exception e)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
+            return GetVRChatPhotosLocation();
+        }
+    }
+
+    private string GetSteamUserdataPathFromRegistry()
+    {
+
+        if (Directory.Exists(_steamUserdataPath))
+        {
+            string[] steamUserDirs = Directory.GetDirectories(_steamUserdataPath);
+            if (steamUserDirs.Length > 0)
+            {
+                return steamUserDirs[0];
+            }
+        }
+        return string.Empty;
+    }
+
+    public override string GetVRChatScreenshotsLocation() =>
+
+        Path.Join(_steamUserdataPath, "760/remote/438100/screenshots");
+
+    public override bool OpenVrcxAppDataFolder()
+    {
+        string? path = Program.AppDataDirectory;
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override bool OpenVrcAppDataFolder()
+    {
+        string path = _vrcAppDataPath;
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override bool OpenVrcPhotosFolder()
+    {
+        string path = GetVRChatPhotosLocation();
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override bool OpenUGCPhotosFolder(string ugcPath = "")
+    {
+        string path = GetUGCPhotoLocation(ugcPath);
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override bool OpenVrcScreenshotsFolder()
+    {
+        string path = GetVRChatScreenshotsLocation();
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override bool OpenCrashVrcCrashDumps()
+    {
+        string path = _vrcCrashesPath;
+        if (!Directory.Exists(path))
+        {
+            return false;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+        return true;
+    }
+
+    public override void OpenShortcutFolder()
+    {
+        string path = AutoAppLaunchManager.Instance.AppShortcutDirectory;
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        OpenFolderAndSelectItem(path, isFolder: true);
+    }
+
+    public override void OpenFolderAndSelectItem(string path, bool isFolder = false)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            return;
+        }
+
+        string directoryPath = isFolder ? path : Path.GetDirectoryName(path);
+        var commandAttempt = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            { "nautilus", $"\"{path}\"" },
+            { "nemo", $"\"{path}\"" },
+            { "thunar", $"\"{path}\"" },
+            { "caja", $"--select \"{path}\"" },
+            { "pcmanfm-qt", $"\"{directoryPath}\"" },
+            { "pcmanfm", $"\"{directoryPath}\"" },
+            { "dolphin", $"--select \"{path}\"" },
+            { "konqueror", $"--select \"{path}\"" },
+            { "xdg-open", $"\"{directoryPath}\"" },
+        };
+
+        foreach (KeyValuePair<string, string> command in commandAttempt)
+        {
+            if (!IsCommandAvailable(command.Key))
+            {
+                continue;
+            }
+
             try
             {
-                var which = new Process
+                var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = "which",
-                        Arguments = command,
-                        RedirectStandardOutput = true,
+                        FileName = command.Key,
+                        Arguments = command.Value,
                         UseShellExecute = false,
+                        RedirectStandardError = true,
+                        RedirectStandardOutput = true,
                         CreateNoWindow = true,
-                    }
+                    },
                 };
-                which.Start();
-                string result = which.StandardOutput.ReadToEnd();
-                which.WaitForExit();
-                return which.ExitCode == 0 && !string.IsNullOrWhiteSpace(result);
+                process.Start();
+                return;
             }
             catch
             {
-                return false;
+
             }
         }
+    }
 
-        public override async Task<string> OpenFolderSelectorDialog(string defaultPath = "")
+    private bool IsCommandAvailable(string command)
+    {
+        try
         {
-            // TODO: Implement
-            return string.Empty;
+            var which = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "which",
+                    Arguments = command,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+            which.Start();
+            string result = which.StandardOutput.ReadToEnd();
+            which.WaitForExit();
+            return which.ExitCode == 0 && !string.IsNullOrWhiteSpace(result);
         }
-
-        public override async Task<string> OpenFileSelectorDialog(string defaultPath = "", string defaultExt = "",
-            string defaultFilter = "All files (*.*)|*.*")
+        catch
         {
-            // TODO: Implement
-            return string.Empty;
+            return false;
         }
     }
+
+    public override Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "") =>
+
+
+        Task.FromResult(string.Empty);
+
+    public override Task<string> OpenFileSelectorDialogAsync(string defaultPath = "", string defaultExt = "",
+        string defaultFilter = "All files (*.*)|*.*") =>
+
+
+        Task.FromResult(string.Empty);
 }

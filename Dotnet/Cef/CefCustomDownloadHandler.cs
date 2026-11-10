@@ -1,32 +1,30 @@
 using CefSharp;
 
-namespace VRCX
+namespace VRCX;
+
+internal sealed class CustomDownloadHandler : IDownloadHandler
 {
-    public class CustomDownloadHandler : IDownloadHandler
+    public bool CanDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, string url, string requestMethod) => true;
+
+    public bool OnBeforeDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IBeforeDownloadCallback callback)
     {
-        public bool CanDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, string url, string requestMethod)
+        if (callback.IsDisposed)
         {
             return true;
         }
 
-        public bool OnBeforeDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IBeforeDownloadCallback callback)
+        using (callback)
         {
-            if (callback.IsDisposed)
-                return true;
-
-            using (callback)
-            {
-                callback.Continue(
-                    downloadItem.SuggestedFileName,
-                    showDialog: true
-                );
-            }
-
-            return true;
+            callback.Continue(
+                downloadItem.SuggestedFileName,
+                showDialog: true
+            );
         }
 
-        public void OnDownloadUpdated(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IDownloadItemCallback callback)
-        {
-        }
+        return true;
+    }
+
+    public void OnDownloadUpdated(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IDownloadItemCallback callback)
+    {
     }
 }

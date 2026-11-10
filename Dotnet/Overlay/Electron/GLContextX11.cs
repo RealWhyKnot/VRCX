@@ -1,152 +1,170 @@
-using System;
 using System.Runtime.InteropServices;
 
-public static class GLContextX11
+public static partial class GLContextX11
 {
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XOpenDisplay(IntPtr display);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial IntPtr XOpenDisplay(IntPtr display);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XDefaultScreen(IntPtr display);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XDefaultScreen(IntPtr display);
 
-    [DllImport("libGL.so.1")]
-    private static extern IntPtr glXChooseVisual(IntPtr display, int screen, int[] attribList);
+    [LibraryImport("libGL.so.1", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial IntPtr glXChooseVisual(IntPtr display, int screen, int[] attribList);
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XCreateSimpleWindow(IntPtr display, IntPtr parent, int x, int y, uint width, uint height, uint border_width, ulong border, ulong background);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial IntPtr XCreateSimpleWindow(IntPtr display, IntPtr parent, int x, int y, uint width, uint height, uint border_width, ulong border, ulong background);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XMapWindow(IntPtr display, IntPtr window);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XMapWindow(IntPtr display, IntPtr window);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XUnmapWindow(IntPtr display, IntPtr window);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XUnmapWindow(IntPtr display, IntPtr window);
 
-    [DllImport("libGL.so.1")]
-    private static extern IntPtr glXCreateContext(IntPtr display, IntPtr visual, IntPtr shareList, bool direct);
+    [LibraryImport("libGL.so.1", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial IntPtr glXCreateContext(IntPtr display, IntPtr visual, IntPtr shareList, [MarshalAs(UnmanagedType.Bool)] bool direct);
 
-    [DllImport("libGL.so.1")]
-    private static extern bool glXMakeCurrent(IntPtr display, IntPtr drawable, IntPtr context);
+    [LibraryImport("libGL.so.1", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool glXMakeCurrent(IntPtr display, IntPtr drawable, IntPtr context);
 
-    [DllImport("libGL.so.1")]
-    private static extern void glXDestroyContext(IntPtr display, IntPtr context);
+    [LibraryImport("libGL.so.1", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial void glXDestroyContext(IntPtr display, IntPtr context);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XDestroyWindow(IntPtr display, IntPtr window);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XDestroyWindow(IntPtr display, IntPtr window);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XCloseDisplay(IntPtr display);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XCloseDisplay(IntPtr display);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XFlush(IntPtr display);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XFlush(IntPtr display);
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XRootWindow(IntPtr display, int screen);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial IntPtr XRootWindow(IntPtr display, int screen);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XStoreName(IntPtr display, IntPtr window, string window_name);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XStoreName(IntPtr display, IntPtr window, string window_name);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XChangeWindowAttributes(IntPtr display, IntPtr window, ulong valuemask, ref XSetWindowAttributes attributes);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XChangeWindowAttributes(IntPtr display, IntPtr window, ulong valuemask, ref XSetWindowAttributes attributes);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XMoveWindow(IntPtr display, IntPtr window, int x, int y);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XMoveWindow(IntPtr display, IntPtr window, int x, int y);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XResizeWindow(IntPtr display, IntPtr window, uint width, uint height);
+    [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    private static partial int XResizeWindow(IntPtr display, IntPtr window, uint width, uint height);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct XSetWindowAttributes
     {
-        public IntPtr background_pixmap;
-        public ulong background_pixel;
-        public IntPtr border_pixmap;
-        public ulong border_pixel;
-        public int bit_gravity;
-        public int win_gravity;
-        public int backing_store;
-        public ulong backing_planes;
-        public ulong backing_pixel;
-        public bool save_under;
-        public long event_mask;
-        public long do_not_propagate_mask;
-        public bool override_redirect;
-        public IntPtr colormap;
-        public IntPtr cursor;
+        public IntPtr BackgroundPixmap;
+        public ulong BackgroundPixel;
+        public IntPtr BorderPixmap;
+        public ulong BorderPixel;
+        public int BitGravity;
+        public int WinGravity;
+        public int BackingStore;
+        public ulong BackingPlanes;
+        public ulong BackingPixel;
+        public int SaveUnder;
+        public long EventMask;
+        public long DoNotPropagateMask;
+        public int OverrideRedirect;
+        public IntPtr Colormap;
+        public IntPtr Cursor;
     }
 
     private const ulong CWOverrideRedirect = 0x00000200;
     private const ulong CWBackPixel = 0x00000002;
     private const ulong CWBorderPixel = 0x00000008;
 
-    private static IntPtr display = IntPtr.Zero;
-    private static IntPtr window = IntPtr.Zero;
-    private static IntPtr context = IntPtr.Zero;
-    private static bool windowVisible = false;
+    private static IntPtr Display;
+    private static IntPtr Window;
+    private static IntPtr Context;
 
     public static bool Initialise()
     {
         try
         {
-            display = XOpenDisplay(IntPtr.Zero);
-            if (display == IntPtr.Zero)
+            Display = XOpenDisplay(IntPtr.Zero);
+            if (Display == IntPtr.Zero)
             {
                 Console.WriteLine("No X11 display available");
                 return false;
             }
 
-            int screen = XDefaultScreen(display);
+            int screen = XDefaultScreen(Display);
 
-            // Request a visual that supports OpenGL
-            int[] attribs = { 4, 1, 5, 1, 12, 1, 0 }; // GLX_RGBA, GLX_DOUBLEBUFFER, GLX_DEPTH_SIZE, 1, None
-            IntPtr visual = glXChooseVisual(display, screen, attribs);
+
+            int[] attribs = [4, 1, 5, 1, 12, 1, 0];
+            IntPtr visual = glXChooseVisual(Display, screen, attribs);
             if (visual == IntPtr.Zero)
             {
                 Console.WriteLine("Failed to find a GLX visual");
                 return false;
             }
 
-            IntPtr root = XRootWindow(display, screen);
+            IntPtr root = XRootWindow(Display, screen);
 
-            // Create window off-screen and very small to minimize visibility
-            window = XCreateSimpleWindow(display, root, -10000, -10000, 1, 1, 0, 0, 0);
-            if (window == IntPtr.Zero)
+
+            Window = XCreateSimpleWindow(Display, root, -10000, -10000, 1, 1, 0, 0, 0);
+            if (Window == IntPtr.Zero)
             {
                 Console.WriteLine("Failed to create X11 window");
                 return false;
             }
 
-            // Set window attributes to make it invisible
-            XSetWindowAttributes attrs = new XSetWindowAttributes();
-            attrs.override_redirect = true; // Bypass window manager
-            attrs.background_pixel = 0;
-            attrs.border_pixel = 0;
 
-            XChangeWindowAttributes(display, window, CWOverrideRedirect | CWBackPixel | CWBorderPixel, ref attrs);
+            var attrs = new XSetWindowAttributes
+            {
+                OverrideRedirect = 1,
+                BackgroundPixel = 0,
+                BorderPixel = 0,
+            };
 
-            // Give it a name that indicates it's a hidden OpenGL context
-            XStoreName(display, window, "Hidden OpenGL Context");
+            XChangeWindowAttributes(Display, Window, CWOverrideRedirect | CWBackPixel | CWBorderPixel, ref attrs);
 
-            context = glXCreateContext(display, visual, IntPtr.Zero, true);
-            if (context == IntPtr.Zero)
+
+            XStoreName(Display, Window, "Hidden OpenGL Context");
+
+            Context = glXCreateContext(Display, visual, IntPtr.Zero, direct: true);
+            if (Context == IntPtr.Zero)
             {
                 Console.WriteLine("Failed to create GLX context");
                 return false;
             }
 
-            if (!glXMakeCurrent(display, window, context))
+            if (!glXMakeCurrent(Display, Window, Context))
             {
                 Console.WriteLine("Failed to make GLX context current");
                 return false;
             }
 
-            // Don't map the window at all - keep it completely hidden
-            // The GLX context will work without the window being visible
-            XFlush(display);
+
+
+            XFlush(Display);
 
             Console.WriteLine("OpenGL context created successfully (X11/GLX)");
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             Console.WriteLine($"Failed to initialize OpenGL context: {ex.Message}");
             return false;
@@ -155,16 +173,22 @@ public static class GLContextX11
 
     public static void Cleanup()
     {
-        if (display != IntPtr.Zero)
+        if (Display != IntPtr.Zero)
         {
-            if (context != IntPtr.Zero)
-                glXDestroyContext(display, context);
-            if (window != IntPtr.Zero)
-                XDestroyWindow(display, window);
-            XCloseDisplay(display);
-            display = IntPtr.Zero;
-            window = IntPtr.Zero;
-            context = IntPtr.Zero;
+            if (Context != IntPtr.Zero)
+            {
+                glXDestroyContext(Display, Context);
+            }
+
+            if (Window != IntPtr.Zero)
+            {
+                XDestroyWindow(Display, Window);
+            }
+
+            XCloseDisplay(Display);
+            Display = IntPtr.Zero;
+            Window = IntPtr.Zero;
+            Context = IntPtr.Zero;
         }
     }
 }
