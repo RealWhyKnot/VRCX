@@ -29,7 +29,7 @@ export default defineConfig({
         "src/styles/**",
         "src/ipc-electron/**",
         "src/localization/**",
-        "src/lib/**/!(*.test).js",
+        "src/lib/**",
         "src/components/ui/**/*.vue",
         "src/components/ui/**/index.js",
       ],

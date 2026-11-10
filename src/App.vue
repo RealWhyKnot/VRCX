@@ -52,7 +52,13 @@ const store = createGlobalStores();
 
 const coordinatorModules = import.meta.glob("./coordinators/*.js", { eager: true });
 const coordinators = Object.fromEntries(
-  Object.entries(coordinatorModules).map(([path, module]) => [path.replace("./coordinators/", "").replace("Coordinator.js", ""), module])
+  Object.entries(coordinatorModules).map(([path, module]) => [
+    path
+      .replace("./coordinators/", "")
+      .replace("-coordinator.js", "")
+      .replace(/-(?<letter>[a-z])/gu, (_match, letter) => letter.toUpperCase()),
+    module,
+  ])
 );
 
 if (typeof window !== "undefined") {
