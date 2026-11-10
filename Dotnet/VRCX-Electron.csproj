@@ -73,10 +73,6 @@
     <PackageReference Include="DiscordRichPresence" Version="1.6.1.70" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NLog" Version="6.2.2" />
-    <PackageReference Include="TiffLibrary" Version="0.6.65" />
-    <PackageReference Include="JpegLibrary" Version="0.4.32" />
-    <PackageReference Include="Pfim" Version="0.11.4" />
-    <PackageReference Include="QoiSharp" Version="1.0.0" />
     <PackageReference Include="SkiaSharp" Version="4.155.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="4.155.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.155.0" />

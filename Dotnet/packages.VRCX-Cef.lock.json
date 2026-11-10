@@ -35,12 +35,6 @@
           "Newtonsoft.Json": "13.0.1"
         }
       },
-      "JpegLibrary": {
-        "type": "Direct",
-        "requested": "[0.4.32, )",
-        "resolved": "0.4.32",
-        "contentHash": "Lv11HXsyGZxuRUG/0sw+3itw930/c08VkEVXDPin819yheN3Y3YpWQYccs1dW+sBlsGs9S4Y4q6DzyBCctsEeQ=="
-      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.322, )",
@@ -70,18 +64,6 @@
         "requested": "[6.2.2, )",
         "resolved": "6.2.2",
         "contentHash": "Hoxigm/d7wY/+y4y2ILF2ERSojhxgLd8ASBZQbrnm52jB5NHkF4AWW5tZzMxJ/HTOp0bLwClGOokrA31iSXuMA=="
-      },
-      "Pfim": {
-        "type": "Direct",
-        "requested": "[0.11.4, )",
-        "resolved": "0.11.4",
-        "contentHash": "B3KDFyxY1NTqbeqGEaOM9uE+G71GG2TxWqVSs57e1pWYPf2vNLMIxk+x55MXdkon0iGeaekolFTlLS2CkgktYg=="
-      },
-      "QoiSharp": {
-        "type": "Direct",
-        "requested": "[1.0.0, )",
-        "resolved": "1.0.0",
-        "contentHash": "btvBo0UjWpWu30wrtLyekBniHy+LL+GpvKtnOrQ8GyGMUOBEaA7TklsFMna2chTcDoPcvHdC97Lo7qhC4GHtHA=="
       },
       "Silk.NET.Direct3D.Compilers": {
         "type": "Direct",
@@ -154,15 +136,6 @@
         "requested": "[10.0.13, )",
         "resolved": "10.0.13",
         "contentHash": "cL8qiJmJtlSIcAoZH4s07VTxTdddvEP12MFeM+KBZagn4CuD/0SFQsmKn5g9MLfiSrYjdAxIwOTO0kATY9A0UA=="
-      },
-      "TiffLibrary": {
-        "type": "Direct",
-        "requested": "[0.6.65, )",
-        "resolved": "0.6.65",
-        "contentHash": "nlONBCj7VeEHY9pbZPQcxK5hYWv8R8IbfrUVCi9YZSMd7Nnf4zwMx1+81F/q6nDB4xkUDslJrpbfgOBDrDa5tg==",
-        "dependencies": {
-          "JpegLibrary": "0.4.32"
-        }
       },
       "Websocket.Client": {
         "type": "Direct",

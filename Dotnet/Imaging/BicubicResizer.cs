@@ -44,14 +44,12 @@ internal static class BicubicResizer
                 output[(y * width) + x] = Vector4.Clamp(sum, Vector4.Zero, Vector4.One);
             }
         }
-        return WritePixels(output, width, height, source.ColorType);
+        return WritePixels(output, width, height);
     }
 
     private static Vector4[] ReadPixels(SKBitmap source)
     {
-        bool highPrecision = source.ColorType == SKColorType.RgbaF16;
-        var info = new SKImageInfo(source.Width, source.Height,
-            highPrecision ? SKColorType.RgbaF32 : SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        var info = new SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
         using var converted = new SKBitmap(info);
         using SKPixmap sourcePixels = source.PeekPixels();
         if (!sourcePixels.ReadPixels(info, converted.GetPixels(), converted.RowBytes, 0, 0))
@@ -59,57 +57,29 @@ internal static class BicubicResizer
             throw new InvalidDataException("Failed to read image pixels.");
         }
         var result = new Vector4[checked(source.Width * source.Height)];
-        if (highPrecision)
-        {
-            float[] values = new float[checked(result.Length * 4)];
-            Marshal.Copy(converted.GetPixels(), values, 0, values.Length);
-            for (int index = 0; index < result.Length; index++)
-            {
-                int offset = index * 4;
-                result[index] = new Vector4(values[offset], values[offset + 1], values[offset + 2], values[offset + 3]);
-            }
-        }
-        else
-        {
-            byte[] values = new byte[checked(result.Length * 4)];
-            Marshal.Copy(converted.GetPixels(), values, 0, values.Length);
-            for (int index = 0; index < result.Length; index++)
-            {
-                int offset = index * 4;
-                result[index] = new Vector4(values[offset], values[offset + 1], values[offset + 2], values[offset + 3]) / 255;
-            }
-        }
+        byte[] values = new byte[checked(result.Length * 4)];
+        Marshal.Copy(converted.GetPixels(), values, 0, values.Length);
         for (int index = 0; index < result.Length; index++)
         {
-            float alpha = result[index].W;
-            result[index] *= alpha;
-            result[index].W = alpha;
+            int offset = index * 4;
+            Vector4 pixel = new Vector4(values[offset], values[offset + 1], values[offset + 2], values[offset + 3]) / 255;
+            float alpha = pixel.W;
+            pixel *= alpha;
+            pixel.W = alpha;
+            result[index] = pixel;
         }
         return result;
     }
 
-    private static SKBitmap WritePixels(Vector4[] pixels, int width, int height, SKColorType colorType)
+    private static SKBitmap WritePixels(Vector4[] pixels, int width, int height)
     {
-        bool highPrecision = colorType == SKColorType.RgbaF16;
-        byte[] bytes = new byte[checked(pixels.Length * (highPrecision ? 8 : 4))];
+        byte[] bytes = new byte[checked(pixels.Length * 4)];
         ReadOnlySpan<float> values = MemoryMarshal.Cast<Vector4, float>(pixels.AsSpan());
-        if (highPrecision)
+        for (int index = 0; index < values.Length; index++)
         {
-            Span<Half> halves = MemoryMarshal.Cast<byte, Half>(bytes.AsSpan());
-            for (int index = 0; index < values.Length; index++)
-            {
-                halves[index] = (Half)values[index];
-            }
+            bytes[index] = (byte)((values[index] * 255) + 0.5f);
         }
-        else
-        {
-            for (int index = 0; index < values.Length; index++)
-            {
-                bytes[index] = (byte)((values[index] * 255) + 0.5f);
-            }
-        }
-        var bitmap = new SKBitmap(width, height,
-            highPrecision ? SKColorType.RgbaF16 : SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        var bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
         Marshal.Copy(bytes, 0, bitmap.GetPixels(), bytes.Length);
         return bitmap;
     }
