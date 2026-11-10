@@ -39,7 +39,7 @@ import { useI18n } from "vue-i18n";
 import { instanceRequest, notificationRequest } from "../../../api";
 import { useGalleryStore, useUserStore } from "../../../stores";
 import { parseLocation } from "../../../shared/utils";
-import { recordRecentAction } from "../../../composables/useRecentActions";
+import { recordRecentAction } from "../../../composables/use-recent-actions";
 
 const { t } = useI18n();
 

@@ -1,9 +1,9 @@
 import { reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 
-import { runRefreshPlayerModerationsFlow } from "../coordinators/moderationCoordinator";
+import { runRefreshPlayerModerationsFlow } from "../coordinators/moderation-coordinator";
 import { useUserStore } from "./user";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 export const useModerationStore = defineStore("Moderation", () => {
   const userStore = useUserStore();

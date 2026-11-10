@@ -24,7 +24,7 @@ import type { Json, VrcxCurrentUser, VrcxUser } from "../types/vrcx";
 import { patchAndRefetchActiveQuery, queryKeys } from "../queries";
 import { request } from "../services/request";
 import { useUserStore } from "../stores";
-import { applyUser, applyCurrentUser, applyPublicProfile } from "../coordinators/userCoordinator";
+import { applyUser, applyCurrentUser, applyPublicProfile } from "../coordinators/user-coordinator";
 
 function getCurrentUserId(): string {
   return useUserStore().currentUser.id;

@@ -4,7 +4,7 @@ import { defineStore } from "pinia";
 import { database } from "../services/database";
 import { useFriendStore } from "./friend";
 import { useVrcxStore } from "./vrcx";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import configRepository from "../services/config";
 

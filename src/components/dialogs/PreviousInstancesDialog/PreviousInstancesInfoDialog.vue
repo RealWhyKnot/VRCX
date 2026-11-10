@@ -81,10 +81,10 @@ import { DataTableLayout } from "../../ui/data-table";
 import { InputGroupField } from "../../../components/ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
 import { TooltipWrapper } from "../../../components/ui/tooltip";
-import { createColumns } from "./previousInstancesInfoColumns.jsx";
+import { createColumns } from "./previous-instances-info-columns.jsx";
 import { database } from "../../../services/database";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
-import { lookupUser } from "../../../coordinators/userCoordinator";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
+import { lookupUser } from "../../../coordinators/user-coordinator";
 
 import PreviousInstancesInfoChart from "./PreviousInstancesInfoChart.vue";
 

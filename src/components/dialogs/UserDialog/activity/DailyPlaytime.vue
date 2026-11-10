@@ -22,7 +22,7 @@ import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
 
 import { useAppearanceSettingsStore } from "@/stores";
-import { formatTimestampKey } from "@/shared/utils/activityEngine";
+import { formatTimestampKey } from "@/shared/utils/activity-engine";
 
 const props = defineProps({
   sessions: {

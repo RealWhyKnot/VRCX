@@ -99,8 +99,8 @@ import { Button } from "../../components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
 import { SidebarInset, SidebarProvider } from "../../components/ui/sidebar";
 import { useAppearanceSettingsStore } from "../../stores";
-import { useMainLayoutResizable } from "../../composables/useMainLayoutResizable";
-import { watchState } from "../../services/watchState";
+import { useMainLayoutResizable } from "../../composables/use-main-layout-resizable";
+import { watchState } from "../../services/watch-state";
 
 import AvatarImportDialog from "../Favorites/dialogs/AvatarImportDialog.vue";
 import ChangelogDialog from "../Settings/dialogs/ChangelogDialog.vue";

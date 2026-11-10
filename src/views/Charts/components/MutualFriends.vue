@@ -245,13 +245,13 @@ import Graph from "graphology";
 import Sigma from "sigma";
 import louvain from "graphology-communities-louvain";
 
-import GraphLayoutWorker from "../graphLayoutWorker.js?worker&inline";
+import GraphLayoutWorker from "../graph-layout-worker.js?worker&inline";
 
 import { useAppearanceSettingsStore, useChartsStore, useFriendStore, useModalStore, useUserStore } from "../../../stores";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { useUserDisplay } from "../../../composables/use-user-display";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { database } from "../../../services/database";
-import { watchState } from "../../../services/watchState";
+import { watchState } from "../../../services/watch-state";
 
 import configRepository from "../../../services/config";
 

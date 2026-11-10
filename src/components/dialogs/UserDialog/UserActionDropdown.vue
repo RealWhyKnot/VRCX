@@ -276,8 +276,8 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
 import { useGameStore, useLocationStore, useUserStore } from "../../../stores";
-import { useInviteChecks } from "../../../composables/useInviteChecks";
-import { isActionRecent } from "../../../composables/useRecentActions";
+import { useInviteChecks } from "../../../composables/use-invite-checks";
+import { isActionRecent } from "../../../composables/use-recent-actions";
 import { invertHexColor } from "@/shared/utils";
 
 const props = defineProps({

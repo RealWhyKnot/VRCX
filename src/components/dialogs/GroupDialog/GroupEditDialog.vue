@@ -254,7 +254,7 @@ import { InputGroupAction, InputGroupField, InputGroupTextareaField } from "@/co
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { groupRequest } from "../../../api";
-import { applyGroup, showGroupDialog } from "../../../coordinators/groupCoordinator";
+import { applyGroup, showGroupDialog } from "../../../coordinators/group-coordinator";
 import { getFaviconUrl } from "../../../shared/utils";
 import { useGroupStore, useUserStore } from "../../../stores";
 import GallerySelectDialog from "./GallerySelectDialog.vue";

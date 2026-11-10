@@ -46,7 +46,7 @@ import { Button } from "@/components/ui/button";
 import { navDefinitions } from "@/shared/constants/ui";
 
 import PanelSelector from "./PanelSelector.vue";
-import { panelComponentMap } from "./panelRegistry";
+import { panelComponentMap } from "./panel-registry";
 
 const props = defineProps({
   panelData: {

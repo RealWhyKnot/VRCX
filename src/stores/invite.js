@@ -4,7 +4,7 @@ import { defineStore } from "pinia";
 import { inviteMessagesRequest } from "../api";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useGameStore } from "./game";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 export const useInviteStore = defineStore("Invite", () => {
   const gameStore = useGameStore();

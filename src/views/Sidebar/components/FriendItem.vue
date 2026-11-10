@@ -59,11 +59,11 @@ import Timer from "@/components/Timer.vue";
 import IconFrame from "@/components/IconFrame.vue";
 
 import { useAppearanceSettingsStore, useFriendStore } from "../../../stores";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 
 import "@/styles/status-icon.css";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
-import { confirmDeleteFriend } from "../../../coordinators/friendRelationshipCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { confirmDeleteFriend } from "../../../coordinators/friend-relationship-coordinator";
 
 const props = defineProps({
   friend: { type: Object, required: true },

@@ -143,7 +143,7 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useAdvancedSettingsStore, useGameStore, useModalStore } from "../../../stores";
-import { runSweepVRChatCacheFlow as sweepVRChatCache } from "../../../coordinators/gameCoordinator";
+import { runSweepVRChatCacheFlow as sweepVRChatCache } from "../../../coordinators/game-coordinator";
 import { VRChatCameraResolutions, VRChatScreenshotResolutions } from "../../../shared/constants";
 import { getVRChatResolution, openExternalLink } from "../../../shared/utils";
 

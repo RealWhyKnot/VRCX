@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { useCarousel } from "./useCarousel";
+import { useCarousel } from "./use-carousel";
 
 const props = defineProps({
   variant: { type: String, required: false, default: "outline" },

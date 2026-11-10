@@ -411,7 +411,7 @@ import { useI18n } from "vue-i18n";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { convertFileUrlToImageUrl, copyToClipboard, formatDateFilter, languageClass, openDiscordProfile, replaceBioSymbols } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { useGalleryStore, useUserStore } from "../../../stores";
 import { Badge } from "../../ui/badge";
@@ -421,8 +421,8 @@ import NameplateEffect from "../../NameplateEffect.vue";
 import ProfileEffect from "../../ProfileEffect.vue";
 
 import UserActionDropdown from "./UserActionDropdown.vue";
-import { showGroupDialog } from "@/coordinators/groupCoordinator";
-import { getAvatarName } from "@/coordinators/avatarCoordinator";
+import { showGroupDialog } from "@/coordinators/group-coordinator";
+import { getAvatarName } from "@/coordinators/avatar-coordinator";
 
 const props = defineProps({
   getUserStateText: {

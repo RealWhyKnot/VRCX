@@ -92,11 +92,11 @@ import { TabsUnderline } from "@/components/ui/tabs";
 import { computed } from "vue";
 import { hasGroupPermission } from "@/shared/utils";
 import { useI18n } from "vue-i18n";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { createColumns as createInvitesColumns } from "./groupMemberModerationInvitesColumns.jsx";
-import { createColumns as createJoinRequestsColumns } from "./groupMemberModerationJoinRequestsColumns.jsx";
-import { createColumns as createBlockedColumns } from "./groupMemberModerationBlockedColumns.jsx";
+import { createColumns as createInvitesColumns } from "./group-member-moderation-invites-columns.jsx";
+import { createColumns as createJoinRequestsColumns } from "./group-member-moderation-join-requests-columns.jsx";
+import { createColumns as createBlockedColumns } from "./group-member-moderation-blocked-columns.jsx";
 import { storeToRefs } from "pinia";
 import { useGroupStore } from "@/stores/group.js";
 

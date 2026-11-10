@@ -13,7 +13,7 @@ import type {
 import type { Json } from "../types/vrcx";
 import { patchAndRefetchActiveQuery, queryKeys } from "../queries";
 import { request } from "../services/request";
-import { applyCurrentUser } from "../coordinators/userCoordinator";
+import { applyCurrentUser } from "../coordinators/user-coordinator";
 
 const avatarReq = {
   getAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params: { avatarId: string } }> {

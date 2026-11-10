@@ -108,7 +108,7 @@ import {
   removeLocalAvatarFavorite,
   addLocalFriendFavorite,
   removeLocalFriendFavorite,
-} from "../../coordinators/favoriteCoordinator";
+} from "../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../api";
 
 const { t } = useI18n();

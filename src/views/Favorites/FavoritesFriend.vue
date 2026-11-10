@@ -299,10 +299,10 @@ import { useAppearanceSettingsStore, useFavoriteStore, useModalStore, useUserSto
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
 import { debounce } from "../../shared/utils";
 import { favoriteRequest } from "../../api";
-import { useFavoritesCardScaling } from "./composables/useFavoritesCardScaling.js";
-import { useFavoritesGroupPanel } from "./composables/useFavoritesGroupPanel.js";
-import { useFavoritesLocalGroups } from "./composables/useFavoritesLocalGroups.js";
-import { useFavoritesSplitter } from "./composables/useFavoritesSplitter.js";
+import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
+import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
+import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";
+import { useFavoritesSplitter } from "./composables/use-favorites-splitter.js";
 import {
   refreshFavorites,
   getLocalWorldFavorites,
@@ -310,7 +310,7 @@ import {
   deleteLocalFriendFavoriteGroup,
   renameLocalFriendFavoriteGroup,
   removeLocalFriendFavorite,
-} from "../../coordinators/favoriteCoordinator";
+} from "../../coordinators/favorite-coordinator";
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesFriendItem from "./components/FavoritesFriendItem.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";

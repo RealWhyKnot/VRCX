@@ -119,10 +119,10 @@ import { useI18n } from "vue-i18n";
 import { LogIn, LogOut, MapPin, Settings, Play, Waypoints } from "lucide-vue-next";
 
 import { database } from "@/services/database";
-import { showUserDialog } from "@/coordinators/userCoordinator";
+import { showUserDialog } from "@/coordinators/user-coordinator";
 import { useFriendStore, useGameLogStore } from "@/stores";
 import { formatDateFilter, openExternalLink } from "@/shared/utils";
-import { watchState } from "@/services/watchState";
+import { watchState } from "@/services/watch-state";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";

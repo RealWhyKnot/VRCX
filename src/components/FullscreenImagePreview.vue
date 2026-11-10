@@ -87,7 +87,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { DialogContent as RekaDialogContent, DialogOverlay as RekaDialogOverlay, DialogPortal } from "reka-ui";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { acquireModalPortalLayer } from "@/lib/modalPortalLayers";
+import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
 import { cn } from "@/lib/utils";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";

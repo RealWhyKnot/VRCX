@@ -54,14 +54,14 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { removeFromArray } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { useFriendStore, useGalleryStore, useUserStore } from "../../../stores";
-import { createColumns } from "./noteExportColumns.jsx";
+import { createColumns } from "./note-export-columns.jsx";
 import { miscRequest } from "../../../api";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 import * as workerTimers from "worker-timers";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { userImage, userImageFull } = useUserDisplay();
 const { t } = useI18n();

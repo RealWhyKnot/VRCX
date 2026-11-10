@@ -118,10 +118,10 @@ import { InputGroupSearch } from "@/components/ui/input-group";
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemHeader, ItemTitle } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWrapper } from "@/components/ui/tooltip";
-import { AppDebug } from "@/services/appConfig";
+import { AppDebug } from "@/services/app-config";
 import { commaNumber } from "@/shared/utils";
 import { useGalleryStore, useUserStore } from "@/stores";
-import { useStoreShelves } from "./composables/useStoreShelves";
+import { useStoreShelves } from "./composables/use-store-shelves";
 
 const { t } = useI18n();
 const router = useRouter();

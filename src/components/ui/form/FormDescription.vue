@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { cn } from "@/lib/utils";
 
-import { useFormField } from "./useFormField";
+import { useFormField } from "./use-form-field";
 
 const props = defineProps<{ class?: unknown }>();
 

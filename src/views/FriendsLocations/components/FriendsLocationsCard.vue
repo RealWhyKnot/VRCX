@@ -52,11 +52,11 @@ import { Card } from "@/components/ui/card";
 import { Pencil, User } from "lucide-vue-next";
 import { computed } from "vue";
 
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 
 import Location from "../../../components/Location.vue";
 import UserContextMenu from "../../../components/UserContextMenu.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { userImage, userStatusClass } = useUserDisplay();
 

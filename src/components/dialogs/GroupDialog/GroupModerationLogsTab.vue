@@ -39,9 +39,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { InputGroupField } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTableLayout } from "@/components/ui/data-table";
-import { getAuditLogTypeName } from "./groupModerationUtils";
-import { createColumns } from "./groupMemberModerationLogsColumns.jsx";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { getAuditLogTypeName } from "./group-moderation-utils";
+import { createColumns } from "./group-member-moderation-logs-columns.jsx";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 const props = defineProps({
   loading: { type: Boolean, default: false },

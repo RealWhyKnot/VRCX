@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*", "src-electron/**/*", "build-scripts/**/*", "*.config.js", "vitest.setup.js"],
+  "include": ["src/**/*", "src-electron/**/*", "build-scripts/**/*", "*.config.js", "tests/**/*"],
   "compilerOptions": {
     "module": "preserve",
     "esModuleInterop": true,
@@ -7,7 +7,7 @@
     "checkJs": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "allowJs": true,
-    "types": ["vite/client", "vitest/globals", "node"],
+    "types": ["vite/client", "node"],
     "jsxImportSource": "vue",
     "moduleResolution": "bundler",
     "paths": {

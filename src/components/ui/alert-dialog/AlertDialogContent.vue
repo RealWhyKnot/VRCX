@@ -1,7 +1,7 @@
 <script setup>
 import { AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, useForwardPropsEmits } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
-import { acquireModalPortalLayer } from "@/lib/modalPortalLayers";
+import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 

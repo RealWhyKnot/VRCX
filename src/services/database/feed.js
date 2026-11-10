@@ -1,6 +1,6 @@
 import { dbVars } from "../database";
 
-import { parseBioLinks } from "./userProfile.js";
+import { parseBioLinks } from "./user-profile.js";
 import sqliteService from "../sqlite.js";
 
 const feed = {

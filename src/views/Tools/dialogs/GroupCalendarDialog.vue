@@ -94,7 +94,7 @@ import { Switch } from "../../../components/ui/switch";
 import { groupRequest, queryRequest } from "../../../api";
 import { processBulk } from "../../../services/request";
 import { useGroupStore } from "../../../stores";
-import { showGroupDialog } from "@/coordinators/groupCoordinator";
+import { showGroupDialog } from "@/coordinators/group-coordinator";
 
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";

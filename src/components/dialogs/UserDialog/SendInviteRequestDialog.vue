@@ -54,10 +54,10 @@ import { Button } from "@/components/ui/button";
 import { DataTableLayout } from "@/components/ui/data-table";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 import { useGalleryStore, useInviteStore, useUserStore } from "../../../stores";
-import { createColumns } from "./sendInviteRequestColumns.jsx";
+import { createColumns } from "./send-invite-request-columns.jsx";
 
 import EditAndSendInviteDialog from "../InviteDialog/EditAndSendInviteDialog.vue";
 import SendInviteConfirmDialog from "../InviteDialog/SendInviteConfirmDialog.vue";

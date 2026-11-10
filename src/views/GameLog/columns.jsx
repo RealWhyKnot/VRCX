@@ -9,8 +9,8 @@ import { storeToRefs } from "pinia";
 import { copyToClipboard, formatDateFilter, openExternalLink } from "../../shared/utils";
 import { i18n } from "../../plugins";
 import { useInstanceStore, useUiStore } from "../../stores";
-import { lookupUser } from "../../coordinators/userCoordinator";
-import { showWorldDialog } from "../../coordinators/worldCoordinator";
+import { lookupUser } from "../../coordinators/user-coordinator";
+import { showWorldDialog } from "../../coordinators/world-coordinator";
 
 const { t } = i18n.global;
 

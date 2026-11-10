@@ -150,13 +150,13 @@ import { storeToRefs } from "pinia";
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { refreshInstancePlayerCount } from "../../../coordinators/instanceCoordinator";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { useAdvancedSettingsStore, useAppearanceSettingsStore, useInstanceStore, useLocationStore, useUserStore, useWorldStore } from "../../../stores";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
-import { useWorldMemo } from "./useWorldDialogInfo";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { useWorldMemo } from "./use-world-dialog-info";
 
 const { t } = useI18n();
 const { userImage, userStatusClass } = useUserDisplay();

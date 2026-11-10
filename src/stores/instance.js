@@ -26,18 +26,18 @@ import {
 import { instanceRequest, queryRequest, userRequest, worldRequest } from "../api";
 import { accessTypeLocaleKeyMap, instanceContentSettings } from "../shared/constants";
 import { database } from "../services/database";
-import { resolveRef } from "../shared/utils/resolveRef";
+import { resolveRef } from "../shared/utils/resolve-ref";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useFriendStore } from "./friend";
 import { useGroupStore } from "./group";
 import { useLocationStore } from "./location";
 import { useNotificationStore } from "./notification";
 import { usePhotonStore } from "./photon";
-import { useSharedFeedStore } from "./sharedFeed";
+import { useSharedFeedStore } from "./shared-feed";
 import { useUiStore } from "./ui";
 import { useUserStore } from "./user";
 import { useWorldStore } from "./world";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import configRepository from "../services/config";
 

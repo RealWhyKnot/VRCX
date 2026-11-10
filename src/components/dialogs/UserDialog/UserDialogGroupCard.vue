@@ -33,7 +33,7 @@ import { useI18n } from "vue-i18n";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import { showGroupDialog } from "../../../coordinators/groupCoordinator";
+import { showGroupDialog } from "../../../coordinators/group-coordinator";
 
 const { t } = useI18n();
 

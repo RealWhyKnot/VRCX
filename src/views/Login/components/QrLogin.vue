@@ -20,9 +20,9 @@ import { useI18n } from "vue-i18n";
 
 import QRCode from "qrcode";
 
-import { AppDebug } from "../../../services/appConfig";
+import { AppDebug } from "../../../services/app-config";
 import { authRequest } from "../../../api";
-import { getCurrentUser } from "../../../coordinators/userCoordinator";
+import { getCurrentUser } from "../../../coordinators/user-coordinator";
 import { useAuthStore } from "../../../stores";
 
 import webApiService from "../../../services/webapi";

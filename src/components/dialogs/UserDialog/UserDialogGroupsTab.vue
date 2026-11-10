@@ -297,12 +297,12 @@ import {
   leaveGroupPrompt,
   setGroupVisibility,
   handleGroupList,
-} from "../../../coordinators/groupCoordinator";
+} from "../../../coordinators/group-coordinator";
 import { compareByMemberCount, compareByName } from "../../../shared/utils";
 import { groupRequest } from "../../../api";
-import { useOptionKeySelect } from "../../../composables/useOptionKeySelect";
+import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { userDialogGroupSortingOptions } from "../../../shared/constants";
-import { moveGroupInOrder, normalizeGroupOrder } from "../../../shared/utils/groupOrder";
+import { moveGroupInOrder, normalizeGroupOrder } from "../../../shared/utils/group-order";
 
 const { t } = useI18n();
 

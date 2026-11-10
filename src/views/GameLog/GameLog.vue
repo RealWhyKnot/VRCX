@@ -125,7 +125,7 @@ import { InputGroupField } from "../../components/ui/input-group";
 import { TooltipWrapper } from "../../components/ui/tooltip";
 import { createColumns } from "./columns.jsx";
 import { database } from "../../services/database";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import GameLogSessions from "./components/GameLogSessions.vue";
 
 const { gameLogTableLookup, setSessionsViewMode } = useGameLogStore();

@@ -342,17 +342,17 @@ import { useAppearanceSettingsStore, useFavoriteStore, useModalStore } from "../
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
 import { favoriteRequest, worldRequest } from "../../api";
 import { debounce } from "../../shared/utils";
-import { useFavoritesCardScaling } from "./composables/useFavoritesCardScaling.js";
-import { useFavoritesGroupPanel } from "./composables/useFavoritesGroupPanel.js";
-import { useFavoritesLocalGroups } from "./composables/useFavoritesLocalGroups.js";
-import { useFavoritesSplitter } from "./composables/useFavoritesSplitter.js";
+import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
+import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
+import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";
+import { useFavoritesSplitter } from "./composables/use-favorites-splitter.js";
 import {
   renameLocalWorldFavoriteGroup,
   removeLocalWorldFavorite,
   newLocalWorldFavoriteGroup,
   refreshFavorites,
   getLocalWorldFavorites,
-} from "../../coordinators/favoriteCoordinator";
+} from "../../coordinators/favorite-coordinator";
 
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";

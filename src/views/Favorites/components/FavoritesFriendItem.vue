@@ -108,12 +108,12 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { favoriteRequest, instanceRequest, notificationRequest, queryRequest } from "../../../api";
-import { useInviteChecks } from "../../../composables/useInviteChecks";
-import { removeLocalFriendFavorite } from "../../../coordinators/favoriteCoordinator";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { useInviteChecks } from "../../../composables/use-invite-checks";
+import { removeLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { parseLocation, isRealInstance } from "../../../shared/utils";
 import { useFavoriteStore, useGameStore, useLocationStore, useLaunchStore, useUserStore } from "../../../stores";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 
 import Location from "../../../components/Location.vue";
 import UserContextMenu from "../../../components/UserContextMenu.vue";

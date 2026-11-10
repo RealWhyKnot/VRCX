@@ -38,8 +38,8 @@ import { useI18n } from "vue-i18n";
 import { useAdvancedSettingsStore, useModalStore, useVrcxStore } from "../../../stores";
 import { downloadAndSaveJson, removeFromArray } from "../../../shared/utils";
 import { Switch } from "../../../components/ui/switch";
-import { createColumns } from "../../Settings/dialogs/registryBackupColumns.jsx";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
+import { createColumns } from "../../Settings/dialogs/registry-backup-columns.jsx";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 import configRepository from "../../../services/config";
 

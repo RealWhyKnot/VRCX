@@ -2,17 +2,17 @@ import { reactive } from "vue";
 import { toast } from "vue-sonner";
 
 import { useFriendStore, useGalleryStore, useInstanceStore, useNotificationStore, useSharedFeedStore, useUiStore, useUserStore } from "../stores";
-import { applyUser, applyCurrentUser } from "../coordinators/userCoordinator";
-import { onGroupLeft, applyGroup, handleGroupMember } from "../coordinators/groupCoordinator";
-import { handleFriendAdd, handleFriendDelete } from "../coordinators/friendRelationshipCoordinator";
+import { applyUser, applyCurrentUser } from "../coordinators/user-coordinator";
+import { onGroupLeft, applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
+import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-relationship-coordinator";
 import { parseLocation } from "../shared/utils";
 import { debounce } from "../shared/utils/common";
-import { AppDebug } from "./appConfig";
+import { AppDebug } from "./app-config";
 import { groupRequest } from "../api";
 import { request } from "./request";
-import { runUpdateFriendFlow } from "../coordinators/friendPresenceCoordinator";
-import { runSetCurrentUserLocationFlow } from "../coordinators/locationCoordinator";
-import { watchState } from "./watchState";
+import { runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
+import { runSetCurrentUserLocationFlow } from "../coordinators/location-coordinator";
+import { watchState } from "./watch-state";
 
 import * as workerTimers from "worker-timers";
 

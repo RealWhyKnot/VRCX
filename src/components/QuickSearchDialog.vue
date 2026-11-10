@@ -5,8 +5,8 @@ import { Globe, Image, Users } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useQuickSearchStore } from "../stores/quickSearch";
-import { useUserDisplay } from "../composables/useUserDisplay";
+import { useQuickSearchStore } from "../stores/quick-search";
+import { useUserDisplay } from "../composables/use-user-display";
 
 import QuickSearchSync from "./QuickSearchSync.vue";
 

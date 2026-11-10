@@ -1,5 +1,5 @@
 import { router } from "./router";
-import { startRendererMemoryThresholdReport } from "./rendererMemoryReport";
+import { startRendererMemoryThresholdReport } from "./renderer-memory-report";
 
 import configRepository from "../services/config";
 

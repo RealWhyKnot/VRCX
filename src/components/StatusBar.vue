@@ -284,14 +284,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useIntervalFn, useNow } from "@vueuse/core";
 import { TooltipWrapper } from "@/components/ui/tooltip";
 import { useI18n } from "vue-i18n";
-import { openExternalLink } from "@/shared/utils/appActions";
+import { openExternalLink } from "@/shared/utils/app-actions";
 import { wsState } from "@/services/websocket";
 
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 
-import { defaultVisibility, formatAppUptime, formatUtcHour, normalizeClock, normalizeUtcHour, parseClockOffset } from "./statusBarUtils";
+import { defaultVisibility, formatAppUptime, formatUtcHour, normalizeClock, normalizeUtcHour, parseClockOffset } from "./status-bar-utils";
 
 import configRepository from "../services/config";
 

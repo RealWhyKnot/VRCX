@@ -6,7 +6,7 @@ import { storeToRefs } from "pinia";
 import { computed, nextTick, ref, watch } from "vue";
 
 import { useExternalLinkStore } from "@/stores";
-import { copyToClipboard } from "@/shared/utils/appActions";
+import { copyToClipboard } from "@/shared/utils/app-actions";
 
 const externalLinkStore = useExternalLinkStore();
 const { externalLinkDialog } = storeToRefs(externalLinkStore);

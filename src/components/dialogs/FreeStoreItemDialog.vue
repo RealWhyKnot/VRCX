@@ -40,7 +40,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { marketplaceRequest } from "../../api";
-import { AppDebug } from "../../services/appConfig";
+import { AppDebug } from "../../services/app-config";
 import { useNotificationStore, useNotificationsSettingsStore, useUserStore } from "../../stores";
 
 const { t } = useI18n();

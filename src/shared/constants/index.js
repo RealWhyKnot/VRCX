@@ -1,5 +1,5 @@
 export * from "./emoji";
-export * from "./feedFilters";
+export * from "./feed-filters";
 export * from "./language";
 export * from "./settings";
 export * from "./group";
@@ -11,7 +11,7 @@ export * from "./themes";
 export * from "./fonts";
 export * from "./link";
 export * from "./ui";
-export * from "./accessType";
+export * from "./access-type";
 export * from "./tags";
 export * from "./dashboard";
 export * from "./tools";

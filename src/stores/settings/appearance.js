@@ -34,7 +34,7 @@ import { useUiStore } from "../ui";
 import { useUserStore } from "../user";
 import { useVrStore } from "../vr";
 import { useVrcxStore } from "../vrcx";
-import { watchState } from "../../services/watchState";
+import { watchState } from "../../services/watch-state";
 
 import configRepository from "../../services/config";
 

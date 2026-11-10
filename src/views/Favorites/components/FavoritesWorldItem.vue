@@ -87,9 +87,9 @@ import { storeToRefs } from "pinia";
 
 import { favoriteRequest } from "../../../api";
 import WorldActionMenuItems from "../../../components/WorldActionMenuItems.vue";
-import { removeLocalWorldFavorite } from "../../../coordinators/favoriteCoordinator";
-import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/inviteCoordinator";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { removeLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
+import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/invite-coordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { useFavoriteStore, useInviteStore, useLocationStore } from "../../../stores";
 import NewInstanceDialog from "../../../components/dialogs/NewInstanceDialog/NewInstanceDialog.vue";
 

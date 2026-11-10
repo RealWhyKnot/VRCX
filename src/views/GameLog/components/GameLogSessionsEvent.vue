@@ -158,7 +158,7 @@ import { Badge } from "../../../components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "../../../components/ui/context-menu";
 import { copyToClipboard, formatDateFilter, openExternalLink } from "../../../shared/utils";
-import { lookupUser } from "../../../coordinators/userCoordinator";
+import { lookupUser } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();
 

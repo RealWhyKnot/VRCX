@@ -6,13 +6,13 @@ import { useI18n } from "vue-i18n";
 import { instanceRequest, userRequest } from "../api";
 import { groupRequest } from "../api/";
 import { useAppearanceSettingsStore } from "./settings/appearance";
-import { showGroupDialog } from "../coordinators/groupCoordinator";
-import { showWorldDialog } from "../coordinators/worldCoordinator";
-import { showAvatarDialog } from "../coordinators/avatarCoordinator";
-import { applyUser, showUserDialog } from "../coordinators/userCoordinator";
+import { showGroupDialog } from "../coordinators/group-coordinator";
+import { showWorldDialog } from "../coordinators/world-coordinator";
+import { showAvatarDialog } from "../coordinators/avatar-coordinator";
+import { applyUser, showUserDialog } from "../coordinators/user-coordinator";
 import { useModalStore } from "./modal";
 import { useUserStore } from "./user";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 export const useSearchStore = defineStore("Search", () => {
   const userStore = useUserStore();

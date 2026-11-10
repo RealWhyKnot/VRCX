@@ -64,7 +64,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore, useUserStore } from "../../../stores";
-import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatarCoordinator";
+import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 
 const { t } = useI18n();
 

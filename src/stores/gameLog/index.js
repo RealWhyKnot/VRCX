@@ -2,13 +2,13 @@ import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { defineStore } from "pinia";
 import { useRouter } from "vue-router";
 
-import { buildGameLogSessions } from "../../views/GameLog/sessions/buildGameLogSessions";
+import { buildGameLogSessions } from "../../views/GameLog/sessions/build-game-log-sessions";
 
 import { compareGameLogRows, findUserByDisplayName, formatSeconds, gameLogSearchFilter, getGroupName } from "../../shared/utils";
-import { createMediaParsers } from "./mediaParsers";
-import { createNowPlayingSpecHandler } from "./nowPlayingSpec";
+import { createMediaParsers } from "./media-parsers";
+import { createNowPlayingSpecHandler } from "./now-playing-spec";
 import { database } from "../../services/database";
-import { tryLoadPlayerList } from "../../coordinators/gameLogCoordinator";
+import { tryLoadPlayerList } from "../../coordinators/game-log-coordinator";
 import { useAdvancedSettingsStore } from "../settings/advanced";
 import { useFriendStore } from "../friend";
 import { useNotificationStore } from "../notification";
@@ -17,7 +17,7 @@ import { useDashboardStore } from "../dashboard";
 import { useUserStore } from "../user";
 import { useVrStore } from "../vr";
 import { useVrcxStore } from "../vrcx";
-import { watchState } from "../../services/watchState";
+import { watchState } from "../../services/watch-state";
 
 import configRepository from "../../services/config";
 

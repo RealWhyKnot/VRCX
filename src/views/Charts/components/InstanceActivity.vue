@@ -165,15 +165,15 @@ import { useAppearanceSettingsStore, useFriendStore, useUserStore } from "../../
 import { parseLocation, timeToText } from "../../../shared/utils";
 import { Slider } from "../../../components/ui/slider";
 import { Switch } from "../../../components/ui/switch";
-import { useActivityDataProcessor } from "../composables/useActivityDataProcessor";
-import { useChartHelpers } from "../composables/useChartHelpers";
-import { useDateNavigation } from "../composables/useDateNavigation";
-import { useInstanceActivityData } from "../composables/useInstanceActivityData";
-import { useInstanceActivitySettings } from "../composables/useInstanceActivitySettings";
-import { useIntersectionObserver } from "../composables/useIntersectionObserver";
+import { useActivityDataProcessor } from "../composables/use-activity-data-processor";
+import { useChartHelpers } from "../composables/use-chart-helpers";
+import { useDateNavigation } from "../composables/use-date-navigation";
+import { useInstanceActivityData } from "../composables/use-instance-activity-data";
+import { useInstanceActivitySettings } from "../composables/use-instance-activity-settings";
+import { useIntersectionObserver } from "../composables/use-intersection-observer";
 
 import InstanceActivityDetail from "./InstanceActivityDetail.vue";
-import InstanceActivityTooltip from "./InstanceActivityTooltip.jsx";
+import InstanceActivityTooltip from "./instance-activity-tooltip.jsx";
 
 import * as echarts from "echarts";
 import { renderToHtml } from "@/lib/utils";

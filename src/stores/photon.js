@@ -6,11 +6,11 @@ import { useI18n } from "vue-i18n";
 import { checkVRChatCache, displayLocation, getGroupName, getWorldName, parseLocation, removeFromArray, replaceBioSymbols, timeToText } from "../shared/utils";
 import { instanceRequest, userRequest } from "../api";
 import { photonEmojis, photonEventType } from "../shared/constants/photon";
-import { AppDebug } from "../services/appConfig";
+import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 
-import { applyAvatar } from "../coordinators/avatarCoordinator";
-import { showUserDialog, lookupUser, applyUser } from "../coordinators/userCoordinator";
+import { applyAvatar } from "../coordinators/avatar-coordinator";
+import { showUserDialog, lookupUser, applyUser } from "../coordinators/user-coordinator";
 import { useFavoriteStore } from "./favorite";
 import { useFriendStore } from "./friend";
 import { useGameLogStore } from "./gameLog";
@@ -18,7 +18,7 @@ import { useInstanceStore } from "./instance";
 import { useLocationStore } from "./location";
 import { useModalStore } from "./modal";
 import { useNotificationStore } from "./notification";
-import { useSharedFeedStore } from "./sharedFeed";
+import { useSharedFeedStore } from "./shared-feed";
 import { useUserStore } from "./user";
 import { useVrStore } from "./vr";
 

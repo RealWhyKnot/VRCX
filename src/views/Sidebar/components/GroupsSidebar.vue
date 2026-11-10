@@ -75,11 +75,11 @@ import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../components/ui/context-menu";
-import { buildGroupHeaderRow, buildGroupItemRow, estimateGroupRowSize, getGroupId } from "../groupsSidebarUtils";
+import { buildGroupHeaderRow, buildGroupItemRow, estimateGroupRowSize, getGroupId } from "../groups-sidebar-utils";
 import { convertFileUrlToImageUrl, parseLocation } from "../../../shared/utils";
-import { useInviteChecks } from "../../../composables/useInviteChecks";
+import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { useAppearanceSettingsStore, useGroupStore, useLaunchStore } from "../../../stores";
-import { showGroupDialog } from "../../../coordinators/groupCoordinator";
+import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { instanceRequest } from "../../../api";
 
 import BackToTop from "../../../components/BackToTop.vue";

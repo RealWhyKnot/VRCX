@@ -331,7 +331,7 @@ import { cn } from "@/lib/utils";
 import { useGroupStore, useInstanceStore, useInviteStore, useLaunchStore, useLocationStore, useModalStore, useUserStore } from "../stores";
 import { formatSeconds, hasGroupPermission, languageClass, parseLocation, replaceBioSymbols } from "../shared/utils";
 import { instanceCategoryIcons } from "../shared/constants";
-import { useInviteChecks } from "../composables/useInviteChecks";
+import { useInviteChecks } from "../composables/use-invite-checks";
 import { instanceRequest, miscRequest, queryRequest } from "../api";
 import InstanceAnnouncementDialog from "./dialogs/InstanceAnnouncementDialog.vue";
 import InstanceCalendarLinkDialog from "./dialogs/InstanceCalendarLinkDialog.vue";

@@ -1,8 +1,8 @@
-import { extractFileId, extractFileVersion, extractVariantVersion } from "./fileUtils";
+import { extractFileId, extractFileVersion, extractVariantVersion } from "./file-utils";
 import { replaceBioSymbols } from "./base/string";
-import { getFaviconUrl, replaceVrcPackageUrl } from "./urlUtils";
-import { AppDebug } from "../../services/appConfig.js";
-import { getAvailablePlatforms } from "./platformUtils";
+import { getFaviconUrl, replaceVrcPackageUrl } from "./url-utils";
+import { AppDebug } from "../../services/app-config.js";
+import { getAvailablePlatforms } from "./platform-utils";
 
 function convertFileUrlToImageUrl(url, resolution = 128, endpointDomain = AppDebug.endpointDomain) {
   if (!url || typeof url !== "string") {
@@ -33,9 +33,9 @@ function debounce(func, delay) {
   };
 }
 
-export { downloadAndSaveJson, copyToClipboard, openExternalLink, openDiscordProfile, openFolderGeneric } from "./appActions";
+export { downloadAndSaveJson, copyToClipboard, openExternalLink, openDiscordProfile, openFolderGeneric } from "./app-actions";
 
-export { deleteVRChatCache, checkVRChatCache, getBundleDateSize } from "../../coordinators/cacheCoordinator";
+export { deleteVRChatCache, checkVRChatCache, getBundleDateSize } from "../../coordinators/cache-coordinator";
 
 export {
   getAvailablePlatforms,

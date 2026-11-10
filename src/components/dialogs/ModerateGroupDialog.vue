@@ -64,11 +64,11 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { hasGroupModerationPermission } from "../../shared/utils";
-import { useUserDisplay } from "../../composables/useUserDisplay";
+import { useUserDisplay } from "../../composables/use-user-display";
 import { VirtualCombobox } from "../ui/virtual-combobox";
 import { queryRequest } from "../../api";
 import { useGroupStore } from "../../stores";
-import { showGroupMemberModerationDialog } from "../../coordinators/groupCoordinator";
+import { showGroupMemberModerationDialog } from "../../coordinators/group-coordinator";
 
 const { userImage } = useUserDisplay();
 const { currentUserGroups, moderateGroupDialog } = storeToRefs(useGroupStore());

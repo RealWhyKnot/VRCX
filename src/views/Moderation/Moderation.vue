@@ -76,12 +76,12 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAppearanceSettingsStore, useModalStore, useModerationStore } from "../../stores";
-import { runRefreshPlayerModerationsFlow as refreshPlayerModerations } from "../../coordinators/moderationCoordinator";
+import { runRefreshPlayerModerationsFlow as refreshPlayerModerations } from "../../coordinators/moderation-coordinator";
 import { DataTableLayout } from "../../components/ui/data-table";
 import { createColumns } from "./columns.jsx";
 import { moderationTypes } from "../../shared/constants";
 import { playerModerationRequest } from "../../api";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import configRepository from "../../services/config.js";
 

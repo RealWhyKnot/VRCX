@@ -364,8 +364,8 @@ import {
   useWorldStore,
 } from "@/stores";
 import { authRequest, queryRequest } from "@/api";
-import { disableGameLogDialog } from "@/coordinators/gameLogCoordinator";
-import { clearVRCXCache } from "@/coordinators/vrcxCoordinator";
+import { disableGameLogDialog } from "@/coordinators/game-log-coordinator";
+import { clearVRCXCache } from "@/coordinators/vrcx-coordinator";
 import { openExternalLink } from "@/shared/utils";
 
 import PhotonSettings from "../PhotonSettings.vue";

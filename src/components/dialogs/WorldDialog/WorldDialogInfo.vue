@@ -184,7 +184,7 @@ import { useI18n } from "vue-i18n";
 
 import { useAuthStore, useInstanceStore, useWorldStore } from "../../../stores";
 import { copyToClipboard, openExternalLink, timeAgo, timeToText } from "../../../shared/utils";
-import { useWorldDialogInfo } from "./useWorldDialogInfo";
+import { useWorldDialogInfo } from "./use-world-dialog-info";
 
 const { t } = useI18n();
 

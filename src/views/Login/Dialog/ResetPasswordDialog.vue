@@ -42,7 +42,7 @@ import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { AppDebug } from "../../../services/appConfig";
+import { AppDebug } from "../../../services/app-config";
 import { authRequest } from "../../../api";
 import { useAuthStore } from "../../../stores";
 

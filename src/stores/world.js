@@ -2,8 +2,8 @@ import { reactive, shallowReactive, watch } from "vue";
 import { defineStore } from "pinia";
 
 import { checkVRChatCache, formatFileSize } from "../shared/utils";
-import { preloadOwnWorlds } from "../coordinators/worldCoordinator";
-import { watchState } from "../services/watchState";
+import { preloadOwnWorlds } from "../coordinators/world-coordinator";
+import { watchState } from "../services/watch-state";
 
 export const useWorldStore = defineStore("World", () => {
   const worldDialog = reactive({

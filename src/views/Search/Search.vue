@@ -320,16 +320,16 @@ import { useI18n } from "vue-i18n";
 
 import { useAppearanceSettingsStore, useAuthStore, useAvatarProviderStore, useSearchStore } from "../../stores";
 import { commaNumber, convertFileUrlToImageUrl, languageClass, replaceBioSymbols } from "../../shared/utils";
-import { useUserDisplay } from "../../composables/useUserDisplay";
-import { showAvatarDialog } from "../../coordinators/avatarCoordinator";
-import { showGroupDialog } from "../../coordinators/groupCoordinator";
-import { showUserDialog } from "../../coordinators/userCoordinator";
-import { showWorldDialog } from "../../coordinators/worldCoordinator";
-import { useSearchAvatar } from "./composables/useSearchAvatar";
-import { useSearchWorld } from "./composables/useSearchWorld";
-import { useSearchUser } from "./composables/useSearchUser";
-import { useSearchGroup } from "./composables/useSearchGroup";
-import { useSearchMarketplace } from "./composables/useSearchMarketplace";
+import { useUserDisplay } from "../../composables/use-user-display";
+import { showAvatarDialog } from "../../coordinators/avatar-coordinator";
+import { showGroupDialog } from "../../coordinators/group-coordinator";
+import { showUserDialog } from "../../coordinators/user-coordinator";
+import { showWorldDialog } from "../../coordinators/world-coordinator";
+import { useSearchAvatar } from "./composables/use-search-avatar";
+import { useSearchWorld } from "./composables/use-search-world";
+import { useSearchUser } from "./composables/use-search-user";
+import { useSearchGroup } from "./composables/use-search-group";
+import { useSearchMarketplace } from "./composables/use-search-marketplace";
 
 const { randomUserColours } = storeToRefs(useAppearanceSettingsStore());
 const { avatarRemoteDatabaseProviderList, avatarRemoteDatabaseProvider, isAvatarProviderDialogVisible } = storeToRefs(useAvatarProviderStore());

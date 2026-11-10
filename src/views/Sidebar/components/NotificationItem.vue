@@ -215,10 +215,10 @@ import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 
 import { useGameStore, useGroupStore, useLocationStore, useNotificationStore, useUserStore } from "../../../stores";
-import { showGroupDialog } from "../../../coordinators/groupCoordinator";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
-import { useInviteChecks } from "../../../composables/useInviteChecks";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { useInviteChecks } from "../../../composables/use-invite-checks";
+import { useUserDisplay } from "../../../composables/use-user-display";
 
 import Location from "../../../components/Location.vue";
 

@@ -395,10 +395,10 @@ import { useAppearanceSettingsStore, useAvatarStore, useFavoriteStore, useModalS
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
 import { avatarRequest, favoriteRequest } from "../../api";
 import { debounce } from "../../shared/utils";
-import { useFavoritesCardScaling } from "./composables/useFavoritesCardScaling.js";
-import { useFavoritesGroupPanel } from "./composables/useFavoritesGroupPanel.js";
-import { useFavoritesLocalGroups } from "./composables/useFavoritesLocalGroups.js";
-import { useFavoritesSplitter } from "./composables/useFavoritesSplitter.js";
+import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
+import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
+import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";
+import { useFavoritesSplitter } from "./composables/use-favorites-splitter.js";
 import {
   deleteLocalAvatarFavoriteGroup,
   renameLocalAvatarFavoriteGroup,
@@ -407,14 +407,14 @@ import {
   getLocalAvatarFavorites,
   checkInvalidLocalAvatars,
   removeInvalidLocalAvatars,
-} from "../../coordinators/favoriteCoordinator";
+} from "../../coordinators/favorite-coordinator";
 
 import AvatarExportDialog from "./dialogs/AvatarExportDialog.vue";
 import FavoritesAvatarItem from "./components/FavoritesAvatarItem.vue";
 import FavoritesAvatarLocalHistoryItem from "./components/FavoritesAvatarLocalHistoryItem.vue";
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
-import InvalidAvatarsProgressToast from "./components/InvalidAvatarsProgressToast.jsx";
+import InvalidAvatarsProgressToast from "./components/invalid-avatars-progress-toast.jsx";
 
 import * as workerTimers from "worker-timers";
 
@@ -450,7 +450,7 @@ const {
 } = storeToRefs(favoriteStore);
 const { showAvatarImportDialog, localAvatarFavGroupLength, localAvatarFavoritesList, handleFavoriteGroup } = favoriteStore;
 const { avatarHistory } = storeToRefs(useAvatarStore());
-import { promptClearAvatarHistory, showAvatarDialog, applyAvatar } from "../../coordinators/avatarCoordinator";
+import { promptClearAvatarHistory, showAvatarDialog, applyAvatar } from "../../coordinators/avatar-coordinator";
 const { t } = useI18n();
 
 const {

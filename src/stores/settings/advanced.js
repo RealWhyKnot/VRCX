@@ -3,15 +3,15 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { logWebRequest } from "../../services/appConfig";
+import { logWebRequest } from "../../services/app-config";
 import { database } from "../../services/database";
 import { languageCodes } from "../../localization";
 import { useGameStore } from "../game";
 import { useModalStore } from "../modal";
-import { useUpdateLoopStore } from "../updateLoop";
-import { useVRCXUpdaterStore } from "../vrcxUpdater";
+import { useUpdateLoopStore } from "../update-loop";
+import { useVRCXUpdaterStore } from "../vrcx-updater";
 import { useVrcxStore } from "../vrcx";
-import { watchState } from "../../services/watchState";
+import { watchState } from "../../services/watch-state";
 
 import configRepository from "../../services/config";
 import webApiService from "../../services/webapi";

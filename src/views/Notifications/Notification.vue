@@ -107,7 +107,7 @@ import { useAppearanceSettingsStore, useGalleryStore, useInviteStore, useNotific
 import { DataTableLayout } from "../../components/ui/data-table";
 import { convertFileUrlToImageUrl } from "../../shared/utils";
 import { createColumns } from "./columns.jsx";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import SendInviteRequestResponseDialog from "./dialogs/SendInviteRequestResponseDialog.vue";
 import SendInviteResponseDialog from "./dialogs/SendInviteResponseDialog.vue";

@@ -38,7 +38,7 @@ import { ref } from "vue";
 import { storeToRefs } from "pinia";
 
 import { useGalleryStore, useGroupStore } from "../../../stores";
-import { AppDebug } from "@/services/appConfig";
+import { AppDebug } from "@/services/app-config";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils";
 import { miscRequest } from "../../../api";
 

@@ -21,8 +21,8 @@
 <script setup>
 import { computed, onBeforeMount, onMounted } from "vue";
 
-import { addGameLogEvent, getGameLogTable } from "./coordinators/gameLogCoordinator";
-import { runCheckVRChatDebugLoggingFlow, runUpdateIsGameRunningFlow, runUpdateIsHmdAfkFlow } from "./coordinators/gameCoordinator";
+import { addGameLogEvent, getGameLogTable } from "./coordinators/game-log-coordinator";
+import { runCheckVRChatDebugLoggingFlow, runUpdateIsGameRunningFlow, runUpdateIsHmdAfkFlow } from "./coordinators/game-coordinator";
 import { Toaster } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { createGlobalStores } from "./stores";

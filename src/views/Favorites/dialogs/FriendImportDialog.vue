@@ -112,13 +112,13 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { removeFromArray } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { useFavoriteStore, useGalleryStore, useUserStore } from "../../../stores";
-import { addLocalFriendFavorite } from "../../../coordinators/favoriteCoordinator";
+import { addLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest, userRequest } from "../../../api";
-import { createColumns } from "./friendImportColumns.jsx";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { createColumns } from "./friend-import-columns.jsx";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { userImage, userImageFull } = useUserDisplay();
 const { t } = useI18n();

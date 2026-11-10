@@ -5,13 +5,13 @@ import { useI18n } from "vue-i18n";
 
 import { convertFileUrlToImageUrl, getEmojiFileName, getPrintFileName, getPrintLocalDate, openExternalLink } from "../shared/utils";
 import { inventoryRequest, queryRequest, vrcPlusIconRequest, vrcPlusImageRequest } from "../api";
-import { AppDebug } from "../services/appConfig";
-import { handleImageUploadInput } from "../coordinators/imageUploadCoordinator";
+import { AppDebug } from "../services/app-config";
+import { handleImageUploadInput } from "../coordinators/image-upload-coordinator";
 import { router } from "../plugins/router";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useAuthStore } from "./auth";
 import { useModalStore } from "./modal";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 import { database } from "../services/database";
 
 import * as workerTimers from "worker-timers";

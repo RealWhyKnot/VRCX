@@ -608,9 +608,9 @@ import { Badge } from "../../ui/badge";
 import { userRequest } from "../../../api";
 import { languageClass, getFaviconUrl, arraysMatch, debounce } from "../../../shared/utils";
 import { useUserStore, useAuthStore, useGalleryStore, useModalStore } from "../../../stores";
-import { useStatusPresets } from "./composables/useStatusPresets";
+import { useStatusPresets } from "./composables/use-status-presets";
 import GallerySelectDialog from "../GroupDialog/GallerySelectDialog.vue";
-import { updateUserDialogProfile } from "@/coordinators/userCoordinator";
+import { updateUserDialogProfile } from "@/coordinators/user-coordinator";
 import { profileBackgrounds } from "@/shared/constants/backgrounds";
 
 const { t } = useI18n();

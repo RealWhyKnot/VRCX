@@ -28,7 +28,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useInstanceStore, useLaunchStore } from "../stores";
-import { showGroupDialog } from "../coordinators/groupCoordinator";
+import { showGroupDialog } from "../coordinators/group-coordinator";
 import { formatDateFilter, getGroupName, parseLocation } from "../shared/utils";
 import { accessTypeLocaleKeyMap } from "../shared/constants";
 import { cn } from "@/lib/utils";

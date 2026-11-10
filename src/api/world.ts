@@ -2,7 +2,7 @@ import type { File, LimitedWorld, SearchWorlds, UpdateWorldRequest, World } from
 import type { Json, WorldRating, WorldRatingValue } from "../types/vrcx";
 import { patchAndRefetchActiveQuery, queryKeys } from "../queries";
 import { request } from "../services/request";
-import { applyWorld } from "../coordinators/worldCoordinator";
+import { applyWorld } from "../coordinators/world-coordinator";
 
 const worldReq = {
   getWorld(params: { worldId: string }): Promise<{ json: Json<World>; ref: any; params: { worldId: string } }> {

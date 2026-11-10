@@ -10,4 +10,4 @@ export {
   patchWorldFromEvent,
   patchGroupFromEvent,
   refetchActiveEntityQuery,
-} from "./entityCache";
+} from "./entity-cache";

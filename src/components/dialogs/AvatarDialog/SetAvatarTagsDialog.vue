@@ -97,7 +97,7 @@ import { watch } from "vue";
 import { avatarRequest } from "../../../api";
 import { removeFromArray } from "../../../shared/utils";
 import { useAvatarStore } from "../../../stores";
-import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatarCoordinator";
+import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
 
 const { cachedAvatars } = useAvatarStore();
 

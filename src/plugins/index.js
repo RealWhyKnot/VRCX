@@ -1,6 +1,6 @@
 import { i18n, loadLocalizedStrings, tForLocale, updateLocalizedStrings } from "./i18n";
 import { initDayjs } from "./dayjs";
-import { initInteropApi } from "./interopApi";
+import { initInteropApi } from "./interop-api";
 import { initNoty } from "./noty";
 import { initUi, initUiForVrOverlay } from "./ui";
 

@@ -18,32 +18,32 @@ import {
   replaceBioSymbols,
   sanitizeNotificationJson,
 } from "../../shared/utils";
-import { getUserMemo } from "../../coordinators/memoCoordinator";
+import { getUserMemo } from "../../coordinators/memo-coordinator";
 import { friendRequest, instanceRequest, inventoryRequest, marketplaceRequest, notificationRequest, queryRequest } from "../../api";
 import { VRCHAT_STORE_IDS } from "../../shared/constants";
-import { getNotificationMessage, getUserIdFromNoty as getUserIdFromNotyBase, toNotificationText } from "../../shared/utils/notificationMessage";
+import { getNotificationMessage, getUserIdFromNoty as getUserIdFromNotyBase, toNotificationText } from "../../shared/utils/notification-message";
 import { database, dbVars } from "../../services/database";
-import { getNotificationCategory, getNotificationTs } from "../../shared/utils/notificationCategory";
-import { AppDebug } from "../../services/appConfig";
-import { createOverlayDispatch } from "./overlayDispatch";
+import { getNotificationCategory, getNotificationTs } from "../../shared/utils/notification-category";
+import { AppDebug } from "../../services/app-config";
+import { createOverlayDispatch } from "./overlay-dispatch";
 import { useAdvancedSettingsStore } from "../settings/advanced";
 import { useFavoriteStore } from "../favorite";
 import { useFriendStore } from "../friend";
-import { handleFriendAdd } from "../../coordinators/friendRelationshipCoordinator";
+import { handleFriendAdd } from "../../coordinators/friend-relationship-coordinator";
 import { useGameStore } from "../game";
 import { useGeneralSettingsStore } from "../settings/general";
 
-import { showGroupDialog } from "../../coordinators/groupCoordinator";
-import { showUserDialog } from "../../coordinators/userCoordinator";
+import { showGroupDialog } from "../../coordinators/group-coordinator";
+import { showUserDialog } from "../../coordinators/user-coordinator";
 import { useInstanceStore } from "../instance";
 import { useLocationStore } from "../location";
 import { useModalStore } from "../modal";
 import { useNotificationsSettingsStore } from "../settings/notifications";
-import { useSharedFeedStore } from "../sharedFeed";
+import { useSharedFeedStore } from "../shared-feed";
 import { useUiStore } from "../ui";
 import { useUserStore } from "../user";
-import { useWristOverlaySettingsStore } from "../settings/wristOverlay";
-import { watchState } from "../../services/watchState";
+import { useWristOverlaySettingsStore } from "../settings/wrist-overlay";
+import { watchState } from "../../services/watch-state";
 
 import configRepository from "../../services/config";
 

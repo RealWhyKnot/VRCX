@@ -91,8 +91,8 @@ import { useI18n } from "vue-i18n";
 
 import { useInstanceStore, useLocationStore } from "@/stores";
 import { languageClass, statusClass } from "@/shared/utils/user";
-import { showUserDialog, lookupUser } from "@/coordinators/userCoordinator";
-import { displayLocation } from "@/shared/utils/locationParser";
+import { showUserDialog, lookupUser } from "@/coordinators/user-coordinator";
+import { displayLocation } from "@/shared/utils/location-parser";
 
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";

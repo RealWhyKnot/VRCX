@@ -6,7 +6,7 @@
 import { ref, watch } from "vue";
 
 import { queryRequest } from "../api";
-import { showUserDialog } from "../coordinators/userCoordinator";
+import { showUserDialog } from "../coordinators/user-coordinator";
 
 const props = defineProps({
   userid: String,

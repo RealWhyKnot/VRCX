@@ -82,10 +82,10 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useUserStore, useWorldStore } from "../../../stores";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { userDialogWorldOrderOptions, userDialogWorldSortingOptions } from "../../../shared/constants/";
 import { queryRequest } from "../../../api";
-import { useOptionKeySelect } from "../../../composables/useOptionKeySelect";
+import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 
 const { t } = useI18n();
 

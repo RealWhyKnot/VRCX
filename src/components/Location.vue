@@ -72,9 +72,9 @@ import {
   translateAccessType,
 } from "../shared/utils";
 import { useAppearanceSettingsStore, useInstanceStore, useInviteStore, useSearchStore, useWorldStore } from "../stores";
-import { showGroupDialog } from "../coordinators/groupCoordinator";
-import { showWorldDialog } from "../coordinators/worldCoordinator";
-import { runNewInstanceSelfInviteFlow } from "../coordinators/inviteCoordinator";
+import { showGroupDialog } from "../coordinators/group-coordinator";
+import { showWorldDialog } from "../coordinators/world-coordinator";
+import { runNewInstanceSelfInviteFlow } from "../coordinators/invite-coordinator";
 import { Spinner } from "./ui/spinner";
 import WorldActionMenuItems from "./WorldActionMenuItems.vue";
 import { accessTypeLocaleKeyMap } from "../shared/constants";

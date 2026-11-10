@@ -1,0 +1,31 @@
+import InteropApi from "../ipc-electron/interop-api.js";
+import configRepository from "../services/config.js";
+import vrcxJsonStorage from "../services/json-storage.js";
+
+export async function initInteropApi(isVrOverlay = false) {
+  if (isVrOverlay) {
+    if (WINDOWS) {
+      await CefSharp.BindObjectAsync("AppApiVr");
+    } else {
+      window.AppApiVr = InteropApi.AppApiVrElectron;
+    }
+  } else {
+    if (WINDOWS) {
+      await CefSharp.BindObjectAsync("AppApi", "WebApi", "VRCXStorage", "SQLite", "LogWatcher", "Discord", "AssetBundleManager");
+    } else {
+      window.AppApi = InteropApi.AppApiElectron;
+      window.WebApi = InteropApi.WebApi;
+      window.VRCXStorage = InteropApi.VRCXStorage;
+      window.SQLite = InteropApi.SQLite;
+      window.LogWatcher = InteropApi.LogWatcher;
+      window.Discord = InteropApi.Discord;
+      window.AssetBundleManager = InteropApi.AssetBundleManager;
+      window.AppApiVrElectron = InteropApi.AppApiVrElectron;
+    }
+
+    await configRepository.init();
+    new vrcxJsonStorage(VRCXStorage);
+
+    AppApi.SetUserAgent();
+  }
+}

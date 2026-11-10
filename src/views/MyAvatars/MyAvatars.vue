@@ -261,11 +261,11 @@ import { ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from "../..
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
 import { Field, FieldContent, FieldLabel } from "../../components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
-import { applyAvatar, selectAvatarWithoutConfirmation, showAvatarDialog } from "../../coordinators/avatarCoordinator";
-import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../coordinators/imageUploadCoordinator";
+import { applyAvatar, selectAvatarWithoutConfirmation, showAvatarDialog } from "../../coordinators/avatar-coordinator";
+import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../coordinators/image-upload-coordinator";
 import { DataTableEmpty, DataTableLayout } from "../../components/ui/data-table";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { readFileAsBase64, withUploadTimeout } from "../../shared/utils/imageUpload";
+import { readFileAsBase64, withUploadTimeout } from "../../shared/utils/image-upload";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -277,8 +277,8 @@ import { getColumns } from "./columns";
 import { getPlatformInfo } from "../../shared/utils/avatar";
 import { getTagColor } from "../../shared/constants";
 import { processBulk } from "../../services/request";
-import { useAvatarCardGrid } from "./composables/useAvatarCardGrid";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useAvatarCardGrid } from "./composables/use-avatar-card-grid";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import ImageCropDialog from "../../components/dialogs/ImageCropDialog.vue";
 import ManageTagsDialog from "./ManageTagsDialog.vue";

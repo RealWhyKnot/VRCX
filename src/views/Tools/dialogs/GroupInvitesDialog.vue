@@ -75,7 +75,7 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { groupRequest } from "../../../api";
-import { showGroupDialog } from "../../../coordinators/groupCoordinator";
+import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { useModalStore } from "../../../stores";
 
 const props = defineProps({

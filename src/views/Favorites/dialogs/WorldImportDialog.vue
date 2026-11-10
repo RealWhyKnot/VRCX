@@ -113,13 +113,13 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore, useGalleryStore, useUserStore, useWorldStore } from "../../../stores";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
-import { addLocalWorldFavorite } from "../../../coordinators/favoriteCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
+import { addLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest, worldRequest } from "../../../api";
-import { createColumns } from "./worldImportColumns.jsx";
+import { createColumns } from "./world-import-columns.jsx";
 import { removeFromArray } from "../../../shared/utils";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { favoriteWorldGroups, worldImportDialogInput, worldImportDialogVisible, localWorldFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { localWorldFavGroupLength, getCachedFavoritesByObjectId } = useFavoriteStore();

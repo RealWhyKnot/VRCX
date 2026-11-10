@@ -10,10 +10,10 @@ import { useGameStore } from "./game";
 import { useLocationStore } from "./location";
 import { useNotificationsSettingsStore } from "./settings/notifications";
 import { usePhotonStore } from "./photon";
-import { useSharedFeedStore } from "./sharedFeed";
+import { useSharedFeedStore } from "./shared-feed";
 import { useUserStore } from "./user";
-import { useWristOverlaySettingsStore } from "./settings/wristOverlay";
-import { watchState } from "../services/watchState";
+import { useWristOverlaySettingsStore } from "./settings/wrist-overlay";
+import { watchState } from "../services/watch-state";
 
 export const useVrStore = defineStore("Vr", () => {
   const friendStore = useFriendStore();

@@ -434,7 +434,7 @@ import { useI18n } from "vue-i18n";
 
 import ColorPickerButton from "@/components/ColorPickerButton.vue";
 import TableLimitsDialog from "@/components/dialogs/TableLimitsDialog.vue";
-import { saveSortFavoritesOption } from "@/coordinators/favoriteCoordinator";
+import { saveSortFavoritesOption } from "@/coordinators/favorite-coordinator";
 
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";

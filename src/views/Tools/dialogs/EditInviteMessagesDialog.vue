@@ -63,12 +63,12 @@ import { TabsUnderline } from "@/components/ui/tabs";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { columns as inviteMessageColumns } from "./editInviteMessagesMessageColumns.jsx";
-import { columns as inviteRequestColumns } from "./editInviteMessagesRequestColumns.jsx";
-import { columns as inviteRequestResponseColumns } from "./editInviteMessagesRequestResponseColumns.jsx";
-import { columns as inviteResponseColumns } from "./editInviteMessagesResponseColumns.jsx";
+import { columns as inviteMessageColumns } from "./edit-invite-messages-message-columns.jsx";
+import { columns as inviteRequestColumns } from "./edit-invite-messages-request-columns.jsx";
+import { columns as inviteRequestResponseColumns } from "./edit-invite-messages-request-response-columns.jsx";
+import { columns as inviteResponseColumns } from "./edit-invite-messages-response-columns.jsx";
 import { useInviteStore } from "../../../stores";
 
 import EditInviteMessageDialog from "./EditInviteMessageDialog.vue";

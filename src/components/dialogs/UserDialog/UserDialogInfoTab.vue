@@ -383,8 +383,8 @@ import {
   userOnlineForTimestamp,
   timeAgo,
 } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
-import { refreshInstancePlayerCount } from "../../../coordinators/instanceCoordinator";
+import { useUserDisplay } from "../../../composables/use-user-display";
+import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
 import {
   useAdvancedSettingsStore,
   useAppearanceSettingsStore,
@@ -394,11 +394,11 @@ import {
   useUserStore,
   useGalleryStore,
 } from "../../../stores";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { queryRequest, userRequest } from "../../../api";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 import EditNoteAndMemoDialog from "./EditNoteAndMemoDialog.vue";
 

@@ -189,8 +189,8 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { showUserDialog } from "@/coordinators/userCoordinator";
-import { showWorldDialog } from "@/coordinators/worldCoordinator";
+import { showUserDialog } from "@/coordinators/user-coordinator";
+import { showWorldDialog } from "@/coordinators/world-coordinator";
 import { database } from "@/services/database";
 import { useAppearanceSettingsStore } from "@/stores";
 

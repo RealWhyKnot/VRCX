@@ -417,10 +417,10 @@ import { useRoute, useRouter } from "vue-router";
 import { extractFileId, formatDateFilter, getEmojiFileName, getPrintFileName, openExternalLink } from "../../shared/utils";
 import { inventoryRequest, miscRequest, userRequest, vrcPlusIconRequest, vrcPlusImageRequest } from "../../api";
 import { useAdvancedSettingsStore, useAuthStore, useGalleryStore, useModalStore, useUserStore } from "../../stores";
-import { readFileAsBase64, withUploadTimeout } from "../../shared/utils/imageUpload";
-import { handleImageUploadInput } from "../../coordinators/imageUploadCoordinator";
+import { readFileAsBase64, withUploadTimeout } from "../../shared/utils/image-upload";
+import { handleImageUploadInput } from "../../coordinators/image-upload-coordinator";
 import { emojiAnimationStyleList, emojiAnimationStyleUrl } from "../../shared/constants";
-import { AppDebug } from "../../services/appConfig";
+import { AppDebug } from "../../services/app-config";
 
 import Emoji from "../../components/Emoji.vue";
 import ImageCropDialog from "../../components/dialogs/ImageCropDialog.vue";

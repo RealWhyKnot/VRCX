@@ -69,14 +69,14 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { compareByDisplayName, compareByFriendOrder, compareByLastActiveRef } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { database } from "../../../services/database";
 import { processBulk } from "../../../services/request";
-import { useOptionKeySelect } from "../../../composables/useOptionKeySelect";
+import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { useUserStore } from "../../../stores";
 import { userDialogMutualFriendSortingOptions } from "../../../shared/constants";
 import { userRequest } from "../../../api";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();
 const { userImage } = useUserDisplay();

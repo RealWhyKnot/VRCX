@@ -7,7 +7,7 @@ import { ArrowDown, ArrowRight, ArrowUpDown, ChevronDown, ChevronRight } from "l
 import { formatDateFilter, getFaviconUrl, openExternalLink, replaceBioSymbols, statusClass, timeToText } from "../../shared/utils";
 import { i18n } from "../../plugins/i18n";
 import { useGalleryStore, useFriendStore } from "../../stores";
-import { showUserDialog } from "../../coordinators/userCoordinator";
+import { showUserDialog } from "../../coordinators/user-coordinator";
 import UserContextMenu from "../../components/UserContextMenu.vue";
 
 const { t } = i18n.global;

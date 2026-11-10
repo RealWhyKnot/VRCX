@@ -13,13 +13,13 @@ export default defineConfig({
     LINUX: JSON.stringify(false),
   },
   test: {
-    globals: true,
+    globals: false,
     testTimeout: 60_000,
     hookTimeout: 60_000,
     maxWorkers: 2,
     environment: "jsdom",
-    setupFiles: ["./vitest.setup.js"],
-    include: ["src/**/*.{test,spec}.js"],
+    setupFiles: ["./tests/setup.js"],
+    include: ["tests/**/*.{test,spec}.js"],
     coverage: {
       reporter: ["text", "text-summary"],
       exclude: [

@@ -139,10 +139,10 @@ import { TooltipWrapper } from "../../components/ui/tooltip";
 import { createColumns } from "./columns.jsx";
 import { localeIncludes, replaceBioSymbols } from "../../shared/utils";
 import removeConfusables, { removeWhitespace } from "../../services/confusables";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
-import { showUserDialog } from "../../coordinators/userCoordinator";
-import { confirmDeleteFriend, handleFriendDelete } from "../../coordinators/friendRelationshipCoordinator";
-import { useUserDisplay } from "../../composables/useUserDisplay";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+import { showUserDialog } from "../../coordinators/user-coordinator";
+import { confirmDeleteFriend, handleFriendDelete } from "../../coordinators/friend-relationship-coordinator";
+import { useUserDisplay } from "../../composables/use-user-display";
 import { database } from "../../services/database";
 
 const { t } = useI18n();

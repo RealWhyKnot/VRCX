@@ -72,16 +72,16 @@ import { localeIncludes } from "@/shared/utils";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useSearchStore } from "@/stores";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 import { useGalleryStore, usePhotonStore, useUserStore, useVrcxStore, useWorldStore } from "../../../stores";
-import { showAvatarDialog } from "../../../coordinators/avatarCoordinator";
-import { showGroupDialog } from "../../../coordinators/groupCoordinator";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
-import { createColumns } from "./photonEventColumns.jsx";
+import { createColumns } from "./photon-event-columns.jsx";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
-import { lookupUser } from "../../../coordinators/userCoordinator";
+import { lookupUser } from "../../../coordinators/user-coordinator";
 
 const emit = defineEmits(["show-chatbox-blacklist"]);
 const { t } = useI18n();

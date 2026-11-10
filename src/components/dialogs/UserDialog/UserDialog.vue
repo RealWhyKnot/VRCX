@@ -103,10 +103,10 @@ import {
 import { copyToClipboard } from "../../../shared/utils";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 import { miscRequest } from "../../../api";
-import { useUserDialogCommands } from "./useUserDialogCommands";
-import { showAvatarDialog, showAvatarAuthorDialog } from "../../../coordinators/avatarCoordinator";
-import { showUserDialog, refreshUserDialogAvatars } from "../../../coordinators/userCoordinator";
-import { getFriendRequest, handleFriendDelete } from "../../../coordinators/friendRelationshipCoordinator";
+import { useUserDialogCommands } from "./use-user-dialog-commands";
+import { showAvatarDialog, showAvatarAuthorDialog } from "../../../coordinators/avatar-coordinator";
+import { showUserDialog, refreshUserDialogAvatars } from "../../../coordinators/user-coordinator";
+import { getFriendRequest, handleFriendDelete } from "../../../coordinators/friend-relationship-coordinator";
 
 import DialogJsonTab from "../DialogJsonTab.vue";
 import SendInviteDialog from "../InviteDialog/SendInviteDialog.vue";

@@ -123,7 +123,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { computed, ref, watch } from "vue";
-import { AppDebug } from "@/services/appConfig";
+import { AppDebug } from "@/services/app-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableEmpty } from "@/components/ui/data-table";
@@ -134,7 +134,7 @@ import { useI18n } from "vue-i18n";
 import { commaNumber, formatDateFilter, replaceBioSymbols } from "../../../shared/utils";
 import { useGalleryStore, useUserStore } from "../../../stores";
 import { marketplaceRequest } from "../../../api";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const props = defineProps({
   isPurchaseHistoryDialogVisible: {

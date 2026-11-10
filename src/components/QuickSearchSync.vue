@@ -8,7 +8,7 @@ export default {
 import { nextTick, watch } from "vue";
 import { useCommand } from "@/components/ui/command";
 
-import { useQuickSearchStore } from "../stores/quickSearch";
+import { useQuickSearchStore } from "../stores/quick-search";
 
 const { filterState, allItems, allGroups } = useCommand();
 const quickSearchStore = useQuickSearchStore();

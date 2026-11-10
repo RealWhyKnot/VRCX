@@ -19,7 +19,7 @@
   "main": "src-electron/main.js",
   "scripts": {
     "dev": "vite serve src",
-    "localization": "node ./src/shared/utils/localizationHelperCLI.js",
+    "localization": "node ./src/shared/utils/localization-helper-cli.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dotnet_format": "dotnet format",

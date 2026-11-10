@@ -149,15 +149,15 @@ import { commaNumber, formatDateFilter } from "../../shared/utils";
 import { Badge } from "../../components/ui/badge";
 import { DataTableLayout } from "../../components/ui/data-table";
 import { createColumns } from "./columns.jsx";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import ChatboxBlacklistDialog from "./dialogs/ChatboxBlacklistDialog.vue";
 import Timer from "../../components/Timer.vue";
-import { showUserDialog, lookupUser } from "../../coordinators/userCoordinator";
-import { showWorldDialog } from "../../coordinators/worldCoordinator";
+import { showUserDialog, lookupUser } from "../../coordinators/user-coordinator";
+import { showWorldDialog } from "../../coordinators/world-coordinator";
 
 import PhotonEventTable from "./components/PhotonEventTable.vue";
-import { useUserDisplay } from "../../composables/useUserDisplay";
+import { useUserDisplay } from "../../composables/use-user-display";
 
 const { randomUserColours } = storeToRefs(useAppearanceSettingsStore());
 const { userImage } = useUserDisplay();

@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import FavoritesAvatar from "./../views/Favorites/FavoritesAvatar.vue";
 import FavoritesFriend from "./../views/Favorites/FavoritesFriend.vue";

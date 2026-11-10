@@ -85,7 +85,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { avatarRequest, queryRequest } from "../../../api";
 import { arraysMatch } from "../../../shared/utils";
 import { useAvatarStore } from "../../../stores";
-import { applyAvatar } from "../../../coordinators/avatarCoordinator";
+import { applyAvatar } from "../../../coordinators/avatar-coordinator";
 
 const props = defineProps({
   setAvatarStylesDialog: {

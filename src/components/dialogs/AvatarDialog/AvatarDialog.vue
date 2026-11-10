@@ -580,19 +580,19 @@ import { Badge } from "../../ui/badge";
 import { avatarRequest, marketplaceRequest, miscRequest } from "../../../api";
 import { database } from "../../../services/database";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
-import { handleImageUploadInput, resizeImageToFitLimits } from "../../../coordinators/imageUploadCoordinator";
-import { readFileAsBase64 } from "../../../shared/utils/imageUpload";
-import { runDeleteVRChatCacheFlow as deleteVRChatCache } from "../../../coordinators/gameCoordinator";
-import { showAvatarDialog, applyAvatar, selectAvatarWithoutConfirmation } from "../../../coordinators/avatarCoordinator";
-import { useAvatarDialogCommands } from "./useAvatarDialogCommands";
+import { handleImageUploadInput, resizeImageToFitLimits } from "../../../coordinators/image-upload-coordinator";
+import { readFileAsBase64 } from "../../../shared/utils/image-upload";
+import { runDeleteVRChatCacheFlow as deleteVRChatCache } from "../../../coordinators/game-coordinator";
+import { showAvatarDialog, applyAvatar, selectAvatarWithoutConfirmation } from "../../../coordinators/avatar-coordinator";
+import { useAvatarDialogCommands } from "./use-avatar-dialog-commands";
 
 import DialogJsonTab from "../DialogJsonTab.vue";
 import ImageCropDialog from "../ImageCropDialog.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 import SetAvatarStylesDialog from "./SetAvatarStylesDialog.vue";
 import SetAvatarTagsDialog from "./SetAvatarTagsDialog.vue";
-import { AppDebug } from "@/services/appConfig";
+import { AppDebug } from "@/services/app-config";
 
 const { sortUserDialogAvatars, getAllProductPurchases } = useUserStore();
 const { userDialog, currentUser, currentUserCredits, ownedListingIds, ownedProductIds } = storeToRefs(useUserStore());

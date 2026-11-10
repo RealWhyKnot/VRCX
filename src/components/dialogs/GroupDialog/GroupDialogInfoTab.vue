@@ -190,14 +190,14 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { formatDateFilter, hasGroupPermission } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
-import { refreshInstancePlayerCount } from "../../../coordinators/instanceCoordinator";
+import { useUserDisplay } from "../../../composables/use-user-display";
+import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
 import { useGalleryStore, useGroupStore, useLocationStore } from "../../../stores";
-import { useGroupCalendarEvents } from "./useGroupCalendarEvents";
+import { useGroupCalendarEvents } from "./use-group-calendar-events";
 
 import GroupCalendarEventCard from "../../../views/Tools/components/GroupCalendarEventCard.vue";
 import InstanceActionBar from "../../InstanceActionBar.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 defineProps({
   showGroupPostEditDialog: {

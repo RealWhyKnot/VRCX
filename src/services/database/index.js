@@ -1,21 +1,21 @@
-import { activityV2 } from "./activityV2.js";
-import { avatarFavorites } from "./avatarFavorites.js";
-import { avatarTags } from "./avatarTags.js";
+import { activityV2 } from "./activity-v2.js";
+import { avatarFavorites } from "./avatar-favorites.js";
+import { avatarTags } from "./avatar-tags.js";
 import { feed } from "./feed.js";
-import { friendFavorites } from "./friendFavorites.js";
-import { friendLogCurrent } from "./friendLogCurrent.js";
-import { friendLogHistory } from "./friendLogHistory.js";
-import { gameLog } from "./gameLog.js";
+import { friendFavorites } from "./friend-favorites.js";
+import { friendLogCurrent } from "./friend-log-current.js";
+import { friendLogHistory } from "./friend-log-history.js";
+import { gameLog } from "./game-log.js";
 import { memos } from "./memos.js";
 import { moderation } from "./moderation.js";
-import { mutualGraph } from "./mutualGraph.js";
+import { mutualGraph } from "./mutual-graph.js";
 import { notifications } from "./notifications.js";
-import { tableAlter } from "./tableAlter.js";
-import { tableFixes } from "./tableFixes.js";
-import { tableSize } from "./tableSize.js";
-import { userProfile } from "./userProfile.js";
-import { worldFavorites } from "./worldFavorites.js";
-import { printFavorites } from "./printFavorites.js";
+import { tableAlter } from "./table-alter.js";
+import { tableFixes } from "./table-fixes.js";
+import { tableSize } from "./table-size.js";
+import { userProfile } from "./user-profile.js";
+import { worldFavorites } from "./world-favorites.js";
+import { printFavorites } from "./print-favorites.js";
 
 import sqliteService from "../sqlite.js";
 

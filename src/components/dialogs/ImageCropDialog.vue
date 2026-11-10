@@ -173,7 +173,7 @@ import { useI18n } from "vue-i18n";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
-import { useImageCropper } from "../../composables/useImageCropper";
+import { useImageCropper } from "../../composables/use-image-cropper";
 import configRepository from "../../services/config";
 
 import "vue-advanced-cropper/dist/style.css";

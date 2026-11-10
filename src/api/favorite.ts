@@ -14,7 +14,7 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { useUserStore } from "../stores";
-import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } from "../coordinators/favoriteCoordinator";
+import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } from "../coordinators/favorite-coordinator";
 import { queryClient } from "../queries";
 import { request } from "../services/request";
 

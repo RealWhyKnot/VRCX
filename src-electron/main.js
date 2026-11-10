@@ -84,7 +84,7 @@ if (app.isPackaged) {
   require(path.join(rootDir, `build/Electron/${rid}/VRCX-Electron.cjs`));
 }
 
-const InteropApi = require("./InteropApi");
+const InteropApi = require("./interop-api");
 const interopApi = new InteropApi();
 
 const OVERLAY_WRIST_FRAME_WIDTH = 512;

@@ -58,7 +58,7 @@ import type {
 } from "vrchat";
 import type { Json, VrcxGroup } from "../types/vrcx";
 import { useUserStore } from "../stores";
-import { applyGroup } from "../coordinators/groupCoordinator";
+import { applyGroup } from "../coordinators/group-coordinator";
 import { queryClient } from "../queries";
 import { request } from "../services/request";
 

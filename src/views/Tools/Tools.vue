@@ -73,8 +73,8 @@ import { useI18n } from "vue-i18n";
 import { Button } from "@/components/ui/button";
 import { TooltipWrapper } from "@/components/ui/tooltip";
 import ToolItem from "./components/ToolItem.vue";
-import { useToolActions } from "../../composables/useToolActions";
-import { useToolNavPinning } from "../../composables/useToolNavPinning";
+import { useToolActions } from "../../composables/use-tool-actions";
+import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
 import { getToolsByCategory, toolCategories } from "../../shared/constants";
 import configRepository from "../../services/config.js";
 

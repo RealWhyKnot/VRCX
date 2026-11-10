@@ -295,9 +295,9 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAppearanceSettingsStore, useFavoriteStore, useFriendStore, useGroupStore, useNotificationStore } from "../../stores";
-import { runRefreshFriendsListFlow } from "../../coordinators/friendSyncCoordinator";
-import { normalizeFavoriteGroupsChange, resolveFavoriteGroups } from "./sidebarSettingsUtils";
-import { useQuickSearchStore } from "../../stores/quickSearch";
+import { runRefreshFriendsListFlow } from "../../coordinators/friend-sync-coordinator";
+import { normalizeFavoriteGroupsChange, resolveFavoriteGroups } from "./sidebar-settings-utils";
+import { useQuickSearchStore } from "../../stores/quick-search";
 
 import FriendsSidebar from "./components/FriendsSidebar.vue";
 import QuickSearchDialog from "../../components/QuickSearchDialog.vue";

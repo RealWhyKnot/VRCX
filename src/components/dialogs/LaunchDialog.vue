@@ -122,7 +122,7 @@ import { useI18n } from "vue-i18n";
 
 import { useFriendStore, useGameStore, useInviteStore, useLaunchStore, useLocationStore, useModalStore } from "../../stores";
 import { getLaunchURL, isRealInstance, parseLocation } from "../../shared/utils";
-import { useInviteChecks } from "../../composables/useInviteChecks";
+import { useInviteChecks } from "../../composables/use-invite-checks";
 import { instanceRequest, queryRequest } from "../../api";
 
 import InviteDialog from "./InviteDialog/InviteDialog.vue";

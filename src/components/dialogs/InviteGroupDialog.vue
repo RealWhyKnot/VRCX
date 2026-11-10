@@ -84,11 +84,11 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { hasGroupPermission } from "../../shared/utils";
-import { useUserDisplay } from "../../composables/useUserDisplay";
+import { useUserDisplay } from "../../composables/use-user-display";
 import { useFriendStore, useGroupStore, useModalStore } from "../../stores";
 import { groupRequest, queryRequest } from "../../api";
 import { VirtualCombobox } from "../ui/virtual-combobox";
-import { applyGroup } from "../../coordinators/groupCoordinator";
+import { applyGroup } from "../../coordinators/group-coordinator";
 
 import configRepository from "../../services/config";
 

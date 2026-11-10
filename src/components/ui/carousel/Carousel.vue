@@ -1,7 +1,7 @@
 <script setup>
 import { cn } from "@/lib/utils";
 
-import { useProvideCarousel } from "./useCarousel";
+import { useProvideCarousel } from "./use-carousel";
 
 const props = defineProps({
   opts: { type: Object, required: false },

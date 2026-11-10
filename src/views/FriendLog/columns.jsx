@@ -7,7 +7,7 @@ import { storeToRefs } from "pinia";
 import { formatDateFilter } from "../../shared/utils";
 import { i18n } from "../../plugins";
 import { useUiStore } from "../../stores";
-import { showUserDialog } from "../../coordinators/userCoordinator";
+import { showUserDialog } from "../../coordinators/user-coordinator";
 
 const { t } = i18n.global;
 

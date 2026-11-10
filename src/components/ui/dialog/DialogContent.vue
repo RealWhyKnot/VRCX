@@ -2,7 +2,7 @@
 import { DialogClose, DialogContent, DialogDescription, DialogPortal, useForwardPropsEmits, VisuallyHidden } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
 import { X } from "lucide-vue-next";
-import { acquireModalPortalLayer } from "@/lib/modalPortalLayers";
+import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 

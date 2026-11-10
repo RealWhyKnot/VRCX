@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n";
 
 import { instanceRequest } from "../api";
 import { parseLocation } from "../shared/utils";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import configRepository from "../services/config";
 

@@ -2,8 +2,8 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 
 import { database } from "../services/database";
-import { mergeSessions } from "../shared/utils/activityEngine.js";
-import { runActivityWorkerTask } from "../workers/activityWorkerRunner.js";
+import { mergeSessions } from "../shared/utils/activity-engine.js";
+import { runActivityWorkerTask } from "../workers/activity-worker-runner.js";
 
 const snapshotMap = new Map();
 const inFlightJobs = new Map();

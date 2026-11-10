@@ -120,7 +120,7 @@ import { Box, MapPin, Pencil, Settings } from "lucide-vue-next";
 
 import { statusClass } from "@/shared/utils/user";
 import { formatDateFilter } from "@/shared/utils";
-import { showUserDialog } from "@/coordinators/userCoordinator";
+import { showUserDialog } from "@/coordinators/user-coordinator";
 import { useFeedStore, useFriendStore } from "@/stores";
 
 import { Button } from "@/components/ui/button";

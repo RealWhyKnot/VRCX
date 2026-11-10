@@ -148,15 +148,15 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAppearanceSettingsStore, useGalleryStore, useGroupStore, useUserStore } from "../../../stores";
-import { applyGroupMember, handleGroupMember, handleGroupMemberProps } from "../../../coordinators/groupCoordinator";
+import { applyGroupMember, handleGroupMember, handleGroupMemberProps } from "../../../coordinators/group-coordinator";
 import { hasGroupPermission } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants";
 import { groupRequest } from "../../../api";
-import { resolveRoleNames } from "./groupModerationUtils";
-import { useGroupBatchOperations } from "./useGroupBatchOperations";
-import { useGroupModerationData } from "./useGroupModerationData";
-import { useGroupModerationSelection } from "./useGroupModerationSelection";
+import { resolveRoleNames } from "./group-moderation-utils";
+import { useGroupBatchOperations } from "./use-group-batch-operations";
+import { useGroupModerationData } from "./use-group-moderation-data";
+import { useGroupModerationSelection } from "./use-group-moderation-selection";
 
 import GroupMemberModerationBanExportDialog from "./GroupMemberModerationBanExportDialog.vue";
 import GroupMemberModerationBanImportDialog from "./GroupMemberModerationBanImportDialog.vue";
@@ -166,7 +166,7 @@ import GroupModerationBulkActions from "./GroupModerationBulkActions.vue";
 import GroupModerationInvitesTab from "./GroupModerationInvitesTab.vue";
 import GroupModerationLogsTab from "./GroupModerationLogsTab.vue";
 import GroupModerationMembersTab from "./GroupModerationMembersTab.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { userImage, userImageFull } = useUserDisplay();
 const appearanceSettingsStore = useAppearanceSettingsStore();

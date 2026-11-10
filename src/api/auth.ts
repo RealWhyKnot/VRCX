@@ -1,7 +1,7 @@
 import type { ApiConfig, Permission, Success, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
-import { handleConfig } from "../coordinators/userCoordinator";
+import { handleConfig } from "../coordinators/user-coordinator";
 
 const loginReq = {
   verifyOTP(params: TwoFactorAuthCode): Promise<{ json: Json<Verify2FaResult>; params: TwoFactorAuthCode }> {

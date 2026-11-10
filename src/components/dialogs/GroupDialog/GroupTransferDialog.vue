@@ -76,8 +76,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { InputGroupField } from "@/components/ui/input-group";
 import { Spinner } from "@/components/ui/spinner";
 import { groupRequest } from "@/api";
-import { showGroupDialog } from "@/coordinators/groupCoordinator";
-import { useUserDisplay } from "@/composables/useUserDisplay";
+import { showGroupDialog } from "@/coordinators/group-coordinator";
+import { useUserDisplay } from "@/composables/use-user-display";
 import { useModalStore } from "@/stores";
 import { debounce } from "@/shared/utils";
 

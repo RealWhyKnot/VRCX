@@ -103,7 +103,7 @@ import { DataTableEmpty } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
-import { refreshUserDialogAvatars } from "@/coordinators/userCoordinator";
+import { refreshUserDialogAvatars } from "@/coordinators/user-coordinator";
 
 import { useAdvancedSettingsStore, useAvatarStore, useUserStore } from "../../../stores";
 
@@ -113,7 +113,7 @@ const userStore = useUserStore();
 const { userDialog, currentUser } = storeToRefs(userStore);
 const { sortUserDialogAvatars, sortUserDialogLicensedAvatars } = userStore;
 
-import { showAvatarDialog, lookupAvatars } from "../../../coordinators/avatarCoordinator";
+import { showAvatarDialog, lookupAvatars } from "../../../coordinators/avatar-coordinator";
 const { cachedAvatars } = useAvatarStore();
 
 const { avatarRemoteDatabase } = storeToRefs(useAdvancedSettingsStore());

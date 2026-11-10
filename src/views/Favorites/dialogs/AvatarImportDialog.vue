@@ -115,19 +115,19 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useAvatarStore, useFavoriteStore, useGalleryStore, useUserStore } from "../../../stores";
-import { addLocalAvatarFavorite } from "../../../coordinators/favoriteCoordinator";
+import { addLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
 import { avatarRequest, favoriteRequest } from "../../../api";
-import { createColumns } from "./avatarImportColumns.jsx";
+import { createColumns } from "./avatar-import-columns.jsx";
 import { removeFromArray } from "../../../shared/utils";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 const emit = defineEmits(["update:avatarImportDialogInput"]);
 const { t } = useI18n();
 
 const { favoriteAvatarGroups, avatarImportDialogInput, avatarImportDialogVisible, localAvatarFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { localAvatarFavGroupLength, getCachedFavoritesByObjectId } = useFavoriteStore();
-import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatarCoordinator";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 const { showFullscreenImageDialog } = useGalleryStore();
 
 const avatarImportDialog = ref({

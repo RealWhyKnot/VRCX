@@ -41,8 +41,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { InputGroupField } from "@/components/ui/input-group";
 import { DataTableLayout } from "@/components/ui/data-table";
 import { hasGroupPermission } from "@/shared/utils";
-import { createColumns } from "./groupMemberModerationBansColumns.jsx";
-import { useVrcxVueTable } from "@/lib/table/useVrcxVueTable";
+import { createColumns } from "./group-member-moderation-bans-columns.jsx";
+import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 const props = defineProps({
   loading: { type: Boolean, default: false },

@@ -27,7 +27,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAvatarStore, useUserStore } from "../../../stores";
-import { applyAvatar, removeAvatarFromCache } from "../../../coordinators/avatarCoordinator";
+import { applyAvatar, removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
 import { avatarRequest } from "../../../api";
 import { processBulk } from "../../../services/request";
 import { Switch } from "../../../components/ui/switch";

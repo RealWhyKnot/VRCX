@@ -103,7 +103,7 @@ import { InputGroupField } from "../../components/ui/input-group";
 import { RangeCalendar } from "../../components/ui/range-calendar";
 import { Toggle } from "../../components/ui/toggle";
 import { columns as baseColumns } from "./columns.jsx";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 const { feedTable, feedTableData } = storeToRefs(useFeedStore());
 const { feedTableLookup } = useFeedStore();

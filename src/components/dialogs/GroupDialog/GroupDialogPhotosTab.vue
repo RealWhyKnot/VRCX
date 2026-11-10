@@ -124,7 +124,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useGalleryStore, useGroupStore, useModalStore, useUserStore } from "../../../stores";
-import { useGroupGalleries } from "./useGroupGalleries";
+import { useGroupGalleries } from "./use-group-galleries";
 import GallerySelectDialog from "./GallerySelectDialog.vue";
 import GroupGalleryForm from "./GroupGalleryForm.vue";
 

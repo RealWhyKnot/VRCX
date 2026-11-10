@@ -5,23 +5,23 @@ import { useI18n } from "vue-i18n";
 
 import Noty from "noty";
 
-import { runLoginSuccessFlow, runLogoutFlow } from "../coordinators/authCoordinator";
-import { AppDebug } from "../services/appConfig";
+import { runLoginSuccessFlow, runLogoutFlow } from "../coordinators/auth-coordinator";
+import { AppDebug } from "../services/app-config";
 import { authRequest } from "../api";
 import { database } from "../services/database";
 import { escapeTag } from "../shared/utils";
 import { links } from "../shared/constants/link";
 import { initWebsocket } from "../services/websocket";
 import { request } from "../services/request";
-import { runHandleAutoLoginFlow } from "../coordinators/authAutoLoginCoordinator";
-import { getCurrentUser } from "../coordinators/userCoordinator";
+import { runHandleAutoLoginFlow } from "../coordinators/auth-auto-login-coordinator";
+import { getCurrentUser } from "../coordinators/user-coordinator";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useGeneralSettingsStore } from "./settings/general";
 import { useModalStore } from "./modal";
-import { useUpdateLoopStore } from "./updateLoop";
+import { useUpdateLoopStore } from "./update-loop";
 import { useUserStore } from "./user";
 import { useVrcxStore } from "./vrcx";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import configRepository from "../services/config";
 import security from "../services/security";

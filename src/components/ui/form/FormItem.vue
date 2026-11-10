@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { provide } from "vue";
 import { useId } from "reka-ui";
 
-import { FORM_ITEM_INJECTION_KEY } from "./injectionKeys";
+import { FORM_ITEM_INJECTION_KEY } from "./injection-keys";
 
 const props = defineProps<{ class?: unknown }>();
 

@@ -97,7 +97,7 @@ import { InputGroupTextareaField } from "@/components/ui/input-group";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { worldRequest } from "../../../api";
 import { removeFromArray } from "../../../shared/utils";
 

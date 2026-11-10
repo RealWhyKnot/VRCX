@@ -12,20 +12,20 @@ import {
   parseLocation,
   replaceBioSymbols,
 } from "../shared/utils";
-import { getAllUserMemos } from "../coordinators/memoCoordinator";
+import { getAllUserMemos } from "../coordinators/memo-coordinator";
 import { instanceRequest, userRequest, cosmeticsRequest, marketplaceRequest } from "../api";
-import { AppDebug } from "../services/appConfig";
+import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { processBulk } from "../services/request";
-import { runUpdateCurrentUserLocationFlow } from "../coordinators/locationCoordinator";
+import { runUpdateCurrentUserLocationFlow } from "../coordinators/location-coordinator";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useFriendStore } from "./friend";
 import { useInstanceStore } from "./instance";
 import { useLocationStore } from "./location";
 import { useModalStore } from "./modal";
-import { syncFriendSearchIndex } from "../coordinators/searchIndexCoordinator";
+import { syncFriendSearchIndex } from "../coordinators/search-index-coordinator";
 import { useUiStore } from "./ui";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 import * as workerTimers from "worker-timers";
 

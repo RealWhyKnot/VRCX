@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 
 import { useFriendStore } from "../friend";
 import { useModalStore } from "../modal";
-import { useVRCXUpdaterStore } from "../vrcxUpdater";
+import { useVRCXUpdaterStore } from "../vrcx-updater";
 import { useVrcxStore } from "../vrcx";
 
 import configRepository from "../../services/config";

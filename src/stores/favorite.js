@@ -8,8 +8,8 @@ import { favoriteRequest } from "../api";
 import { database } from "../services/database";
 import { processBulk } from "../services/request";
 import { useAppearanceSettingsStore } from "./settings/appearance";
-import { watchState } from "../services/watchState";
-import { onLoginStateChanged } from "../coordinators/favoriteCoordinator";
+import { watchState } from "../services/watch-state";
+import { onLoginStateChanged } from "../coordinators/favorite-coordinator";
 
 export const useFavoriteStore = defineStore("Favorite", () => {
   const appearanceSettingsStore = useAppearanceSettingsStore();

@@ -29,8 +29,8 @@ import { useAppearanceSettingsStore, useUserStore } from "../../../stores";
 import { timeToText } from "../../../shared/utils";
 
 import * as echarts from "echarts";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
-import InstanceActivityTooltip from "./InstanceActivityTooltip.jsx";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
+import InstanceActivityTooltip from "./instance-activity-tooltip.jsx";
 import { renderToHtml } from "@/lib/utils";
 
 const { isDarkMode, dtHour12 } = storeToRefs(useAppearanceSettingsStore());

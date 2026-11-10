@@ -4,4 +4,4 @@ export { default as CarouselItem } from "./CarouselItem.vue";
 export { default as CarouselNext } from "./CarouselNext.vue";
 export { default as CarouselPrevious } from "./CarouselPrevious.vue";
 
-export { useCarousel } from "./useCarousel";
+export { useCarousel } from "./use-carousel";

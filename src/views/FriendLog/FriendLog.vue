@@ -51,7 +51,7 @@ import { InputGroupField } from "../../components/ui/input-group";
 import { createColumns } from "./columns.jsx";
 import { database } from "../../services/database";
 import { removeFromArray } from "../../shared/utils";
-import { useVrcxVueTable } from "../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import configRepository from "../../services/config";
 

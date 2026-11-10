@@ -78,7 +78,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAuthStore, useVRCXUpdaterStore, useVrcxStore } from "../../../stores";
-import { AppDebug } from "../../../services/appConfig";
+import { AppDebug } from "../../../services/app-config";
 
 const { loginForm, enableCustomEndpoint } = storeToRefs(useAuthStore());
 const { toggleCustomEndpoint } = useAuthStore();

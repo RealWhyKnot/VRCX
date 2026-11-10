@@ -399,7 +399,7 @@ import {
   useUserStore,
   useWorldStore,
 } from "../../../stores";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { worldRequest } from "../../../api";
 import {
   DropdownMenu,
@@ -414,15 +414,15 @@ import {
 import { deleteVRChatCache, openFolderGeneric } from "../../../shared/utils";
 import { Badge } from "../../ui/badge";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
-import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/inviteCoordinator";
-import { useWorldDialogCommands } from "./useWorldDialogCommands";
+import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/invite-coordinator";
+import { useWorldDialogCommands } from "./use-world-dialog-commands";
 
 import DialogJsonTab from "../DialogJsonTab.vue";
 import ImageCropDialog from "../ImageCropDialog.vue";
 import WorldDialogInfo from "./WorldDialogInfo.vue";
 import WorldDialogInstancesTab from "./WorldDialogInstancesTab.vue";
 import WorldDialogStoreTab from "./WorldDialogStoreTab.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 import NewInstanceDialog from "../NewInstanceDialog/NewInstanceDialog.vue";
 import SetWorldTagsDialog from "./SetWorldTagsDialog.vue";

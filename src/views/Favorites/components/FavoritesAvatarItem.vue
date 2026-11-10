@@ -97,8 +97,8 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { favoriteRequest } from "../../../api";
-import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatarCoordinator";
-import { removeLocalAvatarFavorite } from "../../../coordinators/favoriteCoordinator";
+import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
+import { removeLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
 import { useFavoriteStore, useUserStore } from "../../../stores";
 
 const props = defineProps({

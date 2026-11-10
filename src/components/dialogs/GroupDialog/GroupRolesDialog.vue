@@ -237,7 +237,7 @@ import { useI18n } from "vue-i18n";
 import { useGroupStore, useModalStore, useUserStore } from "../../../stores";
 import { groupRequest } from "../../../api";
 import { hasGroupPermission } from "../../../shared/utils";
-import { loadGroupRolesDialogRoles } from "../../../coordinators/groupCoordinator";
+import { loadGroupRolesDialogRoles } from "../../../coordinators/group-coordinator";
 
 import SortableGroupRoleItem from "./SortableGroupRoleItem.vue";
 

@@ -235,11 +235,11 @@ import * as echarts from "echarts";
 
 import configRepository from "../../../services/config";
 import { worldRequest } from "../../../api";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { parseLocation, timeToText } from "../../../shared/utils";
 import { useActivityStore, useAppearanceSettingsStore, useUserStore } from "../../../stores";
 import { useWorldStore } from "../../../stores/world";
-import { buildHeatmapOption, toHeatmapSeriesData } from "./activity/buildHeatmapOption";
+import { buildHeatmapOption, toHeatmapSeriesData } from "./activity/build-heatmap-option";
 import DailyPlaytime from "./activity/DailyPlaytime.vue";
 
 const { t, locale } = useI18n();

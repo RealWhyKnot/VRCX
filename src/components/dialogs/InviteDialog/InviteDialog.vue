@@ -100,7 +100,7 @@ import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore, useFriendStore, useGalleryStore, useInviteStore, useModalStore, useUserStore } from "../../../stores";
 import { parseLocation } from "../../../shared/utils";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { instanceRequest, notificationRequest } from "../../../api";
 import { VirtualCombobox } from "../../ui/virtual-combobox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../ui/dropdown-menu";

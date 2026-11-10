@@ -10,9 +10,9 @@ import { formatDateFilter } from "../../shared/utils";
 import { checkCanInvite } from "../../shared/utils/invite";
 import { i18n } from "../../plugins";
 import { useGameStore, useInstanceStore, useLocationStore, useUiStore, useUserStore, useNotificationStore } from "../../stores";
-import { showUserDialog } from "../../coordinators/userCoordinator";
-import { showWorldDialog } from "../../coordinators/worldCoordinator";
-import { showGroupDialog } from "../../coordinators/groupCoordinator";
+import { showUserDialog } from "../../coordinators/user-coordinator";
+import { showWorldDialog } from "../../coordinators/world-coordinator";
+import { showGroupDialog } from "../../coordinators/group-coordinator";
 
 import Emoji from "../../components/Emoji.vue";
 

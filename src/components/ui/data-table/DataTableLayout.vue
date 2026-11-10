@@ -260,7 +260,7 @@ import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuIt
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationNext, PaginationPrevious } from "../pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select";
-import { getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./dataTableHelpers.js";
+import { getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./data-table-helpers.js";
 
 import DataTableEmpty from "./DataTableEmpty.vue";
 import SortableTableHead from "./SortableTableHead.vue";

@@ -607,7 +607,7 @@ import {
   setGroupSubscription,
   setGroupEventAnnouncements,
   getGroupDialogCalendar,
-} from "../../../coordinators/groupCoordinator";
+} from "../../../coordinators/group-coordinator";
 import { groupRequest, queryRequest } from "../../../api";
 import { queryKeys, refetchActiveEntityQuery } from "../../../queries";
 import { Badge } from "../../ui/badge";
@@ -615,15 +615,15 @@ import { formatJsonVars } from "../../../shared/utils/base/ui";
 
 import DialogJsonTab from "../DialogJsonTab.vue";
 import GroupDialogInfoTab from "./GroupDialogInfoTab.vue";
-import { useGroupDialogCommands } from "./useGroupDialogCommands";
+import { useGroupDialogCommands } from "./use-group-dialog-commands";
 import GroupDialogMembersTab from "./GroupDialogMembersTab.vue";
 import GroupDialogPhotosTab from "./GroupDialogPhotosTab.vue";
 import GroupDialogPostsTab from "./GroupDialogPostsTab.vue";
 import GroupDialogStoreTab from "./GroupDialogStoreTab.vue";
 import GroupPostEditDialog from "./GroupPostEditDialog.vue";
 import GroupTransferDialog from "./GroupTransferDialog.vue";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
-import { showGroupMemberModerationDialog, showGroupRolesDialog } from "../../../coordinators/groupCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { showGroupMemberModerationDialog, showGroupRolesDialog } from "../../../coordinators/group-coordinator";
 
 const { t } = useI18n();
 const groupDialogTabs = computed(() => [

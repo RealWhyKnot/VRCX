@@ -537,10 +537,10 @@ import { useFriendStore, useGroupStore, useInviteStore, useLaunchStore, useLocat
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
 import { instanceRequest, queryRequest } from "../../../api";
 import { VirtualCombobox } from "../../ui/virtual-combobox";
-import { useNewInstanceBuilder } from "./useNewInstanceBuilder";
+import { useNewInstanceBuilder } from "./use-new-instance-builder";
 
 import InviteDialog from "../InviteDialog/InviteDialog.vue";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useUserDisplay } from "../../../composables/use-user-display";
 
 const { userImage, userStatusClass } = useUserDisplay();
 

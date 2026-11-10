@@ -52,10 +52,10 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator,
 import { isRealInstance, parseLocation } from "../shared/utils";
 import { useGameStore, useLaunchStore, useLocationStore, useUserStore } from "../stores";
 import { instanceRequest, notificationRequest, queryRequest } from "../api";
-import { useInviteChecks } from "../composables/useInviteChecks";
-import { isActionRecent, recordRecentAction } from "../composables/useRecentActions";
+import { useInviteChecks } from "../composables/use-invite-checks";
+import { isActionRecent, recordRecentAction } from "../composables/use-recent-actions";
 
-import { showUserDialog } from "../coordinators/userCoordinator";
+import { showUserDialog } from "../coordinators/user-coordinator";
 
 const { t } = useI18n();
 const { showSendBoopDialog } = useUserStore();

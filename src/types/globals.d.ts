@@ -9,9 +9,9 @@ declare global {
     $pinia: Record<string, import("pinia").StoreGeneric>;
     $coordinators: Record<string, unknown>;
     $bridge: {
-      updateIsGameRunning: (typeof import("../coordinators/gameCoordinator"))["runUpdateIsGameRunningFlow"];
-      updateIsHmdAfk: (typeof import("../coordinators/gameCoordinator"))["runUpdateIsHmdAfkFlow"];
-      addGameLogEvent: (typeof import("../coordinators/gameLogCoordinator"))["addGameLogEvent"];
+      updateIsGameRunning: (typeof import("../coordinators/game-coordinator"))["runUpdateIsGameRunningFlow"];
+      updateIsHmdAfk: (typeof import("../coordinators/game-coordinator"))["runUpdateIsHmdAfkFlow"];
+      addGameLogEvent: (typeof import("../coordinators/game-log-coordinator"))["addGameLogEvent"];
     };
     $vr: any;
     $debug: AppDebug;
@@ -29,7 +29,7 @@ declare global {
     dayjs: (typeof import("dayjs"))["default"];
     configRepository: (typeof import("../services/config.js"))["default"];
     database: (typeof import("../services/database"))["database"];
-    gameLogService: (typeof import("../services/gameLog.js"))["default"];
+    gameLogService: (typeof import("../services/game-log.js"))["default"];
     sqliteService: (typeof import("../services/sqlite.js"))["default"];
     isVrOverlay: boolean;
     interopApi: {

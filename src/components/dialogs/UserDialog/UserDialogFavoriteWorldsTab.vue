@@ -96,8 +96,8 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore, useUserStore } from "../../../stores";
-import { showWorldDialog } from "../../../coordinators/worldCoordinator";
-import { handleFavoriteWorldList } from "../../../coordinators/favoriteCoordinator";
+import { showWorldDialog } from "../../../coordinators/world-coordinator";
+import { handleFavoriteWorldList } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../../api";
 
 const { t } = useI18n();

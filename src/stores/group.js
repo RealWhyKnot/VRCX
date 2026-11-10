@@ -3,8 +3,8 @@ import { defineStore } from "pinia";
 
 import { replaceBioSymbols } from "../shared/utils";
 import { groupRequest } from "../api";
-import { initUserGroups } from "../coordinators/groupCoordinator";
-import { watchState } from "../services/watchState";
+import { initUserGroups } from "../coordinators/group-coordinator";
+import { watchState } from "../services/watch-state";
 
 export const useGroupStore = defineStore("Group", () => {
   const cachedGroups = new Map();

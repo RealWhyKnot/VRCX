@@ -189,8 +189,8 @@ import { tForLocale } from "../../plugins";
 import { openExternalLink } from "../../shared/utils";
 
 import configRepository from "../../services/config";
-import { useUserDisplay } from "../../composables/useUserDisplay";
-import { watchState } from "../../services/watchState";
+import { useUserDisplay } from "../../composables/use-user-display";
+import { watchState } from "../../services/watch-state";
 
 import LoginSettingsDialog from "./Dialog/LoginSettingsDialog.vue";
 import ResetPasswordDialog from "./Dialog/ResetPasswordDialog.vue";

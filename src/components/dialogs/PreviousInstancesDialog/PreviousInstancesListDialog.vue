@@ -37,9 +37,9 @@ import { useI18n } from "vue-i18n";
 import { useInstanceStore, useLaunchStore, useModalStore, useSearchStore, useUiStore, useUserStore, useVrcxStore } from "../../../stores";
 import { compareByCreatedAt, localeIncludes, parseLocation, removeFromArray, timeToText } from "../../../shared/utils";
 import { DataTableLayout } from "../../ui/data-table";
-import { createPreviousInstancesColumns } from "./previousInstancesColumns.jsx";
+import { createPreviousInstancesColumns } from "./previous-instances-columns.jsx";
 import { database } from "../../../services/database";
-import { useVrcxVueTable } from "../../../lib/table/useVrcxVueTable";
+import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 const props = defineProps({
   variant: {

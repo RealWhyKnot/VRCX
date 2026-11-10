@@ -1,7 +1,7 @@
 import type { Avatar, CreateFileVersionRequest, File, FileUploadUrl, UpdateAvatarRequest, UpdateWorldRequest, World } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { useAvatarStore, useWorldStore } from "../stores";
-import { applyWorld } from "../coordinators/worldCoordinator";
+import { applyWorld } from "../coordinators/world-coordinator";
 import { request } from "../services/request";
 
 const imageReq = {

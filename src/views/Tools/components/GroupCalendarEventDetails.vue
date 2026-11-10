@@ -64,7 +64,7 @@ import dayjs from "dayjs";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { AppDebug } from "../../../services/appConfig";
+import { AppDebug } from "../../../services/app-config";
 import { formatDateFilter } from "../../../shared/utils";
 
 const { t } = useI18n();

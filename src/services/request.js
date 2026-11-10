@@ -1,11 +1,11 @@
 import { toast } from "vue-sonner";
 
 import { useAuthStore, useModalStore, useNotificationStore, useUpdateLoopStore } from "../stores";
-import { getCurrentUser } from "../coordinators/userCoordinator";
-import { AppDebug, isApiLogSuppressed, logWebRequest } from "./appConfig.js";
+import { getCurrentUser } from "../coordinators/user-coordinator";
+import { AppDebug, isApiLogSuppressed, logWebRequest } from "./app-config.js";
 import { i18n } from "../plugins/i18n";
 import { statusCodes } from "../shared/constants/api.js";
-import { watchState } from "./watchState";
+import { watchState } from "./watch-state";
 
 import webApiService from "./webapi.js";
 

@@ -158,10 +158,10 @@ import { Plus } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { useNavLayout } from "./composables/useNavLayout";
-import { useNavTheme } from "./composables/useNavTheme";
-import { useToolActions } from "../../composables/useToolActions";
-import { useToolNavPinning } from "../../composables/useToolNavPinning";
+import { useNavLayout } from "./composables/use-nav-layout";
+import { useNavTheme } from "./composables/use-nav-theme";
+import { useToolActions } from "../../composables/use-tool-actions";
+import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
 import { Kbd } from "@/components/ui/kbd";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import {
@@ -176,7 +176,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { useAppearanceSettingsStore, useAuthStore, useDashboardStore, useModalStore, useSearchStore, useUiStore, useVRCXUpdaterStore } from "../../stores";
-import { isEntryNotified as checkEntryNotified } from "./navMenuUtils";
+import { isEntryNotified as checkEntryNotified } from "./nav-menu-utils";
 import { DASHBOARD_NAV_KEY_PREFIX, links } from "../../shared/constants";
 import { openExternalLink } from "../../shared/utils";
 

@@ -210,12 +210,12 @@ import {
   useLocationStore,
   useUserStore,
 } from "../../../stores";
-import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../friendsSidebarUtils";
+import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../friends-sidebar-utils";
 import { getFriendsSortFunction, isRealInstance } from "../../../shared/utils";
 import { instanceRequest, notificationRequest, queryRequest, userRequest } from "../../../api";
-import { useInviteChecks } from "../../../composables/useInviteChecks";
-import { isActionRecent, recordRecentAction } from "../../../composables/useRecentActions";
-import { useUserDisplay } from "../../../composables/useUserDisplay";
+import { useInviteChecks } from "../../../composables/use-invite-checks";
+import { isActionRecent, recordRecentAction } from "../../../composables/use-recent-actions";
+import { useUserDisplay } from "../../../composables/use-user-display";
 import { getFriendsLocations } from "../../../shared/utils/location.js";
 import { parseLocation } from "../../../shared/utils";
 
@@ -224,10 +224,10 @@ import FriendItem from "./FriendItem.vue";
 import Location from "../../../components/Location.vue";
 import EditProfileDialog from "../../../components/dialogs/UserDialog/EditProfileDialog.vue";
 import configRepository from "../../../services/config";
-import { useStatusPresets } from "../../../components/dialogs/UserDialog/composables/useStatusPresets";
+import { useStatusPresets } from "../../../components/dialogs/UserDialog/composables/use-status-presets";
 
 import "@/styles/status-icon.css";
-import { showUserDialog } from "../../../coordinators/userCoordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();
 

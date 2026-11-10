@@ -3,9 +3,9 @@ import { defineStore } from "pinia";
 
 import { checkVRChatCache, formatFileSize } from "../shared/utils";
 import { queryRequest } from "../api";
-import { getAvatarHistory, preloadOwnAvatars } from "../coordinators/avatarCoordinator";
+import { getAvatarHistory, preloadOwnAvatars } from "../coordinators/avatar-coordinator";
 import { database } from "../services/database";
-import { watchState } from "../services/watchState";
+import { watchState } from "../services/watch-state";
 
 export const useAvatarStore = defineStore("Avatar", () => {
   const cachedAvatarModerations = new Map();
