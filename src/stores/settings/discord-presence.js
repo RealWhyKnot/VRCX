@@ -2,10 +2,13 @@ import { reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { getGroupName, getLaunchURL, isRealInstance, isRpcWorld, parseLocation } from "../../shared/utils";
+import { getGroupName } from "../../shared/utils/group";
+import { getLaunchURL, isRealInstance } from "../../shared/utils/instance";
+import { isRpcWorld } from "../../shared/utils/world";
+import { parseLocation } from "../../shared/utils/location-parser";
 import { getPlatformLabel, getRpcWorldConfig, getStatusInfo, isPopcornPalaceWorld } from "../../shared/utils/discord-presence";
 import { ActivityType, StatusDisplayType } from "../../shared/constants/discord";
-import { queryRequest } from "../../api";
+import queryRequest from "../../api/query-request";
 import { useGameLogStore } from "../gameLog";
 import { useGameStore } from "../game";
 import { useLocationStore } from "../location";

@@ -40,12 +40,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/settings/general", () => ({
   useGeneralSettingsStore: () => mocks.generalStore,
+}));
+vi.mock("../../../../src/stores/favorite", () => ({
   useFavoriteStore: () => mocks.favoriteStore,
 }));
 
-vi.mock("../../../../src/shared/constants", () => ({
+vi.mock("../../../../src/shared/constants/access-type", () => ({
   accessTypeLocaleKeyMap: {
     invite: "access.invite",
     invitePlus: "access.invite_plus",
@@ -59,45 +61,73 @@ vi.mock("../../../../src/shared/constants", () => ({
   },
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: {
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: {
     emits: ["update:open"],
     template: '<div><button data-testid="dialog-close" @click="$emit(\'update:open\', false)" /><slot /></div>',
   },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<h2><slot /></h2>" },
+}));
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<h2><slot /></h2>" },
 }));
 
-vi.mock("@/components/ui/field", () => ({
-  Field: { template: "<div><slot /></div>" },
-  FieldContent: { template: "<div><slot /></div>" },
-  FieldGroup: { template: "<div><slot /></div>" },
-  FieldLabel: { template: "<div><slot /></div>" },
-  FieldSeparator: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/field/Field.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldLabel.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldSeparator.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/select", () => ({
-  Select: { template: "<div><slot /></div>" },
-  SelectContent: { template: "<div><slot /></div>" },
-  SelectGroup: { template: "<div><slot /></div>" },
-  SelectItem: { template: "<div><slot /></div>" },
-  SelectSeparator: { template: "<div><slot /></div>" },
-  SelectTrigger: { template: "<div><slot /></div>" },
-  SelectValue: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/select/Select.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectSeparator.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectValue.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/radio-group", () => ({
-  RadioGroup: {
+vi.mock("@/components/ui/radio-group/RadioGroup.vue", () => ({
+  default: {
     emits: ["update:modelValue"],
     template:
       '<div data-testid="radio-group"><button class="emit-false" @click="$emit(\'update:modelValue\', \'false\')" /><button class="emit-true" @click="$emit(\'update:modelValue\', \'true\')" /><button class="emit-all" @click="$emit(\'update:modelValue\', \'All Favorites\')" /><slot /></div>',
   },
-  RadioGroupItem: { template: "<div />" },
+}));
+vi.mock("@/components/ui/radio-group/RadioGroupItem.vue", () => ({
+  default: { template: "<div />" },
 }));
 
-vi.mock("@/components/ui/input", () => ({
-  Input: { template: "<input />" },
+vi.mock("@/components/ui/input/Input.vue", () => ({
+  default: { template: "<input />" },
 }));
 
 vi.mock("../../../../src/views/Settings/components/SimpleSwitch.vue", () => ({

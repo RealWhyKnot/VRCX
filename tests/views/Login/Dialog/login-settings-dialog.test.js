@@ -23,11 +23,15 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/auth", () => ({
   useAuthStore: () => mocks.authStore,
+}));
+vi.mock("../../../../src/stores/vrcx-updater", () => ({
   useVRCXUpdaterStore: () => ({
     restartVRCX: (...args) => mocks.restartVRCX(...args),
   }),
+}));
+vi.mock("../../../../src/stores/vrcx", () => ({
   useVrcxStore: () => mocks.vrcxStore,
 }));
 
@@ -38,44 +42,60 @@ vi.mock("../../../../src/services/app-config", () => ({
   },
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: {
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template:
       '<div data-testid="dialog-root">' + '<button data-testid="open-dialog" @click="$emit(\'update:open\', true)">open</button>' + "<slot />" + "</div>",
   },
-  DialogTrigger: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
-  DialogFooter: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/field", () => ({
-  Field: { template: "<div><slot /></div>" },
-  FieldContent: { template: "<div><slot /></div>" },
-  FieldGroup: { template: "<div><slot /></div>" },
-  FieldLabel: { template: "<label><slot /></label>" },
+vi.mock("@/components/ui/field/Field.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldLabel.vue", () => ({
+  default: { template: "<label><slot /></label>" },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: "<button @click=\"$emit('click')\"><slot /></button>",
   },
 }));
 
-vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: {
+vi.mock("@/components/ui/checkbox/Checkbox.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<button data-testid="toggle-custom-endpoint" @click="$emit(\'update:modelValue\', !modelValue)">toggle</button>',
   },
 }));
 
-vi.mock("@/components/ui/input-group", () => ({
-  InputGroupField: {
+vi.mock("@/components/ui/input-group/InputGroupField.vue", () => ({
+  default: {
     props: ["id", "modelValue"],
     emits: ["update:modelValue"],
     template: '<input :id="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',

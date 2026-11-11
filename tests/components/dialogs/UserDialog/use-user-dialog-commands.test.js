@@ -2,30 +2,41 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useUserDialogCommands } from "../../../../src/components/dialogs/UserDialog/use-user-dialog-commands";
 
-vi.mock("../../../../src/api", () => ({
-  favoriteRequest: {
+vi.mock("../../../../src/api/favorite", () => ({
+  default: {
     deleteFavorite: vi.fn(),
   },
-  friendRequest: {
+}));
+vi.mock("../../../../src/api/friend", () => ({
+  default: {
     sendFriendRequest: vi.fn(),
     cancelFriendRequest: vi.fn(),
     deleteFriend: vi.fn(),
   },
-  notificationRequest: {
+}));
+vi.mock("../../../../src/api/notification", () => ({
+  default: {
     sendRequestInvite: vi.fn(() => Promise.resolve({})),
     sendInvite: vi.fn(() => Promise.resolve({})),
     acceptFriendRequestNotification: vi.fn(() => Promise.resolve({})),
     hideNotification: vi.fn(() => Promise.resolve({})),
   },
-  playerModerationRequest: {
+}));
+vi.mock("../../../../src/api/player-moderation", () => ({
+  default: {
     sendPlayerModeration: vi.fn(),
     deletePlayerModeration: vi.fn(),
   },
-  worldRequest: {},
+}));
+vi.mock("../../../../src/api/world", () => ({
+  default: {},
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   copyToClipboard: vi.fn(),
+}));
+vi.mock("../../../../src/shared/utils/location-parser", async (importOriginal) => ({
+  ...(await importOriginal()),
   parseLocation: vi.fn(() => ({ worldId: "wrld_test", tag: "wrld_test~123" })),
 }));
 
@@ -42,7 +53,9 @@ vi.mock("../../../../src/composables/use-recent-actions", () => ({
   }),
 }));
 
-const { favoriteRequest, friendRequest, playerModerationRequest } = await import("../../../../src/api");
+const { default: favoriteRequest } = await import("../../../../src/api/favorite");
+const { default: friendRequest } = await import("../../../../src/api/friend");
+const { default: playerModerationRequest } = await import("../../../../src/api/player-moderation");
 const { database } = await import("../../../../src/services/database");
 
 function createMockUserDialog() {

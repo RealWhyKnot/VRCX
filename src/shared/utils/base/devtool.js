@@ -1,5 +1,7 @@
-import { extractFileId, extractFileVersion, extractVariantVersion } from "../common";
-import { useAuthStore, useAvatarStore, useWorldStore } from "../../../stores";
+import { extractFileId, extractFileVersion, extractVariantVersion } from "../file-utils";
+import { useAuthStore } from "../../../stores/auth";
+import { useAvatarStore } from "../../../stores/avatar";
+import { useWorldStore } from "../../../stores/world";
 import { compareUnityVersion } from "../avatar";
 
 async function getBundleLocation(input) {

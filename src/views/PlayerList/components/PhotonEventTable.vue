@@ -64,21 +64,29 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
-import { InputGroupField } from "@/components/ui/input-group";
-import { TabsUnderline } from "@/components/ui/tabs";
-import { localeIncludes } from "@/shared/utils";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
+import { localeIncludes } from "@/shared/utils/base/string";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
-import { useSearchStore } from "@/stores";
+import { useSearchStore } from "@/stores/search";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { useGalleryStore, usePhotonStore, useUserStore, useVrcxStore, useWorldStore } from "../../../stores";
+import { useGalleryStore } from "../../../stores/gallery";
+import { usePhotonStore } from "../../../stores/photon";
+import { useUserStore } from "../../../stores/user";
+import { useVrcxStore } from "../../../stores/vrcx";
+import { useWorldStore } from "../../../stores/world";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
+import Select from "../../../components/ui/select/Select.vue";
+import SelectContent from "../../../components/ui/select/SelectContent.vue";
+import SelectItem from "../../../components/ui/select/SelectItem.vue";
+import SelectTrigger from "../../../components/ui/select/SelectTrigger.vue";
+import SelectValue from "../../../components/ui/select/SelectValue.vue";
 import { createColumns } from "./photon-event-columns.jsx";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
 import { lookupUser } from "../../../coordinators/user-coordinator";

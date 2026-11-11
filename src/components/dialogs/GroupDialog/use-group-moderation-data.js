@@ -1,8 +1,9 @@
 import { ref } from "vue";
 import { toast } from "vue-sonner";
 
-import { debounce, mergeGroupMemberSearchResults } from "../../../shared/utils";
-import { queryRequest } from "../../../api";
+import { debounce } from "../../../shared/utils/common";
+import { mergeGroupMemberSearchResults } from "../../../shared/utils/group";
+import queryRequest from "../../../api/query-request";
 
 import * as workerTimers from "worker-timers";
 

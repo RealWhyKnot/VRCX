@@ -4,11 +4,12 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { createRateLimiter, executeWithBackoff } from "../shared/utils";
+import { createRateLimiter } from "../shared/utils/throttle";
+import { executeWithBackoff } from "../shared/utils/retry";
 import { database } from "../services/database";
 import { useFriendStore } from "./friend";
 import { useUserStore } from "./user";
-import { userRequest } from "../api";
+import userRequest from "../api/user";
 
 function createDefaultFetchState() {
   return {

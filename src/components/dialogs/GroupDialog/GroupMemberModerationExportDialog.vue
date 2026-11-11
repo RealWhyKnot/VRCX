@@ -28,13 +28,17 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { ref, watch } from "vue";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { useI18n } from "vue-i18n";
 
-import { copyToClipboard, formatCsvField } from "../../../shared/utils";
+import { copyToClipboard } from "../../../shared/utils/app-actions";
+import { formatCsvField } from "../../../shared/utils/csv";
 
 const { t } = useI18n();
 

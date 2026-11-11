@@ -162,13 +162,17 @@
 
 <script setup>
 import { Expand, FlipHorizontal, FlipVertical, Frame, RefreshCw, RotateCcw, RotateCw, ZoomIn, ZoomOut } from "lucide-vue-next";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { nextTick, onMounted, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { Cropper } from "vue-advanced-cropper";
-import { Slider } from "@/components/ui/slider";
-import { Spinner } from "@/components/ui/spinner";
+import Slider from "@/components/ui/slider/Slider.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { useI18n } from "vue-i18n";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";

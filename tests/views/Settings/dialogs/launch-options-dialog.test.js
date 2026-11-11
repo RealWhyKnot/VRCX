@@ -29,7 +29,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/launch", () => ({
   useLaunchStore: () => ({}),
 }));
 
@@ -37,7 +37,7 @@ vi.mock("../../../../src/services/config", () => ({
   default: mocks.configRepository,
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: (...args) => mocks.openExternalLink(...args),
 }));
 

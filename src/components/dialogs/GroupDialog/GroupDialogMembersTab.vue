@@ -183,21 +183,29 @@
 
 <script setup>
 import { Download, Eye, MessageSquare, Pencil, RefreshCcw, Tag, User } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
-import { VirtualCombobox } from "@/components/ui/virtual-combobox";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import VirtualCombobox from "@/components/ui/virtual-combobox/VirtualCombobox.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { downloadAndSaveJson, hasGroupPermission } from "../../../shared/utils";
+import { downloadAndSaveJson } from "../../../shared/utils/app-actions";
+import { hasGroupPermission } from "../../../shared/utils/group";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { useGroupStore, useUserStore } from "../../../stores";
+import { useGroupStore } from "../../../stores/group";
+import { useUserStore } from "../../../stores/user";
 import { applyGroupMember, handleGroupMember } from "../../../coordinators/group-coordinator";
-import { groupDialogSortingOptions } from "../../../shared/constants";
+import { groupDialogSortingOptions } from "../../../shared/constants/group";
 import { useGroupMembers } from "./use-group-members";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 

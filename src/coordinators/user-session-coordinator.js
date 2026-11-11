@@ -1,4 +1,5 @@
-import { getWorldName, parseLocation } from "../shared/utils";
+import { getWorldName } from "../shared/utils/world";
+import { parseLocation } from "../shared/utils/location-parser";
 import { runUpdateFriendshipsFlow, updateUserCurrentStatus } from "./friend-relationship-coordinator";
 import { useAuthStore } from "../stores/auth";
 import { addAvatarToHistory, addAvatarWearTime } from "./avatar-coordinator";

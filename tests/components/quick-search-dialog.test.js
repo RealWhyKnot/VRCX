@@ -39,19 +39,35 @@ vi.mock("../../src/composables/use-user-display", () => ({
 vi.mock("../../src/components/QuickSearchSync.vue", () => ({
   default: { template: '<div data-testid="sync" />' },
 }));
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
-  DialogDescription: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/command", () => ({
-  Command: { template: "<div><slot /></div>" },
-  CommandInput: { template: "<input />" },
-  CommandList: { template: "<div><slot /></div>" },
-  CommandGroup: { template: "<div><slot /></div>" },
-  CommandItem: {
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogDescription.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/command/Command.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/command/CommandInput.vue", () => ({
+  default: { template: "<input />" },
+}));
+vi.mock("@/components/ui/command/CommandList.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/command/CommandGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/command/CommandItem.vue", () => ({
+  default: {
     emits: ["select"],
     template: '<button data-testid="cmd-item" @click="$emit(\'select\')"><slot /></button>',
   },

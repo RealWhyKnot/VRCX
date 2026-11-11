@@ -56,19 +56,29 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { RefreshCw, Trash2 } from "lucide-vue-next";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { computed, ref, watch } from "vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAuthStore, useModalStore, useUserStore } from "../../../stores";
-import { formatDateFilter } from "../../../shared/utils";
-import { moderationReportRequest } from "../../../api";
+import { useAuthStore } from "../../../stores/auth";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import moderationReportRequest from "../../../api/moderation-report";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

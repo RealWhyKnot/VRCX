@@ -1,12 +1,20 @@
 import AvatarInfo from "../../components/AvatarInfo.vue";
 import Location from "../../components/Location.vue";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
+import Badge from "../../components/ui/badge/Badge.vue";
+import Button from "../../components/ui/button/Button.vue";
+import Tooltip from "../../components/ui/tooltip/Tooltip.vue";
+import TooltipContent from "../../components/ui/tooltip/TooltipContent.vue";
+import TooltipTrigger from "../../components/ui/tooltip/TooltipTrigger.vue";
 import { ArrowDown, ArrowRight, ArrowUpDown, ChevronDown, ChevronRight } from "lucide-vue-next";
-import { formatDateFilter, getFaviconUrl, openExternalLink, replaceBioSymbols, statusClass, timeToText } from "../../shared/utils";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { getFaviconUrl } from "../../shared/utils/url-utils";
+import { openExternalLink } from "../../shared/utils/app-actions";
+import { replaceBioSymbols } from "../../shared/utils/base/string";
+import { statusClass } from "../../shared/utils/user";
+import { timeToText } from "../../shared/utils/base/format";
 import { i18n } from "../../plugins/i18n";
-import { useGalleryStore, useFriendStore } from "../../stores";
+import { useGalleryStore } from "../../stores/gallery";
+import { useFriendStore } from "../../stores/friend";
 import { showUserDialog } from "../../coordinators/user-coordinator";
 import UserContextMenu from "../../components/UserContextMenu.vue";
 

@@ -1,12 +1,14 @@
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
+import Badge from "../../components/ui/badge/Badge.vue";
+import Button from "../../components/ui/button/Button.vue";
+import Tooltip from "../../components/ui/tooltip/Tooltip.vue";
+import TooltipContent from "../../components/ui/tooltip/TooltipContent.vue";
+import TooltipTrigger from "../../components/ui/tooltip/TooltipTrigger.vue";
 import { ArrowRight, ArrowUpDown, Trash2, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 
-import { formatDateFilter } from "../../shared/utils";
-import { i18n } from "../../plugins";
-import { useUiStore } from "../../stores";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { i18n } from "../../plugins/i18n";
+import { useUiStore } from "../../stores/ui";
 import { showUserDialog } from "../../coordinators/user-coordinator";
 
 const { t } = i18n.global;

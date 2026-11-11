@@ -1,8 +1,12 @@
 import { nextTick, ref } from "vue";
 
-import { favoriteRequest, miscRequest, userRequest, worldRequest } from "../../../api";
+import favoriteRequest from "../../../api/favorite";
+import miscRequest from "../../../api/misc";
+import userRequest from "../../../api/user";
+import worldRequest from "../../../api/world";
 import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../../coordinators/image-upload-coordinator";
-import { openExternalLink, replaceVrcPackageUrl } from "../../../shared/utils";
+import { openExternalLink } from "../../../shared/utils/app-actions";
+import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";
 import { readFileAsBase64, withUploadTimeout } from "../../../shared/utils/image-upload";
 import { removeWorldFromCache } from "../../../coordinators/world-coordinator";
 

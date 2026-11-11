@@ -49,16 +49,25 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { Check as CheckIcon } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { miscRequest, notificationRequest, queryRequest } from "../../api";
-import { useGalleryStore, useNotificationStore, useUserStore } from "../../stores";
-import { VirtualCombobox } from "../ui/virtual-combobox";
+import miscRequest from "../../api/misc";
+import notificationRequest from "../../api/notification";
+import queryRequest from "../../api/query-request";
+import { useGalleryStore } from "../../stores/gallery";
+import { useNotificationStore } from "../../stores/notification";
+import { useUserStore } from "../../stores/user";
+import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { photonEmojis } from "../../shared/constants/photon.js";
 
 import Emoji from "../Emoji.vue";

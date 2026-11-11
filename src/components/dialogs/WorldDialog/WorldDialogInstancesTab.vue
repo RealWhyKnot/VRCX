@@ -141,18 +141,25 @@
 
 <script setup>
 import { Globe2, Languages, LockKeyhole, User } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { useAdvancedSettingsStore, useAppearanceSettingsStore, useInstanceStore, useLocationStore, useUserStore, useWorldStore } from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useInstanceStore } from "../../../stores/instance";
+import { useLocationStore } from "../../../stores/location";
+import { useUserStore } from "../../../stores/user";
+import { useWorldStore } from "../../../stores/world";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

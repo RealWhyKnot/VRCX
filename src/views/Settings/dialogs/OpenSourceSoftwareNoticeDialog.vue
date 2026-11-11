@@ -111,12 +111,19 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { openExternalLink } from "@/shared/utils";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Card from "@/components/ui/card/Card.vue";
+import CardContent from "@/components/ui/card/CardContent.vue";
+import CardDescription from "@/components/ui/card/CardDescription.vue";
+import CardHeader from "@/components/ui/card/CardHeader.vue";
+import CardTitle from "@/components/ui/card/CardTitle.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Input from "@/components/ui/input/Input.vue";
+import { openExternalLink } from "@/shared/utils/app-actions";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();

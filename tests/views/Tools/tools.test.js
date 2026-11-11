@@ -37,12 +37,22 @@ vi.mock("pinia", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({ friends }),
+}));
+vi.mock("../../../src/stores/gallery", () => ({
   useGalleryStore: () => ({ showGalleryPage }),
+}));
+vi.mock("../../../src/stores/tools", () => ({
   useToolsStore: () => ({ openDialog: vi.fn() }),
+}));
+vi.mock("../../../src/stores/settings/advanced", () => ({
   useAdvancedSettingsStore: () => ({ showVRChatConfig }),
+}));
+vi.mock("../../../src/stores/launch", () => ({
   useLaunchStore: () => ({ showLaunchOptions }),
+}));
+vi.mock("../../../src/stores/vrcx", () => ({
   useVrcxStore: () => ({ showRegistryBackupDialog }),
 }));
 
@@ -66,8 +76,8 @@ vi.mock("../../../src/views/Tools/dialogs/AutoChangeStatusDialog.vue", () => ({
   default: { template: "<div />" },
 }));
 
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  TooltipWrapper: {
+vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: {
     template: "<div><slot /></div>",
     props: ["content", "disabled", "side"],
   },

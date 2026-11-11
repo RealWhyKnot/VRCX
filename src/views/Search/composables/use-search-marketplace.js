@@ -1,9 +1,9 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import { useSearchStore } from "../../../stores";
-import { replaceBioSymbols } from "../../../shared/utils";
-import { marketplaceRequest } from "../../../api";
+import { useSearchStore } from "../../../stores/search";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
+import marketplaceRequest from "../../../api/marketplace";
 
 function createDefaultSearchMarketplaceParams() {
   return {

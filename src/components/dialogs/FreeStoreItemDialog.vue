@@ -31,17 +31,24 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { toast } from "vue-sonner";
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { marketplaceRequest } from "../../api";
+import marketplaceRequest from "../../api/marketplace";
 import { AppDebug } from "../../services/app-config";
-import { useNotificationStore, useNotificationsSettingsStore, useUserStore } from "../../stores";
+import { useNotificationStore } from "../../stores/notification";
+import { useNotificationsSettingsStore } from "../../stores/settings/notifications";
+import { useUserStore } from "../../stores/user";
 
 const { t } = useI18n();
 

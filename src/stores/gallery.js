@@ -3,8 +3,13 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { convertFileUrlToImageUrl, getEmojiFileName, getPrintFileName, getPrintLocalDate, openExternalLink } from "../shared/utils";
-import { inventoryRequest, queryRequest, vrcPlusIconRequest, vrcPlusImageRequest } from "../api";
+import { convertFileUrlToImageUrl } from "../shared/utils/common";
+import { getEmojiFileName, getPrintFileName, getPrintLocalDate } from "../shared/utils/gallery";
+import { openExternalLink } from "../shared/utils/app-actions";
+import inventoryRequest from "../api/inventory";
+import queryRequest from "../api/query-request";
+import vrcPlusIconRequest from "../api/vrc-plus-icon";
+import vrcPlusImageRequest from "../api/vrc-plus-image";
 import { AppDebug } from "../services/app-config";
 import { handleImageUploadInput } from "../coordinators/image-upload-coordinator";
 import { router } from "../plugins/router";

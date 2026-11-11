@@ -34,17 +34,25 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import DialogTrigger from "@/components/ui/dialog/DialogTrigger.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { AppDebug } from "../../../services/app-config";
-import { authRequest } from "../../../api";
-import { useAuthStore } from "../../../stores";
+import authRequest from "../../../api/auth";
+import { useAuthStore } from "../../../stores/auth";
 
 const { t } = useI18n();
 const { loginForm } = storeToRefs(useAuthStore());

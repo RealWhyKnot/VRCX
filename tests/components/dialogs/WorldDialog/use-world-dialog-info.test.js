@@ -2,10 +2,16 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useWorldDialogInfo } from "../../../../src/components/dialogs/WorldDialog/use-world-dialog-info";
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/base/string", () => ({
   commaNumber: vi.fn((n) => n?.toLocaleString()),
+}));
+vi.mock("../../../../src/shared/utils/avatar", () => ({
   compareUnityVersion: vi.fn(() => true),
+}));
+vi.mock("../../../../src/coordinators/date-coordinator", () => ({
   formatDateFilter: vi.fn((d) => d),
+}));
+vi.mock("../../../../src/shared/utils/base/format", () => ({
   timeToText: vi.fn((ms) => `${Math.floor(ms / 1000)}s`),
 }));
 
@@ -17,7 +23,7 @@ vi.mock("../../../../src/services/database", () => ({
 }));
 
 const { database } = await import("../../../../src/services/database");
-const { compareUnityVersion } = await import("../../../../src/shared/utils");
+const { compareUnityVersion } = await import("../../../../src/shared/utils/avatar");
 
 function createWorldDialog(overrides = {}) {
   return ref({

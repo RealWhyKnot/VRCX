@@ -1,4 +1,5 @@
-import { avatarModerationRequest, playerModerationRequest } from "../api";
+import avatarModerationRequest from "../api/avatar-moderation";
+import playerModerationRequest from "../api/player-moderation";
 import { useAvatarStore } from "../stores/avatar";
 import { useModerationStore } from "../stores/moderation";
 

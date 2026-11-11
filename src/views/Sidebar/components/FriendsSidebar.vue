@@ -186,38 +186,40 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 
-import {
-  ContextMenu,
-  ContextMenuCheckboxItem,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "../../../components/ui/context-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar";
+import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
+import ContextMenuCheckboxItem from "../../../components/ui/context-menu/ContextMenuCheckboxItem.vue";
+import ContextMenuContent from "../../../components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "../../../components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "../../../components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuShortcut from "../../../components/ui/context-menu/ContextMenuShortcut.vue";
+import ContextMenuSub from "../../../components/ui/context-menu/ContextMenuSub.vue";
+import ContextMenuSubContent from "../../../components/ui/context-menu/ContextMenuSubContent.vue";
+import ContextMenuSubTrigger from "../../../components/ui/context-menu/ContextMenuSubTrigger.vue";
+import ContextMenuTrigger from "../../../components/ui/context-menu/ContextMenuTrigger.vue";
+import Avatar from "../../../components/ui/avatar/Avatar.vue";
+import AvatarFallback from "../../../components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "../../../components/ui/avatar/AvatarImage.vue";
 import IconFrame from "../../../components/IconFrame.vue";
-import {
-  useAdvancedSettingsStore,
-  useAppearanceSettingsStore,
-  useFavoriteStore,
-  useFriendStore,
-  useGameStore,
-  useLaunchStore,
-  useLocationStore,
-  useUserStore,
-} from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useFriendStore } from "../../../stores/friend";
+import { useGameStore } from "../../../stores/game";
+import { useLaunchStore } from "../../../stores/launch";
+import { useLocationStore } from "../../../stores/location";
+import { useUserStore } from "../../../stores/user";
 import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../friends-sidebar-utils";
-import { getFriendsSortFunction, isRealInstance } from "../../../shared/utils";
-import { instanceRequest, notificationRequest, queryRequest, userRequest } from "../../../api";
+import { getFriendsSortFunction } from "../../../shared/utils/friend";
+import { isRealInstance } from "../../../shared/utils/instance";
+import instanceRequest from "../../../api/instance";
+import notificationRequest from "../../../api/notification";
+import queryRequest from "../../../api/query-request";
+import userRequest from "../../../api/user";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { isActionRecent, recordRecentAction } from "../../../composables/use-recent-actions";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { getFriendsLocations } from "../../../shared/utils/location.js";
-import { parseLocation } from "../../../shared/utils";
+import { parseLocation } from "../../../shared/utils/location-parser";
 
 import BackToTop from "../../../components/BackToTop.vue";
 import FriendItem from "./FriendItem.vue";

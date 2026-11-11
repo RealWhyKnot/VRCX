@@ -59,25 +59,27 @@ import { AlertTriangle, Lock } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "./ui/context-menu";
+import ContextMenu from "./ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "./ui/context-menu/ContextMenuContent.vue";
+import ContextMenuTrigger from "./ui/context-menu/ContextMenuTrigger.vue";
 
-import {
-  getGroupName,
-  getLocationText,
-  getWorldName,
-  copyToClipboard,
-  formatDateFilter,
-  parseLocation,
-  resolveRegion,
-  translateAccessType,
-} from "../shared/utils";
-import { useAppearanceSettingsStore, useInstanceStore, useInviteStore, useSearchStore, useWorldStore } from "../stores";
+import { getGroupName } from "../shared/utils/group";
+import { getLocationText } from "../shared/utils/location";
+import { getWorldName } from "../shared/utils/world";
+import { copyToClipboard } from "../shared/utils/app-actions";
+import { formatDateFilter } from "../coordinators/date-coordinator";
+import { parseLocation, resolveRegion, translateAccessType } from "../shared/utils/location-parser";
+import { useAppearanceSettingsStore } from "../stores/settings/appearance";
+import { useInstanceStore } from "../stores/instance";
+import { useInviteStore } from "../stores/invite";
+import { useSearchStore } from "../stores/search";
+import { useWorldStore } from "../stores/world";
 import { showGroupDialog } from "../coordinators/group-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { runNewInstanceSelfInviteFlow } from "../coordinators/invite-coordinator";
-import { Spinner } from "./ui/spinner";
+import Spinner from "./ui/spinner/Spinner.vue";
 import WorldActionMenuItems from "./WorldActionMenuItems.vue";
-import { accessTypeLocaleKeyMap } from "../shared/constants";
+import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
 import { cn } from "@/lib/utils";
 
 defineOptions({

@@ -3,9 +3,9 @@ import { ArrowUpDown, Info, LogIn, Trash2 } from "lucide-vue-next";
 import DisplayName from "../../DisplayName.vue";
 import Location from "../../Location.vue";
 import LocationWorld from "../../LocationWorld.vue";
-import { Button } from "../../ui/button";
-import { i18n } from "../../../plugins";
-import { formatDateFilter } from "../../../shared/utils";
+import Button from "../../ui/button/Button.vue";
+import { i18n } from "../../../plugins/i18n";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
 
 const { t } = i18n.global;
 

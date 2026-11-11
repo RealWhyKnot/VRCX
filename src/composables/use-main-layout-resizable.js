@@ -1,7 +1,7 @@
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import { useAppearanceSettingsStore } from "../stores";
+import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 
 export function useMainLayoutResizable() {
   const appearanceStore = useAppearanceSettingsStore();

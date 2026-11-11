@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/gameLog", () => ({
   useGameLogStore: () => ({
     gameLogTableLookup: (...a) => mocks.lookup(...a),
     setSessionsViewMode: (...a) => mocks.setSessionsViewMode(...a),
@@ -20,42 +20,60 @@ vi.mock("../../../src/stores", () => ({
     gameLogTableData: ref([]),
     sessionsViewMode: mocks.sessionsViewMode,
   }),
+}));
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     tablePageSizes: [20, 50],
     tablePageSize: 20,
   }),
+}));
+vi.mock("../../../src/stores/vrcx", () => ({
   useVrcxStore: () => ({ maxTableSize: 500 }),
+}));
+vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({ confirm: vi.fn() }),
 }));
-vi.mock("../../../src/components/ui/data-table", () => ({
-  DataTableLayout: { template: '<div><slot name="toolbar" /></div>' },
+vi.mock("../../../src/components/ui/data-table/DataTableLayout.vue", () => ({
+  default: { template: '<div><slot name="toolbar" /></div>' },
 }));
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: "<div><slot /></div>" },
+vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("../../../src/components/ui/input-group", () => ({
-  InputGroupField: { template: "<input />" },
+vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
+  default: { template: "<input />" },
 }));
-vi.mock("@/components/ui/select", () => ({
-  Select: {
+vi.mock("@/components/ui/select/Select.vue", () => ({
+  default: {
     emits: ["update:modelValue"],
     template: "<button data-testid=\"sel\" @click=\"$emit('update:modelValue', ['Event'])\"><slot /></button>",
   },
-  SelectTrigger: { template: "<div><slot /></div>" },
-  SelectValue: { template: "<div><slot /></div>" },
-  SelectContent: { template: "<div><slot /></div>" },
-  SelectGroup: { template: "<div><slot /></div>" },
-  SelectItem: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/toggle", () => ({
-  Toggle: { template: "<button><slot /></button>" },
+vi.mock("@/components/ui/select/SelectTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/toggle-group", () => ({
-  ToggleGroup: {
+vi.mock("@/components/ui/select/SelectValue.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/toggle/Toggle.vue", () => ({
+  default: { template: "<button><slot /></button>" },
+}));
+vi.mock("@/components/ui/toggle-group/ToggleGroup.vue", () => ({
+  default: {
     emits: ["update:model-value"],
     template: "<div><slot /></div>",
   },
-  ToggleGroupItem: {
+}));
+vi.mock("@/components/ui/toggle-group/ToggleGroupItem.vue", () => ({
+  default: {
     props: ["value"],
     template: '<button :data-value="value"><slot /></button>',
   },
@@ -71,7 +89,9 @@ vi.mock("../../../src/views/GameLog/components/GameLogSessions.vue", () => ({
 vi.mock("../../../src/services/database", () => ({
   database: { deleteGameLogEntry: vi.fn() },
 }));
-vi.mock("../../../src/shared/utils", () => ({ removeFromArray: vi.fn() }));
+vi.mock("../../../src/shared/utils/base/array", () => ({
+  removeFromArray: vi.fn(),
+}));
 vi.mock("../../../src/lib/table/use-vrcx-vue-table", () => ({
   useVrcxVueTable: () => ({
     table: { getFilteredRowModel: () => ({ rows: [] }) },

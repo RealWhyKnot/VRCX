@@ -11,7 +11,7 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
-import { useGalleryStore } from "../stores";
+import { useGalleryStore } from "../stores/gallery";
 
 const notificationReq = {
   getNotifications(params: GetNotifications["query"]): Promise<{ json: Json<Notification[]>; params: GetNotifications["query"] }> {

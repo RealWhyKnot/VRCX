@@ -108,22 +108,40 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { Copy, Info, MoreHorizontal } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useFriendStore, useGameStore, useInviteStore, useLaunchStore, useLocationStore, useModalStore } from "../../stores";
-import { getLaunchURL, isRealInstance, parseLocation } from "../../shared/utils";
+import { useFriendStore } from "../../stores/friend";
+import { useGameStore } from "../../stores/game";
+import { useInviteStore } from "../../stores/invite";
+import { useLaunchStore } from "../../stores/launch";
+import { useLocationStore } from "../../stores/location";
+import { useModalStore } from "../../stores/modal";
+import { getLaunchURL, isRealInstance } from "../../shared/utils/instance";
+import { parseLocation } from "../../shared/utils/location-parser";
 import { useInviteChecks } from "../../composables/use-invite-checks";
-import { instanceRequest, queryRequest } from "../../api";
+import instanceRequest from "../../api/instance";
+import queryRequest from "../../api/query-request";
 
 import InviteDialog from "./InviteDialog/InviteDialog.vue";
 import configRepository from "../../services/config";

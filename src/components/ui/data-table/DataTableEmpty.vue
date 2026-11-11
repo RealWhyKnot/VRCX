@@ -17,7 +17,10 @@ import { Inbox, SearchAlert } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "../empty";
+import Empty from "../empty/Empty.vue";
+import EmptyDescription from "../empty/EmptyDescription.vue";
+import EmptyHeader from "../empty/EmptyHeader.vue";
+import EmptyMedia from "../empty/EmptyMedia.vue";
 
 const props = defineProps({
   type: {

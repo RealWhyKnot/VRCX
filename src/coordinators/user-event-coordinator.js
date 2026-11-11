@@ -1,4 +1,6 @@
-import { getGroupName, getWorldName, parseLocation } from "../shared/utils";
+import { getGroupName } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
+import { parseLocation } from "../shared/utils/location-parser";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { getAvatarName } from "./avatar-coordinator";

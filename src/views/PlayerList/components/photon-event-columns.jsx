@@ -1,9 +1,10 @@
 import { ArrowRight, Download } from "lucide-vue-next";
 
 import Location from "@/components/Location.vue";
-import { TooltipWrapper } from "@/components/ui/tooltip";
-import { i18n } from "@/plugins";
-import { formatDateFilter, statusClass } from "@/shared/utils";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
+import { i18n } from "@/plugins/i18n";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
+import { statusClass } from "@/shared/utils/user";
 
 const { t } = i18n.global;
 

@@ -141,18 +141,22 @@
 </template>
 
 <script setup>
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { TabsUnderline } from "@/components/ui/tabs";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useGalleryStore, useGroupStore, useUserStore } from "../../../stores";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { useUserStore } from "../../../stores/user";
 import { applyGroupMember, handleGroupMember, handleGroupMemberProps } from "../../../coordinators/group-coordinator";
-import { hasGroupPermission } from "../../../shared/utils";
+import { hasGroupPermission } from "../../../shared/utils/group";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants";
-import { groupRequest } from "../../../api";
+import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants/group";
+import groupRequest from "../../../api/group";
 import { resolveRoleNames } from "./group-moderation-utils";
 import { useGroupBatchOperations } from "./use-group-batch-operations";
 import { useGroupModerationData } from "./use-group-moderation-data";

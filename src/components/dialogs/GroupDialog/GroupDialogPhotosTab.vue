@@ -115,15 +115,18 @@
 
 <script setup>
 import { Image, ImagePlus, Pencil, Plus, RefreshCw, Trash2 } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
-import { TabsUnderline } from "@/components/ui/tabs";
+import Button from "@/components/ui/button/Button.vue";
+import Card from "@/components/ui/card/Card.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useGalleryStore, useGroupStore, useModalStore, useUserStore } from "../../../stores";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
 import { useGroupGalleries } from "./use-group-galleries";
 import GallerySelectDialog from "./GallerySelectDialog.vue";
 import GroupGalleryForm from "./GroupGalleryForm.vue";

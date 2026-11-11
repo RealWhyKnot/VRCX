@@ -96,23 +96,43 @@
 
 <script setup>
 import { MoreHorizontal, Trash2, User } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Item from "@/components/ui/item/Item.vue";
+import ItemActions from "@/components/ui/item/ItemActions.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { favoriteRequest, instanceRequest, notificationRequest, queryRequest } from "../../../api";
+import favoriteRequest from "../../../api/favorite";
+import instanceRequest from "../../../api/instance";
+import notificationRequest from "../../../api/notification";
+import queryRequest from "../../../api/query-request";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { removeLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
-import { parseLocation, isRealInstance } from "../../../shared/utils";
-import { useFavoriteStore, useGameStore, useLocationStore, useLaunchStore, useUserStore } from "../../../stores";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { isRealInstance } from "../../../shared/utils/instance";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useGameStore } from "../../../stores/game";
+import { useLocationStore } from "../../../stores/location";
+import { useLaunchStore } from "../../../stores/launch";
+import { useUserStore } from "../../../stores/user";
 import { useUserDisplay } from "../../../composables/use-user-display";
 
 import Location from "../../../components/Location.vue";

@@ -21,7 +21,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
 
-import { useAppearanceSettingsStore } from "@/stores";
+import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { formatTimestampKey } from "@/shared/utils/activity-engine";
 
 const props = defineProps({

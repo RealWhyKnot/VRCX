@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { watch } from "vue";
 
 import { database } from "../services/database";
-import { groupRequest } from "../api";
+import groupRequest from "../api/group";
 import { runRefreshFriendsListFlow } from "../coordinators/friend-sync-coordinator";
 import { runUpdateIsGameRunningFlow } from "../coordinators/game-coordinator";
 import { addGameLogEvent } from "../coordinators/game-log-coordinator";

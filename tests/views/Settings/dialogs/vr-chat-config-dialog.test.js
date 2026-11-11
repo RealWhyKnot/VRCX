@@ -48,28 +48,34 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/game", () => ({
   useGameStore: () => ({
     VRChatUsedCacheSize,
     VRChatTotalCacheSize,
     VRChatCacheSizeLoading,
     getVRChatCacheSize: mocks.getVRChatCacheSize,
   }),
+}));
+vi.mock("../../../../src/stores/settings/advanced", () => ({
   useAdvancedSettingsStore: () => ({
     isVRChatConfigDialogVisible,
     folderSelectorDialog: mocks.folderSelectorDialog,
   }),
+}));
+vi.mock("../../../../src/stores/modal", () => ({
   useModalStore: () => ({
     confirm: mocks.confirm,
   }),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: (...args) => mocks.openExternalLink(...args),
+}));
+vi.mock("../../../../src/shared/utils/setting", () => ({
   getVRChatResolution: (...args) => mocks.getVRChatResolution(...args),
 }));
 
-vi.mock("../../../../src/shared/constants", async (importOriginal) => {
+vi.mock("../../../../src/shared/constants/settings", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,

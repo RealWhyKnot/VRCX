@@ -2,7 +2,7 @@ import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { useVrcxStore } from "./vrcx";
 
-import { openExternalLink } from "../shared/utils";
+import { openExternalLink } from "../shared/utils/app-actions";
 
 import webApiService from "../services/webapi";
 

@@ -89,17 +89,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { worldRequest } from "../../../api";
-import { removeFromArray } from "../../../shared/utils";
+import worldRequest from "../../../api/world";
+import { removeFromArray } from "../../../shared/utils/base/array";
 
 const props = defineProps({
   oldTags: {

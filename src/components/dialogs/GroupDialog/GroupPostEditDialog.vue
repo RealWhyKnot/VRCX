@@ -118,19 +118,35 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { RadioGroup, RadioGroupItem } from "../../ui/radio-group";
-import { groupRequest, vrcPlusIconRequest } from "../../../api";
-import { useGalleryStore, useGroupStore } from "../../../stores";
+import Select from "../../ui/select/Select.vue";
+import SelectContent from "../../ui/select/SelectContent.vue";
+import SelectGroup from "../../ui/select/SelectGroup.vue";
+import SelectItem from "../../ui/select/SelectItem.vue";
+import SelectTrigger from "../../ui/select/SelectTrigger.vue";
+import SelectValue from "../../ui/select/SelectValue.vue";
+import RadioGroup from "../../ui/radio-group/RadioGroup.vue";
+import RadioGroupItem from "../../ui/radio-group/RadioGroupItem.vue";
+import groupRequest from "../../../api/group";
+import vrcPlusIconRequest from "../../../api/vrc-plus-icon";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
 
 import GallerySelectDialog from "./GallerySelectDialog.vue";
 

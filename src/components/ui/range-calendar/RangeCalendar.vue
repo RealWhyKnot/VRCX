@@ -3,19 +3,17 @@ import { RangeCalendarRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-import {
-  RangeCalendarCell,
-  RangeCalendarCellTrigger,
-  RangeCalendarGrid,
-  RangeCalendarGridBody,
-  RangeCalendarGridHead,
-  RangeCalendarGridRow,
-  RangeCalendarHeadCell,
-  RangeCalendarHeader,
-  RangeCalendarHeading,
-  RangeCalendarNextButton,
-  RangeCalendarPrevButton,
-} from ".";
+import RangeCalendarCell from "./RangeCalendarCell.vue";
+import RangeCalendarCellTrigger from "./RangeCalendarCellTrigger.vue";
+import RangeCalendarGrid from "./RangeCalendarGrid.vue";
+import RangeCalendarGridBody from "./RangeCalendarGridBody.vue";
+import RangeCalendarGridHead from "./RangeCalendarGridHead.vue";
+import RangeCalendarGridRow from "./RangeCalendarGridRow.vue";
+import RangeCalendarHeadCell from "./RangeCalendarHeadCell.vue";
+import RangeCalendarHeader from "./RangeCalendarHeader.vue";
+import RangeCalendarHeading from "./RangeCalendarHeading.vue";
+import RangeCalendarNextButton from "./RangeCalendarNextButton.vue";
+import RangeCalendarPrevButton from "./RangeCalendarPrevButton.vue";
 
 const props = defineProps({
   defaultPlaceholder: { type: null, required: false },

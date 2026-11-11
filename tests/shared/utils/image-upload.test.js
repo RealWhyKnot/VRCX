@@ -12,12 +12,12 @@ vi.mock("../../../src/services/app-config", () => ({
   AppDebug: { endpointDomain: "https://api.vrchat.cloud/api/1" },
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/shared/utils/file-utils", () => ({
   extractFileId: vi.fn(),
 }));
 
-vi.mock("../../../src/api", () => ({
-  imageRequest: {},
+vi.mock("../../../src/api/image", () => ({
+  default: {},
 }));
 
 import { toast } from "vue-sonner";

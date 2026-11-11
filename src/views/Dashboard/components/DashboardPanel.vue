@@ -42,7 +42,7 @@ import { computed, ref } from "vue";
 import { Trash2, X } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { navDefinitions } from "@/shared/constants/ui";
 
 import PanelSelector from "./PanelSelector.vue";

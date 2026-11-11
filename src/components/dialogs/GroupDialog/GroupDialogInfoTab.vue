@@ -181,18 +181,23 @@
 
 <script setup>
 import { Eye, Image, Pencil, Trash2, User } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { formatDateFilter, hasGroupPermission } from "../../../shared/utils";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { hasGroupPermission } from "../../../shared/utils/group";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
-import { useGalleryStore, useGroupStore, useLocationStore } from "../../../stores";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { useLocationStore } from "../../../stores/location";
 import { useGroupCalendarEvents } from "./use-group-calendar-events";
 
 import GroupCalendarEventCard from "../../../views/Tools/components/GroupCalendarEventCard.vue";

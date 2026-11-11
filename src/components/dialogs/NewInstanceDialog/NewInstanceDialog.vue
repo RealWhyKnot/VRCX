@@ -518,25 +518,49 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
 import { computed, ref, toRef } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { Check as CheckIcon } from "lucide-vue-next";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { TabsUnderline } from "@/components/ui/tabs";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { copyToClipboard, getLaunchURL, hasGroupPermission, isRealInstance, parseLocation } from "../../../shared/utils";
-import { instanceCategoryIcons } from "../../../shared/constants";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { useFriendStore, useGroupStore, useInviteStore, useLaunchStore, useLocationStore, useUserStore } from "../../../stores";
-import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
-import { instanceRequest, queryRequest } from "../../../api";
-import { VirtualCombobox } from "../../ui/virtual-combobox";
+import { copyToClipboard } from "../../../shared/utils/app-actions";
+import { getLaunchURL, isRealInstance } from "../../../shared/utils/instance";
+import { hasGroupPermission } from "../../../shared/utils/group";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { instanceCategoryIcons } from "../../../shared/constants/instance";
+import Select from "../../ui/select/Select.vue";
+import SelectContent from "../../ui/select/SelectContent.vue";
+import SelectGroup from "../../ui/select/SelectGroup.vue";
+import SelectItem from "../../ui/select/SelectItem.vue";
+import SelectTrigger from "../../ui/select/SelectTrigger.vue";
+import SelectValue from "../../ui/select/SelectValue.vue";
+import { useFriendStore } from "../../../stores/friend";
+import { useGroupStore } from "../../../stores/group";
+import { useInviteStore } from "../../../stores/invite";
+import { useLaunchStore } from "../../../stores/launch";
+import { useLocationStore } from "../../../stores/location";
+import { useUserStore } from "../../../stores/user";
+import ToggleGroup from "../../ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "../../ui/toggle-group/ToggleGroupItem.vue";
+import instanceRequest from "../../../api/instance";
+import queryRequest from "../../../api/query-request";
+import VirtualCombobox from "../../ui/virtual-combobox/VirtualCombobox.vue";
 import { useNewInstanceBuilder } from "./use-new-instance-builder";
 
 import InviteDialog from "../InviteDialog/InviteDialog.vue";

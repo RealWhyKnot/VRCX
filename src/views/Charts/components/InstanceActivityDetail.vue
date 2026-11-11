@@ -20,13 +20,14 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
 
 import dayjs from "dayjs";
 
-import { useAppearanceSettingsStore, useUserStore } from "../../../stores";
-import { timeToText } from "../../../shared/utils";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useUserStore } from "../../../stores/user";
+import { timeToText } from "../../../shared/utils/base/format";
 
 import * as echarts from "echarts";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

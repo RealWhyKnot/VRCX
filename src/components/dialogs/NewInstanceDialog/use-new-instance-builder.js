@@ -1,9 +1,12 @@
 import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 
-import { buildLegacyInstanceTag, getLaunchURL, isRealInstance, parseLocation } from "../../../shared/utils";
-import { useGroupStore, useInstanceStore, useUserStore } from "../../../stores";
-import { groupRequest } from "../../../api";
+import { buildLegacyInstanceTag, getLaunchURL, isRealInstance } from "../../../shared/utils/instance";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { useGroupStore } from "../../../stores/group";
+import { useInstanceStore } from "../../../stores/instance";
+import { useUserStore } from "../../../stores/user";
+import groupRequest from "../../../api/group";
 import { handleGroupPermissions } from "../../../coordinators/group-coordinator";
 
 import configRepository from "../../../services/config";

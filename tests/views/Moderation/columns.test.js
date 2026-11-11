@@ -16,7 +16,7 @@ vi.mock("pinia", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../src/plugins", () => ({
+vi.mock("../../../src/plugins/i18n", () => ({
   i18n: {
     global: {
       t: (...args) => mocks.t(...args),
@@ -25,10 +25,12 @@ vi.mock("../../../src/plugins", () => ({
   },
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/ui", () => ({
   useUiStore: () => ({
     shiftHeld: mocks.shiftHeld,
   }),
+}));
+vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: mocks.currentUser,
   }),
@@ -38,16 +40,24 @@ vi.mock("../../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args) => mocks.showUserDialog(...args),
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/coordinators/date-coordinator", () => ({
   formatDateFilter: (value, format) => `${format}:${value}`,
 }));
 
-vi.mock("../../../src/components/ui/badge", () => ({ Badge: "Badge" }));
-vi.mock("../../../src/components/ui/button", () => ({ Button: "Button" }));
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  Tooltip: "Tooltip",
-  TooltipContent: "TooltipContent",
-  TooltipTrigger: "TooltipTrigger",
+vi.mock("../../../src/components/ui/badge/Badge.vue", () => ({
+  default: "Badge",
+}));
+vi.mock("../../../src/components/ui/button/Button.vue", () => ({
+  default: "Button",
+}));
+vi.mock("../../../src/components/ui/tooltip/Tooltip.vue", () => ({
+  default: "Tooltip",
+}));
+vi.mock("../../../src/components/ui/tooltip/TooltipContent.vue", () => ({
+  default: "TooltipContent",
+}));
+vi.mock("../../../src/components/ui/tooltip/TooltipTrigger.vue", () => ({
+  default: "TooltipTrigger",
 }));
 vi.mock("lucide-vue-next", () => ({
   ArrowUpDown: "ArrowUpDown",

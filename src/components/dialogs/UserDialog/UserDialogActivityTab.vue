@@ -220,13 +220,19 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { Image as ImageIcon, RefreshCw, Sprout, Tractor } from "lucide-vue-next";
-import { Spinner } from "@/components/ui/spinner";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
@@ -234,10 +240,13 @@ import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
 
 import configRepository from "../../../services/config";
-import { worldRequest } from "../../../api";
+import worldRequest from "../../../api/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { parseLocation, timeToText } from "../../../shared/utils";
-import { useActivityStore, useAppearanceSettingsStore, useUserStore } from "../../../stores";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { timeToText } from "../../../shared/utils/base/format";
+import { useActivityStore } from "../../../stores/activity";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
 import { buildHeatmapOption, toHeatmapSeriesData } from "./activity/build-heatmap-option";
 import DailyPlaytime from "./activity/DailyPlaytime.vue";

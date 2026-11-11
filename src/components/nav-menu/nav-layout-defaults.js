@@ -1,4 +1,4 @@
-import { DASHBOARD_NAV_KEY_PREFIX } from "../../shared/constants";
+import { DASHBOARD_NAV_KEY_PREFIX } from "../../shared/constants/dashboard";
 
 export function createBaseDefaultNavLayout(t) {
   return [

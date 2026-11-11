@@ -57,10 +57,14 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Button from "@/components/ui/button/Button.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { DASHBOARD_BLOCKED_PANEL_KEYS } from "@/shared/constants/dashboard";
-import { isToolNavKey } from "@/shared/constants";
+import { isToolNavKey } from "@/shared/constants/tools";
 import { navDefinitions } from "@/shared/constants/ui";
 
 const widgetDefinitions = [

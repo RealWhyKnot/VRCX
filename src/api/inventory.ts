@@ -9,7 +9,7 @@ import type {
   RewardRedemptionResult,
 } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { queryClient } from "../queries";
+import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 
 function refetchActiveInventoryQueries() {

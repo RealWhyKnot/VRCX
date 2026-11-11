@@ -1,5 +1,6 @@
 <script setup>
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import Sheet from "@/components/ui/sheet/Sheet.vue";
+import SheetContent from "@/components/ui/sheet/SheetContent.vue";
 import { cn } from "@/lib/utils";
 
 import SheetDescription from "@/components/ui/sheet/SheetDescription.vue";

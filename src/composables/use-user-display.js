@@ -1,4 +1,4 @@
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 import { userImage as userImagePure, userImageFull as userImageFullPure, userStatusClass as userStatusClassPure } from "../shared/utils/user";
 
 export function useUserDisplay() {

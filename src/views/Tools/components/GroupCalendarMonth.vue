@@ -1,17 +1,15 @@
 <script setup>
-import {
-  CalendarCell,
-  CalendarCellTrigger,
-  CalendarGrid,
-  CalendarGridBody,
-  CalendarGridHead,
-  CalendarGridRow,
-  CalendarHeadCell,
-  CalendarHeader,
-  CalendarHeading,
-  CalendarNextButton,
-  CalendarPrevButton,
-} from "@/components/ui/calendar";
+import CalendarCell from "@/components/ui/calendar/CalendarCell.vue";
+import CalendarCellTrigger from "@/components/ui/calendar/CalendarCellTrigger.vue";
+import CalendarGrid from "@/components/ui/calendar/CalendarGrid.vue";
+import CalendarGridBody from "@/components/ui/calendar/CalendarGridBody.vue";
+import CalendarGridHead from "@/components/ui/calendar/CalendarGridHead.vue";
+import CalendarGridRow from "@/components/ui/calendar/CalendarGridRow.vue";
+import CalendarHeadCell from "@/components/ui/calendar/CalendarHeadCell.vue";
+import CalendarHeader from "@/components/ui/calendar/CalendarHeader.vue";
+import CalendarHeading from "@/components/ui/calendar/CalendarHeading.vue";
+import CalendarNextButton from "@/components/ui/calendar/CalendarNextButton.vue";
+import CalendarPrevButton from "@/components/ui/calendar/CalendarPrevButton.vue";
 import { computed, shallowRef, watch } from "vue";
 import { fromDate, getLocalTimeZone } from "@internationalized/date";
 import { CalendarRoot } from "reka-ui";
@@ -20,7 +18,7 @@ import { storeToRefs } from "pinia";
 
 import dayjs from "dayjs";
 
-import { useAppearanceSettingsStore } from "../../../stores";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 
 const props = defineProps({
   modelValue: {

@@ -1,5 +1,5 @@
 <script setup>
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
 
 import { inputGroupButtonVariants } from ".";

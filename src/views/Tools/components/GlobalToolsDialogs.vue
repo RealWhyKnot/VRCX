@@ -17,7 +17,8 @@
 <script setup>
 import { storeToRefs } from "pinia";
 
-import { useFriendStore, useToolsStore } from "../../../stores";
+import { useFriendStore } from "../../../stores/friend";
+import { useToolsStore } from "../../../stores/tools";
 
 import AutoChangeStatusDialog from "../dialogs/AutoChangeStatusDialog.vue";
 import RegistryBackupDialog from "../dialogs/RegistryBackupDialog.vue";

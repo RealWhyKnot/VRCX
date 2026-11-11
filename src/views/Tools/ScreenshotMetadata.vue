@@ -286,23 +286,30 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { useMagicKeys, whenever } from "@vueuse/core";
 import { onMounted, onUnmounted, reactive, ref, computed } from "vue";
-import { useGalleryStore, useUserStore, useVrcxStore } from "@/stores";
+import { useGalleryStore } from "@/stores/gallery";
+import { useUserStore } from "@/stores/user";
+import { useVrcxStore } from "@/stores/vrcx";
 import { ArrowLeft, ArrowRight, Camera, ChevronLeft, ChevronRight, Copy, FolderOpen, FolderSearch, ImageIcon, Trash2, Upload, Users } from "lucide-vue-next";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { InputGroupSearch } from "@/components/ui/input-group";
-import { Kbd } from "@/components/ui/kbd";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";
+import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
+import Kbd from "@/components/ui/kbd/Kbd.vue";
 
-import { formatDateFilter } from "@/shared/utils";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { vrcPlusImageRequest } from "@/api";
+import vrcPlusImageRequest from "@/api/vrc-plus-image";
 import { lookupUser } from "@/coordinators/user-coordinator";
 
 const router = useRouter();

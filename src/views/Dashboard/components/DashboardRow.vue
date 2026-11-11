@@ -37,7 +37,9 @@
 <script setup>
 import { computed } from "vue";
 
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import ResizableHandle from "@/components/ui/resizable/ResizableHandle.vue";
+import ResizablePanel from "@/components/ui/resizable/ResizablePanel.vue";
+import ResizablePanelGroup from "@/components/ui/resizable/ResizablePanelGroup.vue";
 
 import DashboardPanel from "./DashboardPanel.vue";
 

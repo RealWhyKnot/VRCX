@@ -13,9 +13,9 @@ import type {
   UpdateFavoriteGroupResponse,
 } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } from "../coordinators/favorite-coordinator";
-import { queryClient } from "../queries";
+import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 
 function getCurrentUserId() {

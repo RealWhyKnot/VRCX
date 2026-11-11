@@ -5,18 +5,18 @@ import {
   createLocationEntry,
   createPortalSpawnEntry,
   createResourceLoadEntry,
-  findUserByDisplayName,
-  parseLocation,
   parseInventoryFromUrl,
   parsePrintFromUrl,
-  replaceBioSymbols,
-} from "../shared/utils";
+} from "../shared/utils/game-log";
+import { findUserByDisplayName } from "../shared/utils/user";
+import { parseLocation } from "../shared/utils/location-parser";
+import { replaceBioSymbols } from "../shared/utils/base/string";
 import { i18n } from "../plugins/i18n";
 import { AppDebug, logWebRequest } from "../services/app-config";
 import { database } from "../services/database";
 import { runLastLocationResetFlow, runUpdateCurrentUserLocationFlow } from "./location-coordinator";
-import { getGroupName } from "../shared/utils";
-import { userRequest } from "../api";
+import { getGroupName } from "../shared/utils/group";
+import userRequest from "../api/user";
 import { watchState } from "../services/watch-state";
 import { toast } from "vue-sonner";
 

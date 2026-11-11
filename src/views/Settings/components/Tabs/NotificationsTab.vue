@@ -131,16 +131,23 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { computed, onMounted, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { Play } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useNotificationStore, useNotificationsSettingsStore, useUserStore } from "@/stores";
+import { useNotificationStore } from "@/stores/notification";
+import { useNotificationsSettingsStore } from "@/stores/settings/notifications";
+import { useUserStore } from "@/stores/user";
 
 import FeedFiltersDialog from "../../dialogs/FeedFiltersDialog.vue";
 import SettingsGroup from "../SettingsGroup.vue";

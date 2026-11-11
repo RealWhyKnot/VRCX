@@ -42,16 +42,22 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { RefreshCw, Upload, X } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import Button from "@/components/ui/button/Button.vue";
+import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useAuthStore, useGalleryStore, useUserStore } from "../../../stores";
-import { vrcPlusIconRequest, vrcPlusImageRequest } from "../../../api";
+import { useAuthStore } from "../../../stores/auth";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useUserStore } from "../../../stores/user";
+import vrcPlusIconRequest from "../../../api/vrc-plus-icon";
+import vrcPlusImageRequest from "../../../api/vrc-plus-image";
 import { computed, watch } from "vue";
 
 const { t } = useI18n();

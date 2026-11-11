@@ -22,11 +22,11 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/vrcx-updater", () => ({
   useVRCXUpdaterStore: () => ({}),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: (...args) => openExternalLinkFn(...args),
 }));
 

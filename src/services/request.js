@@ -1,6 +1,9 @@
 import { toast } from "vue-sonner";
 
-import { useAuthStore, useModalStore, useNotificationStore, useUpdateLoopStore } from "../stores";
+import { useAuthStore } from "../stores/auth";
+import { useModalStore } from "../stores/modal";
+import { useNotificationStore } from "../stores/notification";
+import { useUpdateLoopStore } from "../stores/update-loop";
 import { getCurrentUser } from "../coordinators/user-coordinator";
 import { AppDebug, isApiLogSuppressed, logWebRequest } from "./app-config.js";
 import { i18n } from "../plugins/i18n";

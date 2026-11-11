@@ -57,9 +57,9 @@ import type {
   UserAllGroupPermissions,
 } from "vrchat";
 import type { Json, VrcxGroup } from "../types/vrcx";
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 import { applyGroup } from "../coordinators/group-coordinator";
-import { queryClient } from "../queries";
+import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 
 function getCurrentUserId() {

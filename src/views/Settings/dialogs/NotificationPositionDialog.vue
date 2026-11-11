@@ -89,13 +89,18 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
-import { useNotificationsSettingsStore } from "../../../stores";
+import RadioGroup from "../../../components/ui/radio-group/RadioGroup.vue";
+import RadioGroupItem from "../../../components/ui/radio-group/RadioGroupItem.vue";
+import { useNotificationsSettingsStore } from "../../../stores/settings/notifications";
 
 const { t } = useI18n();
 const notificationsSettingsStore = useNotificationsSettingsStore();

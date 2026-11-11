@@ -2,7 +2,9 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { watch } from "vue";
 
-import { compareByCreatedAt, getGroupName, getWorldName } from "../shared/utils";
+import { compareByCreatedAt } from "../shared/utils/compare";
+import { getGroupName } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
 import { database } from "../services/database";
 import { useFriendStore } from "./friend";
 import { useInstanceStore } from "./instance";

@@ -63,5 +63,4 @@ function resolveSystemLanguage(systemLanguage, codes) {
   return codes.find((code) => code.split("-")[0] === lang) ?? null;
 }
 
-export * from "./locales";
 export { getLanguageName, getLocalizedStrings, resolveSystemLanguage };

@@ -19,9 +19,12 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import { Image } from "lucide-vue-next";
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { extractFileId, generateEmojiStyle } from "../shared/utils";
-import { useGalleryStore } from "../stores";
+import Avatar from "./ui/avatar/Avatar.vue";
+import AvatarFallback from "./ui/avatar/AvatarFallback.vue";
+import AvatarImage from "./ui/avatar/AvatarImage.vue";
+import { extractFileId } from "../shared/utils/file-utils";
+import { generateEmojiStyle } from "../shared/utils/gallery";
+import { useGalleryStore } from "../stores/gallery";
 
 const { getCachedEmoji } = useGalleryStore();
 const { emojiTable } = useGalleryStore();

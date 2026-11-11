@@ -144,10 +144,16 @@ import { Apple, Home, Image, Monitor, Smartphone } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useGalleryStore, useInstanceStore, useLocationStore, usePhotonStore, useUserStore } from "../../stores";
-import { commaNumber, formatDateFilter } from "../../shared/utils";
-import { Badge } from "../../components/ui/badge";
-import { DataTableLayout } from "../../components/ui/data-table";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useGalleryStore } from "../../stores/gallery";
+import { useInstanceStore } from "../../stores/instance";
+import { useLocationStore } from "../../stores/location";
+import { usePhotonStore } from "../../stores/photon";
+import { useUserStore } from "../../stores/user";
+import { commaNumber } from "../../shared/utils/base/string";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import Badge from "../../components/ui/badge/Badge.vue";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { createColumns } from "./columns.jsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 

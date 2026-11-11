@@ -75,22 +75,39 @@
 
 <script setup>
 import { AlertTriangle, Image, Lock, MoreHorizontal } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Item from "@/components/ui/item/Item.vue";
+import ItemActions from "@/components/ui/item/ItemActions.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 
-import { favoriteRequest } from "../../../api";
+import favoriteRequest from "../../../api/favorite";
 import WorldActionMenuItems from "../../../components/WorldActionMenuItems.vue";
 import { removeLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
 import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/invite-coordinator";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { useFavoriteStore, useInviteStore, useLocationStore } from "../../../stores";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useInviteStore } from "../../../stores/invite";
+import { useLocationStore } from "../../../stores/location";
 import NewInstanceDialog from "../../../components/dialogs/NewInstanceDialog/NewInstanceDialog.vue";
 
 const props = defineProps({

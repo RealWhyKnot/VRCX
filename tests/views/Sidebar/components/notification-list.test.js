@@ -26,15 +26,15 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="view-more" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/separator", () => ({
-  Separator: { template: '<hr data-testid="separator" />' },
+vi.mock("@/components/ui/separator/Separator.vue", () => ({
+  default: { template: '<hr data-testid="separator" />' },
 }));
 
 vi.mock("../../../../src/views/Sidebar/components/NotificationItem.vue", () => ({

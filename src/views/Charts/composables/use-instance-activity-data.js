@@ -3,7 +3,7 @@ import { nextTick, reactive, ref } from "vue";
 import dayjs from "dayjs";
 
 import { database } from "../../../services/database";
-import { getWorldName } from "../../../shared/utils";
+import { getWorldName } from "../../../shared/utils/world";
 
 export function useInstanceActivityData() {
   const activityData = ref([]);

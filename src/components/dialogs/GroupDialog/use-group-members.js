@@ -1,8 +1,10 @@
 import { computed, ref } from "vue";
 
-import { groupDialogFilterOptions, groupDialogSortingOptions, FILTER_EVERYONE, FILTER_NO_ROLE } from "../../../shared/constants";
-import { groupRequest, queryRequest } from "../../../api";
-import { debounce, mergeGroupMemberSearchResults } from "../../../shared/utils";
+import { groupDialogFilterOptions, groupDialogSortingOptions, FILTER_EVERYONE, FILTER_NO_ROLE } from "../../../shared/constants/group";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
+import { debounce } from "../../../shared/utils/common";
+import { mergeGroupMemberSearchResults } from "../../../shared/utils/group";
 
 import * as workerTimers from "worker-timers";
 

@@ -2,26 +2,23 @@ import { reactive } from "vue";
 import { toast } from "vue-sonner";
 import { i18n } from "../plugins/i18n";
 
-import {
-  arraysMatch,
-  computeUserPlatform,
-  createDefaultUserRef,
-  diffObjectProps,
-  evictMapCache,
-  extractFileId,
-  findUserByDisplayName,
-  getWorldName,
-  isRealInstance,
-  parseLocation,
-  sanitizeUserJson,
-  getReadableProfileThemeColor,
-} from "../shared/utils";
+import { arraysMatch } from "../shared/utils/base/array";
+import { computeUserPlatform, createDefaultUserRef, diffObjectProps, sanitizeUserJson } from "../shared/utils/user-transforms";
+import { evictMapCache } from "../shared/utils/cache-utils";
+import { extractFileId } from "../shared/utils/file-utils";
+import { findUserByDisplayName, getReadableProfileThemeColor } from "../shared/utils/user";
+import { getWorldName } from "../shared/utils/world";
+import { isRealInstance } from "../shared/utils/instance";
+import { parseLocation } from "../shared/utils/location-parser";
 import { getUserMemo } from "./memo-coordinator";
-import { avatarRequest, instanceRequest, queryRequest, userRequest } from "../api";
+import avatarRequest from "../api/avatar";
+import instanceRequest from "../api/instance";
+import queryRequest from "../api/query-request";
+import userRequest from "../api/user";
 import { processBulk, request } from "../services/request";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
-import { patchUserFromEvent } from "../queries";
+import { patchUserFromEvent } from "../queries/entity-cache";
 import { watchState } from "../services/watch-state";
 import { applyAvatar, showAvatarDialog } from "./avatar-coordinator";
 import { applyFavorite } from "./favorite-coordinator";

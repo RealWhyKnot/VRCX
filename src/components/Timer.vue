@@ -5,7 +5,7 @@
 import { useIntervalFn, useNow } from "@vueuse/core";
 import { computed } from "vue";
 
-import { timeToText } from "../shared/utils";
+import { timeToText } from "../shared/utils/base/format";
 
 const props = defineProps<{ epoch: number }>();
 

@@ -165,28 +165,49 @@
 </template>
 
 <script setup>
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Alert from "@/components/ui/alert/Alert.vue";
+import AlertDescription from "@/components/ui/alert/AlertDescription.vue";
+import AlertTitle from "@/components/ui/alert/AlertTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldError from "@/components/ui/field/FieldError.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { computed, onBeforeMount, onBeforeUnmount, ref, watch } from "vue";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Item from "@/components/ui/item/Item.vue";
+import ItemActions from "@/components/ui/item/ItemActions.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 import { ArrowBigDownDash, Languages, Trash2, TriangleAlert, User } from "lucide-vue-next";
 import { Field as VeeField, useForm } from "vee-validate";
 import { useRoute, useRouter } from "vue-router";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { storeToRefs } from "pinia";
 import { toTypedSchema } from "@vee-validate/zod";
 import { useI18n } from "vue-i18n";
 import { z } from "zod";
 
-import { useAppearanceSettingsStore, useAuthStore, useModalStore, useVrcStatusStore, useVRCXUpdaterStore } from "../../stores";
-import { getLanguageName, languageCodes, resolveSystemLanguage } from "../../localization";
-import { tForLocale } from "../../plugins";
-import { openExternalLink } from "../../shared/utils";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useAuthStore } from "../../stores/auth";
+import { useModalStore } from "../../stores/modal";
+import { useVrcStatusStore } from "../../stores/vrc-status";
+import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
+import { getLanguageName, resolveSystemLanguage } from "../../localization";
+import { languageCodes } from "../../localization/locales";
+import { tForLocale } from "../../plugins/i18n";
+import { openExternalLink } from "../../shared/utils/app-actions";
 
 import configRepository from "../../services/config";
 import { useUserDisplay } from "../../composables/use-user-display";

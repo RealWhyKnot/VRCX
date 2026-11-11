@@ -1,10 +1,18 @@
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import InputOTP from "@/components/ui/input-otp/InputOTP.vue";
+import InputOTPGroup from "@/components/ui/input-otp/InputOTPGroup.vue";
+import InputOTPSeparator from "@/components/ui/input-otp/InputOTPSeparator.vue";
+import InputOTPSlot from "@/components/ui/input-otp/InputOTPSlot.vue";
 import { ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
-import { useModalStore } from "@/stores";
+import { useModalStore } from "@/stores/modal";
 
 const modalStore = useModalStore();
 

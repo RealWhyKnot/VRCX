@@ -74,17 +74,26 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { watch } from "vue";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { avatarRequest, queryRequest } from "../../../api";
-import { arraysMatch } from "../../../shared/utils";
-import { useAvatarStore } from "../../../stores";
+import Select from "../../ui/select/Select.vue";
+import SelectContent from "../../ui/select/SelectContent.vue";
+import SelectItem from "../../ui/select/SelectItem.vue";
+import SelectTrigger from "../../ui/select/SelectTrigger.vue";
+import SelectValue from "../../ui/select/SelectValue.vue";
+import avatarRequest from "../../../api/avatar";
+import queryRequest from "../../../api/query-request";
+import { arraysMatch } from "../../../shared/utils/base/array";
+import { useAvatarStore } from "../../../stores/avatar";
 import { applyAvatar } from "../../../coordinators/avatar-coordinator";
 
 const props = defineProps({

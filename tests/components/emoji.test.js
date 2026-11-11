@@ -13,25 +13,31 @@ const mocks = vi.hoisted(() => ({
   generateEmojiStyle: vi.fn(() => "background: red;"),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/gallery", () => ({
   useGalleryStore: () => ({
     getCachedEmoji: (...args) => mocks.getCachedEmoji(...args),
     emojiTable: mocks.emojiTable,
   }),
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/file-utils", () => ({
   extractFileId: (...args) => mocks.extractFileId(...args),
+}));
+vi.mock("../../src/shared/utils/gallery", () => ({
   generateEmojiStyle: (...args) => mocks.generateEmojiStyle(...args),
 }));
 
-vi.mock("../../src/components/ui/avatar", () => ({
-  Avatar: { template: '<div data-testid="avatar"><slot /></div>' },
-  AvatarImage: {
+vi.mock("../../src/components/ui/avatar/Avatar.vue", () => ({
+  default: { template: '<div data-testid="avatar"><slot /></div>' },
+}));
+vi.mock("../../src/components/ui/avatar/AvatarImage.vue", () => ({
+  default: {
     props: ["src"],
     template: '<img data-testid="avatar-image" :src="src" />',
   },
-  AvatarFallback: {
+}));
+vi.mock("../../src/components/ui/avatar/AvatarFallback.vue", () => ({
+  default: {
     template: '<span data-testid="avatar-fallback"><slot /></span>',
   },
 }));

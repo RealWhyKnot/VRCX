@@ -18,7 +18,7 @@ vi.mock("../../src/services/config", () => ({
   default: mocks.configRepository,
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/base/string", () => ({
   changeLogRemoveLinks: (...args) => mocks.changeLogRemoveLinks(...args),
 }));
 

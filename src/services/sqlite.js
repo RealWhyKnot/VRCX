@@ -1,6 +1,6 @@
 import { i18n } from "../plugins/i18n";
-import { openExternalLink } from "../shared/utils";
-import { useModalStore } from "../stores";
+import { openExternalLink } from "../shared/utils/app-actions";
+import { useModalStore } from "../stores/modal";
 
 class SQLiteService {
   handleSQLiteError(e) {

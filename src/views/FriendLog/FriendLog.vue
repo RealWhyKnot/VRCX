@@ -44,13 +44,21 @@ import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { useAppearanceSettingsStore, useFriendStore, useModalStore, useVrcxStore } from "../../stores";
-import { DataTableLayout } from "../../components/ui/data-table";
-import { InputGroupField } from "../../components/ui/input-group";
+import Select from "../../components/ui/select/Select.vue";
+import SelectContent from "../../components/ui/select/SelectContent.vue";
+import SelectGroup from "../../components/ui/select/SelectGroup.vue";
+import SelectItem from "../../components/ui/select/SelectItem.vue";
+import SelectTrigger from "../../components/ui/select/SelectTrigger.vue";
+import SelectValue from "../../components/ui/select/SelectValue.vue";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useFriendStore } from "../../stores/friend";
+import { useModalStore } from "../../stores/modal";
+import { useVrcxStore } from "../../stores/vrcx";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
+import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
 import { createColumns } from "./columns.jsx";
 import { database } from "../../services/database";
-import { removeFromArray } from "../../shared/utils";
+import { removeFromArray } from "../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import configRepository from "../../services/config";

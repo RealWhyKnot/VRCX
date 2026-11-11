@@ -1,7 +1,8 @@
 import { reactive, shallowReactive, watch } from "vue";
 import { defineStore } from "pinia";
 
-import { checkVRChatCache, formatFileSize } from "../shared/utils";
+import { checkVRChatCache } from "../coordinators/cache-coordinator";
+import { formatFileSize } from "../shared/utils/base/format";
 import { preloadOwnWorlds } from "../coordinators/world-coordinator";
 import { watchState } from "../services/watch-state";
 

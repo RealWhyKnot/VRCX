@@ -424,15 +424,30 @@ import { Repeat, Trash2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 
-import { groupRequest, queryRequest } from "../../../api";
-import { useGroupStore, useModalStore, useUserStore } from "../../../stores";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
+import { useGroupStore } from "../../../stores/group";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
 import GallerySelectDialog from "./GallerySelectDialog.vue";
 
 const categoryOptions = [

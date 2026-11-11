@@ -4,7 +4,11 @@ import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { useVModel } from "@vueuse/core";
 
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupText, InputGroupTextarea } from ".";
+import InputGroup from "./InputGroup.vue";
+import InputGroupAddon from "./InputGroupAddon.vue";
+import InputGroupButton from "./InputGroupButton.vue";
+import InputGroupText from "./InputGroupText.vue";
+import InputGroupTextarea from "./InputGroupTextarea.vue";
 
 defineOptions({ inheritAttrs: false });
 

@@ -30,41 +30,57 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/invite", () => ({
   useInviteStore: () => mocks.inviteStore,
+}));
+vi.mock("../../../../src/stores/gallery", () => ({
   useGalleryStore: () => mocks.galleryStore,
+}));
+vi.mock("../../../../src/stores/notification", () => ({
   useNotificationStore: () => mocks.notificationStore,
 }));
 
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: {
+vi.mock("@/components/ui/sheet/Sheet.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template: '<div data-testid="sheet"><slot /></div>',
   },
-  SheetContent: {
+}));
+vi.mock("@/components/ui/sheet/SheetContent.vue", () => ({
+  default: {
     template: '<div data-testid="sheet-content"><slot /></div>',
   },
-  SheetHeader: {
+}));
+vi.mock("@/components/ui/sheet/SheetHeader.vue", () => ({
+  default: {
     template: '<div data-testid="sheet-header"><slot /></div>',
   },
-  SheetTitle: {
+}));
+vi.mock("@/components/ui/sheet/SheetTitle.vue", () => ({
+  default: {
     template: '<div data-testid="sheet-title"><slot /></div>',
   },
 }));
 
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: {
+vi.mock("@/components/ui/tabs/Tabs.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<div data-testid="tabs" :data-model-value="modelValue"><slot /></div>',
   },
-  TabsList: { template: '<div data-testid="tabs-list"><slot /></div>' },
-  TabsTrigger: {
+}));
+vi.mock("@/components/ui/tabs/TabsList.vue", () => ({
+  default: { template: '<div data-testid="tabs-list"><slot /></div>' },
+}));
+vi.mock("@/components/ui/tabs/TabsTrigger.vue", () => ({
+  default: {
     props: ["value"],
     template: '<button data-testid="tabs-trigger" :data-value="value"><slot /></button>',
   },
-  TabsContent: {
+}));
+vi.mock("@/components/ui/tabs/TabsContent.vue", () => ({
+  default: {
     props: ["value"],
     template: '<div data-testid="tabs-content" :data-value="value"><slot /></div>',
   },

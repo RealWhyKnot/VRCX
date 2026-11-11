@@ -1,5 +1,8 @@
 <script setup>
-import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Item from "@/components/ui/item/Item.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 import { computed, ref } from "vue";
 import { GripVertical } from "lucide-vue-next";
 import { useSortable } from "@dnd-kit/vue/sortable";

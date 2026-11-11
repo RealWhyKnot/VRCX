@@ -67,17 +67,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Alert from "@/components/ui/alert/Alert.vue";
+import AlertDescription from "@/components/ui/alert/AlertDescription.vue";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { Progress } from "@/components/ui/progress";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Progress from "@/components/ui/progress/Progress.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { TriangleAlert } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { groupRequest } from "../../../api";
+import groupRequest from "../../../api/group";
 
 import * as workerTimers from "worker-timers";
 

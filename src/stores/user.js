@@ -2,18 +2,15 @@ import { computed, reactive, ref, shallowReactive, watch } from "vue";
 import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import {
-  compareByCreatedAt,
-  compareByDisplayName,
-  compareByLocationAt,
-  compareByName,
-  compareByUpdatedAt,
-  isRealInstance,
-  parseLocation,
-  replaceBioSymbols,
-} from "../shared/utils";
+import { compareByCreatedAt, compareByDisplayName, compareByLocationAt, compareByName, compareByUpdatedAt } from "../shared/utils/compare";
+import { isRealInstance } from "../shared/utils/instance";
+import { parseLocation } from "../shared/utils/location-parser";
+import { replaceBioSymbols } from "../shared/utils/base/string";
 import { getAllUserMemos } from "../coordinators/memo-coordinator";
-import { instanceRequest, userRequest, cosmeticsRequest, marketplaceRequest } from "../api";
+import instanceRequest from "../api/instance";
+import userRequest from "../api/user";
+import cosmeticsRequest from "../api/cosmetics";
+import marketplaceRequest from "../api/marketplace";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { processBulk } from "../services/request";

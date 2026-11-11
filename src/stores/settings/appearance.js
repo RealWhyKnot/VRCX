@@ -3,17 +3,9 @@ import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import {
-  APP_CJK_FONT_PACK_DEFAULT_KEY,
-  APP_CJK_FONT_PACKS,
-  APP_FONT_DEFAULT_KEY,
-  APP_FONT_FAMILIES,
-  SEARCH_LIMIT_MAX,
-  SEARCH_LIMIT_MIN,
-  TABLE_MAX_SIZE_MAX,
-  TABLE_MAX_SIZE_MIN,
-  THEME_CONFIG,
-} from "../../shared/constants";
+import { APP_CJK_FONT_PACK_DEFAULT_KEY, APP_CJK_FONT_PACKS, APP_FONT_DEFAULT_KEY, APP_FONT_FAMILIES } from "../../shared/constants/fonts";
+import { SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN, TABLE_MAX_SIZE_MAX, TABLE_MAX_SIZE_MIN } from "../../shared/constants/settings";
+import { THEME_CONFIG } from "../../shared/constants/themes";
 import {
   applyAppCjkFontPack,
   HueToHex,
@@ -24,10 +16,11 @@ import {
   setSystemIsDarkMode,
   updateTrustColorClasses,
 } from "../../shared/utils/base/ui";
-import { computeTrustLevel, getNameColour } from "../../shared/utils";
+import { computeTrustLevel } from "../../shared/utils/user-transforms";
+import { getNameColour } from "../../shared/utils/user";
 import { database } from "../../services/database";
 
-import { loadLocalizedStrings } from "../../plugins";
+import { loadLocalizedStrings } from "../../plugins/i18n";
 import { useFeedStore } from "../feed";
 import { useGameLogStore } from "../gameLog";
 import { useUiStore } from "../ui";

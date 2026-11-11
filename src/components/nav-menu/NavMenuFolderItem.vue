@@ -105,10 +105,23 @@
 import { ChevronRight } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
+import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
+import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import SidebarMenuButton from "@/components/ui/sidebar/SidebarMenuButton.vue";
+import SidebarMenuItem from "@/components/ui/sidebar/SidebarMenuItem.vue";
+import SidebarMenuSub from "@/components/ui/sidebar/SidebarMenuSub.vue";
+import SidebarMenuSubButton from "@/components/ui/sidebar/SidebarMenuSubButton.vue";
+import SidebarMenuSubItem from "@/components/ui/sidebar/SidebarMenuSubItem.vue";
 
 defineProps({
   item: {

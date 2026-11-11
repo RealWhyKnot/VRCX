@@ -90,20 +90,34 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { Check as CheckIcon } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useFriendStore, useGalleryStore, useInviteStore, useModalStore, useUserStore } from "../../../stores";
-import { parseLocation } from "../../../shared/utils";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useFriendStore } from "../../../stores/friend";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useInviteStore } from "../../../stores/invite";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import { parseLocation } from "../../../shared/utils/location-parser";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { instanceRequest, notificationRequest } from "../../../api";
-import { VirtualCombobox } from "../../ui/virtual-combobox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../ui/dropdown-menu";
+import instanceRequest from "../../../api/instance";
+import notificationRequest from "../../../api/notification";
+import VirtualCombobox from "../../ui/virtual-combobox/VirtualCombobox.vue";
+import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
 
 import SendInviteDialog from "./SendInviteDialog.vue";
 

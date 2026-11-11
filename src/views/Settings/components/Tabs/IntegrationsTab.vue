@@ -200,12 +200,15 @@
 <script setup>
 import { ref } from "vue";
 import { Languages } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAdvancedSettingsStore, useAvatarProviderStore, useDiscordPresenceSettingsStore, useVrStore } from "@/stores";
+import { useAdvancedSettingsStore } from "@/stores/settings/advanced";
+import { useAvatarProviderStore } from "@/stores/avatar-provider";
+import { useDiscordPresenceSettingsStore } from "@/stores/settings/discord-presence";
+import { useVrStore } from "@/stores/vr";
 
 import AvatarProviderDialog from "../../dialogs/AvatarProviderDialog.vue";
 import TranslationApiDialog from "../../dialogs/TranslationApiDialog.vue";

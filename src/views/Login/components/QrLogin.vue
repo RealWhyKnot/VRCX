@@ -13,7 +13,7 @@
 
 <script setup>
 import { onBeforeUnmount, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { QrCode } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
@@ -21,9 +21,9 @@ import { useI18n } from "vue-i18n";
 import QRCode from "qrcode";
 
 import { AppDebug } from "../../../services/app-config";
-import { authRequest } from "../../../api";
+import authRequest from "../../../api/auth";
 import { getCurrentUser } from "../../../coordinators/user-coordinator";
-import { useAuthStore } from "../../../stores";
+import { useAuthStore } from "../../../stores/auth";
 
 import webApiService from "../../../services/webapi";
 import * as workerTimers from "worker-timers";

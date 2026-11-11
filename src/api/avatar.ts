@@ -11,7 +11,8 @@ import type {
   UpdateAvatarRequest,
 } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { patchAndRefetchActiveQuery, queryKeys } from "../queries";
+import { patchAndRefetchActiveQuery } from "../queries/entity-cache";
+import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { applyCurrentUser } from "../coordinators/user-coordinator";
 

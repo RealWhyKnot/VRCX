@@ -19,15 +19,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { inviteMessagesRequest, notificationRequest } from "../../../api";
-import { useGalleryStore, useNotificationStore } from "../../../stores";
+import inviteMessagesRequest from "../../../api/invite-messages";
+import notificationRequest from "../../../api/notification";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useNotificationStore } from "../../../stores/notification";
 
 const { t } = useI18n();
 const galleryStore = useGalleryStore();

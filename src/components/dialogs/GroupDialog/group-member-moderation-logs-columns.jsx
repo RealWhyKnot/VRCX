@@ -1,8 +1,8 @@
 import Location from "@/components/Location.vue";
-import { i18n } from "@/plugins";
-import { formatDateFilter } from "@/shared/utils";
+import { i18n } from "@/plugins/i18n";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { ArrowUpDown } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 
 const { t } = i18n.global;
 

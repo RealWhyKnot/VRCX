@@ -1,5 +1,8 @@
 import { computed } from "vue";
-import { commaNumber, compareUnityVersion, formatDateFilter, timeToText } from "../../../shared/utils";
+import { commaNumber } from "../../../shared/utils/base/string";
+import { compareUnityVersion } from "../../../shared/utils/avatar";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { timeToText } from "../../../shared/utils/base/format";
 import { database } from "../../../services/database";
 
 export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {

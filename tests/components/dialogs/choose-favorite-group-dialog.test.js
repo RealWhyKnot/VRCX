@@ -22,7 +22,7 @@ vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
 vi.mock("vue-sonner", () => ({
   toast: { success: (...a) => mocks.toastSuccess(...a) },
 }));
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
     favoriteFriendGroups: ref([
       {
@@ -48,19 +48,27 @@ vi.mock("../../../src/stores", () => ({
     localFriendFavGroupLength: vi.fn(() => 0),
     hasLocalFriendFavorite: vi.fn(() => false),
   }),
+}));
+vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({ isLocalUserVrcPlusSupporter: ref(true) }),
 }));
-vi.mock("../../../src/api", () => ({
-  favoriteRequest: { addFavorite: (...a) => mocks.addFavorite(...a) },
+vi.mock("../../../src/api/favorite", () => ({
+  default: { addFavorite: (...a) => mocks.addFavorite(...a) },
 }));
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\')"><slot /></button>',
   },

@@ -48,14 +48,18 @@ vi.mock("@tanstack/vue-virtual", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     isAgeGatedInstancesVisible: mocks.isAgeGatedInstancesVisible,
   }),
+}));
+vi.mock("../../../../src/stores/group", () => ({
   useGroupStore: () => ({
     sortGroupInstancesByInGame: mocks.sortGroupInstancesByInGame,
     groupInstances: mocks.groupInstances,
   }),
+}));
+vi.mock("../../../../src/stores/launch", () => ({
   useLaunchStore: () => ({
     showLaunchDialog: (...a) => mocks.showLaunchDialog(...a),
   }),
@@ -67,8 +71,10 @@ vi.mock("../../../../src/composables/use-invite-checks", () => ({
   }),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/common", () => ({
   convertFileUrlToImageUrl: (url) => `${url}?small`,
+}));
+vi.mock("../../../../src/shared/utils/location-parser", () => ({
   parseLocation: (location) => ({
     isRealInstance: !!location,
     worldId: location.split(":")[0],
@@ -80,8 +86,8 @@ vi.mock("../../../../src/coordinators/group-coordinator", () => ({
   showGroupDialog: (...a) => mocks.showGroupDialog(...a),
 }));
 
-vi.mock("../../../../src/api", () => ({
-  instanceRequest: {
+vi.mock("../../../../src/api/instance", () => ({
+  default: {
     selfInvite: (...a) => mocks.selfInvite(...a),
   },
 }));
@@ -92,11 +98,17 @@ vi.mock("vue-sonner", () => ({
   },
 }));
 
-vi.mock("../../../../src/components/ui/context-menu", () => ({
-  ContextMenu: { template: "<div><slot /></div>" },
-  ContextMenuTrigger: { template: "<div><slot /></div>" },
-  ContextMenuContent: { template: "<div><slot /></div>" },
-  ContextMenuItem: {
+vi.mock("../../../../src/components/ui/context-menu/ContextMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../../src/components/ui/context-menu/ContextMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../../src/components/ui/context-menu/ContextMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../../src/components/ui/context-menu/ContextMenuItem.vue", () => ({
+  default: {
     emits: ["click"],
     props: ["disabled"],
     template: '<button data-testid="ctx-item" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',

@@ -297,29 +297,50 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { Settings, Trash2, User, Users } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { Spinner } from "@/components/ui/spinner";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import AvatarProviderDialog from "../Settings/dialogs/AvatarProviderDialog.vue";
 import SearchPagination from "./components/SearchPagination.vue";
-import { Item, ItemContent, ItemDescription, ItemGroup, ItemHeader, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Item from "@/components/ui/item/Item.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemGroup from "@/components/ui/item/ItemGroup.vue";
+import ItemHeader from "@/components/ui/item/ItemHeader.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 
 import { computed, onUnmounted, ref } from "vue";
 import { useMagicKeys, whenever } from "@vueuse/core";
 import { toast } from "vue-sonner";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Tabs from "@/components/ui/tabs/Tabs.vue";
+import TabsContent from "@/components/ui/tabs/TabsContent.vue";
+import TabsList from "@/components/ui/tabs/TabsList.vue";
+import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useAuthStore, useAvatarProviderStore, useSearchStore } from "../../stores";
-import { commaNumber, convertFileUrlToImageUrl, languageClass, replaceBioSymbols } from "../../shared/utils";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useAuthStore } from "../../stores/auth";
+import { useAvatarProviderStore } from "../../stores/avatar-provider";
+import { useSearchStore } from "../../stores/search";
+import { commaNumber, replaceBioSymbols } from "../../shared/utils/base/string";
+import { convertFileUrlToImageUrl } from "../../shared/utils/common";
+import { languageClass } from "../../shared/utils/user";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { showAvatarDialog } from "../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../coordinators/group-coordinator";

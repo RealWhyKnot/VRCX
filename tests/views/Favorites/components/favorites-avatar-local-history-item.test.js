@@ -22,10 +22,12 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
     showFavoriteDialog: (...args) => mocks.showFavoriteDialog(...args),
   }),
+}));
+vi.mock("../../../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: mocks.currentUser,
   }),
@@ -36,53 +38,83 @@ vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
   selectAvatarWithConfirmation: (...args) => mocks.selectAvatarWithConfirmation(...args),
 }));
 
-vi.mock("@/components/ui/item", () => ({
-  Item: {
+vi.mock("@/components/ui/item/Item.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<div data-testid="item" @click="$emit(\'click\', $event)"><slot /></div>',
   },
-  ItemActions: { template: "<div><slot /></div>" },
-  ItemMedia: { template: "<div><slot /></div>" },
-  ItemContent: { template: "<div><slot /></div>" },
-  ItemTitle: { template: "<div><slot /></div>" },
-  ItemDescription: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/item/ItemActions.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/item/ItemMedia.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/item/ItemContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/item/ItemTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/item/ItemDescription.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/avatar", () => ({
-  Avatar: { template: '<div data-testid="avatar"><slot /></div>' },
-  AvatarImage: {
+vi.mock("@/components/ui/avatar/Avatar.vue", () => ({
+  default: { template: '<div data-testid="avatar"><slot /></div>' },
+}));
+vi.mock("@/components/ui/avatar/AvatarImage.vue", () => ({
+  default: {
     props: ["src"],
     template: '<img data-testid="avatar-image" :src="src" :class="$attrs.class" />',
   },
-  AvatarFallback: {
+}));
+vi.mock("@/components/ui/avatar/AvatarFallback.vue", () => ({
+  default: {
     template: '<span data-testid="avatar-fallback" :class="$attrs.class"><slot /></span>',
   },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="button" @click="$emit(\'click\', $event)"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/context-menu", () => ({
-  ContextMenu: { template: "<div><slot /></div>" },
-  ContextMenuTrigger: { template: "<div><slot /></div>" },
-  ContextMenuContent: { template: "<div><slot /></div>" },
-  ContextMenuSeparator: { template: "<hr />" },
-  ContextMenuItem: {
+vi.mock("@/components/ui/context-menu/ContextMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuSeparator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuItem.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="ctx-item" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: { template: "<div><slot /></div>" },
-  DropdownMenuTrigger: { template: "<div><slot /></div>" },
-  DropdownMenuContent: { template: "<div><slot /></div>" },
-  DropdownMenuSeparator: { template: "<hr />" },
-  DropdownMenuItem: {
+vi.mock("@/components/ui/dropdown-menu/DropdownMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuSeparator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuItem.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="dd-item" @click="$emit(\'click\')"><slot /></button>',
   },

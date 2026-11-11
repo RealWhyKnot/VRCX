@@ -7,7 +7,7 @@ import {
   initThemeColor,
   refreshCustomCss,
 } from "../shared/utils/base/ui";
-import { APP_CJK_FONT_PACK_DEFAULT_KEY, APP_FONT_DEFAULT_KEY } from "../shared/constants";
+import { APP_CJK_FONT_PACK_DEFAULT_KEY, APP_FONT_DEFAULT_KEY } from "../shared/constants/fonts";
 import { i18n, loadLocalizedStrings } from "./i18n";
 
 import configRepository from "../services/config";

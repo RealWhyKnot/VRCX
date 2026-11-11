@@ -88,15 +88,17 @@ vi.mock("../../../../src/services/request", () => ({
   $throw: vi.fn(),
   failedGetRequests: new Map(),
 }));
-vi.mock("../../../../src/api", () => ({
-  queryRequest: {
+vi.mock("../../../../src/api/query-request", () => ({
+  default: {
     fetch: vi.fn().mockResolvedValue({ json: [], params: {} }),
   },
-  userRequest: {},
+}));
+vi.mock("../../../../src/api/user", () => ({
+  default: {},
 }));
 
 import GroupDialogPhotosTab from "../../../../src/components/dialogs/GroupDialog/GroupDialogPhotosTab.vue";
-import { useGroupStore } from "../../../../src/stores";
+import { useGroupStore } from "../../../../src/stores/group";
 
 const MOCK_GALLERIES = [
   {

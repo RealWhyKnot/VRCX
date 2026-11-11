@@ -1,7 +1,7 @@
 import type { InviteMessage, InviteMessageType, UpdateInviteMessageRequest } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;

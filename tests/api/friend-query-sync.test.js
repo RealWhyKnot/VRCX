@@ -18,10 +18,12 @@ vi.mock("../../src/coordinators/user-coordinator", () => ({
   applyUser: (...args) => mockApplyUser(...args),
 }));
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/client", () => ({
   queryClient: {
     invalidateQueries: (...args) => mockInvalidateQueries(...args),
   },
+}));
+vi.mock("../../src/queries/policies", () => ({
   entityQueryPolicies: {
     user: {},
     avatar: {},

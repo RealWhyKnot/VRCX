@@ -1,6 +1,6 @@
-import { parseLocation } from "./location";
-import { queryRequest } from "../../api";
-import { rpcWorlds } from "../constants";
+import { parseLocation } from "./location-parser";
+import queryRequest from "../../api/query-request";
+import { rpcWorlds } from "../constants/world";
 
 async function getWorldName(location) {
   let worldName = "";

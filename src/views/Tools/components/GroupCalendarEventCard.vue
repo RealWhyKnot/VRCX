@@ -54,16 +54,21 @@
 
 <script setup>
 import { Image, Pencil, Repeat, Share2, Star } from "lucide-vue-next";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import Button from "@/components/ui/button/Button.vue";
+import Card from "@/components/ui/card/Card.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useGalleryStore, useGroupStore } from "../../../stores";
-import { formatDateFilter, hasGroupPermission } from "../../../shared/utils";
-import { groupRequest, queryRequest } from "../../../api";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { hasGroupPermission } from "../../../shared/utils/group";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import GroupCalendarEventDetails from "./GroupCalendarEventDetails.vue";
 

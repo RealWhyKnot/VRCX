@@ -1,5 +1,9 @@
 <script setup>
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import Item from "@/components/ui/item/Item.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 
 defineProps({
   icon: { type: String, required: true },

@@ -3,7 +3,7 @@ import { computed, useAttrs, useSlots } from "vue";
 import { useVModel } from "@vueuse/core";
 
 import InputGroupField from "./InputGroupField.vue";
-import { InputGroupText } from ".";
+import InputGroupText from "./InputGroupText.vue";
 
 defineOptions({ inheritAttrs: false });
 

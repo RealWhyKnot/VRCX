@@ -1,19 +1,27 @@
 <script setup>
-import {
-  Breadcrumb,
-  BreadcrumbEllipsis,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { useAvatarStore, useGroupStore, useInstanceStore, useUiStore, useUserStore, useWorldStore, useAppearanceSettingsStore } from "@/stores";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import Breadcrumb from "@/components/ui/breadcrumb/Breadcrumb.vue";
+import BreadcrumbEllipsis from "@/components/ui/breadcrumb/BreadcrumbEllipsis.vue";
+import BreadcrumbItem from "@/components/ui/breadcrumb/BreadcrumbItem.vue";
+import BreadcrumbLink from "@/components/ui/breadcrumb/BreadcrumbLink.vue";
+import BreadcrumbList from "@/components/ui/breadcrumb/BreadcrumbList.vue";
+import BreadcrumbPage from "@/components/ui/breadcrumb/BreadcrumbPage.vue";
+import BreadcrumbSeparator from "@/components/ui/breadcrumb/BreadcrumbSeparator.vue";
+import { useAvatarStore } from "@/stores/avatar";
+import { useGroupStore } from "@/stores/group";
+import { useInstanceStore } from "@/stores/instance";
+import { useUiStore } from "@/stores/ui";
+import { useUserStore } from "@/stores/user";
+import { useWorldStore } from "@/stores/world";
+import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import { ArrowLeft } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import Button from "@/components/ui/button/Button.vue";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 

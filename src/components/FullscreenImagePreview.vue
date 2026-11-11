@@ -85,8 +85,8 @@ import { Copy, Download, RefreshCcw, RotateCcw, RotateCw, X, ZoomIn, ZoomOut } f
 import { useEventListener } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { DialogContent as RekaDialogContent, DialogOverlay as RekaDialogOverlay, DialogPortal } from "reka-ui";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import Button from "@/components/ui/button/Button.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
 import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
 import { cn } from "@/lib/utils";
 import { storeToRefs } from "pinia";
@@ -94,8 +94,8 @@ import { toast } from "vue-sonner";
 import { useGeneralSettingsStore } from "@/stores/settings/general";
 import { useI18n } from "vue-i18n";
 
-import { extractFileId } from "../shared/utils";
-import { useGalleryStore } from "../stores";
+import { extractFileId } from "../shared/utils/file-utils";
+import { useGalleryStore } from "../stores/gallery";
 
 const galleryStore = useGalleryStore();
 const { fullscreenImageDialog } = storeToRefs(galleryStore);

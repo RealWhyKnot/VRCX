@@ -154,10 +154,17 @@ import { computed, ref } from "vue";
 import { ChevronRight, Copy, ExternalLink, Play, LogIn, LogOut } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Badge } from "../../../components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "../../../components/ui/context-menu";
-import { copyToClipboard, formatDateFilter, openExternalLink } from "../../../shared/utils";
+import Badge from "../../../components/ui/badge/Badge.vue";
+import Collapsible from "../../../components/ui/collapsible/Collapsible.vue";
+import CollapsibleContent from "../../../components/ui/collapsible/CollapsibleContent.vue";
+import CollapsibleTrigger from "../../../components/ui/collapsible/CollapsibleTrigger.vue";
+import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "../../../components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "../../../components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "../../../components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "../../../components/ui/context-menu/ContextMenuTrigger.vue";
+import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { lookupUser } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();

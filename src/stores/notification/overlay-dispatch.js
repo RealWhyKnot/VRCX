@@ -1,4 +1,4 @@
-import { extractFileId, extractFileVersion } from "../../shared/utils";
+import { extractFileId, extractFileVersion } from "../../shared/utils/file-utils";
 import { getNotificationMessage, toNotificationText } from "../../shared/utils/notification-message";
 
 export function createOverlayDispatch({ getUserIdFromNoty, queryRequest, notificationsSettingsStore, advancedSettingsStore }) {

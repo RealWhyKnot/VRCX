@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/vue-query";
 
-import { avatarRequest, groupRequest, userRequest, worldRequest } from "../api";
+import avatarRequest from "../api/avatar";
+import groupRequest from "../api/group";
+import userRequest from "../api/user";
+import worldRequest from "../api/world";
 import { entityQueryPolicies, toQueryOptions } from "./policies";
 import { queryKeys } from "./keys";
 

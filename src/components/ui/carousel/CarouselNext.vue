@@ -1,6 +1,6 @@
 <script setup>
 import { ArrowRight } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
 
 import { useCarousel } from "./use-carousel";

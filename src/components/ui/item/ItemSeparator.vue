@@ -1,6 +1,6 @@
 <script setup>
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
+import Separator from "@/components/ui/separator/Separator.vue";
 
 const props = defineProps({
   orientation: { type: String, required: false },

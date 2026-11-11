@@ -183,16 +183,22 @@ import { useI18n } from "vue-i18n";
 
 import BackToTop from "@/components/BackToTop.vue";
 
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
+import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
+import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
+import Sheet from "@/components/ui/sheet/Sheet.vue";
+import SheetContent from "@/components/ui/sheet/SheetContent.vue";
+import SheetHeader from "@/components/ui/sheet/SheetHeader.vue";
+import SheetTitle from "@/components/ui/sheet/SheetTitle.vue";
+import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 
 import { showUserDialog } from "@/coordinators/user-coordinator";
 import { showWorldDialog } from "@/coordinators/world-coordinator";
 import { database } from "@/services/database";
-import { useAppearanceSettingsStore } from "@/stores";
+import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 
 const { t } = useI18n();
 const { isDarkMode } = storeToRefs(useAppearanceSettingsStore());

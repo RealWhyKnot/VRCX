@@ -3,10 +3,11 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useModalStore, useUserStore } from "../../../stores";
-import { commaNumber, replaceBioSymbols } from "../../../shared/utils";
-import { marketplaceRequest } from "../../../api";
-import { VRCHAT_STORE_IDS } from "../../../shared/constants";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
+import marketplaceRequest from "../../../api/marketplace";
+import { VRCHAT_STORE_IDS } from "../../../shared/constants/marketplace";
 
 export function useStoreShelves() {
   const { t } = useI18n();

@@ -58,29 +58,34 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuLabel from "@/components/ui/dropdown-menu/DropdownMenuLabel.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { computed } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { RefreshCw, Trash2 } from "lucide-vue-next";
-import { Spinner } from "@/components/ui/spinner";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useModalStore, useModerationStore } from "../../stores";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useModalStore } from "../../stores/modal";
+import { useModerationStore } from "../../stores/moderation";
 import { runRefreshPlayerModerationsFlow as refreshPlayerModerations } from "../../coordinators/moderation-coordinator";
-import { DataTableLayout } from "../../components/ui/data-table";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { createColumns } from "./columns.jsx";
-import { moderationTypes } from "../../shared/constants";
-import { playerModerationRequest } from "../../api";
+import { moderationTypes } from "../../shared/constants/moderation";
+import playerModerationRequest from "../../api/player-moderation";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import configRepository from "../../services/config.js";

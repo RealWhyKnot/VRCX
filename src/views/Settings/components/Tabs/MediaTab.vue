@@ -124,12 +124,12 @@
 </template>
 
 <script setup>
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAdvancedSettingsStore } from "@/stores";
+import { useAdvancedSettingsStore } from "@/stores/settings/advanced";
 
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";

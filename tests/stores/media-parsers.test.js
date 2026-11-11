@@ -1,17 +1,24 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/base/format", () => ({
   convertYoutubeTime: vi.fn((dur) => {
     const m = /(\d+)M/.exec(dur);
     const s = /(\d+)S/.exec(dur);
     return (m ? Number(m[1]) * 60 : 0) + (s ? Number(s[1]) : 0);
   }),
+}));
+vi.mock("../../src/shared/utils/user", () => ({
   findUserByDisplayName: vi.fn(),
+}));
+vi.mock("../../src/shared/utils/world", () => ({
   isRpcWorld: vi.fn(() => false),
+}));
+vi.mock("../../src/shared/utils/base/string", () => ({
   replaceBioSymbols: vi.fn((s) => s),
 }));
 
-import { isRpcWorld, findUserByDisplayName } from "../../src/shared/utils";
+import { isRpcWorld } from "../../src/shared/utils/world";
+import { findUserByDisplayName } from "../../src/shared/utils/user";
 import { createMediaParsers } from "../../src/stores/gameLog/media-parsers";
 import { createNowPlayingSpecHandler } from "../../src/stores/gameLog/now-playing-spec";
 

@@ -1,7 +1,8 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import { useAdvancedSettingsStore, useSearchStore } from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useSearchStore } from "../../../stores/search";
 import { lookupAvatars } from "../../../coordinators/avatar-coordinator";
 
 export function useSearchAvatar() {

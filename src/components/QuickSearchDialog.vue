@@ -1,6 +1,14 @@
 <script setup>
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Command from "@/components/ui/command/Command.vue";
+import CommandGroup from "@/components/ui/command/CommandGroup.vue";
+import CommandInput from "@/components/ui/command/CommandInput.vue";
+import CommandItem from "@/components/ui/command/CommandItem.vue";
+import CommandList from "@/components/ui/command/CommandList.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { Globe, Image, Users } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";

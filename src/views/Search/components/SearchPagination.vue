@@ -17,9 +17,9 @@
 
 <script setup>
 import { ArrowLeft, ArrowRight } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { Kbd } from "@/components/ui/kbd";
+import Button from "@/components/ui/button/Button.vue";
+import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";
+import Kbd from "@/components/ui/kbd/Kbd.vue";
 
 const isMac = navigator.platform.toUpperCase().includes("MAC");
 

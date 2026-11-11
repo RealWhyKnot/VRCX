@@ -1,14 +1,18 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 import { ref } from "vue";
 
-vi.mock("../../../../src/api", () => ({
-  groupRequest: {
+vi.mock("../../../../src/api/group", () => ({
+  default: {
     getGroupMembersSearch: vi.fn(),
   },
-  queryRequest: {
+}));
+vi.mock("../../../../src/api/query-request", () => ({
+  default: {
     fetch: vi.fn(),
   },
-  userRequest: {},
+}));
+vi.mock("../../../../src/api/user", () => ({
+  default: {},
 }));
 vi.mock("../../../../src/plugins/router", async () => {
   const vue = await import("vue");
@@ -101,8 +105,9 @@ vi.mock("worker-timers", () => ({
 }));
 
 import { useGroupMembers } from "../../../../src/components/dialogs/GroupDialog/use-group-members";
-import { groupRequest, queryRequest } from "../../../../src/api";
-import { FILTER_EVERYONE } from "../../../../src/shared/constants";
+import groupRequest from "../../../../src/api/group";
+import queryRequest from "../../../../src/api/query-request";
+import { FILTER_EVERYONE } from "../../../../src/shared/constants/group";
 
 function createGroupDialog(overrides = {}) {
   return ref({

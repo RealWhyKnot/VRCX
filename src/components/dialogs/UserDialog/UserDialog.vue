@@ -81,28 +81,28 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TabsUnderline } from "@/components/ui/tabs";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import {
-  useFavoriteStore,
-  useFriendStore,
-  useGalleryStore,
-  useGroupStore,
-  useInstanceStore,
-  useInviteStore,
-  useLocationStore,
-  useModalStore,
-  useModerationStore,
-  useNotificationStore,
-  useUserStore,
-} from "../../../stores";
-import { copyToClipboard } from "../../../shared/utils";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useFriendStore } from "../../../stores/friend";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { useInstanceStore } from "../../../stores/instance";
+import { useInviteStore } from "../../../stores/invite";
+import { useLocationStore } from "../../../stores/location";
+import { useModalStore } from "../../../stores/modal";
+import { useModerationStore } from "../../../stores/moderation";
+import { useNotificationStore } from "../../../stores/notification";
+import { useUserStore } from "../../../stores/user";
+import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
-import { miscRequest } from "../../../api";
+import miscRequest from "../../../api/misc";
 import { useUserDialogCommands } from "./use-user-dialog-commands";
 import { showAvatarDialog, showAvatarAuthorDialog } from "../../../coordinators/avatar-coordinator";
 import { showUserDialog, refreshUserDialogAvatars } from "../../../coordinators/user-coordinator";

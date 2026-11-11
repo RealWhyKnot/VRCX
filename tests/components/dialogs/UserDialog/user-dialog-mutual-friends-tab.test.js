@@ -96,8 +96,8 @@ vi.mock("../../../../src/coordinators/user-coordinator", async (importOriginal) 
 });
 
 import UserDialogMutualFriendsTab from "../../../../src/components/dialogs/UserDialog/UserDialogMutualFriendsTab.vue";
-import { useUserStore } from "../../../../src/stores";
-import { userDialogMutualFriendSortingOptions } from "../../../../src/shared/constants";
+import { useUserStore } from "../../../../src/stores/user";
+import { userDialogMutualFriendSortingOptions } from "../../../../src/shared/constants/user";
 
 const MOCK_MUTUAL_FRIENDS = [
   {

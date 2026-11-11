@@ -36,10 +36,12 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     randomUserColours: mocks.randomUserColours,
   }),
+}));
+vi.mock("../../../src/stores/photon", () => ({
   usePhotonStore: () => ({
     photonLoggingEnabled: mocks.photonLoggingEnabled,
     chatboxUserBlacklist: mocks.chatboxUserBlacklist,
@@ -52,33 +54,51 @@ vi.mock("../../../src/stores", () => ({
     photonEventTableFilterChange: vi.fn(),
     showUserFromPhotonId: vi.fn(),
   }),
+}));
+vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: mocks.currentUser,
   }),
+}));
+vi.mock("../../../src/stores/world", () => ({
   useWorldStore: () => ({
     showWorldDialog: (...args) => mocks.showWorldDialog(...args),
   }),
+}));
+vi.mock("../../../src/stores/location", () => ({
   useLocationStore: () => ({
     lastLocation: mocks.lastLocation,
   }),
+}));
+vi.mock("../../../src/stores/instance", () => ({
   useInstanceStore: () => ({
     currentInstanceLocation: mocks.currentInstanceLocation,
     currentInstanceWorld: mocks.currentInstanceWorld,
     currentInstanceUsersData: mocks.currentInstanceUsersData,
     getCurrentInstanceUserList: (...args) => mocks.getCurrentInstanceUserList(...args),
   }),
+}));
+vi.mock("../../../src/stores/gallery", () => ({
   useGalleryStore: () => ({
     showFullscreenImageDialog: (...args) => mocks.showFullscreenImageDialog(...args),
   }),
+}));
+vi.mock("../../../src/stores/search", () => ({
   useSearchStore: () => ({
     stringComparer: { value: (a, b) => a.localeCompare(b) },
   }),
+}));
+vi.mock("../../../src/stores/avatar", () => ({
   useAvatarStore: () => ({
     showAvatarDialog: vi.fn(),
   }),
+}));
+vi.mock("../../../src/stores/group", () => ({
   useGroupStore: () => ({
     showGroupDialog: vi.fn(),
   }),
+}));
+vi.mock("../../../src/stores/vrcx", () => ({
   useVrcxStore: () => ({
     ipcEnabled: ref(false),
   }),
@@ -108,13 +128,15 @@ vi.mock("../../../src/views/PlayerList/columns.jsx", () => ({
   createColumns: () => [{ id: "photonId" }],
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/shared/utils/base/string", () => ({
   commaNumber: (value) => String(value ?? ""),
+}));
+vi.mock("../../../src/coordinators/date-coordinator", () => ({
   formatDateFilter: (value) => String(value ?? ""),
 }));
 
-vi.mock("@/components/ui/data-table", () => ({
-  DataTableLayout: {
+vi.mock("@/components/ui/data-table/DataTableLayout.vue", () => ({
+  default: {
     props: ["onRowClick"],
     template:
       "<div>" +
@@ -124,12 +146,12 @@ vi.mock("@/components/ui/data-table", () => ({
   },
 }));
 
-vi.mock("@/components/ui/badge", () => ({
-  Badge: { template: "<span><slot /></span>" },
+vi.mock("@/components/ui/badge/Badge.vue", () => ({
+  default: { template: "<span><slot /></span>" },
 }));
 
-vi.mock("@/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
 vi.mock("../../../src/components/LocationWorld.vue", () => ({

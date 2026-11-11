@@ -93,15 +93,20 @@ import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
-import { useAppearanceSettingsStore, useFeedStore, useVrcxStore } from "../../stores";
-import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { DataTableLayout } from "../../components/ui/data-table";
-import { InputGroupField } from "../../components/ui/input-group";
-import { RangeCalendar } from "../../components/ui/range-calendar";
-import { Toggle } from "../../components/ui/toggle";
+import Popover from "../../components/ui/popover/Popover.vue";
+import PopoverContent from "../../components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "../../components/ui/popover/PopoverTrigger.vue";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useFeedStore } from "../../stores/feed";
+import { useVrcxStore } from "../../stores/vrcx";
+import ToggleGroup from "../../components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "../../components/ui/toggle-group/ToggleGroupItem.vue";
+import Badge from "../../components/ui/badge/Badge.vue";
+import Button from "../../components/ui/button/Button.vue";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
+import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
+import RangeCalendar from "../../components/ui/range-calendar/RangeCalendar.vue";
+import Toggle from "../../components/ui/toggle/Toggle.vue";
 import { columns as baseColumns } from "./columns.jsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 

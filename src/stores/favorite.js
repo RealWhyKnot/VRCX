@@ -3,8 +3,10 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { compareByName, createDefaultFavoriteGroupRef, replaceReactiveObject } from "../shared/utils";
-import { favoriteRequest } from "../api";
+import { compareByName } from "../shared/utils/compare";
+import { createDefaultFavoriteGroupRef } from "../shared/utils/entity-transforms";
+import { replaceReactiveObject } from "../shared/utils/base/array";
+import favoriteRequest from "../api/favorite";
 import { database } from "../services/database";
 import { processBulk } from "../services/request";
 import { useAppearanceSettingsStore } from "./settings/appearance";

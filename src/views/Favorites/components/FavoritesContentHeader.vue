@@ -32,8 +32,8 @@
 </template>
 
 <script setup>
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { useI18n } from "vue-i18n";
 
 defineProps({

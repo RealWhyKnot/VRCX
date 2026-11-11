@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
-vi.mock("@/shared/utils/common", () => ({ openExternalLink: vi.fn() }));
-vi.mock("../../../src/stores", () => ({
+vi.mock("@/shared/utils/app-actions", () => ({
+  openExternalLink: vi.fn(),
+}));
+vi.mock("../../../src/stores/dashboard", () => ({
   useDashboardStore: () => ({
     createDashboard: vi.fn(async () => ({
       id: "dashboard-1",
@@ -19,37 +21,53 @@ vi.mock("../../../src/stores", () => ({
     deleteDashboard: vi.fn(async () => {}),
     setEditingDashboardId: vi.fn(),
   }),
+}));
+vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({
     confirm: vi.fn(async () => ({ ok: true })),
   }),
 }));
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogFooter: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
-vi.mock("@/components/ui/hover-card", () => ({
-  HoverCard: { template: "<div><slot /></div>" },
-  HoverCardContent: { template: "<div><slot /></div>" },
-  HoverCardTrigger: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/hover-card/HoverCard.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/input-group", () => ({
-  InputGroupButton: { template: "<button><slot /></button>" },
-  InputGroupField: { template: "<input />" },
+vi.mock("@/components/ui/hover-card/HoverCardContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/separator", () => ({
-  Separator: { template: "<hr />" },
+vi.mock("@/components/ui/hover-card/HoverCardTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/tree", () => ({
-  Tree: {
+vi.mock("@/components/ui/input-group/InputGroupButton.vue", () => ({
+  default: { template: "<button><slot /></button>" },
+}));
+vi.mock("@/components/ui/input-group/InputGroupField.vue", () => ({
+  default: { template: "<input />" },
+}));
+vi.mock("@/components/ui/separator/Separator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/tree/Tree.vue", () => ({
+  default: {
     props: ["items"],
     template: '<div><slot :flatten-items="[]" /></div>',
   },

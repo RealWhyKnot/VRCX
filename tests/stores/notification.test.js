@@ -14,22 +14,28 @@ vi.mock("../../src/services/database", () => ({
   },
 }));
 
-vi.mock("../../src/api", () => ({
-  friendRequest: {},
-  instanceRequest: {
+vi.mock("../../src/api/friend", () => ({
+  default: {},
+}));
+vi.mock("../../src/api/instance", () => ({
+  default: {
     getInstance: vi.fn(),
   },
-  notificationRequest: {
+}));
+vi.mock("../../src/api/notification", () => ({
+  default: {
     hideNotification: vi.fn(() => Promise.resolve({})),
     getNotifications: vi.fn(() => Promise.resolve({ json: [] })),
     getNotificationsV2: vi.fn(() => Promise.resolve({ json: [] })),
     getHiddenFriendRequests: vi.fn(() => Promise.resolve({ json: [] })),
   },
-  queryRequest: {
+}));
+vi.mock("../../src/api/query-request", () => ({
+  default: {
     fetch: vi.fn(),
   },
 }));
-vi.mock("@/plugins", () => ({
+vi.mock("@/plugins/i18n", () => ({
   i18n: {
     global: {
       t: vi.fn((key) => key),
@@ -86,17 +92,8 @@ vi.mock("../../src/plugins/router", () => ({
     replace: vi.fn(),
   },
 }));
-vi.mock("../../src/shared/utils", async () => {
-  const actual = await vi.importActual("../../src/shared/utils");
-
-  return {
-    ...(actual ?? {}),
-    loadLocalizedStrings: vi.fn(() => Promise.resolve()),
-  };
-});
-
 const { database } = await import("../../src/services/database");
-const { notificationRequest } = await import("../../src/api");
+const { default: notificationRequest } = await import("../../src/api/notification");
 
 const { useNotificationStore } = await import("../../src/stores/notification");
 const { useGeneralSettingsStore } = await import("../../src/stores/settings/general");

@@ -46,9 +46,10 @@ import { computed, ref } from "vue";
 import { ChevronRight, Play, UserMinus, UserPlus } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Badge } from "../../../components/ui/badge";
-import { useGameStore } from "../../../stores";
-import { formatDateFilter, timeToText } from "../../../shared/utils";
+import Badge from "../../../components/ui/badge/Badge.vue";
+import { useGameStore } from "../../../stores/game";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { timeToText } from "../../../shared/utils/base/format";
 import GameLogSessionsEvent from "./GameLogSessionsEvent.vue";
 import Location from "../../../components/Location.vue";
 

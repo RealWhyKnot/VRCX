@@ -4,7 +4,10 @@ import { useRouter } from "vue-router";
 
 import { buildGameLogSessions } from "../../views/GameLog/sessions/build-game-log-sessions";
 
-import { compareGameLogRows, findUserByDisplayName, formatSeconds, gameLogSearchFilter, getGroupName } from "../../shared/utils";
+import { compareGameLogRows, gameLogSearchFilter } from "../../shared/utils/game-log";
+import { findUserByDisplayName } from "../../shared/utils/user";
+import { formatSeconds } from "../../shared/utils/base/format";
+import { getGroupName } from "../../shared/utils/group";
 import { createMediaParsers } from "./media-parsers";
 import { createNowPlayingSpecHandler } from "./now-playing-spec";
 import { database } from "../../services/database";

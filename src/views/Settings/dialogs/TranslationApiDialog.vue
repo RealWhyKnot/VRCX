@@ -129,19 +129,33 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
 import { reactive, ref, watch } from "vue";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { Button } from "@/components/ui/button";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { getLanguageName, languageCodes } from "../../../localization";
-import { openExternalLink } from "../../../shared/utils";
-import { useAdvancedSettingsStore } from "../../../stores";
+import { getLanguageName } from "../../../localization";
+import { languageCodes } from "../../../localization/locales";
+import { openExternalLink } from "../../../shared/utils/app-actions";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
 
 const advancedSettingsStore = useAdvancedSettingsStore();
 

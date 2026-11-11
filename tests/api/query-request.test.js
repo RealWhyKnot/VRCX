@@ -5,10 +5,12 @@ const mockGetUser = vi.fn();
 const mockGetWorlds = vi.fn();
 const mockGetGroupCalendar = vi.fn();
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/client", () => ({
   queryClient: {
     invalidateQueries: vi.fn().mockResolvedValue(undefined),
   },
+}));
+vi.mock("../../src/queries/policies", () => ({
   entityQueryPolicies: {
     user: {
       staleTime: 20000,
@@ -143,7 +145,11 @@ vi.mock("../../src/queries", () => ({
       refetchOnWindowFocus: false,
     },
   },
+}));
+vi.mock("../../src/queries/entity-cache", () => ({
   fetchWithEntityPolicy: (...args) => mockFetchWithEntityPolicy(...args),
+}));
+vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
     user: (userId) => ["user", userId],
     avatars: (params) => ["avatar", "list", params],

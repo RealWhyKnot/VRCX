@@ -2,19 +2,19 @@ import { nextTick } from "vue";
 import { toast } from "vue-sonner";
 import { i18n } from "../plugins/i18n";
 
-import {
-  createDefaultWorldRef,
-  evictMapCache,
-  getAvailablePlatforms,
-  getBundleDateSize,
-  isRealInstance,
-  parseLocation,
-  sanitizeEntityJson,
-} from "../shared/utils";
+import { createDefaultWorldRef } from "../shared/utils/world-transforms";
+import { evictMapCache } from "../shared/utils/cache-utils";
+import { getAvailablePlatforms } from "../shared/utils/platform-utils";
+import { getBundleDateSize } from "./cache-coordinator";
+import { isRealInstance } from "../shared/utils/instance";
+import { parseLocation } from "../shared/utils/location-parser";
+import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
 import { getWorldMemo } from "./memo-coordinator";
-import { instanceRequest, queryRequest, worldRequest } from "../api";
+import instanceRequest from "../api/instance";
+import queryRequest from "../api/query-request";
+import worldRequest from "../api/world";
 import { database } from "../services/database";
-import { patchWorldFromEvent } from "../queries";
+import { patchWorldFromEvent } from "../queries/entity-cache";
 import { processBulk } from "../services/request";
 import { applyFavorite } from "./favorite-coordinator";
 import { useFavoriteStore } from "../stores/favorite";

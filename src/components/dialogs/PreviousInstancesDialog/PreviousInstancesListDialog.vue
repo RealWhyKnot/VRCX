@@ -29,14 +29,25 @@
 defineOptions({ name: "PreviousInstancesListDialog" });
 
 import { computed, ref, watch } from "vue";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InputGroupField } from "@/components/ui/input-group";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useInstanceStore, useLaunchStore, useModalStore, useSearchStore, useUiStore, useUserStore, useVrcxStore } from "../../../stores";
-import { compareByCreatedAt, localeIncludes, parseLocation, removeFromArray, timeToText } from "../../../shared/utils";
-import { DataTableLayout } from "../../ui/data-table";
+import { useInstanceStore } from "../../../stores/instance";
+import { useLaunchStore } from "../../../stores/launch";
+import { useModalStore } from "../../../stores/modal";
+import { useSearchStore } from "../../../stores/search";
+import { useUiStore } from "../../../stores/ui";
+import { useUserStore } from "../../../stores/user";
+import { useVrcxStore } from "../../../stores/vrcx";
+import { compareByCreatedAt } from "../../../shared/utils/compare";
+import { localeIncludes } from "../../../shared/utils/base/string";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { removeFromArray } from "../../../shared/utils/base/array";
+import { timeToText } from "../../../shared/utils/base/format";
+import DataTableLayout from "../../ui/data-table/DataTableLayout.vue";
 import { createPreviousInstancesColumns } from "./previous-instances-columns.jsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";

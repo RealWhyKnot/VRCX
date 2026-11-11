@@ -17,13 +17,18 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useGalleryStore, useNotificationStore } from "../../../stores";
-import { notificationRequest } from "../../../api";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useNotificationStore } from "../../../stores/notification";
+import notificationRequest from "../../../api/notification";
 
 const { t } = useI18n();
 

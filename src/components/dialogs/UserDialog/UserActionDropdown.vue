@@ -259,26 +259,26 @@ import {
   X,
   XCircle,
 } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { useGameStore, useLocationStore, useUserStore } from "../../../stores";
+import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuSub from "../../ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuShortcut from "../../ui/dropdown-menu/DropdownMenuShortcut.vue";
+import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
+import { useGameStore } from "../../../stores/game";
+import { useLocationStore } from "../../../stores/location";
+import { useUserStore } from "../../../stores/user";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { isActionRecent } from "../../../composables/use-recent-actions";
-import { invertHexColor } from "@/shared/utils";
+import { invertHexColor } from "@/shared/utils/user";
 
 const props = defineProps({
   userDialogCommand: {

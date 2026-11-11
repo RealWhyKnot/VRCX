@@ -1,14 +1,20 @@
 import { reactive } from "vue";
 import { toast } from "vue-sonner";
 
-import { useFriendStore, useGalleryStore, useInstanceStore, useNotificationStore, useSharedFeedStore, useUiStore, useUserStore } from "../stores";
+import { useFriendStore } from "../stores/friend";
+import { useGalleryStore } from "../stores/gallery";
+import { useInstanceStore } from "../stores/instance";
+import { useNotificationStore } from "../stores/notification";
+import { useSharedFeedStore } from "../stores/shared-feed";
+import { useUiStore } from "../stores/ui";
+import { useUserStore } from "../stores/user";
 import { applyUser, applyCurrentUser } from "../coordinators/user-coordinator";
 import { onGroupLeft, applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
 import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-relationship-coordinator";
-import { parseLocation } from "../shared/utils";
+import { parseLocation } from "../shared/utils/location-parser";
 import { debounce } from "../shared/utils/common";
 import { AppDebug } from "./app-config";
-import { groupRequest } from "../api";
+import groupRequest from "../api/group";
 import { request } from "./request";
 import { runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { runSetCurrentUserLocationFlow } from "../coordinators/location-coordinator";

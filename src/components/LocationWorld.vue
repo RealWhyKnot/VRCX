@@ -27,10 +27,13 @@ import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useInstanceStore, useLaunchStore } from "../stores";
+import { useInstanceStore } from "../stores/instance";
+import { useLaunchStore } from "../stores/launch";
 import { showGroupDialog } from "../coordinators/group-coordinator";
-import { formatDateFilter, getGroupName, parseLocation } from "../shared/utils";
-import { accessTypeLocaleKeyMap } from "../shared/constants";
+import { formatDateFilter } from "../coordinators/date-coordinator";
+import { getGroupName } from "../shared/utils/group";
+import { parseLocation } from "../shared/utils/location-parser";
+import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
 import { cn } from "@/lib/utils";
 
 const { t } = useI18n();

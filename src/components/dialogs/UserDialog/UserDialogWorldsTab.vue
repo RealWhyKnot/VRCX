@@ -70,21 +70,28 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { Image, RefreshCw } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Spinner } from "@/components/ui/spinner";
-import { Input } from "@/components/ui/input";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import Input from "@/components/ui/input/Input.vue";
 import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useUserStore, useWorldStore } from "../../../stores";
+import { useUserStore } from "../../../stores/user";
+import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { userDialogWorldOrderOptions, userDialogWorldSortingOptions } from "../../../shared/constants/";
-import { queryRequest } from "../../../api";
+import { userDialogWorldOrderOptions, userDialogWorldSortingOptions } from "../../../shared/constants/user";
+import queryRequest from "../../../api/query-request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 
 const { t } = useI18n();

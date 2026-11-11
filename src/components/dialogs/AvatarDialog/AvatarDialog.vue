@@ -553,31 +553,48 @@ import {
   User,
   XCircle,
 } from "lucide-vue-next";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import Carousel from "@/components/ui/carousel/Carousel.vue";
+import CarouselContent from "@/components/ui/carousel/CarouselContent.vue";
+import CarouselItem from "@/components/ui/carousel/CarouselItem.vue";
+import CarouselNext from "@/components/ui/carousel/CarouselNext.vue";
+import CarouselPrevious from "@/components/ui/carousel/CarouselPrevious.vue";
 import { computed, nextTick, ref, watch } from "vue";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { TabsUnderline } from "@/components/ui/tabs";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useAuthStore, useAvatarStore, useFavoriteStore, useGalleryStore, useGameStore, useModalStore, useUiStore, useUserStore } from "../../../stores";
-import { commaNumber, compareUnityVersion, copyToClipboard, formatDateFilter, openFolderGeneric, timeAgo, timeToText } from "../../../shared/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { Badge } from "../../ui/badge";
-import { avatarRequest, marketplaceRequest, miscRequest } from "../../../api";
+import { useAuthStore } from "../../../stores/auth";
+import { useAvatarStore } from "../../../stores/avatar";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGameStore } from "../../../stores/game";
+import { useModalStore } from "../../../stores/modal";
+import { useUiStore } from "../../../stores/ui";
+import { useUserStore } from "../../../stores/user";
+import { commaNumber } from "../../../shared/utils/base/string";
+import { compareUnityVersion } from "../../../shared/utils/avatar";
+import { copyToClipboard, openFolderGeneric } from "../../../shared/utils/app-actions";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { timeAgo, timeToText } from "../../../shared/utils/base/format";
+import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuSub from "../../ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
+import Badge from "../../ui/badge/Badge.vue";
+import avatarRequest from "../../../api/avatar";
+import marketplaceRequest from "../../../api/marketplace";
+import miscRequest from "../../../api/misc";
 import { database } from "../../../services/database";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 import { handleImageUploadInput, resizeImageToFitLimits } from "../../../coordinators/image-upload-coordinator";

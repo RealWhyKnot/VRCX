@@ -1,6 +1,6 @@
 import type { FriendStatus, GetFriends, LimitedUserFriend, Notification, Success } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { queryClient } from "../queries";
+import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
 import { applyUser } from "../coordinators/user-coordinator";

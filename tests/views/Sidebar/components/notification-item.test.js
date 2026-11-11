@@ -49,13 +49,25 @@ vi.mock("pinia", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/notification", () => ({
   useNotificationStore: () => mocks.notificationStore,
+}));
+vi.mock("../../../../src/stores/user", () => ({
   useUserStore: () => mocks.userStore,
+}));
+vi.mock("../../../../src/stores/friend", () => ({
   useFriendStore: () => mocks.friendStore,
+}));
+vi.mock("../../../../src/stores/group", () => ({
   useGroupStore: () => mocks.groupStore,
+}));
+vi.mock("../../../../src/stores/location", () => ({
   useLocationStore: () => mocks.locationStore,
+}));
+vi.mock("../../../../src/stores/game", () => ({
   useGameStore: () => mocks.gameStore,
+}));
+vi.mock("../../../../src/stores/instance", () => ({
   useInstanceStore: () => mocks.instanceStore,
 }));
 
@@ -67,8 +79,10 @@ vi.mock("../../../../src/coordinators/group-coordinator", () => ({
   showGroupDialog: (...args) => mocks.showGroupDialog(...args),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/invite", () => ({
   checkCanInvite: vi.fn(() => true),
+}));
+vi.mock("../../../../src/shared/utils/user", () => ({
   userImage: vi.fn(() => "https://example.com/avatar.png"),
 }));
 
@@ -87,47 +101,63 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/item", () => ({
-  Item: { template: '<div data-testid="item"><slot /></div>' },
-  ItemMedia: { template: '<div data-testid="item-media"><slot /></div>' },
-  ItemContent: { template: '<div data-testid="item-content"><slot /></div>' },
-  ItemTitle: { template: '<div data-testid="item-title"><slot /></div>' },
-  ItemDescription: {
+vi.mock("@/components/ui/item/Item.vue", () => ({
+  default: { template: '<div data-testid="item"><slot /></div>' },
+}));
+vi.mock("@/components/ui/item/ItemMedia.vue", () => ({
+  default: { template: '<div data-testid="item-media"><slot /></div>' },
+}));
+vi.mock("@/components/ui/item/ItemContent.vue", () => ({
+  default: { template: '<div data-testid="item-content"><slot /></div>' },
+}));
+vi.mock("@/components/ui/item/ItemTitle.vue", () => ({
+  default: { template: '<div data-testid="item-title"><slot /></div>' },
+}));
+vi.mock("@/components/ui/item/ItemDescription.vue", () => ({
+  default: {
     template: '<div data-testid="item-description"><slot /></div>',
   },
 }));
 
-vi.mock("@/components/ui/avatar", () => ({
-  Avatar: { template: '<div data-testid="avatar"><slot /></div>' },
-  AvatarImage: {
+vi.mock("@/components/ui/avatar/Avatar.vue", () => ({
+  default: { template: '<div data-testid="avatar"><slot /></div>' },
+}));
+vi.mock("@/components/ui/avatar/AvatarImage.vue", () => ({
+  default: {
     props: ["src"],
     template: '<img data-testid="avatar-image" :src="src" />',
   },
-  AvatarFallback: {
+}));
+vi.mock("@/components/ui/avatar/AvatarFallback.vue", () => ({
+  default: {
     template: '<span data-testid="avatar-fallback"><slot /></span>',
   },
 }));
 
-vi.mock("@/components/ui/hover-card", () => ({
-  HoverCard: { template: '<div data-testid="hover-card"><slot /></div>' },
-  HoverCardTrigger: {
+vi.mock("@/components/ui/hover-card/HoverCard.vue", () => ({
+  default: { template: '<div data-testid="hover-card"><slot /></div>' },
+}));
+vi.mock("@/components/ui/hover-card/HoverCardTrigger.vue", () => ({
+  default: {
     template: '<div data-testid="hover-trigger"><slot /></div>',
   },
-  HoverCardContent: {
+}));
+vi.mock("@/components/ui/hover-card/HoverCardContent.vue", () => ({
+  default: {
     template: '<div data-testid="hover-content"><slot /></div>',
   },
 }));
 
-vi.mock("@/components/ui/badge", () => ({
-  Badge: { template: '<span data-testid="badge"><slot /></span>' },
+vi.mock("@/components/ui/badge/Badge.vue", () => ({
+  default: { template: '<span data-testid="badge"><slot /></span>' },
 }));
 
-vi.mock("@/components/ui/separator", () => ({
-  Separator: { template: '<hr data-testid="separator" />' },
+vi.mock("@/components/ui/separator/Separator.vue", () => ({
+  default: { template: '<hr data-testid="separator" />' },
 }));
 
-vi.mock("@/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: '<span data-testid="tooltip"><slot /></span>' },
+vi.mock("@/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: '<span data-testid="tooltip"><slot /></span>' },
 }));
 
 vi.mock("../../../../src/components/Location.vue", () => ({

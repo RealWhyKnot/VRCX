@@ -87,10 +87,14 @@ vi.mock("../../../../src/services/request", () => ({
   $throw: vi.fn(),
   failedGetRequests: new Map(),
 }));
-vi.mock("../../../../src/api", () => ({
-  groupRequest: {},
-  userRequest: {},
-  queryRequest: {
+vi.mock("../../../../src/api/group", () => ({
+  default: {},
+}));
+vi.mock("../../../../src/api/user", () => ({
+  default: {},
+}));
+vi.mock("../../../../src/api/query-request", () => ({
+  default: {
     fetch: vi.fn(),
   },
 }));
@@ -101,7 +105,7 @@ vi.mock("worker-timers", () => ({
 }));
 
 import { useGroupModerationData } from "../../../../src/components/dialogs/GroupDialog/use-group-moderation-data";
-import { queryRequest } from "../../../../src/api";
+import queryRequest from "../../../../src/api/query-request";
 
 function createTables() {
   return {

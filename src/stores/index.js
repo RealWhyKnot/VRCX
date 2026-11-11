@@ -1,6 +1,6 @@
 import { createPinia } from "pinia";
 
-import { getSentry, isSentryOptedIn } from "../plugins";
+import { getSentry, isSentryOptedIn } from "../plugins/sentry";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useActivityStore } from "./activity";
 import { useAppearanceSettingsStore } from "./settings/appearance";
@@ -154,46 +154,3 @@ export function createGlobalStores() {
     quickSearch: useQuickSearchStore(),
   };
 }
-
-export {
-  useAuthStore,
-  useAvatarStore,
-  useAvatarProviderStore,
-  useExternalLinkStore,
-  useFavoriteStore,
-  useFeedStore,
-  useFriendStore,
-  useGalleryStore,
-  useGameStore,
-  useGameLogStore,
-  useGroupStore,
-  useInstanceStore,
-  useInviteStore,
-  useLaunchStore,
-  useLocationStore,
-  useModerationStore,
-  useNotificationStore,
-  usePhotonStore,
-  useSearchStore,
-  useChartsStore,
-  useDashboardStore,
-  useAdvancedSettingsStore,
-  useActivityStore,
-  useAppearanceSettingsStore,
-  useDiscordPresenceSettingsStore,
-  useGeneralSettingsStore,
-  useNotificationsSettingsStore,
-  useWristOverlaySettingsStore,
-  useToolsStore,
-  useUiStore,
-  useUserStore,
-  useVrStore,
-  useVrcxStore,
-  useVRCXUpdaterStore,
-  useWorldStore,
-  useSharedFeedStore,
-  useUpdateLoopStore,
-  useVrcStatusStore,
-  useModalStore,
-  useQuickSearchStore,
-};

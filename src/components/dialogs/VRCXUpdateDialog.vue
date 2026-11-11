@@ -70,18 +70,34 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import Tabs from "@/components/ui/tabs/Tabs.vue";
+import TabsContent from "@/components/ui/tabs/TabsContent.vue";
+import TabsList from "@/components/ui/tabs/TabsList.vue";
+import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
+import Alert from "@/components/ui/alert/Alert.vue";
+import AlertDescription from "@/components/ui/alert/AlertDescription.vue";
+import AlertTitle from "@/components/ui/alert/AlertTitle.vue";
 import { AlertCircle } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import Button from "@/components/ui/button/Button.vue";
+import Progress from "@/components/ui/progress/Progress.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { useVRCXUpdaterStore } from "../../stores";
+import Select from "../ui/select/Select.vue";
+import SelectContent from "../ui/select/SelectContent.vue";
+import SelectItem from "../ui/select/SelectItem.vue";
+import SelectTrigger from "../ui/select/SelectTrigger.vue";
+import SelectValue from "../ui/select/SelectValue.vue";
+import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
 
 const VRCXUpdaterStore = useVRCXUpdaterStore();
 

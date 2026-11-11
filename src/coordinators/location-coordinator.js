@@ -1,4 +1,7 @@
-import { getGroupName, getWorldName, isRealInstance, parseLocation } from "../shared/utils";
+import { getGroupName } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
+import { isRealInstance } from "../shared/utils/instance";
+import { parseLocation } from "../shared/utils/location-parser";
 import { database } from "../services/database";
 import { useAdvancedSettingsStore } from "../stores/settings/advanced";
 import { useFriendStore } from "../stores/friend";

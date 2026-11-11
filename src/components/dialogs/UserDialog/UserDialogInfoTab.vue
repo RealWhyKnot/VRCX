@@ -362,40 +362,37 @@
 
 <script setup>
 import { Copy, Info, Languages, Pencil, Trash2, User } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
 import { ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import {
-  copyToClipboard,
-  formatDateFilter,
-  getFaviconUrl,
-  isFriendOnline,
-  isRealInstance,
-  openExternalLink,
-  replaceBioSymbols,
-  timeToText,
-  userOnlineForTimestamp,
-  timeAgo,
-} from "../../../shared/utils";
+import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { getFaviconUrl } from "../../../shared/utils/url-utils";
+import { isFriendOnline } from "../../../shared/utils/friend";
+import { isRealInstance } from "../../../shared/utils/instance";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
+import { timeToText, timeAgo } from "../../../shared/utils/base/format";
+import { userOnlineForTimestamp } from "../../../shared/utils/user";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { refreshInstancePlayerCount } from "../../../coordinators/instance-coordinator";
-import {
-  useAdvancedSettingsStore,
-  useAppearanceSettingsStore,
-  useInstanceStore,
-  useLocationStore,
-  useModalStore,
-  useUserStore,
-  useGalleryStore,
-} from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useInstanceStore } from "../../../stores/instance";
+import { useLocationStore } from "../../../stores/location";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import { useGalleryStore } from "../../../stores/gallery";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { queryRequest, userRequest } from "../../../api";
+import queryRequest from "../../../api/query-request";
+import userRequest from "../../../api/user";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

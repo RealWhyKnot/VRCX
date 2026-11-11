@@ -83,9 +83,12 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { Button } from "@/components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { useDashboardStore, useModalStore } from "@/stores";
+import Button from "@/components/ui/button/Button.vue";
+import ResizableHandle from "@/components/ui/resizable/ResizableHandle.vue";
+import ResizablePanel from "@/components/ui/resizable/ResizablePanel.vue";
+import ResizablePanelGroup from "@/components/ui/resizable/ResizablePanelGroup.vue";
+import { useDashboardStore } from "@/stores/dashboard";
+import { useModalStore } from "@/stores/modal";
 
 import DashboardEditToolbar from "./components/DashboardEditToolbar.vue";
 import DashboardRow from "./components/DashboardRow.vue";

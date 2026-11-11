@@ -83,7 +83,7 @@ vi.mock("../../../../src/services/watch-state", () => ({
 }));
 
 import UserDialogAvatarsTab from "../../../../src/components/dialogs/UserDialog/UserDialogAvatarsTab.vue";
-import { useUserStore } from "../../../../src/stores";
+import { useUserStore } from "../../../../src/stores/user";
 
 const MOCK_AVATARS = [
   {

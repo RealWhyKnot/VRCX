@@ -4,7 +4,7 @@ import { FlexRender } from "@tanstack/vue-table";
 import { GripVertical } from "lucide-vue-next";
 import { useSortable } from "@dnd-kit/vue/sortable";
 
-import { TableHead } from "../table";
+import TableHead from "../table/TableHead.vue";
 
 const props = defineProps({
   header: {

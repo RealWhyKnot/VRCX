@@ -28,14 +28,18 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
 import { defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { openExternalLink } from "../../../shared/utils";
-import { useVRCXUpdaterStore } from "../../../stores";
+import { openExternalLink } from "../../../shared/utils/app-actions";
+import { useVRCXUpdaterStore } from "../../../stores/vrcx-updater";
 
 const VueShowdown = defineAsyncComponent(() => import("vue-showdown").then((module) => module.VueShowdown));
 

@@ -318,30 +318,33 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Ellipsis, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { InputGroupField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { useAppearanceSettingsStore, useFavoriteStore, useModalStore } from "../../stores";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
-import { favoriteRequest, worldRequest } from "../../api";
-import { debounce } from "../../shared/utils";
+import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "../../components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "../../components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../components/ui/dropdown-menu/DropdownMenuItem.vue";
+import { DropdownMenuPortal } from "reka-ui";
+import DropdownMenuSub from "../../components/ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "../../components/ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "../../components/ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useFavoriteStore } from "../../stores/favorite";
+import { useModalStore } from "../../stores/modal";
+import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
+import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
+import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
+import favoriteRequest from "../../api/favorite";
+import worldRequest from "../../api/world";
+import { debounce } from "../../shared/utils/common";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";

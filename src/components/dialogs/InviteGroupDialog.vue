@@ -75,19 +75,26 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { Check as CheckIcon } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { hasGroupPermission } from "../../shared/utils";
+import { hasGroupPermission } from "../../shared/utils/group";
 import { useUserDisplay } from "../../composables/use-user-display";
-import { useFriendStore, useGroupStore, useModalStore } from "../../stores";
-import { groupRequest, queryRequest } from "../../api";
-import { VirtualCombobox } from "../ui/virtual-combobox";
+import { useFriendStore } from "../../stores/friend";
+import { useGroupStore } from "../../stores/group";
+import { useModalStore } from "../../stores/modal";
+import groupRequest from "../../api/group";
+import queryRequest from "../../api/query-request";
+import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { applyGroup } from "../../coordinators/group-coordinator";
 
 import configRepository from "../../services/config";

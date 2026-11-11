@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/file-utils", () => ({
   extractFileId: vi.fn(),
   extractFileVersion: vi.fn(),
 }));
@@ -9,7 +9,7 @@ vi.mock("../../src/shared/utils/notification-message", () => ({
   toNotificationText: vi.fn(),
 }));
 
-import { extractFileId, extractFileVersion } from "../../src/shared/utils";
+import { extractFileId, extractFileVersion } from "../../src/shared/utils/file-utils";
 import { getNotificationMessage, toNotificationText } from "../../src/shared/utils/notification-message";
 import { createOverlayDispatch } from "../../src/stores/notification/overlay-dispatch";
 

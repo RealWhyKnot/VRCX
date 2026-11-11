@@ -13,15 +13,18 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { ref, watch } from "vue";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { database } from "../../../services/database";
-import { replaceBioSymbols } from "../../../shared/utils";
-import { useUserStore } from "../../../stores";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
+import { useUserStore } from "../../../stores/user";
 
 const { t } = useI18n();
 const { currentUser } = storeToRefs(useUserStore());

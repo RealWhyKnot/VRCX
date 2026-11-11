@@ -11,13 +11,15 @@
 defineOptions({ name: "PreviousInstancesInfoChart" });
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
 
 import dayjs from "dayjs";
 
-import { useAppearanceSettingsStore, useGameLogStore, useUserStore } from "../../../stores";
-import { timeToText } from "../../../shared/utils";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useGameLogStore } from "../../../stores/gameLog";
+import { useUserStore } from "../../../stores/user";
+import { timeToText } from "../../../shared/utils/base/format";
 
 import * as echarts from "echarts";
 import type { BarSeriesOption, EChartsOption, EChartsType, ECElementEvent, TooltipComponentFormatterCallbackParams } from "echarts";

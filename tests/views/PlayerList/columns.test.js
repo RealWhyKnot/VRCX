@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   onUnblockChatbox: vi.fn(),
 }));
 
-vi.mock("../../../src/plugins", () => ({
+vi.mock("../../../src/plugins/i18n", () => ({
   i18n: {
     global: {
       t: (key) => key,
@@ -17,18 +17,24 @@ vi.mock("../../../src/plugins", () => ({
   },
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/shared/utils/app-actions", () => ({
   openExternalLink: (...args) => mocks.openExternalLink(...args),
+}));
+vi.mock("../../../src/shared/utils/user", () => ({
   userImage: (...args) => mocks.userImage(...args),
-  getFaviconUrl: (...args) => mocks.getFaviconUrl(...args),
   statusClass: () => "status-online",
   languageClass: (lang) => `lang-${lang}`,
 }));
+vi.mock("../../../src/shared/utils/url-utils", () => ({
+  getFaviconUrl: (...args) => mocks.getFaviconUrl(...args),
+}));
 
 vi.mock("../../../src/components/Timer.vue", () => ({ default: "Timer" }));
-vi.mock("../../../src/components/ui/button", () => ({ Button: "Button" }));
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  TooltipWrapper: "TooltipWrapper",
+vi.mock("../../../src/components/ui/button/Button.vue", () => ({
+  default: "Button",
+}));
+vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: "TooltipWrapper",
 }));
 vi.mock("lucide-vue-next", () => ({
   ArrowUpDown: "ArrowUpDown",

@@ -70,17 +70,25 @@
 defineOptions({ name: "PreviousInstancesInfoDialog" });
 
 import { computed, nextTick, ref, watch } from "vue";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { BarChart3, List } from "lucide-vue-next";
 
-import { useGameLogStore, useInstanceStore, useSearchStore, useVrcxStore } from "../../../stores";
-import { compareByCreatedAt, localeIncludes, parseLocation, timeToText } from "../../../shared/utils";
-import { DataTableLayout } from "../../ui/data-table";
-import { InputGroupField } from "../../../components/ui/input-group";
-import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
-import { TooltipWrapper } from "../../../components/ui/tooltip";
+import { useGameLogStore } from "../../../stores/gameLog";
+import { useInstanceStore } from "../../../stores/instance";
+import { useSearchStore } from "../../../stores/search";
+import { useVrcxStore } from "../../../stores/vrcx";
+import { compareByCreatedAt } from "../../../shared/utils/compare";
+import { localeIncludes } from "../../../shared/utils/base/string";
+import { parseLocation } from "../../../shared/utils/location-parser";
+import { timeToText } from "../../../shared/utils/base/format";
+import DataTableLayout from "../../ui/data-table/DataTableLayout.vue";
+import InputGroupField from "../../ui/input-group/InputGroupField.vue";
+import ToggleGroup from "../../ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "../../ui/toggle-group/ToggleGroupItem.vue";
+import TooltipWrapper from "../../ui/tooltip/TooltipWrapper.vue";
 import { createColumns } from "./previous-instances-info-columns.jsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";

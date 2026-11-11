@@ -96,13 +96,23 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { ArrowUpDown, Ellipsis } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { InputGroupSearch } from "@/components/ui/input-group";
-import { Slider } from "@/components/ui/slider";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
+import Slider from "@/components/ui/slider/Slider.vue";
 import { useI18n } from "vue-i18n";
 
 defineProps({

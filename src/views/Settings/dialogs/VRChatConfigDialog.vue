@@ -129,23 +129,39 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import FieldSeparator from "@/components/ui/field/FieldSeparator.vue";
 import { computed, ref, watch } from "vue";
 import { FolderOpen, RefreshCw } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupAction } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupAction from "@/components/ui/input-group/InputGroupAction.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useAdvancedSettingsStore, useGameStore, useModalStore } from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useGameStore } from "../../../stores/game";
+import { useModalStore } from "../../../stores/modal";
 import { runSweepVRChatCacheFlow as sweepVRChatCache } from "../../../coordinators/game-coordinator";
-import { VRChatCameraResolutions, VRChatScreenshotResolutions } from "../../../shared/constants";
-import { getVRChatResolution, openExternalLink } from "../../../shared/utils";
+import { VRChatCameraResolutions, VRChatScreenshotResolutions } from "../../../shared/constants/settings";
+import { getVRChatResolution } from "../../../shared/utils/setting";
+import { openExternalLink } from "../../../shared/utils/app-actions";
 
 const { VRChatUsedCacheSize, VRChatTotalCacheSize, VRChatCacheSizeLoading } = storeToRefs(useGameStore());
 const { getVRChatCacheSize } = useGameStore();

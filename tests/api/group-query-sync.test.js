@@ -8,19 +8,23 @@ vi.mock("../../src/services/request", () => ({
   request: (...args) => mockRequest(...args),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/group", () => ({
   useGroupStore: () => ({
     applyGroup: (...args) => mockApplyGroup(...args),
   }),
+}));
+vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: { id: "usr_me" },
   }),
 }));
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/client", () => ({
   queryClient: {
     invalidateQueries: (...args) => mockInvalidateQueries(...args),
   },
+}));
+vi.mock("../../src/queries/policies", () => ({
   entityQueryPolicies: {
     user: {},
     avatar: {},

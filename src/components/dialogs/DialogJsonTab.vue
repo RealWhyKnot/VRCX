@@ -1,13 +1,13 @@
 <script setup>
 import { Download, RefreshCw } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
 import { storeToRefs } from "pinia";
 
 import VueJsonPretty from "vue-json-pretty";
 
-import { downloadAndSaveJson } from "../../shared/utils";
-import { useAppearanceSettingsStore } from "../../stores";
+import { downloadAndSaveJson } from "../../shared/utils/app-actions";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps({

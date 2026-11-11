@@ -1,7 +1,8 @@
 import { ref } from "vue";
 import { toast } from "vue-sonner";
 
-import { APP_CJK_FONT_PACK_CONFIG, APP_CJK_FONT_PACK_DEFAULT_KEY, APP_FONT_CONFIG, APP_FONT_DEFAULT_KEY, THEME_COLORS, THEME_CONFIG } from "../../constants";
+import { APP_CJK_FONT_PACK_CONFIG, APP_CJK_FONT_PACK_DEFAULT_KEY, APP_FONT_CONFIG, APP_FONT_DEFAULT_KEY } from "../../constants/fonts";
+import { THEME_COLORS, THEME_CONFIG } from "../../constants/themes";
 import { i18n } from "../../../plugins/i18n";
 import { router } from "../../../plugins/router";
 import { textToHex } from "./string";

@@ -111,18 +111,27 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { computed, ref } from "vue";
 import { Logs, Star, Table2 } from "lucide-vue-next";
-import { Toggle } from "@/components/ui/toggle";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import Toggle from "@/components/ui/toggle/Toggle.vue";
+import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useGameLogStore, useModalStore, useVrcxStore } from "../../stores";
-import { DataTableLayout } from "../../components/ui/data-table";
-import { InputGroupField } from "../../components/ui/input-group";
-import { TooltipWrapper } from "../../components/ui/tooltip";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useGameLogStore } from "../../stores/gameLog";
+import { useModalStore } from "../../stores/modal";
+import { useVrcxStore } from "../../stores/vrcx";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
+import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
+import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { createColumns } from "./columns.jsx";
 import { database } from "../../services/database";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";

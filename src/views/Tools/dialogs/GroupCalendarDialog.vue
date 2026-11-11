@@ -79,21 +79,26 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { ChevronDown } from "lucide-vue-next";
-import { InputGroupSearch } from "@/components/ui/input-group";
+import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { formatDateFilter, replaceBioSymbols } from "../../../shared/utils";
-import { Switch } from "../../../components/ui/switch";
-import { groupRequest, queryRequest } from "../../../api";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
+import Switch from "../../../components/ui/switch/Switch.vue";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
 import { processBulk } from "../../../services/request";
-import { useGroupStore } from "../../../stores";
+import { useGroupStore } from "../../../stores/group";
 import { showGroupDialog } from "@/coordinators/group-coordinator";
 
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";

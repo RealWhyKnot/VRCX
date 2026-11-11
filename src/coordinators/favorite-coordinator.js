@@ -10,12 +10,16 @@ import { useWorldStore } from "../stores/world";
 import { rebuildFavoriteSearchIndex } from "./search-index-coordinator";
 import { applyWorld } from "./world-coordinator";
 import { runUpdateFriendFlow } from "./friend-presence-coordinator";
-import { avatarRequest, favoriteRequest, queryRequest } from "../api";
+import avatarRequest from "../api/avatar";
+import favoriteRequest from "../api/favorite";
+import queryRequest from "../api/query-request";
 import { database } from "../services/database";
 import { i18n } from "../plugins/i18n";
 import { processBulk } from "../services/request";
 import { watchState } from "../services/watch-state";
-import { compareByName, createDefaultFavoriteCachedRef, removeFromArray, replaceReactiveObject } from "../shared/utils";
+import { compareByName } from "../shared/utils/compare";
+import { createDefaultFavoriteCachedRef } from "../shared/utils/entity-transforms";
+import { removeFromArray, replaceReactiveObject } from "../shared/utils/base/array";
 
 export function handleFavorite(args) {
   const userStore = useUserStore();

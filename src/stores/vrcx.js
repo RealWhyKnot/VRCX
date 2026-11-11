@@ -3,9 +3,11 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { DEFAULT_MAX_TABLE_SIZE, DEFAULT_SEARCH_LIMIT, SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN } from "../shared/constants";
-import { avatarRequest, queryRequest } from "../api";
-import { debounce, parseLocation } from "../shared/utils";
+import { DEFAULT_MAX_TABLE_SIZE, DEFAULT_SEARCH_LIMIT, SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN } from "../shared/constants/settings";
+import avatarRequest from "../api/avatar";
+import queryRequest from "../api/query-request";
+import { debounce } from "../shared/utils/common";
+import { parseLocation } from "../shared/utils/location-parser";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { refreshCustomScript } from "../shared/utils/base/ui";

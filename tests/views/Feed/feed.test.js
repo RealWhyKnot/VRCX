@@ -43,16 +43,20 @@ vi.mock("@internationalized/date", () => ({
   today: () => ({}),
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/feed", () => ({
   useFeedStore: () => ({
     feedTable: mocks.feedTable,
     feedTableData: mocks.feedTableData,
     feedTableLookup: mocks.feedTableLookup,
   }),
+}));
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     tablePageSizes: mocks.tablePageSizes,
     tablePageSize: mocks.tablePageSize,
   }),
+}));
+vi.mock("../../../src/stores/vrcx", () => ({
   useVrcxStore: () => ({
     maxTableSize: mocks.maxTableSize,
   }),
@@ -71,8 +75,8 @@ vi.mock("../../../src/views/Feed/columns.jsx", () => ({
   columns: [],
 }));
 
-vi.mock("../../../src/components/ui/data-table", () => ({
-  DataTableLayout: {
+vi.mock("../../../src/components/ui/data-table/DataTableLayout.vue", () => ({
+  default: {
     props: ["totalItems", "onPageSizeChange"],
     template:
       '<div data-testid="data-table-layout">' +
@@ -83,25 +87,29 @@ vi.mock("../../../src/components/ui/data-table", () => ({
   },
 }));
 
-vi.mock("../../../src/components/ui/button", () => ({
-  Button: {
+vi.mock("../../../src/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: "<button @click=\"$emit('click')\"><slot /></button>",
   },
 }));
 
-vi.mock("../../../src/components/ui/popover", () => ({
-  Popover: {
+vi.mock("../../../src/components/ui/popover/Popover.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template: "<div><slot /></div>",
   },
-  PopoverTrigger: { template: "<div><slot /></div>" },
-  PopoverContent: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("../../../src/components/ui/toggle-group", () => ({
-  ToggleGroup: {
+vi.mock("../../../src/components/ui/toggle-group/ToggleGroup.vue", () => ({
+  default: {
     emits: ["update:model-value"],
     template:
       '<div data-testid="toggle-group">' +
@@ -110,42 +118,44 @@ vi.mock("../../../src/components/ui/toggle-group", () => ({
       "<slot />" +
       "</div>",
   },
-  ToggleGroupItem: {
+}));
+vi.mock("../../../src/components/ui/toggle-group/ToggleGroupItem.vue", () => ({
+  default: {
     props: ["value"],
     template: '<button :data-value="value"><slot /></button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/toggle", () => ({
-  Toggle: {
+vi.mock("../../../src/components/ui/toggle/Toggle.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<button data-testid="vip-toggle" @click="$emit(\'update:modelValue\', !modelValue)"><slot /></button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/input-group", () => ({
-  InputGroupField: {
+vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue", "change", "keyup.enter"],
     template: '<input data-testid="feed-search" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @change="$emit(\'change\')" />',
   },
 }));
 
-vi.mock("../../../src/components/ui/range-calendar", () => ({
-  RangeCalendar: {
+vi.mock("../../../src/components/ui/range-calendar/RangeCalendar.vue", () => ({
+  default: {
     emits: ["update:modelValue"],
     template:
       '<button data-testid="set-date-range" @click="$emit(\'update:modelValue\', { start: { year: 2026, month: 3, day: 1 }, end: { year: 2026, month: 3, day: 2 } })">set-date-range</button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/badge", () => ({
-  Badge: { template: "<span><slot /></span>" },
+vi.mock("../../../src/components/ui/badge/Badge.vue", () => ({
+  default: { template: "<span><slot /></span>" },
 }));
 
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: "<div><slot /></div>" },
+vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
 vi.mock("lucide-vue-next", () => ({

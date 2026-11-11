@@ -8,17 +8,19 @@ vi.mock("../../src/services/request", () => ({
   request: (...args) => mockRequest(...args),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: { id: "usr_me" },
   }),
 }));
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/client", () => ({
   queryClient: {
     invalidateQueries: (...args) => mockInvalidateQueries(...args),
     removeQueries: (...args) => mockRemoveQueries(...args),
   },
+}));
+vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
     galleryFiles: (params) => ["gallery", "files", params],
     prints: (params) => ["gallery", "prints", params],

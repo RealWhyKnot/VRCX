@@ -263,26 +263,42 @@
 </template>
 
 <script setup>
-import {
-  ContextMenu,
-  ContextMenuCheckboxItem,
-  ContextMenuContent,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuCheckboxItem from "@/components/ui/context-menu/ContextMenuCheckboxItem.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuSub from "@/components/ui/context-menu/ContextMenuSub.vue";
+import ContextMenuSubContent from "@/components/ui/context-menu/ContextMenuSubContent.vue";
+import ContextMenuSubTrigger from "@/components/ui/context-menu/ContextMenuSubTrigger.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from "@/components/ui/number-field";
-import { useGameLogStore, useGameStore, useGeneralSettingsStore, useUserStore, useVrcStatusStore, useVrcxStore } from "@/stores";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { formatSeconds, timeToText } from "@/shared/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import NumberField from "@/components/ui/number-field/NumberField.vue";
+import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
+import NumberFieldDecrement from "@/components/ui/number-field/NumberFieldDecrement.vue";
+import NumberFieldIncrement from "@/components/ui/number-field/NumberFieldIncrement.vue";
+import NumberFieldInput from "@/components/ui/number-field/NumberFieldInput.vue";
+import { useGameLogStore } from "@/stores/gameLog";
+import { useGameStore } from "@/stores/game";
+import { useGeneralSettingsStore } from "@/stores/settings/general";
+import { useUserStore } from "@/stores/user";
+import { useVrcStatusStore } from "@/stores/vrc-status";
+import { useVrcxStore } from "@/stores/vrcx";
+import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
+import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
+import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
+import { formatSeconds, timeToText } from "@/shared/utils/base/format";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { useIntervalFn, useNow } from "@vueuse/core";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { useI18n } from "vue-i18n";
 import { openExternalLink } from "@/shared/utils/app-actions";
 import { wsState } from "@/services/websocket";

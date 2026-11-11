@@ -8,7 +8,7 @@ vi.mock("pinia", () => ({
   storeToRefs: (store) => store,
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/search", () => ({
   useSearchStore: () => ({
     searchText: mocks.searchText,
     moreSearchUser: (...args) => mocks.moreSearchUser(...args),

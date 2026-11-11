@@ -64,19 +64,26 @@
 </template>
 
 <script setup>
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import { Ban, Check, RefreshCw, Users, X } from "lucide-vue-next";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Tabs from "@/components/ui/tabs/Tabs.vue";
+import TabsList from "@/components/ui/tabs/TabsList.vue";
+import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
 import { ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { groupRequest } from "../../../api";
+import groupRequest from "../../../api/group";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
-import { useModalStore } from "../../../stores";
+import { useModalStore } from "../../../stores/modal";
 
 const props = defineProps({
   isGroupInvitesDialogVisible: {

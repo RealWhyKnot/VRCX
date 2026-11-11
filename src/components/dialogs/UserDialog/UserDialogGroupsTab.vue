@@ -274,19 +274,28 @@
 
 <script setup>
 import { ArrowDown, ArrowUp, DownloadIcon, Eye, LogOut, Plus, RefreshCw, Tag, ToolCase, Trash2, Users } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { computed, nextTick, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import UserDialogGroupCard from "./UserDialogGroupCard.vue";
-import { useAuthStore, useGroupStore, useUiStore, useUserStore } from "../../../stores";
+import { useAuthStore } from "../../../stores/auth";
+import { useGroupStore } from "../../../stores/group";
+import { useUiStore } from "../../../stores/ui";
+import { useUserStore } from "../../../stores/user";
 import {
   showGroupDialog,
   applyGroup,
@@ -298,10 +307,10 @@ import {
   setGroupVisibility,
   handleGroupList,
 } from "../../../coordinators/group-coordinator";
-import { compareByMemberCount, compareByName } from "../../../shared/utils";
-import { groupRequest } from "../../../api";
+import { compareByMemberCount, compareByName } from "../../../shared/utils/compare";
+import groupRequest from "../../../api/group";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
-import { userDialogGroupSortingOptions } from "../../../shared/constants";
+import { userDialogGroupSortingOptions } from "../../../shared/constants/user";
 import { moveGroupInOrder, normalizeGroupOrder } from "../../../shared/utils/group-order";
 
 const { t } = useI18n();

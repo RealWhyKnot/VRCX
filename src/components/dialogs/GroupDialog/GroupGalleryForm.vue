@@ -25,9 +25,10 @@
 </template>
 
 <script setup>
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { useI18n } from "vue-i18n";
 
 defineProps({

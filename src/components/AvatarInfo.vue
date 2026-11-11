@@ -16,7 +16,7 @@ import { ref, watch } from "vue";
 import { Lock } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { TooltipWrapper } from "./ui/tooltip";
+import TooltipWrapper from "./ui/tooltip/TooltipWrapper.vue";
 import { getAvatarName, showAvatarAuthorDialog } from "../coordinators/avatar-coordinator";
 
 const { t } = useI18n();

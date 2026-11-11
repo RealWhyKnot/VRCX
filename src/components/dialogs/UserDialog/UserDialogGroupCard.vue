@@ -31,7 +31,9 @@ import { Eye, Tag, Users } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 

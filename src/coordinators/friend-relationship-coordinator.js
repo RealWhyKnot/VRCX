@@ -1,8 +1,9 @@
 import { i18n } from "../plugins/i18n";
 
 import { database } from "../services/database";
-import { friendRequest, userRequest } from "../api";
-import { getNameColour } from "../shared/utils";
+import friendRequest from "../api/friend";
+import userRequest from "../api/user";
+import { getNameColour } from "../shared/utils/user";
 import { handleFavoriteDelete } from "./favorite-coordinator";
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 import { useFriendStore } from "../stores/friend";

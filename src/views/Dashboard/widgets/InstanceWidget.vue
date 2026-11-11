@@ -89,16 +89,23 @@ import { Apple, IdCard, Monitor, Settings, Smartphone } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useInstanceStore, useLocationStore } from "@/stores";
+import { useInstanceStore } from "@/stores/instance";
+import { useLocationStore } from "@/stores/location";
 import { languageClass, statusClass } from "@/shared/utils/user";
 import { showUserDialog, lookupUser } from "@/coordinators/user-coordinator";
 import { displayLocation } from "@/shared/utils/location-parser";
 
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Button from "@/components/ui/button/Button.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import Timer from "@/components/Timer.vue";
 import WidgetHeader from "./WidgetHeader.vue";
-import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import Table from "@/components/ui/table/Table.vue";
+import TableBody from "@/components/ui/table/TableBody.vue";
+import TableRow from "@/components/ui/table/TableRow.vue";
+import TableCell from "@/components/ui/table/TableCell.vue";
 
 const ALL_COLUMNS = ["icon", "displayName", "rank", "timer", "platform", "language", "status"];
 const DEFAULT_COLUMNS = ["icon", "displayName", "timer"];

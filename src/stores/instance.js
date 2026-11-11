@@ -3,28 +3,24 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import {
-  checkVRChatCache,
-  compareByDisplayName,
-  compareById,
-  compareByLocationAt,
-  computeDisabledContentSettings,
-  createDefaultInstanceRef,
-  debounce,
-  displayLocation,
-  evictMapCache,
-  formatFileSize,
-  getAvailablePlatforms,
-  getBundleDateSize,
-  getGroupName,
-  getWorldName,
-  hasGroupPermission,
-  isRealInstance,
-  parseLocation,
-  replaceBioSymbols,
-} from "../shared/utils";
-import { instanceRequest, queryRequest, userRequest, worldRequest } from "../api";
-import { accessTypeLocaleKeyMap, instanceContentSettings } from "../shared/constants";
+import { checkVRChatCache, getBundleDateSize } from "../coordinators/cache-coordinator";
+import { compareByDisplayName, compareById, compareByLocationAt } from "../shared/utils/compare";
+import { computeDisabledContentSettings, createDefaultInstanceRef } from "../shared/utils/instance-transforms";
+import { debounce } from "../shared/utils/common";
+import { displayLocation, parseLocation } from "../shared/utils/location-parser";
+import { evictMapCache } from "../shared/utils/cache-utils";
+import { formatFileSize } from "../shared/utils/base/format";
+import { getAvailablePlatforms } from "../shared/utils/platform-utils";
+import { getGroupName, hasGroupPermission } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
+import { isRealInstance } from "../shared/utils/instance";
+import { replaceBioSymbols } from "../shared/utils/base/string";
+import instanceRequest from "../api/instance";
+import queryRequest from "../api/query-request";
+import userRequest from "../api/user";
+import worldRequest from "../api/world";
+import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
+import { instanceContentSettings } from "../shared/constants/instance";
 import { database } from "../services/database";
 import { resolveRef } from "../shared/utils/resolve-ref";
 import { useAppearanceSettingsStore } from "./settings/appearance";

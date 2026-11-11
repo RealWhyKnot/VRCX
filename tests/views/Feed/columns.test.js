@@ -8,7 +8,7 @@ vi.mock("../../../src/plugins/i18n", () => ({
   },
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/gallery", () => ({
   useGalleryStore: () => ({
     showFullscreenImageDialog: vi.fn(),
   }),
@@ -18,10 +18,16 @@ vi.mock("../../../src/coordinators/user-coordinator", () => ({
   showUserDialog: vi.fn(),
 }));
 
-vi.mock("../../../src/shared/utils", async () => ({
+vi.mock("../../../src/shared/utils/base/string", async () => ({
   replaceBioSymbols: (await import("../../../src/shared/utils/base/string")).replaceBioSymbols,
+}));
+vi.mock("../../../src/coordinators/date-coordinator", async () => ({
   formatDateFilter: (value) => value,
+}));
+vi.mock("../../../src/shared/utils/user", async () => ({
   statusClass: (value) => value,
+}));
+vi.mock("../../../src/shared/utils/base/format", async () => ({
   timeToText: (value) => value,
 }));
 
@@ -33,18 +39,22 @@ vi.mock("../../../src/components/Location.vue", () => ({
   default: "Location",
 }));
 
-vi.mock("../../../src/components/ui/badge", () => ({
-  Badge: "Badge",
+vi.mock("../../../src/components/ui/badge/Badge.vue", () => ({
+  default: "Badge",
 }));
 
-vi.mock("../../../src/components/ui/button", () => ({
-  Button: "Button",
+vi.mock("../../../src/components/ui/button/Button.vue", () => ({
+  default: "Button",
 }));
 
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  Tooltip: "Tooltip",
-  TooltipContent: "TooltipContent",
-  TooltipTrigger: "TooltipTrigger",
+vi.mock("../../../src/components/ui/tooltip/Tooltip.vue", () => ({
+  default: "Tooltip",
+}));
+vi.mock("../../../src/components/ui/tooltip/TooltipContent.vue", () => ({
+  default: "TooltipContent",
+}));
+vi.mock("../../../src/components/ui/tooltip/TooltipTrigger.vue", () => ({
+  default: "TooltipTrigger",
 }));
 
 vi.mock("lucide-vue-next", () => ({

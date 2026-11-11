@@ -24,8 +24,8 @@ declare global {
     Discord: typeof Discord;
     AssetBundleManager: typeof AssetBundleManager;
     webApiService: typeof webApiService;
-    request: typeof import("../api");
-    utils: typeof import("../shared/utils");
+    request: Record<string, unknown>;
+    utils: Record<string, unknown>;
     dayjs: (typeof import("dayjs"))["default"];
     configRepository: (typeof import("../services/config.js"))["default"];
     database: (typeof import("../services/database"))["database"];

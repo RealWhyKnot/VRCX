@@ -51,14 +51,27 @@ import { Loader2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Button from "@/components/ui/button/Button.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 
-import { groupRequest, instanceRequest } from "../../api";
-import { useGroupStore } from "../../stores";
-import { formatDateFilter, parseLocation } from "../../shared/utils";
+import groupRequest from "../../api/group";
+import instanceRequest from "../../api/instance";
+import { useGroupStore } from "../../stores/group";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { parseLocation } from "../../shared/utils/location-parser";
 import GroupCalendarEventDetails from "../../views/Tools/components/GroupCalendarEventDetails.vue";
 
 const LINK_WINDOW_MS = 6 * 60 * 60 * 1000;

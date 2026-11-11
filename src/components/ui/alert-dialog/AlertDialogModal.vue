@@ -1,17 +1,15 @@
 <script setup>
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import AlertDialog from "@/components/ui/alert-dialog/AlertDialog.vue";
+import AlertDialogAction from "@/components/ui/alert-dialog/AlertDialogAction.vue";
+import AlertDialogCancel from "@/components/ui/alert-dialog/AlertDialogCancel.vue";
+import AlertDialogContent from "@/components/ui/alert-dialog/AlertDialogContent.vue";
+import AlertDialogDescription from "@/components/ui/alert-dialog/AlertDialogDescription.vue";
+import AlertDialogFooter from "@/components/ui/alert-dialog/AlertDialogFooter.vue";
+import AlertDialogHeader from "@/components/ui/alert-dialog/AlertDialogHeader.vue";
+import AlertDialogTitle from "@/components/ui/alert-dialog/AlertDialogTitle.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { storeToRefs } from "pinia";
-import { useModalStore } from "@/stores";
+import { useModalStore } from "@/stores/modal";
 import { nextTick, ref, watch } from "vue";
 
 const modalStore = useModalStore();

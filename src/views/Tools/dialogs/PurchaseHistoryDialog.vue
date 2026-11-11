@@ -119,21 +119,33 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Tabs from "@/components/ui/tabs/Tabs.vue";
+import TabsContent from "@/components/ui/tabs/TabsContent.vue";
+import TabsList from "@/components/ui/tabs/TabsList.vue";
+import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
 import { computed, ref, watch } from "vue";
 import { AppDebug } from "@/services/app-config";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { RefreshCw } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { commaNumber, formatDateFilter, replaceBioSymbols } from "../../../shared/utils";
-import { useGalleryStore, useUserStore } from "../../../stores";
-import { marketplaceRequest } from "../../../api";
+import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useUserStore } from "../../../stores/user";
+import marketplaceRequest from "../../../api/marketplace";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const props = defineProps({

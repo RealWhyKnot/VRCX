@@ -54,8 +54,9 @@ import { markRaw, onMounted, ref } from "vue";
 import { LayoutDashboard, MousePointerClick, Search, Sparkles, UserSearch } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import Button from "@/components/ui/button/Button.vue";
 import configRepository from "../../services/config";
 import vrcxLogo from "../../../images/VRCX.png";
 

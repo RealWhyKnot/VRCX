@@ -136,19 +136,24 @@
 
 <script setup>
 import { ChevronRight, RefreshCw, Video } from "lucide-vue-next";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { useI18n } from "vue-i18n";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
-import { formatDateFilter, openExternalLink } from "../../../shared/utils";
-import { miscRequest } from "../../../api";
-import { useGalleryStore } from "../../../stores";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { openExternalLink } from "../../../shared/utils/app-actions";
+import miscRequest from "../../../api/misc";
+import { useGalleryStore } from "../../../stores/gallery";
 
 const BANNER_CATEGORIES = ["quick-menu-banner", "loading-screen-banners"];
 const CATEGORY_ORDER = ["help-article", ...BANNER_CATEGORIES];

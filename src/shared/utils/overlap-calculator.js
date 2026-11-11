@@ -5,12 +5,8 @@ import {
   buildHeatmapBuckets,
   buildOverlapBuckets,
   clipSessionsToRange,
-  computeActivityView,
-  computeOverlapView,
   findBestOverlapTimeFromBuckets,
 } from "./activity-engine.js";
-
-export { ONLINE_SESSION_MERGE_GAP_MS };
 
 export function buildSessionsFromEvents(events) {
   return engineBuildSessionsFromEvents(events).sessions;
@@ -74,8 +70,6 @@ export function findBestOverlapTime(grid, dayLabels) {
   }
   return findBestOverlapTimeFromBuckets(buckets, dayLabels);
 }
-
-export { computeActivityView, computeOverlapView };
 
 function sumDurations(sessions) {
   return sessions.reduce((sum, session) => sum + (session.end - session.start), 0);

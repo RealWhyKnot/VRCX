@@ -84,13 +84,13 @@
 </template>
 
 <script setup>
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { RefreshCw } from "lucide-vue-next";
-import { Spinner } from "@/components/ui/spinner";
-import { TabsUnderline } from "@/components/ui/tabs";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { computed } from "vue";
-import { hasGroupPermission } from "@/shared/utils";
+import { hasGroupPermission } from "@/shared/utils/group";
 import { useI18n } from "vue-i18n";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 

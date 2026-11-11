@@ -57,25 +57,31 @@
 </template>
 
 <script setup>
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Button from "@/components/ui/button/Button.vue";
 import { RefreshCw, User, Users } from "lucide-vue-next";
-import { Spinner } from "@/components/ui/spinner";
-import { Input } from "@/components/ui/input";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import Input from "@/components/ui/input/Input.vue";
 import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { compareByDisplayName, compareByFriendOrder, compareByLastActiveRef } from "../../../shared/utils";
+import { compareByDisplayName, compareByFriendOrder, compareByLastActiveRef } from "../../../shared/utils/compare";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { database } from "../../../services/database";
 import { processBulk } from "../../../services/request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
-import { useUserStore } from "../../../stores";
-import { userDialogMutualFriendSortingOptions } from "../../../shared/constants";
-import { userRequest } from "../../../api";
+import { useUserStore } from "../../../stores/user";
+import { userDialogMutualFriendSortingOptions } from "../../../shared/constants/user";
+import userRequest from "../../../api/user";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();

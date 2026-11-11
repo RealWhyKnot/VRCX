@@ -220,23 +220,30 @@
 <script setup>
 import { Plus, RefreshCw, Trash2, UserMinus, UserPlus } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { DragDropProvider } from "@dnd-kit/vue";
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { isSortable } from "@dnd-kit/vue/sortable";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useGroupStore, useModalStore, useUserStore } from "../../../stores";
-import { groupRequest } from "../../../api";
-import { hasGroupPermission } from "../../../shared/utils";
+import { useGroupStore } from "../../../stores/group";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import groupRequest from "../../../api/group";
+import { hasGroupPermission } from "../../../shared/utils/group";
 import { loadGroupRolesDialogRoles } from "../../../coordinators/group-coordinator";
 
 import SortableGroupRoleItem from "./SortableGroupRoleItem.vue";

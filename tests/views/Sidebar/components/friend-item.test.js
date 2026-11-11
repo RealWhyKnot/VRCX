@@ -22,9 +22,13 @@ vi.mock("pinia", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => mocks.appearanceStore,
+}));
+vi.mock("../../../../src/stores/friend", () => ({
   useFriendStore: () => mocks.friendStore,
+}));
+vi.mock("../../../../src/stores/user", () => ({
   useUserStore: () => mocks.userStore,
 }));
 
@@ -36,7 +40,7 @@ vi.mock("../../../../src/coordinators/friend-relationship-coordinator", () => ({
   confirmDeleteFriend: (...args) => mocks.confirmDeleteFriend(...args),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/user", () => ({
   userImage: vi.fn(() => "https://example.com/avatar.png"),
   userStatusClass: vi.fn(() => "status-online"),
 }));
@@ -48,28 +52,32 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/avatar", () => ({
-  Avatar: {
+vi.mock("@/components/ui/avatar/Avatar.vue", () => ({
+  default: {
     template: '<div data-testid="avatar"><slot /></div>',
   },
-  AvatarImage: {
+}));
+vi.mock("@/components/ui/avatar/AvatarImage.vue", () => ({
+  default: {
     props: ["src"],
     template: '<img data-testid="avatar-image" :src="src" />',
   },
-  AvatarFallback: {
+}));
+vi.mock("@/components/ui/avatar/AvatarFallback.vue", () => ({
+  default: {
     template: '<span data-testid="avatar-fallback"><slot /></span>',
   },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="delete-button" @click="$emit(\'click\', $event)"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/spinner", () => ({
-  Spinner: {
+vi.mock("@/components/ui/spinner/Spinner.vue", () => ({
+  default: {
     template: '<span data-testid="spinner" />',
   },
 }));

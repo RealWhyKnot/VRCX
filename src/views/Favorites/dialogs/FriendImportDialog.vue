@@ -100,22 +100,33 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { removeFromArray } from "../../../shared/utils";
+import { removeFromArray } from "../../../shared/utils/base/array";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { useFavoriteStore, useGalleryStore, useUserStore } from "../../../stores";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useUserStore } from "../../../stores/user";
 import { addLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
-import { favoriteRequest, userRequest } from "../../../api";
+import favoriteRequest from "../../../api/favorite";
+import userRequest from "../../../api/user";
 import { createColumns } from "./friend-import-columns.jsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

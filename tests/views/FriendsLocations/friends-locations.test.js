@@ -54,7 +54,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     onlineFriends: mocks.onlineFriends,
     allFavoriteOnlineFriends: mocks.allFavoriteOnlineFriends,
@@ -63,17 +63,23 @@ vi.mock("../../../src/stores", () => ({
     offlineFriends: mocks.offlineFriends,
     friendsInSameInstance: mocks.friendsInSameInstance,
   }),
+}));
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     isSidebarDivideByFriendGroup: mocks.isSidebarDivideByFriendGroup,
     sidebarFavoriteGroups: mocks.sidebarFavoriteGroups,
     sidebarFavoriteGroupOrder: mocks.sidebarFavoriteGroupOrder,
     sidebarSortMethods: mocks.sidebarSortMethods,
   }),
+}));
+vi.mock("../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
     favoriteFriendGroups: mocks.favoriteFriendGroups,
     groupedByGroupKeyFavoriteFriends: mocks.groupedByGroupKeyFavoriteFriends,
     localFriendFavorites: mocks.localFriendFavorites,
   }),
+}));
+vi.mock("../../../src/stores/location", () => ({
   useLocationStore: () => ({
     lastLocation: mocks.lastLocation,
   }),
@@ -88,11 +94,11 @@ vi.mock("../../../src/services/config.js", () => ({
   },
 }));
 
-vi.mock("../../../src/shared/utils/location.js", () => ({
+vi.mock("../../../src/shared/utils/location", () => ({
   getFriendsLocations: (friends) => friends?.[0]?.ref?.location ?? "",
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/shared/utils/common", () => ({
   debounce: (fn, delay) => {
     let timer = null;
     return (...args) => {
@@ -100,6 +106,8 @@ vi.mock("../../../src/shared/utils", () => ({
       timer = setTimeout(() => fn(...args), delay);
     };
   },
+}));
+vi.mock("../../../src/shared/utils/friend", () => ({
   getFriendsSortFunction: () => (a, b) => String(a?.displayName ?? "").localeCompare(String(b?.displayName ?? "")),
 }));
 
@@ -125,14 +133,18 @@ vi.mock("lucide-vue-next", () => ({
   Settings: { template: "<span />" },
 }));
 
-vi.mock("@/components/ui/field", () => ({
-  Field: { template: "<div><slot /></div>" },
-  FieldContent: { template: "<div><slot /></div>" },
-  FieldLabel: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/field/Field.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldLabel.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: {
+vi.mock("@/components/ui/tabs/Tabs.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template:
@@ -142,51 +154,59 @@ vi.mock("@/components/ui/tabs", () => ({
       "<slot />" +
       "</div>",
   },
-  TabsList: { template: "<div><slot /></div>" },
-  TabsTrigger: {
+}));
+vi.mock("@/components/ui/tabs/TabsList.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/tabs/TabsTrigger.vue", () => ({
+  default: {
     props: ["value"],
     template: '<button :data-value="value"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: "<button @click=\"$emit('click')\"><slot /></button>",
   },
 }));
 
-vi.mock("@/components/ui/data-table", () => ({
-  DataTableEmpty: {
+vi.mock("@/components/ui/data-table/DataTableEmpty.vue", () => ({
+  default: {
     props: ["type"],
     template: '<div data-testid="empty-state">{{ type }}</div>',
   },
 }));
 
-vi.mock("@/components/ui/input-group", () => ({
-  InputGroupSearch: {
+vi.mock("@/components/ui/input-group/InputGroupSearch.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<input data-testid="friend-locations-search" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
 }));
 
-vi.mock("../../../src/components/ui/popover", () => ({
-  Popover: { template: "<div><slot /></div>" },
-  PopoverContent: { template: "<div><slot /></div>" },
-  PopoverTrigger: { template: "<div><slot /></div>" },
+vi.mock("../../../src/components/ui/popover/Popover.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("../../../src/components/ui/slider", () => ({
-  Slider: {
+vi.mock("../../../src/components/ui/slider/Slider.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<button data-testid="set-scale" @click="$emit(\'update:modelValue\', [0.8])">set-scale</button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/switch", () => ({
-  Switch: {
+vi.mock("../../../src/components/ui/switch/Switch.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<button data-testid="toggle-same-instance" @click="$emit(\'update:modelValue\', !modelValue)">toggle</button>',

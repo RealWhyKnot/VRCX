@@ -11,7 +11,7 @@ import type {
 } from "vrchat";
 import type { Json, MarketplaceAvatarSearchParams } from "../types/vrcx";
 import { request } from "../services/request";
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 
 type MarketplaceAvatarSearchResponse = {
   hasNext: boolean;

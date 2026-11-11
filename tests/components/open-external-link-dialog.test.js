@@ -8,9 +8,11 @@ const mocks = vi.hoisted(() => ({
   openLink: vi.fn(),
 }));
 
-vi.mock("@/stores", async () => {
+vi.mock("@/stores/external-link", async () => {
   const { useExternalLinkStore } = await import("@/stores/external-link");
-  return { useExternalLinkStore };
+  return {
+    useExternalLinkStore,
+  };
 });
 
 vi.mock("@/shared/utils/app-actions", () => ({

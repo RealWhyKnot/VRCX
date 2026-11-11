@@ -22,7 +22,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/avatar-provider", () => ({
   useAvatarProviderStore: () => ({
     avatarRemoteDatabaseProviderList: mocks.avatarRemoteDatabaseProviderList,
     saveAvatarProviderList: (...args) => mocks.saveAvatarProviderList(...args),
@@ -30,8 +30,8 @@ vi.mock("../../../../src/stores", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: {
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template:
@@ -40,20 +40,26 @@ vi.mock("@/components/ui/dialog", () => ({
       "<slot />" +
       "</div>",
   },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<h2><slot /></h2>" },
+}));
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<h2><slot /></h2>" },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="add-provider" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/input-group", () => ({
-  InputGroupAction: {
+vi.mock("@/components/ui/input-group/InputGroupAction.vue", () => ({
+  default: {
     props: ["modelValue", "size"],
     emits: ["update:modelValue", "change"],
     template:

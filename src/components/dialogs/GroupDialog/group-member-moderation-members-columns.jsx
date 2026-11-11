@@ -1,9 +1,9 @@
-import { Checkbox } from "@/components/ui/checkbox";
-import { i18n } from "@/plugins";
-import { formatDateFilter } from "@/shared/utils";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import { i18n } from "@/plugins/i18n";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { ArrowUpDown } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import Button from "@/components/ui/button/Button.vue";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
 const { t } = i18n.global;
 

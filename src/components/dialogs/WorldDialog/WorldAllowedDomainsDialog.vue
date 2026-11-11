@@ -26,15 +26,19 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupAction } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupAction from "@/components/ui/input-group/InputGroupAction.vue";
 import { Trash2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { worldRequest } from "../../../api";
+import worldRequest from "../../../api/world";
 
 const props = defineProps({
   worldAllowedDomainsDialog: {

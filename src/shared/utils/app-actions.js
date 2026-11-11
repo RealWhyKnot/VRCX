@@ -1,6 +1,7 @@
 import { toast } from "vue-sonner";
 
-import { useExternalLinkStore, useSearchStore } from "../../stores";
+import { useExternalLinkStore } from "../../stores/external-link";
+import { useSearchStore } from "../../stores/search";
 import { escapeTag } from "./base/string";
 import { i18n } from "../../plugins/i18n";
 

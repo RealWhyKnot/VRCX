@@ -10,7 +10,7 @@ vi.mock("../../src/services/request", () => ({
   request: (...args) => mockRequest(...args),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: { id: "usr_me" },
   }),
@@ -22,7 +22,7 @@ vi.mock("../../src/coordinators/favorite-coordinator", () => ({
   handleFavoriteGroupClear: (...args) => mockHandleFavoriteGroupClear(...args),
 }));
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/client", () => ({
   queryClient: {
     invalidateQueries: (...args) => mockInvalidateQueries(...args),
   },

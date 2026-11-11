@@ -22,8 +22,10 @@ vi.mock("vue-sonner", () => ({
   toast: mocks.toast,
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/search", () => ({
   useSearchStore: () => mocks.searchStore,
+}));
+vi.mock("../../../src/stores/external-link", () => ({
   useExternalLinkStore: () => mocks.externalLinkStore,
 }));
 

@@ -1,11 +1,14 @@
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 
-import { useAuthStore, useAvatarStore, useInstanceStore, useWorldStore } from "../stores";
+import { useAuthStore } from "../stores/auth";
+import { useAvatarStore } from "../stores/avatar";
+import { useInstanceStore } from "../stores/instance";
+import { useWorldStore } from "../stores/world";
 import { extractFileId, extractFileVersion, extractVariantVersion } from "../shared/utils/file-utils";
 import { compareUnityVersion } from "../shared/utils/avatar";
 import { formatFileSize } from "../shared/utils/base/format";
-import { queryRequest } from "../api";
+import queryRequest from "../api/query-request";
 
 async function deleteVRChatCache(ref) {
   const authStore = useAuthStore();

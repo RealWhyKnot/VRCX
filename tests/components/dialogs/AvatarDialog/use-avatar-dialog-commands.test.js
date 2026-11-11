@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useAvatarDialogCommands } from "../../../../src/components/dialogs/AvatarDialog/use-avatar-dialog-commands";
 
-vi.mock("../../../../src/api", () => ({
-  avatarModerationRequest: {
+vi.mock("../../../../src/api/avatar-moderation", () => ({
+  default: {
     sendAvatarModeration: vi.fn(),
     deleteAvatarModeration: vi.fn(),
   },
-  avatarRequest: {
+}));
+vi.mock("../../../../src/api/avatar", () => ({
+  default: {
     saveAvatar: vi.fn(),
     deleteAvatar: vi.fn(),
     selectFallbackAvatar: vi.fn(),
@@ -15,14 +17,18 @@ vi.mock("../../../../src/api", () => ({
     createImposter: vi.fn(),
     uploadAvatarImage: vi.fn(),
   },
-  favoriteRequest: {
+}));
+vi.mock("../../../../src/api/favorite", () => ({
+  default: {
     deleteFavorite: vi.fn(),
   },
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   copyToClipboard: vi.fn(),
   openExternalLink: vi.fn(),
+}));
+vi.mock("../../../../src/shared/utils/url-utils", () => ({
   replaceVrcPackageUrl: vi.fn((url) => url),
 }));
 
@@ -41,8 +47,10 @@ vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
   removeAvatarFromCache: vi.fn(),
 }));
 
-const { copyToClipboard, openExternalLink } = await import("../../../../src/shared/utils");
-const { favoriteRequest, avatarRequest, avatarModerationRequest } = await import("../../../../src/api");
+const { copyToClipboard, openExternalLink } = await import("../../../../src/shared/utils/app-actions");
+const { default: favoriteRequest } = await import("../../../../src/api/favorite");
+const { default: avatarRequest } = await import("../../../../src/api/avatar");
+const { default: avatarModerationRequest } = await import("../../../../src/api/avatar-moderation");
 
 function createMockAvatarDialog() {
   return ref({

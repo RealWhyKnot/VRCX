@@ -1,8 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import Tooltip from "@/components/ui/tooltip/Tooltip.vue";
+import TooltipContent from "@/components/ui/tooltip/TooltipContent.vue";
+import TooltipTrigger from "@/components/ui/tooltip/TooltipTrigger.vue";
 import { ArrowUp } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps({

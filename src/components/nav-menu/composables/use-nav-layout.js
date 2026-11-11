@@ -2,7 +2,9 @@ import { useEventListener } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 
 import configRepository from "../../../services/config";
-import { DASHBOARD_NAV_KEY_PREFIX, isToolNavKey, navDefinitions } from "../../../shared/constants";
+import { DASHBOARD_NAV_KEY_PREFIX } from "../../../shared/constants/dashboard";
+import { isToolNavKey } from "../../../shared/constants/tools";
+import { navDefinitions } from "../../../shared/constants/ui";
 import { triggerNavEntryAction } from "../nav-action-utils";
 import { buildMenuItems, findFirstNavEntry, findFirstNavKey } from "../nav-layout-helpers";
 import { createBaseDefaultNavLayout, insertDashboardEntries } from "../nav-layout-defaults";

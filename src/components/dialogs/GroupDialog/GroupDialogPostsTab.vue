@@ -81,13 +81,15 @@
 
 <script setup>
 import { Eye, Image, Pencil, Trash2 } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { formatDateFilter, hasGroupPermission } from "../../../shared/utils";
-import { useGalleryStore, useGroupStore } from "../../../stores";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { hasGroupPermission } from "../../../shared/utils/group";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
 
 defineProps({
   showGroupPostEditDialog: {

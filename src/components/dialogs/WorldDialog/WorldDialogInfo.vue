@@ -176,14 +176,17 @@
 
 <script setup>
 import { ChevronDown, Copy } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { useAuthStore, useInstanceStore, useWorldStore } from "../../../stores";
-import { copyToClipboard, openExternalLink, timeAgo, timeToText } from "../../../shared/utils";
+import { useAuthStore } from "../../../stores/auth";
+import { useInstanceStore } from "../../../stores/instance";
+import { useWorldStore } from "../../../stores/world";
+import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
+import { timeAgo, timeToText } from "../../../shared/utils/base/format";
 import { useWorldDialogInfo } from "./use-world-dialog-info";
 
 const { t } = useI18n();

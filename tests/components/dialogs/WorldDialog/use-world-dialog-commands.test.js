@@ -2,17 +2,23 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useWorldDialogCommands } from "../../../../src/components/dialogs/WorldDialog/use-world-dialog-commands";
 
-vi.mock("../../../../src/api", () => ({
-  favoriteRequest: {
+vi.mock("../../../../src/api/favorite", () => ({
+  default: {
     deleteFavorite: vi.fn(),
   },
-  miscRequest: {
+}));
+vi.mock("../../../../src/api/misc", () => ({
+  default: {
     deleteWorldPersistData: vi.fn(),
   },
-  userRequest: {
+}));
+vi.mock("../../../../src/api/user", () => ({
+  default: {
     saveCurrentUser: vi.fn(),
   },
-  worldRequest: {
+}));
+vi.mock("../../../../src/api/world", () => ({
+  default: {
     saveWorld: vi.fn(),
     publishWorld: vi.fn(),
     unpublishWorld: vi.fn(),
@@ -20,8 +26,10 @@ vi.mock("../../../../src/api", () => ({
   },
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: vi.fn(),
+}));
+vi.mock("../../../../src/shared/utils/url-utils", () => ({
   replaceVrcPackageUrl: vi.fn((url) => url),
 }));
 
@@ -40,8 +48,11 @@ vi.mock("../../../../src/coordinators/world-coordinator", () => ({
   removeWorldFromCache: vi.fn(),
 }));
 
-const { favoriteRequest, miscRequest, userRequest, worldRequest } = await import("../../../../src/api");
-const { openExternalLink } = await import("../../../../src/shared/utils");
+const { default: favoriteRequest } = await import("../../../../src/api/favorite");
+const { default: miscRequest } = await import("../../../../src/api/misc");
+const { default: userRequest } = await import("../../../../src/api/user");
+const { default: worldRequest } = await import("../../../../src/api/world");
+const { openExternalLink } = await import("../../../../src/shared/utils/app-actions");
 
 function createWorldDialog(overrides = {}) {
   return ref({

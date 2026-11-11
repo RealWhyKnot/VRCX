@@ -15,7 +15,7 @@ vi.mock("vue-i18n", async () => {
   };
 });
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/group", () => ({
   hasGroupPermission: vi.fn((_group, permission) => {
     if (_group?._mockPermissions) {
       return _group._mockPermissions.includes(permission);

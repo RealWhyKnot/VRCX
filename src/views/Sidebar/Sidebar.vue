@@ -276,25 +276,44 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectSeparator from "@/components/ui/select/SelectSeparator.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { Bell, ChevronDown, RefreshCw, Search, Settings } from "lucide-vue-next";
 import { toast } from "vue-sonner";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { computed, ref } from "vue";
 import { useMagicKeys, whenever } from "@vueuse/core";
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Kbd } from "@/components/ui/kbd";
-import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { TabsUnderline } from "@/components/ui/tabs";
+import Button from "@/components/ui/button/Button.vue";
+import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
+import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
+import Kbd from "@/components/ui/kbd/Kbd.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAppearanceSettingsStore, useFavoriteStore, useFriendStore, useGroupStore, useNotificationStore } from "../../stores";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useFavoriteStore } from "../../stores/favorite";
+import { useFriendStore } from "../../stores/friend";
+import { useGroupStore } from "../../stores/group";
+import { useNotificationStore } from "../../stores/notification";
 import { runRefreshFriendsListFlow } from "../../coordinators/friend-sync-coordinator";
 import { normalizeFavoriteGroupsChange, resolveFavoriteGroups } from "./sidebar-settings-utils";
 import { useQuickSearchStore } from "../../stores/quick-search";

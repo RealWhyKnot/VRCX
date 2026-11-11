@@ -252,17 +252,32 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Field, FieldContent, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectSeparator from "@/components/ui/select/SelectSeparator.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import FieldSeparator from "@/components/ui/field/FieldSeparator.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import RadioGroup from "@/components/ui/radio-group/RadioGroup.vue";
+import RadioGroupItem from "@/components/ui/radio-group/RadioGroupItem.vue";
+import Input from "@/components/ui/input/Input.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useGeneralSettingsStore } from "../../../stores";
-import { accessTypeLocaleKeyMap } from "../../../shared/constants";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useGeneralSettingsStore } from "../../../stores/settings/general";
+import { accessTypeLocaleKeyMap } from "../../../shared/constants/access-type";
 
 import SimpleSwitch from "../../Settings/components/SimpleSwitch.vue";
 

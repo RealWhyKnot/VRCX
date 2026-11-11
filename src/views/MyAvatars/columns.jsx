@@ -1,10 +1,17 @@
-import { getTagColor } from "../../shared/constants";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
+import { getTagColor } from "../../shared/constants/tags";
+import Badge from "../../components/ui/badge/Badge.vue";
+import Button from "../../components/ui/button/Button.vue";
+import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { Apple, ArrowUpDown, Check, Ellipsis, Eye, Image, Monitor, Pencil, RefreshCw, Smartphone, Tag, User } from "lucide-vue-next";
-import { formatDateFilter, getAvailablePlatforms, getPlatformInfo, timeToText } from "../../shared/utils";
-import { i18n } from "../../plugins";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { getAvailablePlatforms } from "../../shared/utils/platform-utils";
+import { getPlatformInfo } from "../../shared/utils/avatar";
+import { timeToText } from "../../shared/utils/base/format";
+import { i18n } from "../../plugins/i18n";
 
 const { t } = i18n.global;
 

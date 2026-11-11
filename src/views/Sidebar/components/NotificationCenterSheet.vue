@@ -62,14 +62,22 @@
 </template>
 
 <script setup>
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Sheet from "@/components/ui/sheet/Sheet.vue";
+import SheetContent from "@/components/ui/sheet/SheetContent.vue";
+import SheetHeader from "@/components/ui/sheet/SheetHeader.vue";
+import SheetTitle from "@/components/ui/sheet/SheetTitle.vue";
+import Tabs from "@/components/ui/tabs/Tabs.vue";
+import TabsContent from "@/components/ui/tabs/TabsContent.vue";
+import TabsList from "@/components/ui/tabs/TabsList.vue";
+import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
 import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { useGalleryStore, useInviteStore, useNotificationStore } from "../../../stores";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useInviteStore } from "../../../stores/invite";
+import { useNotificationStore } from "../../../stores/notification";
 
 import NotificationList from "./NotificationList.vue";
 import SendInviteRequestResponseDialog from "../../Notifications/dialogs/SendInviteRequestResponseDialog.vue";

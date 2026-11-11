@@ -1,19 +1,11 @@
-import {
-  checkVRChatCache,
-  deleteVRChatCache,
-  displayLocation,
-  extractFileId,
-  extractFileVersion,
-  extractVariantVersion,
-  getAvailablePlatforms,
-  getBundleLocation,
-  getLaunchURL,
-  getPrintFileName,
-  getPrintLocalDate,
-  isFriendOnline,
-  isRealInstance,
-  parseLocation,
-} from "./index";
+import { checkVRChatCache, deleteVRChatCache } from "../../coordinators/cache-coordinator";
+import { displayLocation, parseLocation } from "./location-parser";
+import { extractFileId, extractFileVersion, extractVariantVersion } from "./file-utils";
+import { getAvailablePlatforms } from "./platform-utils";
+import { getBundleLocation } from "./base/devtool";
+import { getLaunchURL, isRealInstance } from "./instance";
+import { getPrintFileName, getPrintLocalDate } from "./gallery";
+import { isFriendOnline } from "./friend";
 
 const utils = {
   getAvailablePlatforms,

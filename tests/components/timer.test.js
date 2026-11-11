@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   nowRef: null,
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/base/format", () => ({
   timeToText: (...args) => mocks.timeToText(...args),
 }));
 

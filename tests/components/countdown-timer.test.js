@@ -13,7 +13,7 @@ vi.mock("worker-timers", () => ({
   clearInterval: (...args) => mocks.clearInterval(...args),
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/base/format", () => ({
   timeToText: (...args) => mocks.timeToText(...args),
 }));
 

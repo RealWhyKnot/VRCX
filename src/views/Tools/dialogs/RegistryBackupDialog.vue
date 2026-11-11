@@ -27,17 +27,23 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useAdvancedSettingsStore, useModalStore, useVrcxStore } from "../../../stores";
-import { downloadAndSaveJson, removeFromArray } from "../../../shared/utils";
-import { Switch } from "../../../components/ui/switch";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useModalStore } from "../../../stores/modal";
+import { useVrcxStore } from "../../../stores/vrcx";
+import { downloadAndSaveJson } from "../../../shared/utils/app-actions";
+import { removeFromArray } from "../../../shared/utils/base/array";
+import Switch from "../../../components/ui/switch/Switch.vue";
 import { createColumns } from "../../Settings/dialogs/registry-backup-columns.jsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 

@@ -28,16 +28,8 @@ const storeMocks = vi.hoisted(() => ({
 
 vi.mock("../../../src/stores", () => storeMocks);
 
-import {
-  languageClass,
-  parseUserUrl,
-  removeEmojis,
-  statusClass,
-  userImage,
-  userImageFull,
-  userOnlineForTimestamp,
-  userStatusClass,
-} from "../../../src/shared/utils/user";
+import { languageClass, parseUserUrl, statusClass, userImage, userImageFull, userOnlineForTimestamp, userStatusClass } from "../../../src/shared/utils/user";
+import { removeEmojis } from "../../../src/shared/utils/base/string";
 
 describe("User Utils", () => {
   describe("removeEmojis", () => {

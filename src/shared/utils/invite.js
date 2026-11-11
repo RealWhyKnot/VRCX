@@ -1,4 +1,4 @@
-import { parseLocation } from "./location";
+import { parseLocation } from "./location-parser";
 
 function checkCanInvite(location, deps) {
   if (!location) {

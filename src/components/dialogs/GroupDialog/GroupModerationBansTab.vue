@@ -36,11 +36,11 @@
 import { RefreshCw } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { InputGroupField } from "@/components/ui/input-group";
-import { DataTableLayout } from "@/components/ui/data-table";
-import { hasGroupPermission } from "@/shared/utils";
+import Button from "@/components/ui/button/Button.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import { hasGroupPermission } from "@/shared/utils/group";
 import { createColumns } from "./group-member-moderation-bans-columns.jsx";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 

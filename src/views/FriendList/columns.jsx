@@ -1,11 +1,18 @@
 import { ArrowUpDown, EyeOff, User, UserMinus } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import Avatar from "../../components/ui/avatar/Avatar.vue";
+import AvatarFallback from "../../components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "../../components/ui/avatar/AvatarImage.vue";
 
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
-import { TooltipWrapper } from "../../components/ui/tooltip";
-import { i18n } from "../../plugins";
-import { formatDateFilter, getFaviconUrl, languageClass, openExternalLink, sortStatus, statusClass, timeToText } from "../../shared/utils";
+import Button from "../../components/ui/button/Button.vue";
+import Checkbox from "../../components/ui/checkbox/Checkbox.vue";
+import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
+import { i18n } from "../../plugins/i18n";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { getFaviconUrl } from "../../shared/utils/url-utils";
+import { languageClass, statusClass } from "../../shared/utils/user";
+import { openExternalLink } from "../../shared/utils/app-actions";
+import { sortStatus } from "../../shared/utils/friend";
+import { timeToText } from "../../shared/utils/base/format";
 
 const { t } = i18n.global;
 

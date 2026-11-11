@@ -138,25 +138,33 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, reactive, ref, watch } from "vue";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
+import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
+import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
 import { Link as LinkIcon, Minus } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { DragDropProvider } from "@dnd-kit/vue";
 import { isSortable } from "@dnd-kit/vue/sortable";
-import { openExternalLink } from "@/shared/utils/common";
+import { openExternalLink } from "@/shared/utils/app-actions";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { InputGroupButton, InputGroupField } from "../ui/input-group";
-import { Separator } from "../ui/separator";
-import { Tree } from "../ui/tree";
-import { isToolNavKey } from "../../shared/constants";
+import InputGroupButton from "../ui/input-group/InputGroupButton.vue";
+import InputGroupField from "../ui/input-group/InputGroupField.vue";
+import Separator from "../ui/separator/Separator.vue";
+import Tree from "../ui/tree/Tree.vue";
+import { isToolNavKey } from "../../shared/constants/tools";
 import { navDefinitions } from "../../shared/constants/ui.js";
 import { DASHBOARD_NAV_KEY_PREFIX, DEFAULT_DASHBOARD_ICON } from "../../shared/constants/dashboard";
-import { useDashboardStore, useModalStore } from "../../stores";
+import { useDashboardStore } from "../../stores/dashboard";
+import { useModalStore } from "../../stores/modal";
 
 import SortableTreeNode from "./SortableTreeNode.vue";
 

@@ -1,8 +1,8 @@
 import { toast } from "vue-sonner";
 import { i18n } from "../plugins/i18n";
 
-import { instanceRequest } from "../api";
-import { parseLocation } from "../shared/utils";
+import instanceRequest from "../api/instance";
+import { parseLocation } from "../shared/utils/location-parser";
 import { useInstanceStore } from "../stores/instance";
 import { useInviteStore } from "../stores/invite";
 import { useLaunchStore } from "../stores/launch";

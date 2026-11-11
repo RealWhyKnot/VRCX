@@ -57,17 +57,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { hasGroupModerationPermission } from "../../shared/utils";
+import { hasGroupModerationPermission } from "../../shared/utils/group";
 import { useUserDisplay } from "../../composables/use-user-display";
-import { VirtualCombobox } from "../ui/virtual-combobox";
-import { queryRequest } from "../../api";
-import { useGroupStore } from "../../stores";
+import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
+import queryRequest from "../../api/query-request";
+import { useGroupStore } from "../../stores/group";
 import { showGroupMemberModerationDialog } from "../../coordinators/group-coordinator";
 
 const { userImage } = useUserDisplay();

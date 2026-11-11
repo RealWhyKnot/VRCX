@@ -1,8 +1,8 @@
 import type { File, Print, UploadImage, UploadPrint } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { queryClient } from "../queries";
+import { queryClient } from "../queries/client";
 import { request } from "../services/request";
-import { useUserStore } from "../stores";
+import { useUserStore } from "../stores/user";
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;

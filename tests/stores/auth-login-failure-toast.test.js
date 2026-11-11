@@ -103,8 +103,8 @@ vi.mock("../../src/services/request", () => ({
   request: (...args) => mocks.request(...args),
 }));
 
-vi.mock("../../src/api", () => ({
-  authRequest: mocks.authRequest,
+vi.mock("../../src/api/auth", () => ({
+  default: mocks.authRequest,
 }));
 
 vi.mock("../../src/coordinators/auth-coordinator", () => ({
@@ -126,7 +126,7 @@ vi.mock("../../src/services/app-config", () => ({
   logWebRequest: vi.fn(),
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/base/string", () => ({
   escapeTag: (value) => value,
 }));
 

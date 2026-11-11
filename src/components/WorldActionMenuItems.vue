@@ -29,8 +29,10 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { ExternalLink, Flag, LineChart, MessageSquare, Share2 } from "lucide-vue-next";
 
-import { ContextMenuItem, ContextMenuSeparator } from "./ui/context-menu";
-import { DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
+import ContextMenuItem from "./ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "./ui/context-menu/ContextMenuSeparator.vue";
+import DropdownMenuItem from "./ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "./ui/dropdown-menu/DropdownMenuSeparator.vue";
 
 const { t } = useI18n();
 

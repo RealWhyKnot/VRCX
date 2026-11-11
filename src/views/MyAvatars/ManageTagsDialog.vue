@@ -56,12 +56,23 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from "@/components/ui/tags-input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import TagsInput from "@/components/ui/tags-input/TagsInput.vue";
+import TagsInputInput from "@/components/ui/tags-input/TagsInputInput.vue";
+import TagsInputItem from "@/components/ui/tags-input/TagsInputItem.vue";
+import TagsInputItemDelete from "@/components/ui/tags-input/TagsInputItemDelete.vue";
+import TagsInputItemText from "@/components/ui/tags-input/TagsInputItemText.vue";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { computed, ref, watch } from "vue";
-import { TAG_COLORS, getTagColor } from "@/shared/constants";
-import { Button } from "@/components/ui/button";
+import { TAG_COLORS, getTagColor } from "@/shared/constants/tags";
+import Button from "@/components/ui/button/Button.vue";
 import { useI18n } from "vue-i18n";
 
 const props = defineProps({

@@ -88,17 +88,20 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { Image } from "lucide-vue-next";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { TabsUnderline } from "@/components/ui/tabs";
+import Input from "@/components/ui/input/Input.vue";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useUserStore } from "../../../stores";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useUserStore } from "../../../stores/user";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { handleFavoriteWorldList } from "../../../coordinators/favorite-coordinator";
-import { favoriteRequest } from "../../../api";
+import favoriteRequest from "../../../api/favorite";
 
 const { t } = useI18n();
 

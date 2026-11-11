@@ -1,4 +1,5 @@
-import { useFriendStore, useUserStore } from "../stores";
+import { useFriendStore } from "../stores/friend";
+import { useUserStore } from "../stores/user";
 import { database } from "../services/database";
 import { syncFriendSearchIndex } from "./search-index-coordinator";
 

@@ -7,18 +7,24 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/coordinators/date-coordinator", () => ({
   formatDateFilter: () => "formatted-date",
+}));
+vi.mock("../../../../src/shared/utils/platform-utils", () => ({
   getAvailablePlatforms: () => ({ isPC: true, isQuest: true, isIos: false }),
+}));
+vi.mock("../../../../src/shared/utils/avatar", () => ({
   getPlatformInfo: () => ({
     pc: { performanceRating: "Good" },
     android: { performanceRating: "Medium" },
     ios: { performanceRating: "" },
   }),
+}));
+vi.mock("../../../../src/shared/utils/base/format", () => ({
   timeToText: () => "1h",
 }));
 
-vi.mock("../../../../src/shared/constants", () => ({
+vi.mock("../../../../src/shared/constants/tags", () => ({
   getTagColor: () => ({
     name: "blue",
     bg: "hsl(210 100% 50% / 0.2)",
@@ -26,45 +32,57 @@ vi.mock("../../../../src/shared/constants", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/context-menu", () => ({
-  ContextMenu: { template: "<div><slot /></div>" },
-  ContextMenuTrigger: { template: "<div><slot /></div>" },
-  ContextMenuContent: { template: "<div><slot /></div>" },
-  ContextMenuSeparator: { template: "<hr />" },
-  ContextMenuItem: {
+vi.mock("@/components/ui/context-menu/ContextMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuSeparator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuItem.vue", () => ({
+  default: {
     props: ["disabled"],
     emits: ["click"],
     template: '<button data-testid="ctx-item" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/hover-card", () => ({
-  HoverCard: {
+vi.mock("@/components/ui/hover-card/HoverCard.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template: "<div><slot /></div>",
   },
-  HoverCardTrigger: { template: "<div><slot /></div>" },
-  HoverCardContent: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/hover-card/HoverCardTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/hover-card/HoverCardContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/badge", () => ({
-  Badge: { template: '<span data-testid="badge"><slot /></span>' },
+vi.mock("@/components/ui/badge/Badge.vue", () => ({
+  default: { template: '<span data-testid="badge"><slot /></span>' },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="button" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/card", () => ({
-  Card: { template: '<div data-testid="card"><slot /></div>' },
+vi.mock("@/components/ui/card/Card.vue", () => ({
+  default: { template: '<div data-testid="card"><slot /></div>' },
 }));
 
-vi.mock("@/components/ui/separator", () => ({
-  Separator: { template: "<hr />" },
+vi.mock("@/components/ui/separator/Separator.vue", () => ({
+  default: { template: "<hr />" },
 }));
 
 vi.mock("lucide-vue-next", () => ({

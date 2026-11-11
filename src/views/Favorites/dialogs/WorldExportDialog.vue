@@ -50,17 +50,26 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useWorldStore } from "../../../stores";
-import { formatCsvRow } from "../../../shared/utils";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useWorldStore } from "../../../stores/world";
+import { formatCsvRow } from "../../../shared/utils/csv";
 
 const props = defineProps({
   worldExportDialogVisible: {

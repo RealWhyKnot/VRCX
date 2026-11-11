@@ -7,20 +7,25 @@ import dayjs from "dayjs";
 
 import {
   applyBoopLegacyHandling,
-  checkCanInvite,
   createDefaultNotificationRef,
   createDefaultNotificationV2Ref,
-  executeWithBackoff,
-  findUserByDisplayName,
-  parseLocation,
   parseNotificationDetails,
-  removeFromArray,
-  replaceBioSymbols,
   sanitizeNotificationJson,
-} from "../../shared/utils";
+} from "../../shared/utils/notification-transforms";
+import { checkCanInvite } from "../../shared/utils/invite";
+import { executeWithBackoff } from "../../shared/utils/retry";
+import { findUserByDisplayName } from "../../shared/utils/user";
+import { parseLocation } from "../../shared/utils/location-parser";
+import { removeFromArray } from "../../shared/utils/base/array";
+import { replaceBioSymbols } from "../../shared/utils/base/string";
 import { getUserMemo } from "../../coordinators/memo-coordinator";
-import { friendRequest, instanceRequest, inventoryRequest, marketplaceRequest, notificationRequest, queryRequest } from "../../api";
-import { VRCHAT_STORE_IDS } from "../../shared/constants";
+import friendRequest from "../../api/friend";
+import instanceRequest from "../../api/instance";
+import inventoryRequest from "../../api/inventory";
+import marketplaceRequest from "../../api/marketplace";
+import notificationRequest from "../../api/notification";
+import queryRequest from "../../api/query-request";
+import { VRCHAT_STORE_IDS } from "../../shared/constants/marketplace";
 import { getNotificationMessage, getUserIdFromNoty as getUserIdFromNotyBase, toNotificationText } from "../../shared/utils/notification-message";
 import { database, dbVars } from "../../services/database";
 import { getNotificationCategory, getNotificationTs } from "../../shared/utils/notification-category";

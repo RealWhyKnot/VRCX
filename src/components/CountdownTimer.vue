@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-import { timeToText } from "../shared/utils";
+import { timeToText } from "../shared/utils/base/format";
 
 import * as workerTimers from "worker-timers";
 

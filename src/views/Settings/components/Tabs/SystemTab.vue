@@ -149,15 +149,20 @@
 
 <script setup>
 import { computed, defineAsyncComponent, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useGeneralSettingsStore, useVRCXUpdaterStore } from "@/stores";
-import { links } from "@/shared/constants";
-import { openExternalLink } from "@/shared/utils";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import { useGeneralSettingsStore } from "@/stores/settings/general";
+import { useVRCXUpdaterStore } from "@/stores/vrcx-updater";
+import { links } from "@/shared/constants/link";
+import { openExternalLink } from "@/shared/utils/app-actions";
 
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";

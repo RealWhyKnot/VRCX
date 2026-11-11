@@ -11,7 +11,7 @@
 import { onMounted, ref, watch } from "vue";
 import { Lock } from "lucide-vue-next";
 
-import { parseLocation } from "../../shared/utils/location";
+import { parseLocation } from "../../shared/utils/location-parser";
 
 const props = defineProps({
   location: String,

@@ -93,10 +93,11 @@ import { Search, FolderHeart, RefreshCw, MousePointerClick } from "lucide-vue-ne
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { openExternalLink } from "../../shared/utils";
-import { useVRCXUpdaterStore } from "../../stores";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import Button from "@/components/ui/button/Button.vue";
+import { openExternalLink } from "../../shared/utils/app-actions";
+import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
 import vrcxLogo from "../../../images/VRCX.png";
 
 const { t } = useI18n();

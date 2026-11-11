@@ -134,8 +134,9 @@ function makeApiMock() {
     miscRequest: {},
   };
 }
-vi.mock("../../src/api", () => makeApiMock());
-vi.mock("../../src/api", () => makeApiMock());
+vi.mock("../../src/api/instance", () => ({ default: makeApiMock().instanceRequest }));
+vi.mock("../../src/api/user", () => ({ default: makeApiMock().userRequest }));
+vi.mock("../../src/api/group", () => ({ default: makeApiMock().groupRequest }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args) => mockShowUserDialog(...args),

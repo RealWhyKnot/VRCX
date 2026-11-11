@@ -202,19 +202,31 @@
 
 <script setup>
 import { Ban, Bell, BellOff, CalendarDays, Check, Link, Mail, MessageCircle, Reply, Send, Tag, Trash2, UserPlus, Users, X } from "lucide-vue-next";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import Item from "@/components/ui/item/Item.vue";
+import ItemContent from "@/components/ui/item/ItemContent.vue";
+import ItemDescription from "@/components/ui/item/ItemDescription.vue";
+import ItemMedia from "@/components/ui/item/ItemMedia.vue";
+import ItemTitle from "@/components/ui/item/ItemTitle.vue";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
+import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
+import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
 import { computed, onBeforeUnmount } from "vue";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { useGameStore, useGroupStore, useLocationStore, useNotificationStore, useUserStore } from "../../../stores";
+import { useGameStore } from "../../../stores/game";
+import { useGroupStore } from "../../../stores/group";
+import { useLocationStore } from "../../../stores/location";
+import { useNotificationStore } from "../../../stores/notification";
+import { useUserStore } from "../../../stores/user";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { useInviteChecks } from "../../../composables/use-invite-checks";

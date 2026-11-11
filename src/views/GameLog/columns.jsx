@@ -1,14 +1,20 @@
 import Location from "../../components/Location.vue";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "../../components/ui/context-menu";
-import { TooltipWrapper } from "../../components/ui/tooltip";
+import Badge from "../../components/ui/badge/Badge.vue";
+import Button from "../../components/ui/button/Button.vue";
+import ContextMenu from "../../components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "../../components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "../../components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "../../components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "../../components/ui/context-menu/ContextMenuTrigger.vue";
+import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { ArrowUpDown, Copy, ExternalLink, FileText, Trash2, X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 
-import { copyToClipboard, formatDateFilter, openExternalLink } from "../../shared/utils";
-import { i18n } from "../../plugins";
-import { useInstanceStore, useUiStore } from "../../stores";
+import { copyToClipboard, openExternalLink } from "../../shared/utils/app-actions";
+import { formatDateFilter } from "../../coordinators/date-coordinator";
+import { i18n } from "../../plugins/i18n";
+import { useInstanceStore } from "../../stores/instance";
+import { useUiStore } from "../../stores/ui";
 import { lookupUser } from "../../coordinators/user-coordinator";
 import { showWorldDialog } from "../../coordinators/world-coordinator";
 

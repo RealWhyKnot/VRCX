@@ -117,12 +117,21 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
-import { Progress } from "@/components/ui/progress";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import Progress from "@/components/ui/progress/Progress.vue";
 import { Star } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
@@ -130,14 +139,20 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { Loader2 } from "lucide-vue-next";
 
-import { useAppearanceSettingsStore, useChartsStore, useFriendStore, useModalStore, useSearchStore, useUserStore } from "../../stores";
-import { friendRequest, userRequest } from "../../api";
-import { DataTableLayout } from "../../components/ui/data-table";
-import { Switch } from "../../components/ui/switch";
-import { Toggle } from "../../components/ui/toggle";
-import { TooltipWrapper } from "../../components/ui/tooltip";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useChartsStore } from "../../stores/charts";
+import { useFriendStore } from "../../stores/friend";
+import { useModalStore } from "../../stores/modal";
+import { useSearchStore } from "../../stores/search";
+import { useUserStore } from "../../stores/user";
+import friendRequest from "../../api/friend";
+import userRequest from "../../api/user";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
+import Switch from "../../components/ui/switch/Switch.vue";
+import Toggle from "../../components/ui/toggle/Toggle.vue";
+import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { createColumns } from "./columns.jsx";
-import { localeIncludes, replaceBioSymbols } from "../../shared/utils";
+import { localeIncludes, replaceBioSymbols } from "../../shared/utils/base/string";
 import removeConfusables, { removeWhitespace } from "../../services/confusables";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import { showUserDialog } from "../../coordinators/user-coordinator";

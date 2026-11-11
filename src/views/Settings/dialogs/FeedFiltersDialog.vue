@@ -70,16 +70,23 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { AlertTriangle, Info } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useNotificationsSettingsStore, usePhotonStore, useSharedFeedStore } from "../../../stores";
-import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
-import { feedFiltersOptions, sharedFeedFiltersDefaults } from "../../../shared/constants";
+import { useNotificationsSettingsStore } from "../../../stores/settings/notifications";
+import { usePhotonStore } from "../../../stores/photon";
+import { useSharedFeedStore } from "../../../stores/shared-feed";
+import ToggleGroup from "../../../components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem.vue";
+import { feedFiltersOptions, sharedFeedFiltersDefaults } from "../../../shared/constants/feed-filters";
 
 import configRepository from "../../../services/config";
 

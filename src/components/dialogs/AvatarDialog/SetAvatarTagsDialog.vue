@@ -85,18 +85,22 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { watch } from "vue";
 
-import { avatarRequest } from "../../../api";
-import { removeFromArray } from "../../../shared/utils";
-import { useAvatarStore } from "../../../stores";
+import avatarRequest from "../../../api/avatar";
+import { removeFromArray } from "../../../shared/utils/base/array";
+import { useAvatarStore } from "../../../stores/avatar";
 import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
 
 const { cachedAvatars } = useAvatarStore();

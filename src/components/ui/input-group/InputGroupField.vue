@@ -4,7 +4,11 @@ import { computed, ref, useAttrs } from "vue";
 import { cn } from "@/lib/utils";
 import { useVModel } from "@vueuse/core";
 
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from ".";
+import InputGroup from "./InputGroup.vue";
+import InputGroupAddon from "./InputGroupAddon.vue";
+import InputGroupButton from "./InputGroupButton.vue";
+import InputGroupInput from "./InputGroupInput.vue";
+import InputGroupText from "./InputGroupText.vue";
 
 defineOptions({ inheritAttrs: false });
 

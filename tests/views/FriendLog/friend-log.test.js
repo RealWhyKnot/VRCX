@@ -38,18 +38,24 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     tablePageSizes: [10, 25, 50],
     tablePageSize: 25,
     hideUnfriends: mocks.hideUnfriends,
   }),
+}));
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     friendLogTable: mocks.friendLogTable,
   }),
+}));
+vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({
     confirm: vi.fn().mockResolvedValue({ ok: true }),
   }),
+}));
+vi.mock("../../../src/stores/vrcx", () => ({
   useVrcxStore: () => ({
     maxTableSize: 100,
   }),
@@ -68,8 +74,8 @@ vi.mock("../../../src/views/FriendLog/columns.jsx", () => ({
   createColumns: () => [],
 }));
 
-vi.mock("../../../src/components/ui/data-table", () => ({
-  DataTableLayout: {
+vi.mock("../../../src/components/ui/data-table/DataTableLayout.vue", () => ({
+  default: {
     props: ["totalItems", "onPageSizeChange"],
     template:
       '<div data-testid="friend-log-layout">' +
@@ -80,20 +86,30 @@ vi.mock("../../../src/components/ui/data-table", () => ({
   },
 }));
 
-vi.mock("../../../src/components/ui/select", () => ({
-  Select: {
+vi.mock("../../../src/components/ui/select/Select.vue", () => ({
+  default: {
     emits: ["update:modelValue"],
     template: "<div><button data-testid=\"set-type-filter\" @click=\"$emit('update:modelValue', ['Friend'])\">set-filter</button><slot /></div>",
   },
-  SelectContent: { template: "<div><slot /></div>" },
-  SelectGroup: { template: "<div><slot /></div>" },
-  SelectItem: { template: "<div><slot /></div>" },
-  SelectTrigger: { template: "<div><slot /></div>" },
-  SelectValue: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/select/SelectContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/select/SelectGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/select/SelectItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/select/SelectTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/select/SelectValue.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("../../../src/components/ui/input-group", () => ({
-  InputGroupField: {
+vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
@@ -112,7 +128,7 @@ vi.mock("../../../src/services/database", () => ({
   },
 }));
 
-vi.mock("../../../src/shared/utils", () => ({
+vi.mock("../../../src/shared/utils/base/array", () => ({
   removeFromArray: (...args) => mocks.removeFromArray(...args),
 }));
 

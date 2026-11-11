@@ -9,18 +9,18 @@ vi.mock("pinia", () => ({
   storeToRefs: (store) => store,
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/search", () => ({
   useSearchStore: () => ({
     searchText: mocks.searchText,
   }),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/base/string", () => ({
   replaceBioSymbols: (...args) => mocks.replaceBioSymbols(...args),
 }));
 
-vi.mock("../../../../src/api", () => ({
-  groupRequest: {
+vi.mock("../../../../src/api/group", () => ({
+  default: {
     groupSearch: (...args) => mocks.groupSearch(...args),
   },
 }));

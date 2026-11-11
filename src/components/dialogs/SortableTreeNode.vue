@@ -1,9 +1,12 @@
 <script setup>
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { ChevronRight, Ellipsis, GripVertical } from "lucide-vue-next";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { TreeItem } from "@/components/ui/tree";
+import Button from "@/components/ui/button/Button.vue";
+import TreeItem from "@/components/ui/tree/TreeItem.vue";
 import { useI18n } from "vue-i18n";
 import { useSortable } from "@dnd-kit/vue/sortable";
 

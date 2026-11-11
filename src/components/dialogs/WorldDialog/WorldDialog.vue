@@ -381,38 +381,37 @@ import {
   Wand2,
 } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { TabsUnderline } from "@/components/ui/tabs";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import {
-  useFavoriteStore,
-  useGalleryStore,
-  useGameStore,
-  useInstanceStore,
-  useInviteStore,
-  useLocationStore,
-  useModalStore,
-  useUserStore,
-  useWorldStore,
-} from "../../../stores";
+import { useFavoriteStore } from "../../../stores/favorite";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGameStore } from "../../../stores/game";
+import { useInstanceStore } from "../../../stores/instance";
+import { useInviteStore } from "../../../stores/invite";
+import { useLocationStore } from "../../../stores/location";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
+import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import { worldRequest } from "../../../api";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import { deleteVRChatCache, openFolderGeneric } from "../../../shared/utils";
-import { Badge } from "../../ui/badge";
+import worldRequest from "../../../api/world";
+import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuSub from "../../ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
+import { deleteVRChatCache } from "../../../coordinators/cache-coordinator";
+import { openFolderGeneric } from "../../../shared/utils/app-actions";
+import Badge from "../../ui/badge/Badge.vue";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/invite-coordinator";
 import { useWorldDialogCommands } from "./use-world-dialog-commands";

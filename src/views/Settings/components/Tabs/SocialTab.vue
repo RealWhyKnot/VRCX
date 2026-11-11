@@ -70,14 +70,25 @@
 </template>
 
 <script setup>
-import { Switch } from "@/components/ui/switch";
+import Switch from "@/components/ui/switch/Switch.vue";
 
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from "@/components/ui/number-field";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import NumberField from "@/components/ui/number-field/NumberField.vue";
+import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
+import NumberFieldDecrement from "@/components/ui/number-field/NumberFieldDecrement.vue";
+import NumberFieldIncrement from "@/components/ui/number-field/NumberFieldIncrement.vue";
+import NumberFieldInput from "@/components/ui/number-field/NumberFieldInput.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectSeparator from "@/components/ui/select/SelectSeparator.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useGeneralSettingsStore } from "@/stores";
+import { useFavoriteStore } from "@/stores/favorite";
+import { useGeneralSettingsStore } from "@/stores/settings/general";
 
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";

@@ -92,7 +92,7 @@ vi.mock("../../../../src/services/request", () => ({
 }));
 
 import GroupDialogPostsTab from "../../../../src/components/dialogs/GroupDialog/GroupDialogPostsTab.vue";
-import { useGroupStore } from "../../../../src/stores";
+import { useGroupStore } from "../../../../src/stores/group";
 
 const MOCK_POSTS = [
   {

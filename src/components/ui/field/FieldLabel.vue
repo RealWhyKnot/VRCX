@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Label } from "@/components/ui/label";
+import Label from "@/components/ui/label/Label.vue";
 import { cn } from "@/lib/utils";
 
 const props = defineProps<{ class?: unknown }>();

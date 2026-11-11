@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
-vi.mock("../../../../src/components/ui/switch", () => ({
-  Switch: {
+vi.mock("../../../../src/components/ui/switch/Switch.vue", () => ({
+  default: {
     props: ["modelValue", "disabled"],
     emits: ["update:modelValue"],
     template: '<button data-testid="switch" :data-disabled="disabled" @click="$emit(\'update:modelValue\', !modelValue)">switch</button>',

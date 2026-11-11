@@ -96,16 +96,24 @@ import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 
 import { Image, RefreshCw } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { DataTableEmpty } from "@/components/ui/data-table";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 
 import { refreshUserDialogAvatars } from "@/coordinators/user-coordinator";
 
-import { useAdvancedSettingsStore, useAvatarStore, useUserStore } from "../../../stores";
+import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
+import { useAvatarStore } from "../../../stores/avatar";
+import { useUserStore } from "../../../stores/user";
 
 const { t } = useI18n();
 

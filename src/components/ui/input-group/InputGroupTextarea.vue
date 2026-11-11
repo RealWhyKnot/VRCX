@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Textarea } from "@/components/ui/textarea";
+import Textarea from "@/components/ui/textarea/Textarea.vue";
 import { cn } from "@/lib/utils";
 
 const props = defineProps<{ class?: unknown }>();

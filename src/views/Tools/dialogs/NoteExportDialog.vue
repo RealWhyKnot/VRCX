@@ -45,19 +45,24 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { removeFromArray } from "../../../shared/utils";
+import { removeFromArray } from "../../../shared/utils/base/array";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { useFriendStore, useGalleryStore, useUserStore } from "../../../stores";
+import { useFriendStore } from "../../../stores/friend";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useUserStore } from "../../../stores/user";
 import { createColumns } from "./note-export-columns.jsx";
-import { miscRequest } from "../../../api";
+import miscRequest from "../../../api/misc";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 import * as workerTimers from "worker-timers";

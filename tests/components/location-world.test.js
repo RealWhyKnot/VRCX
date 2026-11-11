@@ -28,14 +28,18 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/instance", () => ({
   useInstanceStore: () => ({
     cachedInstances: mocks.cachedInstances,
     lastInstanceApplied: mocks.lastInstanceApplied,
   }),
+}));
+vi.mock("../../src/stores/launch", () => ({
   useLaunchStore: () => ({
     showLaunchDialog: (...args) => mocks.showLaunchDialog(...args),
   }),
+}));
+vi.mock("../../src/stores/group", () => ({
   useGroupStore: () => ({}),
 }));
 
@@ -43,7 +47,7 @@ vi.mock("../../src/coordinators/group-coordinator", () => ({
   showGroupDialog: (...args) => mocks.showGroupDialog(...args),
 }));
 
-vi.mock("../../src/shared/constants", () => ({
+vi.mock("../../src/shared/constants/access-type", () => ({
   accessTypeLocaleKeyMap: {
     friends: "dialog.world.instance.friends",
     groupPublic: "dialog.world.instance.group_public",
@@ -51,8 +55,11 @@ vi.mock("../../src/shared/constants", () => ({
   },
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/group", () => ({
   getGroupName: (...args) => mocks.getGroupName(...args),
+}));
+vi.mock("../../src/shared/utils/location-parser", async (importOriginal) => ({
+  ...(await importOriginal()),
   parseLocation: (...args) => mocks.parseLocation(...args),
 }));
 

@@ -1,6 +1,7 @@
 import { toast } from "vue-sonner";
 
-import { deleteVRChatCache as _deleteVRChatCache, isRealInstance } from "../shared/utils";
+import { deleteVRChatCache as _deleteVRChatCache } from "./cache-coordinator";
+import { isRealInstance } from "../shared/utils/instance";
 import { database } from "../services/database";
 import { useAdvancedSettingsStore } from "../stores/settings/advanced";
 import { useAvatarStore } from "../stores/avatar";

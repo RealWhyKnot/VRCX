@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   useAppearanceSettingsStore: vi.fn(),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: (...args) => mocks.useAppearanceSettingsStore(...args),
 }));
 

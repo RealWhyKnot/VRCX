@@ -6,7 +6,7 @@ import { ref } from "vue";
 const { mockDownloadAndSaveJson } = vi.hoisted(() => ({
   mockDownloadAndSaveJson: vi.fn(),
 }));
-vi.mock("../../../src/shared/utils", async (importOriginal) => {
+vi.mock("../../../src/shared/utils/app-actions", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,

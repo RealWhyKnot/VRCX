@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { sharedFeedFiltersDefaults } from "../../shared/constants";
+import { sharedFeedFiltersDefaults } from "../../shared/constants/feed-filters";
 import { useModalStore } from "../modal";
 import { useVrStore } from "../vr";
 

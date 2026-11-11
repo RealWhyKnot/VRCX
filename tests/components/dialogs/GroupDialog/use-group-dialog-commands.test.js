@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 import { useGroupDialogCommands } from "../../../../src/components/dialogs/GroupDialog/use-group-dialog-commands";
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   copyToClipboard: vi.fn(),
 }));
 

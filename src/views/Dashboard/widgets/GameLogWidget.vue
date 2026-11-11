@@ -120,16 +120,25 @@ import { LogIn, LogOut, MapPin, Settings, Play, Waypoints } from "lucide-vue-nex
 
 import { database } from "@/services/database";
 import { showUserDialog } from "@/coordinators/user-coordinator";
-import { useFriendStore, useGameLogStore } from "@/stores";
-import { formatDateFilter, openExternalLink } from "@/shared/utils";
+import { useFriendStore } from "@/stores/friend";
+import { useGameLogStore } from "@/stores/gameLog";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
+import { openExternalLink } from "@/shared/utils/app-actions";
 import { watchState } from "@/services/watch-state";
 
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Button from "@/components/ui/button/Button.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import Location from "@/components/Location.vue";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import WidgetHeader from "./WidgetHeader.vue";
-import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import Table from "@/components/ui/table/Table.vue";
+import TableBody from "@/components/ui/table/TableBody.vue";
+import TableRow from "@/components/ui/table/TableRow.vue";
+import TableCell from "@/components/ui/table/TableCell.vue";
 
 const GAMELOG_TYPES = ["Location", "OnPlayerJoined", "OnPlayerLeft", "VideoPlay", "PortalSpawn", "Event", "External"];
 

@@ -92,20 +92,29 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { computed, onMounted, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { RefreshCw } from "lucide-vue-next";
-import { Spinner } from "@/components/ui/spinner";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
 
-import { useAppearanceSettingsStore, useGalleryStore, useInviteStore, useNotificationStore, useVrcxStore } from "../../stores";
-import { DataTableLayout } from "../../components/ui/data-table";
-import { convertFileUrlToImageUrl } from "../../shared/utils";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useGalleryStore } from "../../stores/gallery";
+import { useInviteStore } from "../../stores/invite";
+import { useNotificationStore } from "../../stores/notification";
+import { useVrcxStore } from "../../stores/vrcx";
+import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
+import { convertFileUrlToImageUrl } from "../../shared/utils/common";
 import { createColumns } from "./columns.jsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 

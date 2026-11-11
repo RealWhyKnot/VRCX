@@ -70,12 +70,12 @@
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import Button from "@/components/ui/button/Button.vue";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import ToolItem from "./components/ToolItem.vue";
 import { useToolActions } from "../../composables/use-tool-actions";
 import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
-import { getToolsByCategory, toolCategories } from "../../shared/constants";
+import { getToolsByCategory, toolCategories } from "../../shared/constants/tools";
 import configRepository from "../../services/config.js";
 
 const { t } = useI18n();

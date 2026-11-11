@@ -8,7 +8,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../src/shared/constants", () => ({
+vi.mock("../../../src/shared/constants/tags", () => ({
   TAG_COLORS: [
     {
       name: "blue",
@@ -24,47 +24,69 @@ vi.mock("../../../src/shared/constants", () => ({
   }),
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: {
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: {
     props: ["open"],
     emits: ["update:open"],
     template: "<div><slot /></div>",
   },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogDescription: { template: "<div><slot /></div>" },
-  DialogFooter: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogDescription.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/popover", () => ({
-  Popover: { template: "<div><slot /></div>" },
-  PopoverContent: { template: "<div><slot /></div>" },
-  PopoverTrigger: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/popover/Popover.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/popover/PopoverContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/popover/PopoverTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="button" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/tags-input", () => ({
-  TagsInput: {
+vi.mock("@/components/ui/tags-input/TagsInput.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: "<div><slot /></div>",
   },
-  TagsInputInput: {
+}));
+vi.mock("@/components/ui/tags-input/TagsInputInput.vue", () => ({
+  default: {
     template: '<input data-testid="tags-input" />',
   },
-  TagsInputItem: {
+}));
+vi.mock("@/components/ui/tags-input/TagsInputItem.vue", () => ({
+  default: {
     props: ["value"],
     template: '<span data-testid="tag-item"><slot />{{ value }}</span>',
   },
-  TagsInputItemDelete: { template: "<span>x</span>" },
-  TagsInputItemText: { template: "<span />" },
+}));
+vi.mock("@/components/ui/tags-input/TagsInputItemDelete.vue", () => ({
+  default: { template: "<span>x</span>" },
+}));
+vi.mock("@/components/ui/tags-input/TagsInputItemText.vue", () => ({
+  default: { template: "<span />" },
 }));
 
 import ManageTagsDialog from "../../../src/views/MyAvatars/ManageTagsDialog.vue";

@@ -68,19 +68,27 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { ChevronDown, Users } from "lucide-vue-next";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../components/ui/context-menu";
+import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "../../../components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "../../../components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuTrigger from "../../../components/ui/context-menu/ContextMenuTrigger.vue";
 import { buildGroupHeaderRow, buildGroupItemRow, estimateGroupRowSize, getGroupId } from "../groups-sidebar-utils";
-import { convertFileUrlToImageUrl, parseLocation } from "../../../shared/utils";
+import { convertFileUrlToImageUrl } from "../../../shared/utils/common";
+import { parseLocation } from "../../../shared/utils/location-parser";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
-import { useAppearanceSettingsStore, useGroupStore, useLaunchStore } from "../../../stores";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useGroupStore } from "../../../stores/group";
+import { useLaunchStore } from "../../../stores/launch";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
-import { instanceRequest } from "../../../api";
+import instanceRequest from "../../../api/instance";
 
 import BackToTop from "../../../components/BackToTop.vue";
 import Location from "../../../components/Location.vue";

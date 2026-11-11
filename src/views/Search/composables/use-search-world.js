@@ -1,9 +1,11 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import { replaceBioSymbols } from "../../../shared/utils";
-import { useAuthStore, useSearchStore, useWorldStore } from "../../../stores";
-import { worldRequest } from "../../../api";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
+import { useAuthStore } from "../../../stores/auth";
+import { useSearchStore } from "../../../stores/search";
+import { useWorldStore } from "../../../stores/world";
+import worldRequest from "../../../api/world";
 
 function createDefaultSearchWorldParams() {
   return {

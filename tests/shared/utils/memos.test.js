@@ -16,10 +16,12 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     friends: mocks.friends,
   }),
+}));
+vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({
     setUserDialogMemo: (...args) => mocks.setUserDialogMemo(...args),
   }),

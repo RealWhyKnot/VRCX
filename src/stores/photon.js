@@ -3,8 +3,15 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { checkVRChatCache, displayLocation, getGroupName, getWorldName, parseLocation, removeFromArray, replaceBioSymbols, timeToText } from "../shared/utils";
-import { instanceRequest, userRequest } from "../api";
+import { checkVRChatCache } from "../coordinators/cache-coordinator";
+import { displayLocation, parseLocation } from "../shared/utils/location-parser";
+import { getGroupName } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
+import { removeFromArray } from "../shared/utils/base/array";
+import { replaceBioSymbols } from "../shared/utils/base/string";
+import { timeToText } from "../shared/utils/base/format";
+import instanceRequest from "../api/instance";
+import userRequest from "../api/user";
 import { photonEmojis, photonEventType } from "../shared/constants/photon";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";

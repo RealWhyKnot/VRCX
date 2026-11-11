@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { getNotificationMessage, getUserIdFromNoty, toNotificationText } from "../../src/shared/utils/notification-message";
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/location-parser", () => ({
   displayLocation: (location, worldName, groupName) => {
     let text = worldName || location;
     if (groupName) text += ` (${groupName})`;

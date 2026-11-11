@@ -11,44 +11,70 @@ vi.mock("lucide-vue-next", () => ({
   ChevronRight: { template: "<i />" },
 }));
 
-vi.mock("@/components/ui/sidebar", () => ({
-  SidebarMenuItem: { template: "<div><slot /></div>" },
-  SidebarMenuButton: {
+vi.mock("@/components/ui/sidebar/SidebarMenuItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/sidebar/SidebarMenuButton.vue", () => ({
+  default: {
     template: '<button data-testid="folder-btn"><slot /></button>',
   },
-  SidebarMenuSub: { template: "<div><slot /></div>" },
-  SidebarMenuSubItem: { template: "<div><slot /></div>" },
-  SidebarMenuSubButton: {
+}));
+vi.mock("@/components/ui/sidebar/SidebarMenuSub.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/sidebar/SidebarMenuSubItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/sidebar/SidebarMenuSubButton.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="submenu-btn" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("@/components/ui/collapsible", () => ({
-  Collapsible: { template: '<div><slot :open="true" /></div>' },
-  CollapsibleTrigger: { template: "<div><slot /></div>" },
-  CollapsibleContent: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/collapsible/Collapsible.vue", () => ({
+  default: { template: '<div><slot :open="true" /></div>' },
+}));
+vi.mock("@/components/ui/collapsible/CollapsibleTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/collapsible/CollapsibleContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/context-menu", () => ({
-  ContextMenu: { template: "<div><slot /></div>" },
-  ContextMenuTrigger: { template: "<div><slot /></div>" },
-  ContextMenuContent: { template: "<div><slot /></div>" },
-  ContextMenuItem: {
+vi.mock("@/components/ui/context-menu/ContextMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuItem.vue", () => ({
+  default: {
     emits: ["click"],
     template: "<button @click=\"$emit('click')\"><slot /></button>",
   },
-  ContextMenuSeparator: { template: "<div />" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuSeparator.vue", () => ({
+  default: { template: "<div />" },
 }));
 
-vi.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: {
+vi.mock("@/components/ui/dropdown-menu/DropdownMenu.vue", () => ({
+  default: {
     emits: ["update:open"],
     template: '<div><button data-testid="dropdown-open" @click="$emit(\'update:open\', true)" /><slot /></div>',
   },
-  DropdownMenuTrigger: { template: "<div><slot /></div>" },
-  DropdownMenuContent: { template: "<div><slot /></div>" },
-  DropdownMenuItem: {
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dropdown-menu/DropdownMenuItem.vue", () => ({
+  default: {
     emits: ["select"],
     template: "<button @click=\"$emit('select', $event)\"><slot /></button>",
   },

@@ -148,13 +148,19 @@
 </template>
 
 <script setup>
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useNotificationsSettingsStore, useVrStore, useWristOverlaySettingsStore } from "@/stores";
+import { useNotificationsSettingsStore } from "@/stores/settings/notifications";
+import { useVrStore } from "@/stores/vr";
+import { useWristOverlaySettingsStore } from "@/stores/settings/wrist-overlay";
 
 import SettingsGroup from "./SettingsGroup.vue";
 import SettingsItem from "./SettingsItem.vue";

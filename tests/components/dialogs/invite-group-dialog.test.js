@@ -27,30 +27,38 @@ const mocks = vi.hoisted(() => ({
 vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
 vi.mock("vue-sonner", () => ({ toast: { error: vi.fn() } }));
-vi.mock("../../../src/shared/utils", () => ({ hasGroupPermission: () => true }));
+vi.mock("../../../src/shared/utils/group", () => ({
+  hasGroupPermission: () => true,
+}));
 vi.mock("../../../src/composables/use-user-display", () => ({
   useUserDisplay: () => ({ userImage: () => "", userStatusClass: () => "" }),
 }));
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     vipFriends: ref([]),
     onlineFriends: ref([]),
     activeFriends: ref([]),
     offlineFriends: ref([]),
   }),
+}));
+vi.mock("../../../src/stores/group", () => ({
   useGroupStore: () => ({
     currentUserGroups: ref(new Map()),
     inviteGroupDialog: mocks.inviteDialog,
     applyGroup: (...a) => mocks.applyGroup(...a),
   }),
+}));
+vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({ confirm: (...a) => mocks.confirm(...a) }),
 }));
-vi.mock("../../../src/api", () => ({
-  groupRequest: {
+vi.mock("../../../src/api/group", () => ({
+  default: {
     sendGroupInvite: (...a) => mocks.sendGroupInvite(...a),
     getGroup: (...a) => mocks.getGroup(...a),
   },
-  queryRequest: { fetch: (...a) => mocks.fetch(...a) },
+}));
+vi.mock("../../../src/api/query-request", () => ({
+  default: { fetch: (...a) => mocks.fetch(...a) },
 }));
 vi.mock("../../../src/services/config", () => ({
   default: {
@@ -58,21 +66,29 @@ vi.mock("../../../src/services/config", () => ({
     setString: (...a) => mocks.setString(...a),
   },
 }));
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
-  DialogFooter: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
-vi.mock("../../../src/components/ui/virtual-combobox", () => ({
-  VirtualCombobox: { template: "<div />" },
+vi.mock("../../../src/components/ui/virtual-combobox/VirtualCombobox.vue", () => ({
+  default: { template: "<div />" },
 }));
 vi.mock("lucide-vue-next", () => ({ Check: { template: "<i />" } }));
 

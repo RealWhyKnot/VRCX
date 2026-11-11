@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n";
 
 import { logWebRequest } from "../../services/app-config";
 import { database } from "../../services/database";
-import { languageCodes } from "../../localization";
+import { languageCodes } from "../../localization/locales";
 import { useGameStore } from "../game";
 import { useModalStore } from "../modal";
 import { useUpdateLoopStore } from "../update-loop";

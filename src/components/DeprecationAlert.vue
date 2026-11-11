@@ -16,7 +16,9 @@
 import { MessageSquareWarning } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import Alert from "./ui/alert/Alert.vue";
+import AlertDescription from "./ui/alert/AlertDescription.vue";
+import AlertTitle from "./ui/alert/AlertTitle.vue";
 
 const { t } = useI18n();
 

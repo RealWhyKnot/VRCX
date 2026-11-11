@@ -4,8 +4,8 @@ import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 
 import configRepository from "../services/config";
-import { navDefinitions } from "../shared/constants";
-import { useDashboardStore } from "../stores";
+import { navDefinitions } from "../shared/constants/ui";
+import { useDashboardStore } from "../stores/dashboard";
 import { createBaseDefaultNavLayout, insertDashboardEntries } from "../components/nav-menu/nav-layout-defaults";
 import { collectLayoutKeys } from "../components/nav-menu/nav-layout-helpers";
 import {

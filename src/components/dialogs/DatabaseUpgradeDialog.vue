@@ -20,11 +20,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Spinner } from "@/components/ui/spinner";
+import AlertDialog from "@/components/ui/alert-dialog/AlertDialog.vue";
+import AlertDialogContent from "@/components/ui/alert-dialog/AlertDialogContent.vue";
+import AlertDialogDescription from "@/components/ui/alert-dialog/AlertDialogDescription.vue";
+import AlertDialogHeader from "@/components/ui/alert-dialog/AlertDialogHeader.vue";
+import AlertDialogTitle from "@/components/ui/alert-dialog/AlertDialogTitle.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { useI18n } from "vue-i18n";
 
-import { useVrcxStore } from "../../stores";
+import { useVrcxStore } from "../../stores/vrcx";
 
 const { t } = useI18n();
 const { databaseUpgradeState } = storeToRefs(useVrcxStore());

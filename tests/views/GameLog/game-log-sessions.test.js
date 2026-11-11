@@ -40,7 +40,7 @@ vi.mock("@internationalized/date", () => ({
   toDate: (date) => date,
 }));
 
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/gameLog", () => ({
   useGameLogStore: () => ({
     sessionsSegments,
     sessionsLoading,
@@ -59,21 +59,23 @@ vi.mock("../../../src/stores", () => ({
     clearSessionsDateRange: (...args) => mocks.clearSessionsDateRange(...args),
     loadMoreSessionsSegments: (...args) => mocks.loadMoreSessionsSegments(...args),
   }),
+}));
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     weekStartsOn,
   }),
 }));
 
-vi.mock("../../../src/components/ui/toggle", () => ({
-  Toggle: {
+vi.mock("../../../src/components/ui/toggle/Toggle.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue"],
     template: '<button data-testid="vip-toggle" @click="$emit(\'update:modelValue\', !modelValue)"><slot /></button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/toggle-group", () => ({
-  ToggleGroup: {
+vi.mock("../../../src/components/ui/toggle-group/ToggleGroup.vue", () => ({
+  default: {
     emits: ["update:model-value"],
     template:
       '<div data-testid="toggle-group">' +
@@ -81,30 +83,36 @@ vi.mock("../../../src/components/ui/toggle-group", () => ({
       "<slot />" +
       "</div>",
   },
-  ToggleGroupItem: {
+}));
+vi.mock("../../../src/components/ui/toggle-group/ToggleGroupItem.vue", () => ({
+  default: {
     props: ["value"],
     template: '<button :data-value="value"><slot /></button>',
   },
 }));
 
-vi.mock("../../../src/components/ui/popover", () => ({
-  Popover: {
+vi.mock("../../../src/components/ui/popover/Popover.vue", () => ({
+  default: {
     template: "<div><slot /></div>",
   },
-  PopoverTrigger: { template: "<div><slot /></div>" },
-  PopoverContent: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("../../../src/components/ui/popover/PopoverContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("../../../src/components/ui/range-calendar", () => ({
-  RangeCalendar: {
+vi.mock("../../../src/components/ui/range-calendar/RangeCalendar.vue", () => ({
+  default: {
     emits: ["update:modelValue"],
     template:
       "<button data-testid=\"set-date-range\" @click=\"$emit('update:modelValue', { start: { toDate: () => new Date('2026-04-01T00:00:00.000Z') }, end: { toDate: () => new Date('2026-04-02T00:00:00.000Z') } })\">range</button>",
   },
 }));
 
-vi.mock("../../../src/components/ui/input-group", () => ({
-  InputGroupField: {
+vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
+  default: {
     props: ["modelValue"],
     emits: ["update:modelValue", "change", "keyup.enter"],
     template:
@@ -112,8 +120,8 @@ vi.mock("../../../src/components/ui/input-group", () => ({
   },
 }));
 
-vi.mock("../../../src/components/ui/button", () => ({
-  Button: {
+vi.mock("../../../src/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: "<button @click=\"$emit('click')\"><slot /></button>",
   },
@@ -123,20 +131,20 @@ vi.mock("../../../src/components/ui/data-table/DataTableEmpty.vue", () => ({
   default: { template: '<div data-testid="data-table-empty" />' },
 }));
 
-vi.mock("../../../src/components/ui/badge", () => ({
-  Badge: { template: "<span><slot /></span>" },
+vi.mock("../../../src/components/ui/badge/Badge.vue", () => ({
+  default: { template: "<span><slot /></span>" },
 }));
 
-vi.mock("../../../src/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: "<div><slot /></div>" },
+vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("../../../src/components/ui/skeleton", () => ({
-  Skeleton: { template: "<div />" },
+vi.mock("../../../src/components/ui/skeleton/Skeleton.vue", () => ({
+  default: { template: "<div />" },
 }));
 
-vi.mock("../../../src/components/ui/spinner", () => ({
-  Spinner: { template: "<div />" },
+vi.mock("../../../src/components/ui/spinner/Spinner.vue", () => ({
+  default: { template: "<div />" },
 }));
 
 vi.mock("../../../src/views/GameLog/components/GameLogSessionsSegment.vue", () => ({

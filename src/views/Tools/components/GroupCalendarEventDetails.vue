@@ -59,13 +59,13 @@
 
 <script setup>
 import { Calendar, Download } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import dayjs from "dayjs";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { AppDebug } from "../../../services/app-config";
-import { formatDateFilter } from "../../../shared/utils";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
 
 const { t } = useI18n();
 

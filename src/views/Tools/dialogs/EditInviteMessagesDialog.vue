@@ -56,10 +56,13 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { DataTableLayout } from "@/components/ui/data-table";
-import { TabsUnderline } from "@/components/ui/tabs";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
@@ -69,7 +72,7 @@ import { columns as inviteMessageColumns } from "./edit-invite-messages-message-
 import { columns as inviteRequestColumns } from "./edit-invite-messages-request-columns.jsx";
 import { columns as inviteRequestResponseColumns } from "./edit-invite-messages-request-response-columns.jsx";
 import { columns as inviteResponseColumns } from "./edit-invite-messages-response-columns.jsx";
-import { useInviteStore } from "../../../stores";
+import { useInviteStore } from "../../../stores/invite";
 
 import EditInviteMessageDialog from "./EditInviteMessageDialog.vue";
 

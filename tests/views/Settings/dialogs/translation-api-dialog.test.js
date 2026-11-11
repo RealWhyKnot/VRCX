@@ -45,7 +45,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/settings/advanced", () => ({
   useAdvancedSettingsStore: () => ({
     setBioLanguage: mocks.setBioLanguage,
     translateText: mocks.translateText,
@@ -58,7 +58,7 @@ vi.mock("../../../../src/stores", () => ({
   }),
 }));
 
-vi.mock("../../../../src/shared/utils", () => ({
+vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: (...args) => mocks.openExternalLink(...args),
 }));
 
@@ -68,6 +68,8 @@ vi.mock("vue-sonner", () => ({
 
 vi.mock("../../../../src/localization", () => ({
   getLanguageName: (code) => `Language_${code}`,
+}));
+vi.mock("../../../../src/localization/locales", () => ({
   languageCodes: ["en", "ja", "ko", "zh-CN", "fr"],
 }));
 

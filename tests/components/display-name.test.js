@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   showUserDialog: vi.fn(),
 }));
 
-vi.mock("../../src/api", () => ({
-  queryRequest: {
+vi.mock("../../src/api/query-request", () => ({
+  default: {
     fetch: (...args) => mocks.fetch(...args),
   },
 }));

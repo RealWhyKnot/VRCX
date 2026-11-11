@@ -80,12 +80,14 @@ vi.mock("vue-i18n", async (importOriginal) => {
 });
 
 const mockGetInstanceShortName = vi.fn();
-vi.mock("../../src/api", () => ({
-  instanceRequest: {
+vi.mock("../../src/api/instance", () => ({
+  default: {
     getInstanceShortName: (...args) => mockGetInstanceShortName(...args),
     selfInvite: vi.fn().mockResolvedValue({}),
   },
-  miscRequest: {},
+}));
+vi.mock("../../src/api/misc", () => ({
+  default: {},
 }));
 vi.mock("vue-sonner", () => ({
   toast: {

@@ -43,8 +43,8 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import Button from "@/components/ui/button/Button.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 

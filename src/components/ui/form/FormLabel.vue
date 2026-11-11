@@ -1,5 +1,5 @@
 <script setup>
-import { Label } from "@/components/ui/label";
+import Label from "@/components/ui/label/Label.vue";
 import { cn } from "@/lib/utils";
 
 import { useFormField } from "./use-form-field";

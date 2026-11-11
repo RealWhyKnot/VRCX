@@ -4,9 +4,9 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { logWebRequest } from "../services/app-config";
-import { branches } from "../shared/constants";
+import { branches } from "../shared/constants/settings";
 import { getWhatsNewRelease, normalizeReleaseVersion } from "../shared/constants/whats-new-releases";
-import { changeLogRemoveLinks } from "../shared/utils";
+import { changeLogRemoveLinks } from "../shared/utils/base/string";
 
 import configRepository from "../services/config";
 

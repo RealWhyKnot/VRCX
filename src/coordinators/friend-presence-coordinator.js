@@ -1,4 +1,6 @@
-import { getGroupName, getWorldName, isRealInstance } from "../shared/utils";
+import { getGroupName } from "../shared/utils/group";
+import { getWorldName } from "../shared/utils/world";
+import { isRealInstance } from "../shared/utils/instance";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { useFeedStore } from "../stores/feed";
@@ -7,7 +9,7 @@ import { useNotificationStore } from "../stores/notification";
 import { syncFriendSearchIndex } from "./search-index-coordinator";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUserStore } from "../stores/user";
-import { userRequest } from "../api";
+import userRequest from "../api/user";
 import { watchState } from "../services/watch-state";
 
 export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $location_at, { now = Date.now, nowIso = () => new Date().toJSON() } = {}) {

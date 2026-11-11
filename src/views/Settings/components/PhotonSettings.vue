@@ -91,13 +91,19 @@
 </template>
 
 <script setup>
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
-import { useNotificationsSettingsStore, usePhotonStore } from "../../../stores";
+import Select from "../../../components/ui/select/Select.vue";
+import SelectContent from "../../../components/ui/select/SelectContent.vue";
+import SelectItem from "../../../components/ui/select/SelectItem.vue";
+import SelectTrigger from "../../../components/ui/select/SelectTrigger.vue";
+import SelectValue from "../../../components/ui/select/SelectValue.vue";
+import ToggleGroup from "../../../components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem.vue";
+import { useNotificationsSettingsStore } from "../../../stores/settings/notifications";
+import { usePhotonStore } from "../../../stores/photon";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
 
 import SimpleSwitch from "./SimpleSwitch.vue";

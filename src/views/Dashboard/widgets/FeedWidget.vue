@@ -119,17 +119,25 @@ import { useI18n } from "vue-i18n";
 import { Box, MapPin, Pencil, Settings } from "lucide-vue-next";
 
 import { statusClass } from "@/shared/utils/user";
-import { formatDateFilter } from "@/shared/utils";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { showUserDialog } from "@/coordinators/user-coordinator";
-import { useFeedStore, useFriendStore } from "@/stores";
+import { useFeedStore } from "@/stores/feed";
+import { useFriendStore } from "@/stores/friend";
 
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Button from "@/components/ui/button/Button.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import Location from "@/components/Location.vue";
 import UserContextMenu from "@/components/UserContextMenu.vue";
-import { TooltipWrapper } from "@/components/ui/tooltip";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import WidgetHeader from "./WidgetHeader.vue";
-import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import Table from "@/components/ui/table/Table.vue";
+import TableBody from "@/components/ui/table/TableBody.vue";
+import TableRow from "@/components/ui/table/TableRow.vue";
+import TableCell from "@/components/ui/table/TableCell.vue";
 
 const FEED_TYPES = ["GPS", "Online", "Offline", "Status", "Avatar", "Bio"];
 

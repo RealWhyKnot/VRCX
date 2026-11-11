@@ -3,8 +3,8 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { instanceRequest } from "../api";
-import { parseLocation } from "../shared/utils";
+import instanceRequest from "../api/instance";
+import { parseLocation } from "../shared/utils/location-parser";
 import { watchState } from "../services/watch-state";
 
 import configRepository from "../services/config";

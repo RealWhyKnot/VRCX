@@ -14,12 +14,14 @@ vi.mock("../../src/services/request", () => ({
   request: (...args) => mockRequest(...args),
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: { id: "usr_me" },
     applyCurrentUser: mockApplyCurrentUser,
     applyUser: mockApplyUser,
   }),
+}));
+vi.mock("../../src/stores/world", () => ({
   useWorldStore: () => ({
     applyWorld: mockApplyWorld,
   }),
@@ -34,13 +36,17 @@ vi.mock("../../src/coordinators/world-coordinator", () => ({
   applyWorld: (...args) => mockApplyWorld(...args),
 }));
 
-vi.mock("../../src/queries", () => ({
+vi.mock("../../src/queries/entity-cache", () => ({
   patchAndRefetchActiveQuery: (...args) => mockPatchAndRefetchActiveQuery(...args),
+}));
+vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
     user: (userId) => ["user", userId],
     avatar: (avatarId) => ["avatar", avatarId],
     world: (worldId) => ["world", worldId],
   },
+}));
+vi.mock("../../src/queries/policies", () => ({
   entityQueryPolicies: {
     user: {},
     avatar: {},

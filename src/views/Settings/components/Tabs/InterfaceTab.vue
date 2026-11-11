@@ -410,24 +410,52 @@
 </template>
 
 <script setup>
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { ListboxContent, ListboxFilter, ListboxItem, ListboxItemIndicator, ListboxRoot, useFilter } from "reka-ui";
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from "@/components/ui/number-field";
-import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from "@/components/ui/tags-input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import NumberField from "@/components/ui/number-field/NumberField.vue";
+import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
+import NumberFieldDecrement from "@/components/ui/number-field/NumberFieldDecrement.vue";
+import NumberFieldIncrement from "@/components/ui/number-field/NumberFieldIncrement.vue";
+import NumberFieldInput from "@/components/ui/number-field/NumberFieldInput.vue";
+import TagsInput from "@/components/ui/tags-input/TagsInput.vue";
+import TagsInputInput from "@/components/ui/tags-input/TagsInputInput.vue";
+import TagsInputItem from "@/components/ui/tags-input/TagsInputItem.vue";
+import TagsInputItemDelete from "@/components/ui/tags-input/TagsInputItemDelete.vue";
+import TagsInputItemText from "@/components/ui/tags-input/TagsInputItemText.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverAnchor from "@/components/ui/popover/PopoverAnchor.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { CheckIcon, ChevronDown } from "lucide-vue-next";
-import { useAppearanceSettingsStore, useVrStore } from "@/stores";
+import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
+import { useVrStore } from "@/stores/vr";
 
-import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { getLanguageName, languageCodes } from "@/localization";
-import { APP_CJK_FONT_PACKS, APP_FONT_CONFIG, APP_FONT_DEFAULT_KEY, APP_FONT_FAMILIES } from "@/shared/constants";
-import { Button } from "@/components/ui/button";
+import Switch from "@/components/ui/switch/Switch.vue";
+import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
+import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
+import { getLanguageName } from "@/localization";
+import { languageCodes } from "@/localization/locales";
+import { APP_CJK_FONT_PACKS, APP_FONT_CONFIG, APP_FONT_DEFAULT_KEY, APP_FONT_FAMILIES } from "@/shared/constants/fonts";
+import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";

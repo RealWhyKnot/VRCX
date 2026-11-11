@@ -49,8 +49,10 @@ vi.mock("vue-sonner", () => ({
   toast: vi.fn(),
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/coordinators/cache-coordinator", () => ({
   deleteVRChatCache: vi.fn(),
+}));
+vi.mock("../../src/shared/utils/instance", () => ({
   isRealInstance: vi.fn(() => false),
 }));
 

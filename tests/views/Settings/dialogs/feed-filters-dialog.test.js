@@ -17,13 +17,17 @@ const mocks = vi.hoisted(() => ({
 vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/photon", () => ({
   usePhotonStore: () => ({
     photonLoggingEnabled: mocks.photonLoggingEnabled,
   }),
+}));
+vi.mock("../../../../src/stores/settings/notifications", () => ({
   useNotificationsSettingsStore: () => ({
     sharedFeedFilters: mocks.sharedFeedFilters,
   }),
+}));
+vi.mock("../../../../src/stores/shared-feed", () => ({
   useSharedFeedStore: () => ({
     loadSharedFeed: (...a) => mocks.loadSharedFeed(...a),
   }),
@@ -35,7 +39,7 @@ vi.mock("../../../../src/services/config", () => ({
   },
 }));
 
-vi.mock("../../../../src/shared/constants", () => ({
+vi.mock("../../../../src/shared/constants/feed-filters", () => ({
   feedFiltersOptions: () => ({
     notyFeedFiltersOptions: [
       {
@@ -59,30 +63,40 @@ vi.mock("../../../../src/shared/constants", () => ({
   },
 }));
 
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: {
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: {
     emits: ["update:open"],
     template: '<div><button data-testid="dialog-close" @click="$emit(\'update:open\', false)" /><slot /></div>',
   },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: '<h2 data-testid="dialog-title"><slot /></h2>' },
-  DialogFooter: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: '<h2 data-testid="dialog-title"><slot /></h2>' },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
 
-vi.mock("../../../../src/components/ui/toggle-group", () => ({
-  ToggleGroup: {
+vi.mock("../../../../src/components/ui/toggle-group/ToggleGroup.vue", () => ({
+  default: {
     emits: ["update:model-value"],
     template: "<div><button data-testid=\"toggle-update\" @click=\"$emit('update:model-value', 'all')\" /><slot /></div>",
   },
-  ToggleGroupItem: { template: "<button><slot /></button>" },
+}));
+vi.mock("../../../../src/components/ui/toggle-group/ToggleGroupItem.vue", () => ({
+  default: { template: "<button><slot /></button>" },
 }));
 
 vi.mock("lucide-vue-next", () => ({

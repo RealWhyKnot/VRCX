@@ -2,7 +2,13 @@ import { reactive } from "vue";
 
 import dayjs from "dayjs";
 
-import * as utils from "../shared/utils";
+import { formatDateFilter } from "../coordinators/date-coordinator";
+
+const utils = Object.assign(
+  {},
+  ...Object.values(import.meta.glob(["../shared/utils/*.js", "../shared/utils/base/*.js", "!../shared/utils/localization-helper-cli.js"], { eager: true })),
+  { formatDateFilter }
+);
 
 const AppDebug =
   window.$debug ??

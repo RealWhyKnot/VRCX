@@ -48,10 +48,21 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuTrigger } from "./ui/context-menu";
-import { isRealInstance, parseLocation } from "../shared/utils";
-import { useGameStore, useLaunchStore, useLocationStore, useUserStore } from "../stores";
-import { instanceRequest, notificationRequest, queryRequest } from "../api";
+import ContextMenu from "./ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "./ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "./ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "./ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuShortcut from "./ui/context-menu/ContextMenuShortcut.vue";
+import ContextMenuTrigger from "./ui/context-menu/ContextMenuTrigger.vue";
+import { isRealInstance } from "../shared/utils/instance";
+import { parseLocation } from "../shared/utils/location-parser";
+import { useGameStore } from "../stores/game";
+import { useLaunchStore } from "../stores/launch";
+import { useLocationStore } from "../stores/location";
+import { useUserStore } from "../stores/user";
+import instanceRequest from "../api/instance";
+import notificationRequest from "../api/notification";
+import queryRequest from "../api/query-request";
 import { useInviteChecks } from "../composables/use-invite-checks";
 import { isActionRecent, recordRecentAction } from "../composables/use-recent-actions";
 

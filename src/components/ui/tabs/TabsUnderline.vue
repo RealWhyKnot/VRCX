@@ -4,7 +4,7 @@ import { computed, nextTick, onMounted, onUpdated, ref, toRefs, watch } from "vu
 import { usePreferredReducedMotion, useResizeObserver } from "@vueuse/core";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 
 const props = defineProps({
   modelValue: String,

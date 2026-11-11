@@ -2,7 +2,7 @@ import { computed } from "vue";
 
 import { useThemeColor } from "@/shared/utils/base/ui";
 
-import { THEME_CONFIG } from "../../../shared/constants";
+import { THEME_CONFIG } from "../../../shared/constants/themes";
 
 export function useNavTheme({ t, appearanceSettingsStore }) {
   const themes = computed(() => Object.keys(THEME_CONFIG));

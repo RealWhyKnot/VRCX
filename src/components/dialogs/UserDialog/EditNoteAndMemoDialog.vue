@@ -47,17 +47,23 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { miscRequest, userRequest } from "../../../api";
-import { replaceBioSymbols } from "../../../shared/utils";
+import miscRequest from "../../../api/misc";
+import userRequest from "../../../api/user";
+import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { saveUserMemo } from "../../../coordinators/memo-coordinator";
-import { useAppearanceSettingsStore, useUserStore } from "../../../stores";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useUserStore } from "../../../stores/user";
 
 const { userDialog } = storeToRefs(useUserStore());
 const { cachedUsers } = useUserStore();

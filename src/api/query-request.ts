@@ -1,4 +1,6 @@
-import { entityQueryPolicies, fetchWithEntityPolicy, queryKeys } from "../queries";
+import { entityQueryPolicies } from "../queries/policies";
+import { fetchWithEntityPolicy } from "../queries/entity-cache";
+import { queryKeys } from "../queries/keys";
 
 import avatarRequest from "./avatar";
 import favoriteRequest from "./favorite";

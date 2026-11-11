@@ -3,8 +3,8 @@ import { i18n } from "../plugins/i18n";
 import Noty from "noty";
 
 import { closeWebSocket, initWebsocket } from "../services/websocket";
-import { escapeTag } from "../shared/utils";
-import { queryClient } from "../queries";
+import { escapeTag } from "../shared/utils/base/string";
+import { queryClient } from "../queries/client";
 import { useAuthStore } from "../stores/auth";
 import { useInstanceStore } from "../stores/instance";
 import { useNotificationStore } from "../stores/notification";

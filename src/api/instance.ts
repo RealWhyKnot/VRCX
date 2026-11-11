@@ -4,7 +4,7 @@ import { toast } from "vue-sonner";
 
 import { i18n } from "../plugins/i18n";
 import { request } from "../services/request";
-import { useInstanceStore } from "../stores";
+import { useInstanceStore } from "../stores/instance";
 
 const instanceReq = {
   getInstance(params: {

@@ -75,9 +75,11 @@
 
 <script setup>
 import { computed, ref, shallowRef, watch } from "vue";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Popover from "@/components/ui/popover/Popover.vue";
+import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
+import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Input from "@/components/ui/input/Input.vue";
 import { X } from "lucide-vue-next";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 

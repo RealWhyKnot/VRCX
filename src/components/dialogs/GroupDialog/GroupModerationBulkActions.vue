@@ -128,14 +128,19 @@
 import { AlertTriangle, Plus, Trash2, X } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { InputGroupField, InputGroupTextareaField } from "@/components/ui/input-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { hasGroupPermission } from "@/shared/utils";
+import Button from "@/components/ui/button/Button.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import Progress from "@/components/ui/progress/Progress.vue";
+import ScrollArea from "@/components/ui/scroll-area/ScrollArea.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import { hasGroupPermission } from "@/shared/utils/group";
 
 const props = defineProps({
   selectUserId: { type: String, default: "" },

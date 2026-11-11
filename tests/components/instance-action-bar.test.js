@@ -51,28 +51,40 @@ vi.mock("vue-sonner", () => ({
   },
 }));
 
-vi.mock("../../src/stores", () => ({
+vi.mock("../../src/stores/location", () => ({
   useLocationStore: () => ({
     lastLocation: mocks.lastLocation,
   }),
+}));
+vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
     currentUser: mocks.currentUser,
   }),
+}));
+vi.mock("../../src/stores/group", () => ({
   useGroupStore: () => ({
     cachedGroups: mocks.cachedGroups,
   }),
+}));
+vi.mock("../../src/stores/instance", () => ({
   useInstanceStore: () => ({
     instanceJoinHistory: mocks.instanceJoinHistory,
     applyInstance: (...args) => mocks.applyInstance(...args),
   }),
+}));
+vi.mock("../../src/stores/modal", () => ({
   useModalStore: () => ({
     confirm: (...args) => mocks.modalConfirm(...args),
   }),
+}));
+vi.mock("../../src/stores/launch", () => ({
   useLaunchStore: () => ({
     isOpeningInstance: mocks.isOpeningInstance,
     showLaunchDialog: (...args) => mocks.showLaunchDialog(...args),
     tryOpenInstanceInVrc: (...args) => mocks.tryOpenInstanceInVrc(...args),
   }),
+}));
+vi.mock("../../src/stores/invite", () => ({
   useInviteStore: () => ({
     canOpenInstanceInGame: mocks.canOpenInstanceInGame,
   }),
@@ -84,17 +96,24 @@ vi.mock("../../src/composables/use-invite-checks", () => ({
   }),
 }));
 
-vi.mock("../../src/shared/utils", () => ({
+vi.mock("../../src/shared/utils/location-parser", async (importOriginal) => ({
+  ...(await importOriginal()),
   parseLocation: (...args) => mocks.parseLocation(...args),
+}));
+vi.mock("../../src/shared/utils/group", () => ({
   hasGroupPermission: (...args) => mocks.hasGroupPermission(...args),
+}));
+vi.mock("../../src/coordinators/date-coordinator", () => ({
   formatDateFilter: (...args) => mocks.formatDateFilter(...args),
 }));
 
-vi.mock("../../src/api", () => ({
-  instanceRequest: {
+vi.mock("../../src/api/instance", () => ({
+  default: {
     selfInvite: (...args) => mocks.selfInvite(...args),
   },
-  miscRequest: {
+}));
+vi.mock("../../src/api/misc", () => ({
+  default: {
     closeInstance: (...args) => mocks.closeInstance(...args),
   },
 }));
@@ -103,8 +122,8 @@ vi.mock("../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args) => mocks.showUserDialog(...args),
 }));
 
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\', $event)"><slot /></button>',
   },

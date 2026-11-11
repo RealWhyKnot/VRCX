@@ -70,16 +70,23 @@ import { Check, User } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InputGroupField } from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
-import { groupRequest } from "@/api";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
+import groupRequest from "@/api/group";
 import { showGroupDialog } from "@/coordinators/group-coordinator";
 import { useUserDisplay } from "@/composables/use-user-display";
-import { useModalStore } from "@/stores";
-import { debounce } from "@/shared/utils";
+import { useModalStore } from "@/stores/modal";
+import { debounce } from "@/shared/utils/common";
 
 const MIN_SEARCH_LENGTH = 3;
 const TRANSFER_REQUIREMENT_LABELS = {

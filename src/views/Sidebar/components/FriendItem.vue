@@ -46,10 +46,12 @@
 </template>
 
 <script setup>
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import { Trash2, User } from "lucide-vue-next";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import Button from "@/components/ui/button/Button.vue";
+import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
@@ -58,7 +60,8 @@ import Location from "@/components/Location.vue";
 import Timer from "@/components/Timer.vue";
 import IconFrame from "@/components/IconFrame.vue";
 
-import { useAppearanceSettingsStore, useFriendStore } from "../../../stores";
+import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import { useFriendStore } from "../../../stores/friend";
 import { useUserDisplay } from "../../../composables/use-user-display";
 
 import "@/styles/status-icon.css";

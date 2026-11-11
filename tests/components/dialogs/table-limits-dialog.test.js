@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     tableLimitsDialog: mocks.dialog,
     closeTableLimitsDialog: (...a) => mocks.close(...a),
@@ -22,28 +22,44 @@ vi.mock("../../../src/stores", () => ({
     SEARCH_LIMIT_MAX: 1000,
   }),
 }));
-vi.mock("@/components/ui/dialog", () => ({
-  Dialog: { template: "<div><slot /></div>" },
-  DialogContent: { template: "<div><slot /></div>" },
-  DialogHeader: { template: "<div><slot /></div>" },
-  DialogTitle: { template: "<div><slot /></div>" },
-  DialogDescription: { template: "<div><slot /></div>" },
-  DialogFooter: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/field", () => ({
-  Field: { template: "<div><slot /></div>" },
-  FieldGroup: { template: "<div><slot /></div>" },
-  FieldLabel: { template: "<div><slot /></div>" },
-  FieldContent: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/dialog/DialogContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/dialog/DialogHeader.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogTitle.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogDescription.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/dialog/DialogFooter.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/Field.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldLabel.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" :disabled="$attrs.disabled" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
-vi.mock("@/components/ui/input-group", () => ({
-  InputGroupField: { template: "<input />" },
+vi.mock("@/components/ui/input-group/InputGroupField.vue", () => ({
+  default: { template: "<input />" },
 }));
 
 import TableLimitsDialog from "../../../src/components/dialogs/TableLimitsDialog.vue";

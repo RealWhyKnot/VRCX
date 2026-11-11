@@ -20,17 +20,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAvatarStore, useUserStore } from "../../../stores";
+import { useAvatarStore } from "../../../stores/avatar";
+import { useUserStore } from "../../../stores/user";
 import { applyAvatar, removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
-import { avatarRequest } from "../../../api";
+import avatarRequest from "../../../api/avatar";
 import { processBulk } from "../../../services/request";
-import { Switch } from "../../../components/ui/switch";
+import Switch from "../../../components/ui/switch/Switch.vue";
 
 const { t } = useI18n();
 

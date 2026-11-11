@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 
-import { useSearchStore } from "../../../stores";
+import { useSearchStore } from "../../../stores/search";
 
 function createDefaultSearchUserParams() {
   return {

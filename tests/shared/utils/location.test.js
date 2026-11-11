@@ -10,7 +10,7 @@ vi.mock("../../../src/plugins/router", () => ({
 
 import { displayLocation, parseLocation, resolveRegion, translateAccessType } from "../../../src/shared/utils/location-parser";
 import { getLocationText } from "../../../src/shared/utils/location";
-import { accessTypeLocaleKeyMap } from "../../../src/shared/constants";
+import { accessTypeLocaleKeyMap } from "../../../src/shared/constants/access-type";
 
 describe("Location Utils", () => {
   describe("parseLocation", () => {

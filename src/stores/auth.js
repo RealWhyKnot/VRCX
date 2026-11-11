@@ -7,9 +7,9 @@ import Noty from "noty";
 
 import { runLoginSuccessFlow, runLogoutFlow } from "../coordinators/auth-coordinator";
 import { AppDebug } from "../services/app-config";
-import { authRequest } from "../api";
+import authRequest from "../api/auth";
 import { database } from "../services/database";
-import { escapeTag } from "../shared/utils";
+import { escapeTag } from "../shared/utils/base/string";
 import { links } from "../shared/constants/link";
 import { initWebsocket } from "../services/websocket";
 import { request } from "../services/request";

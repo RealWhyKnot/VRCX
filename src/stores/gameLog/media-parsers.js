@@ -1,4 +1,7 @@
-import { convertYoutubeTime, findUserByDisplayName, isRpcWorld, replaceBioSymbols } from "../../shared/utils";
+import { convertYoutubeTime } from "../../shared/utils/base/format";
+import { findUserByDisplayName } from "../../shared/utils/user";
+import { isRpcWorld } from "../../shared/utils/world";
+import { replaceBioSymbols } from "../../shared/utils/base/string";
 
 export function createMediaParsers({ nowPlaying, setNowPlaying, clearNowPlaying, userStore, advancedSettingsStore }) {
   async function addGameLogVideo(gameLog, location, userId) {

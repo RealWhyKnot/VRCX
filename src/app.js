@@ -1,11 +1,16 @@
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { createApp } from "vue";
 
-import { i18n, initComponents, initPlugins, initRouter, initSentry } from "./plugins";
+import { i18n } from "./plugins/i18n";
+import { initComponents } from "./plugins/components";
+import { initPlugins } from "./plugins";
+import { initRouter } from "./plugins/router";
+import { initSentry } from "./plugins/sentry";
 import { initPiniaPlugins, pinia } from "./stores";
-import { queryClient } from "./queries";
+import { queryClient } from "./queries/client";
 
 import App from "./App.vue";
+import "./api/request-global";
 
 await initPlugins();
 await initPiniaPlugins();

@@ -92,15 +92,19 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/ui/button/Button.vue";
 import { Check } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useFavoriteStore, useUserStore } from "../../stores";
+import { useFavoriteStore } from "../../stores/favorite";
+import { useUserStore } from "../../stores/user";
 import {
   addLocalWorldFavorite,
   removeLocalWorldFavorite,
@@ -109,7 +113,7 @@ import {
   addLocalFriendFavorite,
   removeLocalFriendFavorite,
 } from "../../coordinators/favorite-coordinator";
-import { favoriteRequest } from "../../api";
+import favoriteRequest from "../../api/favorite";
 
 const { t } = useI18n();
 

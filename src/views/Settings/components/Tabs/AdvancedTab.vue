@@ -339,34 +339,43 @@
 <script setup>
 import { Trash2, TriangleAlert } from "lucide-vue-next";
 import { computed, reactive, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectGroup from "@/components/ui/select/SelectGroup.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
+import Alert from "@/components/ui/alert/Alert.vue";
+import AlertDescription from "@/components/ui/alert/AlertDescription.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import VueJsonPretty from "vue-json-pretty";
 
-import {
-  useAdvancedSettingsStore,
-  useAppearanceSettingsStore,
-  useAuthStore,
-  useAvatarStore,
-  useGeneralSettingsStore,
-  useGroupStore,
-  useInstanceStore,
-  usePhotonStore,
-  useUiStore,
-  useUserStore,
-  useVRCXUpdaterStore,
-  useWorldStore,
-} from "@/stores";
-import { authRequest, queryRequest } from "@/api";
+import { useAdvancedSettingsStore } from "@/stores/settings/advanced";
+import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
+import { useAuthStore } from "@/stores/auth";
+import { useAvatarStore } from "@/stores/avatar";
+import { useGeneralSettingsStore } from "@/stores/settings/general";
+import { useGroupStore } from "@/stores/group";
+import { useInstanceStore } from "@/stores/instance";
+import { usePhotonStore } from "@/stores/photon";
+import { useUiStore } from "@/stores/ui";
+import { useUserStore } from "@/stores/user";
+import { useVRCXUpdaterStore } from "@/stores/vrcx-updater";
+import { useWorldStore } from "@/stores/world";
+import authRequest from "@/api/auth";
+import queryRequest from "@/api/query-request";
 import { disableGameLogDialog } from "@/coordinators/game-log-coordinator";
 import { clearVRCXCache } from "@/coordinators/vrcx-coordinator";
-import { openExternalLink } from "@/shared/utils";
+import { openExternalLink } from "@/shared/utils/app-actions";
 
 import PhotonSettings from "../PhotonSettings.vue";
 import RegistryBackupDialog from "../../../Tools/dialogs/RegistryBackupDialog.vue";

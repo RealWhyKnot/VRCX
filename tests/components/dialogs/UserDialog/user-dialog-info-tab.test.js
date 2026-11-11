@@ -97,8 +97,12 @@ vi.mock("../../../../src/services/request", () => ({
 }));
 
 import UserDialogInfoTab from "../../../../src/components/dialogs/UserDialog/UserDialogInfoTab.vue";
-import { queryRequest } from "../../../../src/api";
-import { useAdvancedSettingsStore, useAppearanceSettingsStore, useLocationStore, useModalStore, useUserStore } from "../../../../src/stores";
+import queryRequest from "../../../../src/api/query-request";
+import { useAdvancedSettingsStore } from "../../../../src/stores/settings/advanced";
+import { useAppearanceSettingsStore } from "../../../../src/stores/settings/appearance";
+import { useLocationStore } from "../../../../src/stores/location";
+import { useModalStore } from "../../../../src/stores/modal";
+import { useUserStore } from "../../../../src/stores/user";
 
 function mountComponent(overrides = {}) {
   const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });

@@ -29,7 +29,9 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 
-import { useUserStore, useAppearanceSettingsStore, useVrcxStore } from "../stores";
+import { useUserStore } from "../stores/user";
+import { useAppearanceSettingsStore } from "../stores/settings/appearance";
+import { useVrcxStore } from "../stores/vrcx";
 
 defineOptions({ inheritAttrs: false });
 

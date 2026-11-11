@@ -20,18 +20,24 @@ vi.mock("@vueuse/core", async (importOriginal) => {
     whenever: vi.fn(),
   };
 });
-vi.mock("../../../src/stores", () => ({
+vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     friends: ref(new Map()),
     isRefreshFriendsLoading: ref(false),
     onlineFriendCount: ref(0),
   }),
+}));
+vi.mock("../../../src/stores/group", () => ({
   useGroupStore: () => ({ groupInstances: ref([]) }),
+}));
+vi.mock("../../../src/stores/notification", () => ({
   useNotificationStore: () => ({
     isNotificationCenterOpen: mocks.centerOpen,
     hasUnseenNotifications: mocks.hasUnseen,
     markAllAsSeen: (...a) => mocks.markAllAsSeen(...a),
   }),
+}));
+vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     sidebarSortMethod1: ref(""),
     sidebarSortMethod2: ref(""),
@@ -50,6 +56,8 @@ vi.mock("../../../src/stores", () => ({
     setIsSidebarDivideByFriendGroup: vi.fn(),
     setSidebarFavoriteGroups: vi.fn(),
   }),
+}));
+vi.mock("../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
     favoriteFriendGroups: ref([]),
     localFriendFavoriteGroups: ref([]),
@@ -65,62 +73,94 @@ vi.mock("../../../src/views/Sidebar/sidebar-settings-utils", () => ({
   normalizeFavoriteGroupsChange: (v) => v,
   resolveFavoriteGroups: (v) => v,
 }));
-vi.mock("@/components/ui/button", () => ({
-  Button: {
+vi.mock("@/components/ui/button/Button.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="btn" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
-vi.mock("@/components/ui/context-menu", () => ({
-  ContextMenu: { template: "<div><slot /></div>" },
-  ContextMenuTrigger: { template: "<div><slot /></div>" },
-  ContextMenuContent: { template: "<div><slot /></div>" },
-  ContextMenuItem: {
+vi.mock("@/components/ui/context-menu/ContextMenu.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/context-menu/ContextMenuItem.vue", () => ({
+  default: {
     emits: ["click"],
     template: '<button data-testid="ctx" @click="$emit(\'click\')"><slot /></button>',
   },
 }));
-vi.mock("@/components/ui/popover", () => ({
-  Popover: { template: "<div><slot /></div>" },
-  PopoverTrigger: { template: "<div><slot /></div>" },
-  PopoverContent: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/popover/Popover.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/select", () => ({
-  Select: { template: "<div><slot /></div>" },
-  SelectTrigger: { template: "<div><slot /></div>" },
-  SelectValue: { template: "<div><slot /></div>" },
-  SelectContent: { template: "<div><slot /></div>" },
-  SelectGroup: { template: "<div><slot /></div>" },
-  SelectItem: { template: "<div><slot /></div>" },
-  SelectSeparator: { template: "<hr />" },
+vi.mock("@/components/ui/popover/PopoverTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/field", () => ({
-  Field: { template: "<div><slot /></div>" },
-  FieldLabel: { template: "<div><slot /></div>" },
-  FieldContent: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/popover/PopoverContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/tabs", () => ({
-  TabsUnderline: {
+vi.mock("@/components/ui/select/Select.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectValue.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectGroup.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectItem.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/select/SelectSeparator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/field/Field.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldLabel.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/field/FieldContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/tabs/TabsUnderline.vue", () => ({
+  default: {
     template: '<div><slot name="friends" /><slot name="groups" /></div>',
   },
 }));
-vi.mock("@/components/ui/switch", () => ({ Switch: { template: "<div />" } }));
-vi.mock("@/components/ui/spinner", () => ({
-  Spinner: { template: "<div />" },
+vi.mock("@/components/ui/switch/Switch.vue", () => ({
+  default: { template: "<div />" },
 }));
-vi.mock("@/components/ui/tooltip", () => ({
-  TooltipWrapper: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/spinner/Spinner.vue", () => ({
+  default: { template: "<div />" },
 }));
-vi.mock("@/components/ui/kbd", () => ({
-  Kbd: { template: "<kbd><slot /></kbd>" },
+vi.mock("@/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
-vi.mock("@/components/ui/separator", () => ({
-  Separator: { template: "<hr />" },
+vi.mock("@/components/ui/kbd/Kbd.vue", () => ({
+  default: { template: "<kbd><slot /></kbd>" },
 }));
-vi.mock("@/components/ui/collapsible", () => ({
-  Collapsible: { template: "<div><slot /></div>" },
-  CollapsibleTrigger: { template: "<div><slot /></div>" },
-  CollapsibleContent: { template: "<div><slot /></div>" },
+vi.mock("@/components/ui/separator/Separator.vue", () => ({
+  default: { template: "<hr />" },
+}));
+vi.mock("@/components/ui/collapsible/Collapsible.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/collapsible/CollapsibleTrigger.vue", () => ({
+  default: { template: "<div><slot /></div>" },
+}));
+vi.mock("@/components/ui/collapsible/CollapsibleContent.vue", () => ({
+  default: { template: "<div><slot /></div>" },
 }));
 vi.mock("lucide-vue-next", () => ({
   Bell: { template: "<i />" },

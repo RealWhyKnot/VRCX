@@ -9,10 +9,12 @@ vi.mock("pinia", () => ({
   storeToRefs: (store) => store,
 }));
 
-vi.mock("../../../../src/stores", () => ({
+vi.mock("../../../../src/stores/settings/advanced", () => ({
   useAdvancedSettingsStore: () => ({
     avatarRemoteDatabase: mocks.avatarRemoteDatabase,
   }),
+}));
+vi.mock("../../../../src/stores/search", () => ({
   useSearchStore: () => ({
     searchText: mocks.searchText,
   }),

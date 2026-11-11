@@ -1,11 +1,16 @@
 <script setup>
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import AlertDialog from "@/components/ui/alert-dialog/AlertDialog.vue";
+import AlertDialogContent from "@/components/ui/alert-dialog/AlertDialogContent.vue";
+import AlertDialogDescription from "@/components/ui/alert-dialog/AlertDialogDescription.vue";
+import AlertDialogFooter from "@/components/ui/alert-dialog/AlertDialogFooter.vue";
+import AlertDialogHeader from "@/components/ui/alert-dialog/AlertDialogHeader.vue";
+import AlertDialogTitle from "@/components/ui/alert-dialog/AlertDialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
 import { X } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { computed, nextTick, ref, watch } from "vue";
 
-import { useExternalLinkStore } from "@/stores";
+import { useExternalLinkStore } from "@/stores/external-link";
 import { copyToClipboard } from "@/shared/utils/app-actions";
 
 const externalLinkStore = useExternalLinkStore();

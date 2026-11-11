@@ -1,8 +1,10 @@
 import { computed, ref } from "vue";
 import { toast } from "vue-sonner";
 
-import { groupRequest, queryRequest } from "../../../api";
-import { hasGroupPermission, removeFromArray } from "../../../shared/utils";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
+import { hasGroupPermission } from "../../../shared/utils/group";
+import { removeFromArray } from "../../../shared/utils/base/array";
 
 export function useGroupGalleries(groupDialog, deps = {}) {
   const { t, modalStore, currentUser } = deps;

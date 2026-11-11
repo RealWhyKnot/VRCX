@@ -1,10 +1,12 @@
 import Timer from "../../components/Timer.vue";
-import { Button } from "../../components/ui/button";
-import { TooltipWrapper } from "../../components/ui/tooltip";
+import Button from "../../components/ui/button/Button.vue";
+import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { Apple, ArrowUpDown, IdCard, User, Monitor, Smartphone } from "lucide-vue-next";
 
-import { getFaviconUrl, languageClass, openExternalLink, statusClass } from "../../shared/utils";
-import { i18n } from "../../plugins";
+import { getFaviconUrl } from "../../shared/utils/url-utils";
+import { languageClass, statusClass } from "../../shared/utils/user";
+import { openExternalLink } from "../../shared/utils/app-actions";
+import { i18n } from "../../plugins/i18n";
 
 const { t } = i18n.global;
 

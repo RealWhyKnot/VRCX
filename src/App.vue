@@ -23,8 +23,8 @@ import { computed, onBeforeMount, onMounted } from "vue";
 
 import { addGameLogEvent, getGameLogTable } from "./coordinators/game-log-coordinator";
 import { runCheckVRChatDebugLoggingFlow, runUpdateIsGameRunningFlow, runUpdateIsHmdAfkFlow } from "./coordinators/game-coordinator";
-import { Toaster } from "./components/ui/sonner";
-import { TooltipProvider } from "./components/ui/tooltip";
+import Toaster from "./components/ui/sonner/Sonner.vue";
+import TooltipProvider from "./components/ui/tooltip/TooltipProvider.vue";
 import { createGlobalStores } from "./stores";
 import { initNoty } from "./plugins/noty";
 

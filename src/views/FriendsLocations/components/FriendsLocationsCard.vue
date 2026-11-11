@@ -45,10 +45,12 @@
 </template>
 
 <script setup>
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar/Avatar.vue";
+import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
+import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import IconFrame from "@/components/IconFrame.vue";
 import ProfileEffect from "@/components/ProfileEffect.vue";
-import { Card } from "@/components/ui/card";
+import Card from "@/components/ui/card/Card.vue";
 import { Pencil, User } from "lucide-vue-next";
 import { computed } from "vue";
 

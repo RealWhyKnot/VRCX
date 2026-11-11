@@ -52,15 +52,24 @@ import { computed, ref, watch } from "vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
+import Button from "@/components/ui/button/Button.vue";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Field from "@/components/ui/field/Field.vue";
+import FieldContent from "@/components/ui/field/FieldContent.vue";
+import FieldGroup from "@/components/ui/field/FieldGroup.vue";
+import FieldLabel from "@/components/ui/field/FieldLabel.vue";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 
-import { instanceRequest } from "../../api";
-import { useGalleryStore, useGroupStore } from "../../stores";
+import instanceRequest from "../../api/instance";
+import { useGalleryStore } from "../../stores/gallery";
+import { useGroupStore } from "../../stores/group";
 import GallerySelectDialog from "./GroupDialog/GallerySelectDialog.vue";
-import { extractFileId, extractFileVersion, parseLocation } from "@/shared/utils";
+import { extractFileId, extractFileVersion } from "@/shared/utils/file-utils";
+import { parseLocation } from "@/shared/utils/location-parser";
 import { storeToRefs } from "pinia";
 
 const props = defineProps({

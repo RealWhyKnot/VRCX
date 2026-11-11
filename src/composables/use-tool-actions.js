@@ -2,8 +2,11 @@ import { toast } from "vue-sonner";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
-import { toolDefinitionMap, toolDefinitions } from "../shared/constants";
-import { useAdvancedSettingsStore, useLaunchStore, useToolsStore, useVrcxStore } from "../stores";
+import { toolDefinitionMap, toolDefinitions } from "../shared/constants/tools";
+import { useAdvancedSettingsStore } from "../stores/settings/advanced";
+import { useLaunchStore } from "../stores/launch";
+import { useToolsStore } from "../stores/tools";
+import { useVrcxStore } from "../stores/vrcx";
 
 export async function executeToolAction(definition, { router, t, toolsStore, advancedSettingsStore, launchStore, vrcxStore }) {
   if (!definition?.action) {

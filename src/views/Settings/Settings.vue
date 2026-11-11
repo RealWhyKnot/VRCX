@@ -36,7 +36,7 @@
 
 <script setup>
 import { computed, onBeforeMount } from "vue";
-import { TabsUnderline } from "@/components/ui/tabs";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { useI18n } from "vue-i18n";
 
 import AdvancedTab from "./components/Tabs/AdvancedTab.vue";

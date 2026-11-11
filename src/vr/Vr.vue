@@ -1068,7 +1068,7 @@ import Noty from "noty";
 
 import { escapeTag, escapeTagRecursive } from "../shared/utils/base/string";
 import { changeHtmlLangAttribute } from "../shared/utils/base/ui";
-import { displayLocation } from "../shared/utils/location";
+import { displayLocation } from "../shared/utils/location-parser";
 import { loadLocalizedStrings } from "../plugins/i18n";
 import { removeFromArray } from "../shared/utils/base/array";
 import { timeToText } from "../shared/utils/base/format";

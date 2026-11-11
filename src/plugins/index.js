@@ -1,4 +1,3 @@
-import { i18n, loadLocalizedStrings, tForLocale, updateLocalizedStrings } from "./i18n";
 import { initDayjs } from "./dayjs";
 import { initInteropApi } from "./interop-api";
 import { initNoty } from "./noty";
@@ -16,8 +15,3 @@ export async function initPlugins(isVrOverlay = false) {
     initNoty(true);
   }
 }
-
-export { i18n, loadLocalizedStrings, tForLocale, updateLocalizedStrings };
-export * from "./components";
-export * from "./sentry";
-export * from "./router";

@@ -97,8 +97,8 @@ vi.mock("../../../../src/coordinators/world-coordinator", async (importOriginal)
 });
 
 import UserDialogWorldsTab from "../../../../src/components/dialogs/UserDialog/UserDialogWorldsTab.vue";
-import { useUserStore } from "../../../../src/stores";
-import { userDialogWorldSortingOptions, userDialogWorldOrderOptions } from "../../../../src/shared/constants";
+import { useUserStore } from "../../../../src/stores/user";
+import { userDialogWorldSortingOptions, userDialogWorldOrderOptions } from "../../../../src/shared/constants/user";
 
 const MOCK_WORLDS = [
   {

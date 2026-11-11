@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 
-import { isToolNavKey } from "../../shared/constants";
+import { isToolNavKey } from "../../shared/constants/tools";
 import { collectLayoutKeys } from "./nav-layout-helpers";
 
 export const NAV_CONFIG_KEY = "VRCX_customNavMenuLayoutList";

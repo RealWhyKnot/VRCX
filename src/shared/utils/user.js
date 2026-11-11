@@ -1,7 +1,6 @@
 import { HueToHex } from "./base/ui";
 import { convertFileUrlToImageUrl } from "./common";
-import { languageMappings } from "../constants";
-import { removeEmojis } from "./base/string";
+import { languageMappings } from "../constants/language";
 
 const THEME_COLOR_LIMITS = Object.freeze({
   darkMinLuminance: 0.06,
@@ -298,7 +297,6 @@ export {
   getNameColour,
   getReadableProfileThemeColor,
   invertHexColor,
-  removeEmojis,
   userStatusClass,
   statusClass,
   userImage,

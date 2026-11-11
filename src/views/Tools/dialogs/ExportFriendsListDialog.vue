@@ -30,14 +30,17 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
-import { InputGroupTextareaField } from "@/components/ui/input-group";
-import { TabsUnderline } from "@/components/ui/tabs";
+import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useUserStore } from "../../../stores";
+import { useUserStore } from "../../../stores/user";
 
 const props = defineProps({
   friends: {

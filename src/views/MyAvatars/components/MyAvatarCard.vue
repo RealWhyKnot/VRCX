@@ -188,15 +188,24 @@
 
 <script setup>
 import { Apple, Check, ExternalLink, Eye, Image as ImageIcon, Monitor, Pencil, RefreshCw, Smartphone, Tag, User } from "lucide-vue-next";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { formatDateFilter, getAvailablePlatforms, getPlatformInfo, timeToText } from "@/shared/utils";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
+import { formatDateFilter } from "@/coordinators/date-coordinator";
+import { getAvailablePlatforms } from "@/shared/utils/platform-utils";
+import { getPlatformInfo } from "@/shared/utils/avatar";
+import { timeToText } from "@/shared/utils/base/format";
+import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
+import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
+import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
 import { computed, ref } from "vue";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { getTagColor } from "@/shared/constants";
+import Badge from "@/components/ui/badge/Badge.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Card from "@/components/ui/card/Card.vue";
+import Separator from "@/components/ui/separator/Separator.vue";
+import { getTagColor } from "@/shared/constants/tags";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();

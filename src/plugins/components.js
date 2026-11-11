@@ -1,4 +1,4 @@
-import { TooltipWrapper } from "../components/ui/tooltip";
+import TooltipWrapper from "../components/ui/tooltip/TooltipWrapper.vue";
 
 import AvatarInfo from "../components/AvatarInfo.vue";
 import CountdownTimer from "../components/CountdownTimer.vue";

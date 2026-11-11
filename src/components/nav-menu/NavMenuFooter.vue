@@ -152,20 +152,21 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { computed, ref, watch } from "vue";
 
-import { TooltipWrapper } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
+import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
+import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuLabel from "@/components/ui/dropdown-menu/DropdownMenuLabel.vue";
+import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuSub from "@/components/ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "@/components/ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "@/components/ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import SidebarFooter from "@/components/ui/sidebar/SidebarFooter.vue";
+import SidebarMenu from "@/components/ui/sidebar/SidebarMenu.vue";
+import SidebarMenuButton from "@/components/ui/sidebar/SidebarMenuButton.vue";
+import SidebarMenuItem from "@/components/ui/sidebar/SidebarMenuItem.vue";
 
 defineProps({
   isCollapsed: {

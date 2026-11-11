@@ -48,15 +48,21 @@
 </template>
 
 <script setup>
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref } from "vue";
-import { Button } from "@/components/ui/button";
-import { DataTableLayout } from "@/components/ui/data-table";
+import Button from "@/components/ui/button/Button.vue";
+import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { useGalleryStore, useInviteStore, useUserStore } from "../../../stores";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useInviteStore } from "../../../stores/invite";
+import { useUserStore } from "../../../stores/user";
 import { createColumns } from "./send-invite-request-columns.jsx";
 
 import EditAndSendInviteDialog from "../InviteDialog/EditAndSendInviteDialog.vue";

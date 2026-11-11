@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { watch } from "vue";
 
-import { isRpcWorld } from "../shared/utils";
+import { isRpcWorld } from "../shared/utils/world";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useFriendStore } from "./friend";

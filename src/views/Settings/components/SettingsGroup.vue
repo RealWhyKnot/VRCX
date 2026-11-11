@@ -15,7 +15,8 @@
 </template>
 
 <script setup>
-import { Card, CardContent } from "@/components/ui/card";
+import Card from "@/components/ui/card/Card.vue";
+import CardContent from "@/components/ui/card/CardContent.vue";
 
 defineProps({
   title: { type: String, default: "" },

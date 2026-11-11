@@ -1,4 +1,4 @@
-import { copyToClipboard } from "../../../shared/utils";
+import { copyToClipboard } from "../../../shared/utils/app-actions";
 
 export function useGroupDialogCommands(
   groupDialog,

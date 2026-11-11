@@ -3,7 +3,8 @@ import { SelectContent, SelectPortal, SelectViewport, useForwardPropsEmits } fro
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-import { SelectScrollDownButton, SelectScrollUpButton } from ".";
+import SelectScrollDownButton from "./SelectScrollDownButton.vue";
+import SelectScrollUpButton from "./SelectScrollUpButton.vue";
 
 defineOptions({
   inheritAttrs: false,

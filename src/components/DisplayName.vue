@@ -5,7 +5,7 @@
 <script setup>
 import { ref, watch } from "vue";
 
-import { queryRequest } from "../api";
+import queryRequest from "../api/query-request";
 import { showUserDialog } from "../coordinators/user-coordinator";
 
 const props = defineProps({

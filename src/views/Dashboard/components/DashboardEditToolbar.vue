@@ -17,8 +17,8 @@
 <script setup>
 import { useI18n } from "vue-i18n";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Button from "@/components/ui/button/Button.vue";
+import Input from "@/components/ui/input/Input.vue";
 
 defineProps({
   name: {

@@ -2,20 +2,19 @@ import { nextTick } from "vue";
 import { toast } from "vue-sonner";
 import { i18n } from "../plugins/i18n";
 
-import {
-  createDefaultAvatarRef,
-  extractFileId,
-  getAvailablePlatforms,
-  getBundleDateSize,
-  getPlatformInfo,
-  replaceBioSymbols,
-  sanitizeEntityJson,
-  storeAvatarImage,
-} from "../shared/utils";
-import { avatarRequest, miscRequest, queryRequest } from "../api";
+import { createDefaultAvatarRef } from "../shared/utils/avatar-transforms";
+import { extractFileId } from "../shared/utils/file-utils";
+import { getAvailablePlatforms } from "../shared/utils/platform-utils";
+import { getBundleDateSize } from "./cache-coordinator";
+import { getPlatformInfo, storeAvatarImage } from "../shared/utils/avatar";
+import { replaceBioSymbols } from "../shared/utils/base/string";
+import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
+import avatarRequest from "../api/avatar";
+import miscRequest from "../api/misc";
+import queryRequest from "../api/query-request";
 import { logWebRequest } from "../services/app-config";
 import { database } from "../services/database";
-import { patchAvatarFromEvent } from "../queries";
+import { patchAvatarFromEvent } from "../queries/entity-cache";
 import { processBulk } from "../services/request";
 import { applyFavorite } from "./favorite-coordinator";
 import { refreshUserDialogAvatars, showUserDialog } from "./user-coordinator";

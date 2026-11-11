@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import Button from "@/components/ui/button/Button.vue";
+import Progress from "@/components/ui/progress/Progress.vue";
 
 export default {
   name: "InvalidAvatarsProgressToast",

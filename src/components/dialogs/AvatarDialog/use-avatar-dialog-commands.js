@@ -1,8 +1,11 @@
 import { ref } from "vue";
 
-import { avatarModerationRequest, avatarRequest, favoriteRequest } from "../../../api";
+import avatarModerationRequest from "../../../api/avatar-moderation";
+import avatarRequest from "../../../api/avatar";
+import favoriteRequest from "../../../api/favorite";
 import { removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
-import { copyToClipboard, openExternalLink, replaceVrcPackageUrl } from "../../../shared/utils";
+import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
+import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";
 import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../../coordinators/image-upload-coordinator";
 import { readFileAsBase64, withUploadTimeout } from "../../../shared/utils/image-upload";
 

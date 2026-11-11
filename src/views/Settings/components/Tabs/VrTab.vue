@@ -192,15 +192,26 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { NumberField, NumberFieldContent, NumberFieldDecrement, NumberFieldIncrement, NumberFieldInput } from "@/components/ui/number-field";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import NumberField from "@/components/ui/number-field/NumberField.vue";
+import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
+import NumberFieldDecrement from "@/components/ui/number-field/NumberFieldDecrement.vue";
+import NumberFieldIncrement from "@/components/ui/number-field/NumberFieldIncrement.vue";
+import NumberFieldInput from "@/components/ui/number-field/NumberFieldInput.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Switch from "@/components/ui/switch/Switch.vue";
+import Slider from "@/components/ui/slider/Slider.vue";
+import Select from "@/components/ui/select/Select.vue";
+import SelectContent from "@/components/ui/select/SelectContent.vue";
+import SelectItem from "@/components/ui/select/SelectItem.vue";
+import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
+import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { useAdvancedSettingsStore, useNotificationsSettingsStore, useVrStore, useWristOverlaySettingsStore } from "@/stores";
+import { useAdvancedSettingsStore } from "@/stores/settings/advanced";
+import { useNotificationsSettingsStore } from "@/stores/settings/notifications";
+import { useVrStore } from "@/stores/vr";
+import { useWristOverlaySettingsStore } from "@/stores/settings/wrist-overlay";
 
 import FeedFiltersDialog from "../../dialogs/FeedFiltersDialog.vue";
 import NotificationPositionDialog from "../../dialogs/NotificationPositionDialog.vue";

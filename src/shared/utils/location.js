@@ -1,7 +1,5 @@
 import { isRealInstance } from "./instance.js";
 
-export { parseLocation, displayLocation, resolveRegion, translateAccessType } from "./location-parser.js";
-
 function getFriendsLocations(friendsArr, lastLocation) {
   if (!friendsArr?.length) {
     return "";

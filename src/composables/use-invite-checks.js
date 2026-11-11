@@ -1,4 +1,7 @@
-import { useFriendStore, useInstanceStore, useLocationStore, useUserStore } from "../stores";
+import { useFriendStore } from "../stores/friend";
+import { useInstanceStore } from "../stores/instance";
+import { useLocationStore } from "../stores/location";
+import { useUserStore } from "../stores/user";
 import { checkCanInvite as checkCanInvitePure, checkCanInviteSelf as checkCanInviteSelfPure } from "../shared/utils/invite";
 
 export function useInviteChecks() {

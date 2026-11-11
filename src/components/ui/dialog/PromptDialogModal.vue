@@ -1,11 +1,20 @@
 <script setup>
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Dialog from "@/components/ui/dialog/Dialog.vue";
+import DialogContent from "@/components/ui/dialog/DialogContent.vue";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import FormControl from "@/components/ui/form/FormControl.vue";
+import { Field as FormField } from "vee-validate";
+import FormItem from "@/components/ui/form/FormItem.vue";
+import FormLabel from "@/components/ui/form/FormLabel.vue";
+import FormMessage from "@/components/ui/form/FormMessage.vue";
+import Button from "@/components/ui/button/Button.vue";
+import Input from "@/components/ui/input/Input.vue";
 import { storeToRefs } from "pinia";
 import { useForm } from "vee-validate";
-import { useModalStore } from "@/stores";
+import { useModalStore } from "@/stores/modal";
 import { watch } from "vue";
 
 const modalStore = useModalStore();

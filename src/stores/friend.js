@@ -3,9 +3,14 @@ import { defineStore } from "pinia";
 import { useRouter } from "vue-router";
 
 import { i18n } from "../plugins/i18n";
-import { compareByCreatedAtAscending, createRateLimiter, executeWithBackoff, getFriendsSortFunction, isRealInstance } from "../shared/utils";
+import { compareByCreatedAtAscending } from "../shared/utils/compare";
+import { createRateLimiter } from "../shared/utils/throttle";
+import { executeWithBackoff } from "../shared/utils/retry";
+import { getFriendsSortFunction } from "../shared/utils/friend";
+import { isRealInstance } from "../shared/utils/instance";
 import { getUserMemo } from "../coordinators/memo-coordinator";
-import { friendRequest, userRequest } from "../api";
+import friendRequest from "../api/friend";
+import userRequest from "../api/user";
 import { runInitFriendsListFlow } from "../coordinators/friend-sync-coordinator";
 import { runPendingOfflineTickFlow, runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { updateFriendship, runUpdateFriendshipsFlow } from "../coordinators/friend-relationship-coordinator";

@@ -568,36 +568,35 @@ import {
   XCircle,
 } from "lucide-vue-next";
 import { computed, reactive, ref, watch } from "vue";
-import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { TabsUnderline } from "@/components/ui/tabs";
+import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
+import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
+import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
+import Button from "@/components/ui/button/Button.vue";
+import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "../../ui/dropdown-menu";
-import {
-  copyToClipboard,
-  formatDateFilter,
-  getFaviconUrl,
-  hasGroupModerationPermission,
-  hasGroupPermission,
-  languageClass,
-  openExternalLink,
-  removeFromArray,
-  timeAgo,
-  timeToText,
-} from "../../../shared/utils";
-import { useGalleryStore, useGroupStore, useInstanceStore, useModalStore, useUserStore } from "../../../stores";
+import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
+import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
+import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
+import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
+import DropdownMenuSub from "../../ui/dropdown-menu/DropdownMenuSub.vue";
+import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubContent.vue";
+import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
+import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
+import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import { getFaviconUrl } from "../../../shared/utils/url-utils";
+import { hasGroupModerationPermission, hasGroupPermission } from "../../../shared/utils/group";
+import { languageClass } from "../../../shared/utils/user";
+import { removeFromArray } from "../../../shared/utils/base/array";
+import { timeAgo, timeToText } from "../../../shared/utils/base/format";
+import { useGalleryStore } from "../../../stores/gallery";
+import { useGroupStore } from "../../../stores/group";
+import { useInstanceStore } from "../../../stores/instance";
+import { useModalStore } from "../../../stores/modal";
+import { useUserStore } from "../../../stores/user";
 import {
   getGroupDialogGroup,
   isSoleGroupOwner,
@@ -608,9 +607,11 @@ import {
   setGroupEventAnnouncements,
   getGroupDialogCalendar,
 } from "../../../coordinators/group-coordinator";
-import { groupRequest, queryRequest } from "../../../api";
-import { queryKeys, refetchActiveEntityQuery } from "../../../queries";
-import { Badge } from "../../ui/badge";
+import groupRequest from "../../../api/group";
+import queryRequest from "../../../api/query-request";
+import { queryKeys } from "../../../queries/keys";
+import { refetchActiveEntityQuery } from "../../../queries/entity-cache";
+import Badge from "../../ui/badge/Badge.vue";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 
 import DialogJsonTab from "../DialogJsonTab.vue";

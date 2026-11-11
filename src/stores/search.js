@@ -3,8 +3,9 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { instanceRequest, userRequest } from "../api";
-import { groupRequest } from "../api/";
+import instanceRequest from "../api/instance";
+import userRequest from "../api/user";
+import groupRequest from "../api/group";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { showGroupDialog } from "../coordinators/group-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";

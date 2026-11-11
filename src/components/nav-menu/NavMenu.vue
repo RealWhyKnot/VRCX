@@ -162,23 +162,32 @@ import { useNavLayout } from "./composables/use-nav-layout";
 import { useNavTheme } from "./composables/use-nav-theme";
 import { useToolActions } from "../../composables/use-tool-actions";
 import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
-import { Kbd } from "@/components/ui/kbd";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import Kbd from "@/components/ui/kbd/Kbd.vue";
+import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
+import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
+import ContextMenuItem from "@/components/ui/context-menu/ContextMenuItem.vue";
+import ContextMenuSeparator from "@/components/ui/context-menu/ContextMenuSeparator.vue";
+import ContextMenuTrigger from "@/components/ui/context-menu/ContextMenuTrigger.vue";
+import Sidebar from "@/components/ui/sidebar/Sidebar.vue";
+import SidebarContent from "@/components/ui/sidebar/SidebarContent.vue";
+import SidebarGroup from "@/components/ui/sidebar/SidebarGroup.vue";
+import SidebarGroupContent from "@/components/ui/sidebar/SidebarGroupContent.vue";
+import SidebarHeader from "@/components/ui/sidebar/SidebarHeader.vue";
+import SidebarMenu from "@/components/ui/sidebar/SidebarMenu.vue";
+import SidebarMenuButton from "@/components/ui/sidebar/SidebarMenuButton.vue";
+import SidebarMenuItem from "@/components/ui/sidebar/SidebarMenuItem.vue";
 
-import { useAppearanceSettingsStore, useAuthStore, useDashboardStore, useModalStore, useSearchStore, useUiStore, useVRCXUpdaterStore } from "../../stores";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { useAuthStore } from "../../stores/auth";
+import { useDashboardStore } from "../../stores/dashboard";
+import { useModalStore } from "../../stores/modal";
+import { useSearchStore } from "../../stores/search";
+import { useUiStore } from "../../stores/ui";
+import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
 import { isEntryNotified as checkEntryNotified } from "./nav-menu-utils";
-import { DASHBOARD_NAV_KEY_PREFIX, links } from "../../shared/constants";
-import { openExternalLink } from "../../shared/utils";
+import { DASHBOARD_NAV_KEY_PREFIX } from "../../shared/constants/dashboard";
+import { links } from "../../shared/constants/link";
+import { openExternalLink } from "../../shared/utils/app-actions";
 
 import NavMenuFolderItem from "./NavMenuFolderItem.vue";
 import NavMenuFooter from "./NavMenuFooter.vue";

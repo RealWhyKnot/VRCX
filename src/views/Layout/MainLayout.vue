@@ -95,10 +95,13 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ChevronLeft } from "lucide-vue-next";
 
-import { Button } from "../../components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable";
-import { SidebarInset, SidebarProvider } from "../../components/ui/sidebar";
-import { useAppearanceSettingsStore } from "../../stores";
+import Button from "../../components/ui/button/Button.vue";
+import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
+import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
+import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
+import SidebarInset from "../../components/ui/sidebar/SidebarInset.vue";
+import SidebarProvider from "../../components/ui/sidebar/SidebarProvider.vue";
+import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useMainLayoutResizable } from "../../composables/use-main-layout-resizable";
 import { watchState } from "../../services/watch-state";
 

@@ -14,7 +14,7 @@
 <script setup>
 import { Info } from "lucide-vue-next";
 
-import { Switch } from "../../../components/ui/switch";
+import Switch from "../../../components/ui/switch/Switch.vue";
 defineProps({
   label: String,
   value: Boolean,
