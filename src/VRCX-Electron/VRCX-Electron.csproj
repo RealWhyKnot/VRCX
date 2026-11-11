@@ -1,8 +1,8 @@
 <Project>
-  <Import Project="Platform.props" />
+  <Import Project="..\VRCX-Shared\Platform.props" />
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
   <PropertyGroup>
-    <OutputPath>..\build\Electron\$(RuntimeIdentifier)\</OutputPath>
+    <OutputPath>..\..\build\Electron\$(RuntimeIdentifier)\</OutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -13,7 +13,7 @@
     <RuntimeIdentifiers>linux-x64;linux-arm64;win-x64;win-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.*</ApplicationVersion>
-    <ApplicationIcon>..\images\VRCX.ico</ApplicationIcon>
+    <ApplicationIcon>..\..\images\VRCX.ico</ApplicationIcon>
     <AssemblyName>VRCX-Electron</AssemblyName>
     <RootNamespace>VRCX</RootNamespace>
     <AssemblyTitle>VRCX</AssemblyTitle>
@@ -23,7 +23,7 @@
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <Title>VRCX</Title>
     <Description>VRCX</Description>
-    <PackageIcon>..\images\VRCX.png</PackageIcon>
+    <PackageIcon>..\..\images\VRCX.png</PackageIcon>
     <RepositoryUrl>https://github.com/vrcx-team/VRCX</RepositoryUrl>
     <ResourceLanguages>en</ResourceLanguages>
     <SatelliteResourceLanguages>en-US;en</SatelliteResourceLanguages>
@@ -47,23 +47,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="app.manifest" />
-    <None Include="..\Version">
+    <None Include="..\VRCX-Cef\app.manifest" Link="app.manifest" />
+    <None Include="..\..\Version">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="libs\openvr_api.dll">
+    <None Include="..\VRCX-Shared\libs\openvr_api.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>openvr_api.dll</TargetPath>
     </None>
-    <Content Include="..\images\VRCX.ico">
+    <Content Include="..\..\images\VRCX.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\images\VRCX_notify.ico">
+    <Content Include="..\..\images\VRCX_notify.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\images\VRCX.png">
+    <Content Include="..\..\images\VRCX.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -88,27 +88,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="obj\**" />
-    <Compile Remove="obj\**" />
-    <Content Remove="Cef\**" />
-    <Compile Remove="Cef\**" />
-    <Content Remove="AppApi\Cef\**" />
-    <Compile Remove="AppApi\Cef\**" />
-    <Content Remove="Overlay\Cef\**" />
-    <Compile Remove="Overlay\Cef\**" />
-    <Content Remove="OverlayWebSocket\**" />
-    <Compile Remove="OverlayWebSocket\**" />
-    <Content Remove="DBMerger\**" />
-    <Compile Remove="DBMerger\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="Blake2Sharp">
-      <HintPath>libs\Blake2Sharp.dll</HintPath>
+      <HintPath>..\VRCX-Shared\libs\Blake2Sharp.dll</HintPath>
     </Reference>
     <Reference Include="librsync.net">
-      <HintPath>libs\librsync.net.dll</HintPath>
+      <HintPath>..\VRCX-Shared\libs\librsync.net.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\VRCX-Shared\**\*.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\VRCX-Cef\Program.cs" Link="Program.cs" />
   </ItemGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
 </Project>

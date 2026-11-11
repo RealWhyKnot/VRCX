@@ -1,5 +1,5 @@
 <Project>
-  <Import Project="..\Platform.props" />
+  <Import Project="..\VRCX-Shared\Platform.props" />
   <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 	<PropertyGroup>
 		<OutputPath>..\..\build\DBMerger\</OutputPath>

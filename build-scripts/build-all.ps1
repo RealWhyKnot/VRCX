@@ -33,7 +33,7 @@ Write-Host 'Building .Net...' -ForegroundColor Green
 
 if ($env:OS -eq 'Windows_NT') {
     $buildArguments = @(
-        'Dotnet\VRCX-Cef.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
+        'src\VRCX-Cef\VRCX-Cef.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
         '-t:Clean;Build', '-maxcpucount', '--runtime', 'win-x64', '--self-contained'
     )
     dotnet build @buildArguments
@@ -43,12 +43,12 @@ if ($env:OS -eq 'Windows_NT') {
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
     if ($BuildArm64) {
         $buildArguments = @(
-            'Dotnet/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'linux-arm64'
         )
     } else {
         $buildArguments = @(
-            'Dotnet/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'linux-x64'
         )
     }
@@ -59,12 +59,12 @@ if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::OSX)) {
     if ($BuildArm64) {
         $buildArguments = @(
-            'Dotnet/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'osx-arm64'
         )
     } else {
         $buildArguments = @(
-            'Dotnet/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'osx-x64'
         )
     }

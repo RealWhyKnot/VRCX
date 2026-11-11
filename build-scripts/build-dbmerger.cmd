@@ -1,4 +1,4 @@
-cd ..\Dotnet\DBMerger
+cd ..\src\DBMerger
 dotnet publish -c release -o publish\win-x64 -r win-x64
 dotnet publish -c release -o publish\linux-x64 -r linux-x64
 dotnet publish -c release -o publish\linux-arm64 -r linux-arm64

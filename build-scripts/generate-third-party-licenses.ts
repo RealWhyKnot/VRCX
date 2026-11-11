@@ -45,7 +45,6 @@ const frontendLicensePath = path.join(rootDir, "build", "html", ".vite", "licens
 const outputDir = path.join(rootDir, "build", "html", "licenses");
 const outputManifestPath = path.join(outputDir, "third-party-licenses.json");
 const outputNoticePath = path.join(outputDir, "THIRD_PARTY_NOTICES.txt");
-const dotnetDir = path.join(rootDir, "Dotnet");
 const nugetPackagesEnv = process.env["NUGET_PACKAGES"];
 const nugetCacheDir = nugetPackagesEnv === undefined || nugetPackagesEnv === "" ? path.join(os.homedir(), ".nuget", "packages") : nugetPackagesEnv;
 const overridesPath = path.join(import.meta.dirname, "licenses", "nuget-overrides.json");
@@ -438,12 +437,11 @@ function main(): void {
 
   const frontendLicenseMarkdown = readFileIfExists(frontendLicensePath) ?? "";
   const frontendEntries = parseFrontendLicenses(frontendLicenseMarkdown);
-  const csprojFiles = fs
-    .readdirSync(dotnetDir)
-    .filter((fileName) => fileName.endsWith(".csproj"))
-    .map((fileName) => path.join(dotnetDir, fileName))
-    .concat(path.join(dotnetDir, "DBMerger", "DBMerger.csproj"))
-    .filter((filePath, index, filePaths) => filePaths.indexOf(filePath) === index && fs.existsSync(filePath));
+  const csprojFiles = [
+    path.join(rootDir, "src", "VRCX-Cef", "VRCX-Cef.csproj"),
+    path.join(rootDir, "src", "VRCX-Electron", "VRCX-Electron.csproj"),
+    path.join(rootDir, "src", "DBMerger", "DBMerger.csproj"),
+  ].filter((filePath, index, filePaths) => filePaths.indexOf(filePath) === index && fs.existsSync(filePath));
 
   const dotnetEntries = enrichDotnetEntries(mergeDotnetEntries(csprojFiles));
   const manifest = {

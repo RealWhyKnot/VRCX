@@ -52,7 +52,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}/Dotnet/VRCX-Cef.csproj",
+        "${workspaceFolder}/src/VRCX-Cef/VRCX-Cef.csproj",
         "-p:Configuration=Release",
         "-p:WarningLevel=0",
         "-p:Platform=x64",
@@ -71,7 +71,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}/Dotnet/VRCX-Electron.csproj",
+        "${workspaceFolder}/src/VRCX-Electron/VRCX-Electron.csproj",
         "-p:Configuration=Release",
         "-p:WarningLevel=0",
         "-p:Platform=x64",

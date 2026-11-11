@@ -21,22 +21,18 @@ function Clear-BuildDirectory {
 Set-Location -LiteralPath $PSScriptRoot
 
 $BuildDir = '../build'
-$ObjDir = '../Dotnet/obj'
-$OldObjDir = '../Dotnet/obj1'
+$ObjDirs = @('../src/VRCX-Cef/obj', '../src/VRCX-Electron/obj', '../src/DBMerger/obj')
 
 if (Test-Path -LiteralPath $BuildDir) {
     Write-Host "Removing '$BuildDir"
     Clear-BuildDirectory -Path $BuildDir
 }
 
-if (Test-Path -LiteralPath $ObjDir) {
-    Write-Host "Removing '$ObjDir"
-    Clear-BuildDirectory -Path $ObjDir
-}
-
-if (Test-Path -LiteralPath $OldObjDir) {
-    Write-Host "Removing '$OldObjDir"
-    Clear-BuildDirectory -Path $OldObjDir
+foreach ($ObjDir in $ObjDirs) {
+    if (Test-Path -LiteralPath $ObjDir) {
+        Write-Host "Removing '$ObjDir"
+        Clear-BuildDirectory -Path $ObjDir
+    }
 }
 
 Write-Host 'Done.'

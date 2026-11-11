@@ -10,6 +10,11 @@
 @import "./status-icon.css";
 @import "./options-container.css";
 
+@source not "../VRCX-Cef";
+@source not "../VRCX-Electron";
+@source not "../VRCX-Shared";
+@source not "../DBMerger";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

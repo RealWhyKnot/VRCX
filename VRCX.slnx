@@ -3,13 +3,13 @@
     <Platform Name="x64" />
     <Platform Name="ARM64" />
   </Configurations>
-  <Project Path="Dotnet/DBMerger/DBMerger.csproj">
+  <Project Path="src/DBMerger/DBMerger.csproj">
     <Platform Project="x64" />
   </Project>
-  <Project Path="Dotnet/VRCX-Cef.csproj">
+  <Project Path="src/VRCX-Cef/VRCX-Cef.csproj">
     <Platform Project="x64" />
   </Project>
-  <Project Path="Dotnet/VRCX-Electron.csproj">
+  <Project Path="src/VRCX-Electron/VRCX-Electron.csproj">
     <Platform Solution="*|ARM64" Project="ARM64" />
     <Platform Solution="*|x64" Project="x64" />
   </Project>

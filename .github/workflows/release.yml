@@ -92,7 +92,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet build Dotnet/VRCX-Cef.csproj -c Release -p:Platform=x64 --runtime win-x64 --self-contained
+          dotnet build src/VRCX-Cef/VRCX-Cef.csproj -c Release -p:Platform=x64 --runtime win-x64 --self-contained
           if ($LASTEXITCODE -ne 0) { throw "build failed ($LASTEXITCODE)" }
       - name: Install NSIS
         uses: RealWhyKnot/workflows/setup-nsis@v1
@@ -190,7 +190,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "version update failed ($LASTEXITCODE)" }
       - name: Build
         shell: bash
-        run: dotnet build Dotnet/VRCX-Electron.csproj -c Release -p:Platform="${BUILD_ARCH}" --runtime "${BUILD_RID}"
+        run: dotnet build src/VRCX-Electron/VRCX-Electron.csproj -c Release -p:Platform="${BUILD_ARCH}" --runtime "${BUILD_RID}"
       - name: Build html
         run: npm run prod
       - name: Package

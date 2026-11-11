@@ -119,7 +119,7 @@ dotnet_diagnostic.CA2007.severity = none
 generated_code = true
 ignore = true
 
-[{Dotnet/Overlay/OpenVR/openvr_api.cs,Dotnet/libs/Blake2Sharp.dll,Dotnet/libs/librsync.net.dll,Dotnet/libs/openvr_api.dll,Installer/Plugins/x86-unicode/ApplicationID.dll,Installer/Plugins/x86-unicode/INetC.dll,Installer/Plugins/x86-unicode/ShellExecAsUser.dll,Installer/Plugins/x86-unicode/nsProcess.dll,src-electron/libs/linux/libopenvr_api.so}]
+[{src/VRCX-Shared/Overlay/OpenVR/openvr_api.cs,src/VRCX-Shared/libs/Blake2Sharp.dll,src/VRCX-Shared/libs/librsync.net.dll,src/VRCX-Shared/libs/openvr_api.dll,Installer/Plugins/x86-unicode/ApplicationID.dll,Installer/Plugins/x86-unicode/INetC.dll,Installer/Plugins/x86-unicode/ShellExecAsUser.dll,Installer/Plugins/x86-unicode/nsProcess.dll,src-electron/libs/linux/libopenvr_api.so}]
 generated_code = true
 ignore = true
 

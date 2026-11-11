@@ -6,6 +6,11 @@
 @import "../styles/fonts.css";
 @import "./vr-noty.user.css";
 
+@source not "../VRCX-Cef";
+@source not "../VRCX-Electron";
+@source not "../VRCX-Shared";
+@source not "../DBMerger";
+
 [data-loading] {
   animation: rotation 2s linear infinite;
   display: inline-block;
