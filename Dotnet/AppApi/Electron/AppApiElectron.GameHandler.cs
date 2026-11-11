@@ -123,7 +123,7 @@ public partial class AppApiElectron
 
         false;
 
-    public override Task<bool> TryOpenInstanceInVrcAsync(string launchUrl)
+    public override Task<bool> TryOpenInstanceInVrcAsync(string launchLink)
     {
         try
         {
@@ -140,7 +140,7 @@ public partial class AppApiElectron
                 return Task.FromResult(false);
             }
 
-            string url = launchUrl.Contains("attach=1", StringComparison.Ordinal) ? launchUrl : launchUrl + "&attach=1";
+            string url = launchLink.Contains("attach=1", StringComparison.Ordinal) ? launchLink : launchLink + "&attach=1";
 
             const string Inner =
                 "while IFS= read -r -d '' kv; do export \"$kv\"; done < \"/proc/$1/environ\"; exec wine \"$2\" \"$3\"";

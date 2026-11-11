@@ -166,9 +166,7 @@ partial class AppApi
 
     public virtual string? GetFileBase64(string path) => File.Exists(path) ? Convert.ToBase64String(File.ReadAllBytes(path)) : null;
 
-    public virtual Task<bool> TryOpenInstanceInVrcAsync(string launchUrl) => VRCIPC.SendAsync(launchUrl);
+    public virtual Task<bool> TryOpenInstanceInVrcAsync(string launchLink) => VRCIPC.SendAsync(launchLink);
 
     internal void OpenLink(Uri url) => OpenLink(url.AbsoluteUri);
-
-    internal Task<bool> TryOpenInstanceInVrcAsync(Uri launchUrl) => TryOpenInstanceInVrcAsync(launchUrl.AbsoluteUri);
 }

@@ -178,7 +178,7 @@ static class Update
         throw new InvalidDataException("Unable to extract file name from content-disposition header.");
     }
 
-    public static async Task DownloadUpdateAsync(string fileUrl, string hashString, int downloadSize, CancellationToken cancellationToken = default)
+    public static async Task DownloadUpdateAsync(string fileLink, string hashString, int downloadSize, CancellationToken cancellationToken = default)
     {
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         lock (DownloadLock)
@@ -188,7 +188,7 @@ static class Update
 
         try
         {
-            await DownloadToTempFileAsync(fileUrl, cancellation.Token).ConfigureAwait(false);
+            await DownloadToTempFileAsync(fileLink, cancellation.Token).ConfigureAwait(false);
             await VerifyDownloadAsync(hashString, downloadSize, cancellation.Token).ConfigureAwait(false);
             await ReplaceInstalledFileAsync(cancellation.Token).ConfigureAwait(false);
             UpdateProgress = 0;
@@ -330,6 +330,4 @@ static class Update
             Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Could not delete the cancelled download: {0}", ex);
         }
     }
-
-    public static Task DownloadUpdateAsync(Uri fileUrl, string hashString, int downloadSize, CancellationToken cancellationToken = default) => DownloadUpdateAsync(fileUrl.AbsoluteUri, hashString, downloadSize, cancellationToken);
 }

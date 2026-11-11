@@ -20,7 +20,7 @@ partial class AppApi
         ImageCache.PopulateImageHosts(hosts ?? []);
     }
 
-    public virtual async Task<string> GetImageAsync(string url, string fileId, string version, CancellationToken cancellationToken = default) => await ImageCache.GetImageAsync(url, fileId, version, cancellationToken).ConfigureAwait(false);
+    public virtual async Task<string> GetImageAsync(string imageLink, string fileId, string version, CancellationToken cancellationToken = default) => await ImageCache.GetImageAsync(imageLink, fileId, version, cancellationToken).ConfigureAwait(false);
 
     public string ResizeImageToFitLimits(string base64data) => Convert.ToBase64String(ResizeImageToFitLimits(Convert.FromBase64String(base64data), matchingDimensions: false));
 
@@ -210,7 +210,7 @@ partial class AppApi
         return true;
     }
 
-    public async Task<string?> SavePrintToFileAsync(string url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
+    public async Task<string?> SavePrintToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
     {
         string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Prints", MakeValidFileName(monthFolder));
         Directory.CreateDirectory(folder);
@@ -222,7 +222,7 @@ partial class AppApi
 
         try
         {
-            await ImageCache.SaveImageToFileAsync(url, filePath, cancellationToken).ConfigureAwait(false);
+            await ImageCache.SaveImageToFileAsync(imageLink, filePath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
@@ -233,7 +233,7 @@ partial class AppApi
         return filePath;
     }
 
-    public async Task<string?> SaveStickerToFileAsync(string url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
+    public async Task<string?> SaveStickerToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
     {
         string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Stickers", MakeValidFileName(monthFolder));
         Directory.CreateDirectory(folder);
@@ -245,7 +245,7 @@ partial class AppApi
 
         try
         {
-            await ImageCache.SaveImageToFileAsync(url, filePath, cancellationToken).ConfigureAwait(false);
+            await ImageCache.SaveImageToFileAsync(imageLink, filePath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
@@ -256,7 +256,7 @@ partial class AppApi
         return filePath;
     }
 
-    public async Task<string?> SaveEmojiToFileAsync(string url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
+    public async Task<string?> SaveEmojiToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
     {
         string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Emoji", MakeValidFileName(monthFolder));
         Directory.CreateDirectory(folder);
@@ -268,7 +268,7 @@ partial class AppApi
 
         try
         {
-            await ImageCache.SaveImageToFileAsync(url, filePath, cancellationToken).ConfigureAwait(false);
+            await ImageCache.SaveImageToFileAsync(imageLink, filePath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
@@ -302,12 +302,4 @@ partial class AppApi
         byte[] fileData = Convert.FromBase64String(blob);
         return fileData.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
-
-    internal Task<string> GetImageAsync(Uri url, string fileId, string version, CancellationToken cancellationToken = default) => GetImageAsync(url.AbsoluteUri, fileId, version, cancellationToken);
-
-    internal Task<string?> SavePrintToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SavePrintToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
-
-    internal Task<string?> SaveStickerToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveStickerToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
-
-    internal Task<string?> SaveEmojiToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveEmojiToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
 }
