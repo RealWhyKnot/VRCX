@@ -646,6 +646,40 @@
         "header": "Outros",
         "edit_invite_message": "Editar Mensagens de Convite",
         "edit_invite_message_description": "Editar mensagens de convite e resposta de convite"
+      },
+      "instance_browser": {
+        "title": "Instance Browser",
+        "description": "Find open instances by region, category and vibe",
+        "source_discover": "Discover",
+        "source_mine": "My open instances",
+        "mode_active": "Most active",
+        "mode_population": "Most people",
+        "mode_match": "Best match",
+        "mode_random": "Random",
+        "any_region": "Any region",
+        "any_platform": "Any platform",
+        "platform_standalonewindows": "PC",
+        "platform_android": "Android",
+        "platform_ios": "iOS",
+        "any_category": "Any category",
+        "any_vibe": "Any vibe",
+        "min_people": "Min people",
+        "group_hosted": "Group hosted",
+        "trending_only": "Trending worlds",
+        "search_placeholder": "Search results",
+        "refresh": "Refresh",
+        "full": "Full",
+        "queue": "{count} in queue",
+        "friends_here": "Friends here: {count}",
+        "hosted_by": "Hosted by {name}",
+        "launch": "Launch",
+        "invite_me": "Invite me",
+        "load_more": "Load more",
+        "load_failed": "Couldn't load instances. Try again in a moment."
+      },
+      "marketplace": {
+        "creator_earnings": "Creator Earnings",
+        "creator_earnings_description": "See what your marketplace listings have earned"
       }
     },
     "profile": {
@@ -1256,7 +1290,9 @@
         "trust_level": "Nível de Confiança",
         "mutual_friends": "Amigos Mútuos",
         "open_in_discord": "Abrir no Discord",
-        "discord": "Discord"
+        "discord": "Discord",
+        "account_standing_sanctions": "Active sanctions: {count}",
+        "account_standing_clear_days": "Days until issues clear: {count}"
       },
       "badges": {
         "assigned": "Atribuído",
@@ -1301,7 +1337,11 @@
         "unfriend_success_msg": "Amizade desfeita",
         "logout": "Sair",
         "edit_note_memo": "Editar Nota e Memo",
-        "reset_home": "Redefinir Mundo Inicial"
+        "reset_home": "Redefinir Mundo Inicial",
+        "instance_warn": "Warn in Instance",
+        "instance_kick": "Kick from Instance",
+        "instance_moderation_reason": "Reason for moderating {name}",
+        "instance_moderation_reason_invalid": "Enter a reason of up to {max} characters"
       },
       "info": {
         "header": "Informações",
@@ -2258,7 +2298,9 @@
         "description": "Descrição",
         "export_to_calendar": "Exportar para Calendário",
         "download_ics": "Baixar .ics",
-        "copied_event_link": "URL do evento do calendário copiada para a área de transferência"
+        "copied_event_link": "URL do evento do calendário copiada para a área de transferência",
+        "interested_friends": "Friends Interested",
+        "linked_instances": "Linked Instances"
       },
       "featured_events": "Eventos em Destaque"
     },
@@ -2340,6 +2382,19 @@
     "avatar_database_provider": {
       "header": "Provedor de Banco de Dados de Avatar",
       "add_provider": "Adicionar Provedor"
+    },
+    "creator_earnings": {
+      "header": "Creator Earnings",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_1y": "Last 12 months",
+      "range_all": "All time",
+      "total": "Total earnings",
+      "otp_earnings": "One-time purchase earnings",
+      "otp_count": "One-time purchases",
+      "subscriber_earnings": "Subscription earnings",
+      "subscriber_months": "Subscriber months",
+      "load_failed": "Couldn't load earnings. Try again in a moment."
     }
   },
   "confirm": {
@@ -2612,7 +2667,8 @@
       "deleted": "Avatar excluído",
       "impostor_deleted": "Impostor excluído",
       "impostor_queued": "Impostor enfileirado para criação",
-      "impostor_regenerated": "Impostor excluído e enfileirado para criação"
+      "impostor_regenerated": "Impostor excluído e enfileirado para criação",
+      "impostor_queued_wait": "Imposter queued for creation. Estimated wait: {minutes} min"
     },
     "avatar_lookup": {
       "not_found": "Avatar não encontrado nos provedores de pesquisa",
@@ -2684,7 +2740,9 @@
       "display_name_copied": "Nome de Exibição do usuário copiado para a área de transferência",
       "home_reset": "Mundo inicial foi redefinido",
       "request_invite_sent": "Solicitação de convite enviada",
-      "no_fallback_avatar": "Nenhum avatar substituto definido"
+      "no_fallback_avatar": "Nenhum avatar substituto definido",
+      "instance_warn_done": "Warned {name}",
+      "instance_kick_done": "Kicked {name} from the instance"
     },
     "friend": {
       "load_failed": "Falha ao carregar lista de amigos, saindo"

@@ -2,6 +2,8 @@ const accessTypeLocaleKeyMap = {
   public: "dialog.new_instance.access_type_public",
   group: "dialog.new_instance.access_type_group",
   "friends+": "dialog.new_instance.access_type_friend_plus",
+  friendsPlus: "dialog.new_instance.access_type_friend_plus",
+  invitePlus: "dialog.new_instance.access_type_invite_plus",
   friends: "dialog.new_instance.access_type_friend",
   "invite+": "dialog.new_instance.access_type_invite_plus",
   invite: "dialog.new_instance.access_type_invite",

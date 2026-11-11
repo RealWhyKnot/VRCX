@@ -201,6 +201,17 @@
                 <XCircle class="size-4" />
                 {{ t("dialog.user.actions.moderation_disable_avatar_interaction") }}
               </DropdownMenuItem>
+              <template v-if="canModerateTarget">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem data-testid="instance-warn" @click="moderateTarget('warn')">
+                  <TriangleAlert class="size-4" />
+                  {{ t("dialog.user.actions.instance_warn") }}
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" data-testid="instance-kick" @click="moderateTarget('kick')">
+                  <LogOut class="size-4" />
+                  {{ t("dialog.user.actions.instance_kick") }}
+                </DropdownMenuItem>
+              </template>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
@@ -263,6 +274,8 @@ import {
   VolumeX,
   X,
   XCircle,
+  LogOut,
+  TriangleAlert,
 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { computed } from "vue";
@@ -284,6 +297,7 @@ import { useUserStore } from "../../../stores/user";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { isActionRecent } from "../../../composables/use-recent-actions";
 import { invertHexColor } from "@/shared/utils/user";
+import { useInstanceModeration } from "./composables/use-instance-moderation";
 
 const props = defineProps<{
   userDialogCommand: (command: string) => void;
@@ -295,6 +309,7 @@ const { userDialog, currentUser } = storeToRefs(useUserStore());
 const { isGameRunning } = storeToRefs(useGameStore());
 const { lastLocation } = storeToRefs(useLocationStore());
 const { checkCanInvite } = useInviteChecks();
+const { canModerateTarget, moderateTarget } = useInstanceModeration();
 
 const hasRequest = computed(() => userDialog.value.incomingRequest || userDialog.value.outgoingRequest);
 const hasRisk = computed(

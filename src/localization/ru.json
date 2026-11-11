@@ -279,6 +279,40 @@
         "header": "Фотографии",
         "screenshot": "Управление скриншотами",
         "screenshot_description": "Управление скриншотами и просмотр метаданных"
+      },
+      "instance_browser": {
+        "title": "Instance Browser",
+        "description": "Find open instances by region, category and vibe",
+        "source_discover": "Discover",
+        "source_mine": "My open instances",
+        "mode_active": "Most active",
+        "mode_population": "Most people",
+        "mode_match": "Best match",
+        "mode_random": "Random",
+        "any_region": "Any region",
+        "any_platform": "Any platform",
+        "platform_standalonewindows": "PC",
+        "platform_android": "Android",
+        "platform_ios": "iOS",
+        "any_category": "Any category",
+        "any_vibe": "Any vibe",
+        "min_people": "Min people",
+        "group_hosted": "Group hosted",
+        "trending_only": "Trending worlds",
+        "search_placeholder": "Search results",
+        "refresh": "Refresh",
+        "full": "Full",
+        "queue": "{count} in queue",
+        "friends_here": "Friends here: {count}",
+        "hosted_by": "Hosted by {name}",
+        "launch": "Launch",
+        "invite_me": "Invite me",
+        "load_more": "Load more",
+        "load_failed": "Couldn't load instances. Try again in a moment."
+      },
+      "marketplace": {
+        "creator_earnings": "Creator Earnings",
+        "creator_earnings_description": "See what your marketplace listings have earned"
       }
     },
     "profile": {
@@ -540,7 +574,9 @@
       "pronouns": "Местоимение",
       "tags": {
         "vrchat_team": "Команда VRChat",
-        "age_verified": "Возраст подтвержден"
+        "age_verified": "Возраст подтвержден",
+        "account_standing_sanctions": "Active sanctions: {count}",
+        "account_standing_clear_days": "Days until issues clear: {count}"
       },
       "badges": {
         "assigned": "Назначен",
@@ -581,7 +617,11 @@
         "edit_pronouns": "Местоимение",
         "report_hacking": "Сообщить о взломе",
         "unfriend": "Удалить из друзей",
-        "logout": "Выйти"
+        "logout": "Выйти",
+        "instance_warn": "Warn in Instance",
+        "instance_kick": "Kick from Instance",
+        "instance_moderation_reason": "Reason for moderating {name}",
+        "instance_moderation_reason_invalid": "Enter a reason of up to {max} characters"
       },
       "info": {
         "header": "Информация",
@@ -1375,7 +1415,9 @@
         "interested_user": "Заинтересованный пользователь",
         "close_time": "Закрыть инстанс после завершения",
         "created": "Дата создания",
-        "description": "Описание"
+        "description": "Описание",
+        "interested_friends": "Friends Interested",
+        "linked_instances": "Linked Instances"
       }
     },
     "moderate_group": {
@@ -1439,6 +1481,19 @@
     "avatar_database_provider": {
       "header": "Провайдер базы данных аватаров",
       "add_provider": "Добавить провайдера"
+    },
+    "creator_earnings": {
+      "header": "Creator Earnings",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_1y": "Last 12 months",
+      "range_all": "All time",
+      "total": "Total earnings",
+      "otp_earnings": "One-time purchase earnings",
+      "otp_count": "One-time purchases",
+      "subscriber_earnings": "Subscription earnings",
+      "subscriber_months": "Subscriber months",
+      "load_failed": "Couldn't load earnings. Try again in a moment."
     }
   },
   "confirm": {
@@ -1644,7 +1699,8 @@
       "not_allowed": "У вас нет доступа к этому инстансу"
     },
     "avatar": {
-      "change_moderation_failed": "Не удалось изменить модерацию аватара"
+      "change_moderation_failed": "Не удалось изменить модерацию аватара",
+      "impostor_queued_wait": "Imposter queued for creation. Estimated wait: {minutes} min"
     },
     "file": {
       "not_image": "Файл не является изображением",
@@ -1655,7 +1711,9 @@
       "failed": "Не удалось загрузить изображение галереи"
     },
     "user": {
-      "moderated": "Пользователь модерирован"
+      "moderated": "Пользователь модерирован",
+      "instance_warn_done": "Warned {name}",
+      "instance_kick_done": "Kicked {name} from the instance"
     },
     "friend": {
       "load_failed": "Не удалось загрузить список друзей, выход из системы"

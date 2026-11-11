@@ -185,6 +185,14 @@ const instanceRequest = {
     });
   },
 
+  discoverInstances(query: string): Promise<unknown> {
+    return request(`instances/discover?${query}`, { method: "GET" });
+  },
+
+  getActiveInstances(params: { n: number; offset: number }): Promise<unknown> {
+    return request("instances/active", { method: "GET", params });
+  },
+
   getInstanceVibes(): Promise<{ json: InstanceVibe[] }> {
     return requestObject<InstanceVibe[]>("instanceVibes", {
       method: "GET",

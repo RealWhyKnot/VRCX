@@ -113,7 +113,7 @@
             <Shield class="h-2.5 w-2.5" /> {{ userDialog.ref.$trustLevel }}
           </Badge>
         </TooltipWrapper>
-        <TooltipWrapper v-if="userDialog.id === currentUser.id && currentUser.accountStanding" side="top" :content="t('dialog.user.tags.account_standing')">
+        <TooltipWrapper v-if="userDialog.id === currentUser.id && currentUser.accountStanding" side="top" :content="accountStandingTooltip">
           <Badge
             variant="outline"
             class="h-5 px-1.5 text-[11px] leading-none capitalize"
@@ -430,6 +430,7 @@ import NameplateEffect from "../../NameplateEffect.vue";
 import ProfileEffect from "../../ProfileEffect.vue";
 
 import UserActionDropdown from "./UserActionDropdown.vue";
+import { useAccountStanding } from "./composables/use-account-standing";
 import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { getAvatarName } from "@/coordinators/avatar-coordinator";
 
@@ -455,6 +456,8 @@ const { toggleSharedConnectionsOptOut, toggleDiscordFriendsOptOut, toggleAvatarC
 const { showFullscreenImageDialog } = useGalleryStore();
 const { userStatusClass } = useUserDisplay();
 const { showEditProfileDialog } = useUserStore();
+
+const { accountStandingTooltip } = useAccountStanding(() => userDialog.value.visible && userDialog.value.id === currentUser.value.id);
 
 const profileImageError = ref(false);
 const userIconError = ref(false);

@@ -704,6 +704,40 @@
         "header": "その他",
         "edit_invite_message": "招待メッセージの編集",
         "edit_invite_message_description": "招待送信用と、招待返信用のメッセージを編集"
+      },
+      "instance_browser": {
+        "title": "Instance Browser",
+        "description": "Find open instances by region, category and vibe",
+        "source_discover": "Discover",
+        "source_mine": "My open instances",
+        "mode_active": "Most active",
+        "mode_population": "Most people",
+        "mode_match": "Best match",
+        "mode_random": "Random",
+        "any_region": "Any region",
+        "any_platform": "Any platform",
+        "platform_standalonewindows": "PC",
+        "platform_android": "Android",
+        "platform_ios": "iOS",
+        "any_category": "Any category",
+        "any_vibe": "Any vibe",
+        "min_people": "Min people",
+        "group_hosted": "Group hosted",
+        "trending_only": "Trending worlds",
+        "search_placeholder": "Search results",
+        "refresh": "Refresh",
+        "full": "Full",
+        "queue": "{count} in queue",
+        "friends_here": "Friends here: {count}",
+        "hosted_by": "Hosted by {name}",
+        "launch": "Launch",
+        "invite_me": "Invite me",
+        "load_more": "Load more",
+        "load_failed": "Couldn't load instances. Try again in a moment."
+      },
+      "marketplace": {
+        "creator_earnings": "Creator Earnings",
+        "creator_earnings_description": "See what your marketplace listings have earned"
       }
     },
     "profile": {
@@ -1323,7 +1357,9 @@
         "trust_level": "トラストランク",
         "mutual_friends": "共通のフレンド",
         "open_in_discord": "Discord を開く",
-        "discord": "Discord"
+        "discord": "Discord",
+        "account_standing_sanctions": "Active sanctions: {count}",
+        "account_standing_clear_days": "Days until issues clear: {count}"
       },
       "badges": {
         "assigned": "授与済",
@@ -1369,7 +1405,11 @@
         "logout": "ログアウト",
         "edit_note_memo": "ノートとメモを編集",
         "reset_home": "ホームをリセット",
-        "edit_profile": "プロフィールを編集"
+        "edit_profile": "プロフィールを編集",
+        "instance_warn": "Warn in Instance",
+        "instance_kick": "Kick from Instance",
+        "instance_moderation_reason": "Reason for moderating {name}",
+        "instance_moderation_reason_invalid": "Enter a reason of up to {max} characters"
       },
       "info": {
         "header": "情報",
@@ -2378,7 +2418,9 @@
         "export_to_calendar": "カレンダーにエクスポート",
         "download_ics": ".ics ファイルをダウンロード",
         "copied_event_link": "イベント URL をクリップボードにコピー",
-        "repeating_event_tooltip": "繰り返しイベント"
+        "repeating_event_tooltip": "繰り返しイベント",
+        "interested_friends": "Friends Interested",
+        "linked_instances": "Linked Instances"
       },
       "featured_events": "注目のイベント"
     },
@@ -2460,6 +2502,19 @@
     "avatar_database_provider": {
       "header": "アバターデータベースプロバイダー",
       "add_provider": "プロバイダーを追加"
+    },
+    "creator_earnings": {
+      "header": "Creator Earnings",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_1y": "Last 12 months",
+      "range_all": "All time",
+      "total": "Total earnings",
+      "otp_earnings": "One-time purchase earnings",
+      "otp_count": "One-time purchases",
+      "subscriber_earnings": "Subscription earnings",
+      "subscriber_months": "Subscriber months",
+      "load_failed": "Couldn't load earnings. Try again in a moment."
     }
   },
   "confirm": {
@@ -2736,7 +2791,8 @@
       "deleted": "アバターが削除されました",
       "impostor_deleted": "インポスターが削除されました",
       "impostor_queued": "インポスターが作成のためにキューに追加されました",
-      "impostor_regenerated": "インポスターが削除され、作成のためにキューに追加されました"
+      "impostor_regenerated": "インポスターが削除され、作成のためにキューに追加されました",
+      "impostor_queued_wait": "Imposter queued for creation. Estimated wait: {minutes} min"
     },
     "avatar_lookup": {
       "not_found": "検索プロバイダーでアバターが見つかりません",
@@ -2811,7 +2867,9 @@
       "display_name_copied": "ユーザーの名前がクリップボードにコピーされました",
       "home_reset": "ホームワールドがリセットされました",
       "request_invite_sent": "招待リクエストが送信されました",
-      "no_fallback_avatar": "フォールバックアバターが設定されていません"
+      "no_fallback_avatar": "フォールバックアバターが設定されていません",
+      "instance_warn_done": "Warned {name}",
+      "instance_kick_done": "Kicked {name} from the instance"
     },
     "friend": {
       "load_failed": "フレンドリストの読み込みに失敗しました、ログアウトしています"

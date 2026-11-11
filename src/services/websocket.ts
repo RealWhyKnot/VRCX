@@ -8,6 +8,7 @@ import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
 import { applyCurrentUser } from "../coordinators/current-user-apply";
+import { runBadgeEventFlow } from "../coordinators/badge-event-coordinator";
 import { applyUser } from "../coordinators/user-profile-apply";
 import { onGroupLeft } from "../coordinators/group-membership-coordinator";
 import { applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
@@ -588,7 +589,10 @@ function handlePipeline(args: { json: PipelineMessage }) {
       userStore.setCurrentUserCredits(walletBalance ?? null);
       break;
     }
-
+    case "user-badge-assigned":
+    case "user-badge-unassigned":
+      runBadgeEventFlow(type, record).catch(logError);
+      break;
     default:
       console.log("Unknown pipeline type", args.json);
   }

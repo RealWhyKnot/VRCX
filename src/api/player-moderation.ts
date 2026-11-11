@@ -1,8 +1,19 @@
 import type { ModerateUserRequest, PlayerModeration, Success } from "vrchat";
 import type { Json } from "../types/vrcx";
+import { request } from "../services/request";
 import { requestJson, requestAck } from "./request-json";
 
+export type InstanceModerationType = "warn" | "kick";
+
 const playerModerationRequest = {
+  moderateInstanceUser(params: { userId: string; type: InstanceModerationType; reason: string; worldId: string; instanceId: string }): Promise<unknown> {
+    const { userId, ...body } = params;
+    return request(`user/${userId}/moderations`, {
+      method: "POST",
+      params: body,
+    });
+  },
+
   getPlayerModerations(): Promise<{ json: Json<PlayerModeration[]> }> {
     return requestJson<Json<PlayerModeration[]>>("auth/user/playermoderations", {
       method: "GET",

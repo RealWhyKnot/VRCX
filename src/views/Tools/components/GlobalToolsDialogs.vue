@@ -11,6 +11,7 @@
   <AutoChangeStatusDialog :is-auto-change-status-dialog-visible="autoChangeStatus" @close="closeDialog('autoChangeStatus')" />
   <ModerationReportsDialog :is-moderation-reports-dialog-visible="moderationReports" @close="closeDialog('moderationReports')" />
   <PurchaseHistoryDialog :is-purchase-history-dialog-visible="purchaseHistory" @close="closeDialog('purchaseHistory')" />
+  <CreatorEarningsDialog :is-visible="creatorEarnings" @close="closeDialog('creatorEarnings')" />
   <InfoPushDialog :is-info-push-dialog-visible="infoPush" @close="closeDialog('infoPush')" />
 </template>
 
@@ -24,6 +25,7 @@ import AutoChangeStatusDialog from "../dialogs/AutoChangeStatusDialog.vue";
 import RegistryBackupDialog from "../dialogs/RegistryBackupDialog.vue";
 
 import BlockedGroupsDialog from "../dialogs/BlockedGroupsDialog.vue";
+import CreatorEarningsDialog from "../dialogs/CreatorEarningsDialog.vue";
 import EditInviteMessageDialog from "../dialogs/EditInviteMessagesDialog.vue";
 import ExportAvatarsListDialog from "../dialogs/ExportAvatarsListDialog.vue";
 import ExportDiscordNamesDialog from "../dialogs/ExportDiscordNamesDialog.vue";
@@ -40,6 +42,7 @@ const toolsStore = useToolsStore();
 const {
   autoChangeStatus,
   blockedGroups,
+  creatorEarnings,
   editInviteMessages,
   exportAvatarsList,
   exportDiscordNames,

@@ -11,6 +11,7 @@ import type {
 } from "vrchat";
 import type { Json, MarketplaceAvatarSearchParams } from "../types/vrcx";
 import { useUserStore } from "../stores/user";
+import { request } from "../services/request";
 import { requestJson } from "./request-json";
 
 type MarketplaceAvatarSearchResponse = {
@@ -116,6 +117,13 @@ const marketplaceRequest = {
         params,
       };
       return args;
+    });
+  },
+
+  getEarningsMetrics(params: { metricDateStart?: string; metricDateEnd?: string }): Promise<unknown> {
+    return request("economy/metrics/earnings", {
+      method: "GET",
+      params,
     });
   },
 

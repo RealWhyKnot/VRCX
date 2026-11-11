@@ -716,6 +716,40 @@
         "header": "其它",
         "edit_invite_message": "编辑邀请消息",
         "edit_invite_message_description": "编辑邀请或申请加入时使用的消息"
+      },
+      "instance_browser": {
+        "title": "Instance Browser",
+        "description": "Find open instances by region, category and vibe",
+        "source_discover": "Discover",
+        "source_mine": "My open instances",
+        "mode_active": "Most active",
+        "mode_population": "Most people",
+        "mode_match": "Best match",
+        "mode_random": "Random",
+        "any_region": "Any region",
+        "any_platform": "Any platform",
+        "platform_standalonewindows": "PC",
+        "platform_android": "Android",
+        "platform_ios": "iOS",
+        "any_category": "Any category",
+        "any_vibe": "Any vibe",
+        "min_people": "Min people",
+        "group_hosted": "Group hosted",
+        "trending_only": "Trending worlds",
+        "search_placeholder": "Search results",
+        "refresh": "Refresh",
+        "full": "Full",
+        "queue": "{count} in queue",
+        "friends_here": "Friends here: {count}",
+        "hosted_by": "Hosted by {name}",
+        "launch": "Launch",
+        "invite_me": "Invite me",
+        "load_more": "Load more",
+        "load_failed": "Couldn't load instances. Try again in a moment."
+      },
+      "marketplace": {
+        "creator_earnings": "Creator Earnings",
+        "creator_earnings_description": "See what your marketplace listings have earned"
       }
     },
     "profile": {
@@ -1348,7 +1382,9 @@
         "trust_level": "信誉等级",
         "mutual_friends": "共同好友",
         "open_in_discord": "在 Discord 中打开",
-        "discord": "Discord"
+        "discord": "Discord",
+        "account_standing_sanctions": "Active sanctions: {count}",
+        "account_standing_clear_days": "Days until issues clear: {count}"
       },
       "badges": {
         "assigned": "获得于",
@@ -1394,7 +1430,11 @@
         "logout": "退出登录",
         "edit_note_memo": "编辑备注",
         "reset_home": "重置出生点",
-        "edit_profile": "编辑个人主页"
+        "edit_profile": "编辑个人主页",
+        "instance_warn": "Warn in Instance",
+        "instance_kick": "Kick from Instance",
+        "instance_moderation_reason": "Reason for moderating {name}",
+        "instance_moderation_reason_invalid": "Enter a reason of up to {max} characters"
       },
       "info": {
         "header": "信息",
@@ -2574,7 +2614,9 @@
         "export_to_calendar": "导出到日历",
         "download_ics": "下载 .ics 文件",
         "copied_event_link": "相关活动日历的链接已复制到剪贴板",
-        "repeating_event_tooltip": "重复活动"
+        "repeating_event_tooltip": "重复活动",
+        "interested_friends": "Friends Interested",
+        "linked_instances": "Linked Instances"
       },
       "featured_events": "精选活动"
     },
@@ -2665,6 +2707,19 @@
       "select_image": "选择图片",
       "sending": "发送中...",
       "send": "发送房间公告"
+    },
+    "creator_earnings": {
+      "header": "Creator Earnings",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_1y": "Last 12 months",
+      "range_all": "All time",
+      "total": "Total earnings",
+      "otp_earnings": "One-time purchase earnings",
+      "otp_count": "One-time purchases",
+      "subscriber_earnings": "Subscription earnings",
+      "subscriber_months": "Subscriber months",
+      "load_failed": "Couldn't load earnings. Try again in a moment."
     }
   },
   "confirm": {
@@ -2945,7 +3000,8 @@
       "deleted": "模型删除成功",
       "impostor_deleted": "模型替身删除成功",
       "impostor_queued": "模型替身已加入创建队列",
-      "impostor_regenerated": "模型替身删除成功，新替身已进入创建队列，正在等待创建"
+      "impostor_regenerated": "模型替身删除成功，新替身已进入创建队列，正在等待创建",
+      "impostor_queued_wait": "Imposter queued for creation. Estimated wait: {minutes} min"
     },
     "avatar_lookup": {
       "not_found": "在模型数据库中未能找到模型",
@@ -3021,7 +3077,9 @@
       "display_name_copied": "用户昵称已复制到剪贴板",
       "home_reset": "出生点已重置",
       "request_invite_sent": "加入申请已发送",
-      "no_fallback_avatar": "未设置后备模型"
+      "no_fallback_avatar": "未设置后备模型",
+      "instance_warn_done": "Warned {name}",
+      "instance_kick_done": "Kicked {name} from the instance"
     },
     "friend": {
       "load_failed": "加载好友列表失败，即将登出"

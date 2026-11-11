@@ -148,6 +148,40 @@
         "discord_names": "Tên Discord",
         "export_friend_list": "Xuất dữ liệu danh sách bạn bè",
         "export_own_avatars": "Xuất dữ liệu avatar cá nhân"
+      },
+      "instance_browser": {
+        "title": "Instance Browser",
+        "description": "Find open instances by region, category and vibe",
+        "source_discover": "Discover",
+        "source_mine": "My open instances",
+        "mode_active": "Most active",
+        "mode_population": "Most people",
+        "mode_match": "Best match",
+        "mode_random": "Random",
+        "any_region": "Any region",
+        "any_platform": "Any platform",
+        "platform_standalonewindows": "PC",
+        "platform_android": "Android",
+        "platform_ios": "iOS",
+        "any_category": "Any category",
+        "any_vibe": "Any vibe",
+        "min_people": "Min people",
+        "group_hosted": "Group hosted",
+        "trending_only": "Trending worlds",
+        "search_placeholder": "Search results",
+        "refresh": "Refresh",
+        "full": "Full",
+        "queue": "{count} in queue",
+        "friends_here": "Friends here: {count}",
+        "hosted_by": "Hosted by {name}",
+        "launch": "Launch",
+        "invite_me": "Invite me",
+        "load_more": "Load more",
+        "load_failed": "Couldn't load instances. Try again in a moment."
+      },
+      "marketplace": {
+        "creator_earnings": "Creator Earnings",
+        "creator_earnings_description": "See what your marketplace listings have earned"
       }
     },
     "profile": {
@@ -468,7 +502,9 @@
       "previous_display_names": "Tên hiển thị trước đây:",
       "pronouns": "Pronouns",
       "tags": {
-        "vrchat_team": "VRChat Team"
+        "vrchat_team": "VRChat Team",
+        "account_standing_sanctions": "Active sanctions: {count}",
+        "account_standing_clear_days": "Days until issues clear: {count}"
       },
       "actions": {
         "refresh": "Làm mới",
@@ -500,7 +536,11 @@
         "edit_pronouns": "Pronouns",
         "report_hacking": "Báo cáo Hack",
         "unfriend": "Bỏ bạn",
-        "logout": "Đang xuất"
+        "logout": "Đang xuất",
+        "instance_warn": "Warn in Instance",
+        "instance_kick": "Kick from Instance",
+        "instance_moderation_reason": "Reason for moderating {name}",
+        "instance_moderation_reason_invalid": "Enter a reason of up to {max} characters"
       },
       "info": {
         "header": "Thông tin",
@@ -1260,6 +1300,25 @@
     "avatar_database_provider": {
       "header": "Nguồn Avatar Database",
       "add_provider": "Thêm Nguồn"
+    },
+    "group_calendar": {
+      "event_card": {
+        "interested_friends": "Friends Interested",
+        "linked_instances": "Linked Instances"
+      }
+    },
+    "creator_earnings": {
+      "header": "Creator Earnings",
+      "range_30d": "Last 30 days",
+      "range_90d": "Last 90 days",
+      "range_1y": "Last 12 months",
+      "range_all": "All time",
+      "total": "Total earnings",
+      "otp_earnings": "One-time purchase earnings",
+      "otp_count": "One-time purchases",
+      "subscriber_earnings": "Subscription earnings",
+      "subscriber_months": "Subscriber months",
+      "load_failed": "Couldn't load earnings. Try again in a moment."
     }
   },
   "prompt": {
@@ -1537,6 +1596,15 @@
       "players": "Players:",
       "cpu": "CPU:",
       "online": "Online:"
+    }
+  },
+  "message": {
+    "avatar": {
+      "impostor_queued_wait": "Imposter queued for creation. Estimated wait: {minutes} min"
+    },
+    "user": {
+      "instance_warn_done": "Warned {name}",
+      "instance_kick_done": "Kicked {name} from the instance"
     }
   }
 }

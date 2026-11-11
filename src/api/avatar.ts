@@ -7,6 +7,7 @@ import type {
   GroupGalleryFileOrder,
   GroupGalleryFileOrderRequest,
   SearchAvatars,
+  ServiceQueueStats,
   ServiceStatus,
   UpdateAvatarRequest,
 } from "vrchat";
@@ -132,6 +133,12 @@ const avatarRequest = {
         params,
       };
       return args;
+    });
+  },
+
+  getImpostorQueueStats(): Promise<Json<ServiceQueueStats>> {
+    return requestJson<Json<ServiceQueueStats>>("avatars/impostor/queue/stats", {
+      method: "GET",
     });
   },
 

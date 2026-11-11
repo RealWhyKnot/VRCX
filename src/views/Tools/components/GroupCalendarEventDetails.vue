@@ -30,6 +30,18 @@
       </div>
       <div class="font-medium">{{ event.interestedUserCount }}</div>
     </div>
+    <div v-if="friendsInterested !== undefined" class="flex min-w-0 flex-col gap-1">
+      <div>
+        {{ t("dialog.group_calendar.event_card.interested_friends") }}
+      </div>
+      <div class="font-medium">{{ friendsInterested }}</div>
+    </div>
+    <div v-if="linkedInstances !== undefined" class="flex min-w-0 flex-col gap-1">
+      <div>
+        {{ t("dialog.group_calendar.event_card.linked_instances") }}
+      </div>
+      <div class="font-medium">{{ linkedInstances }}</div>
+    </div>
     <div class="flex min-w-0 flex-col gap-1">
       <div>
         {{ t("dialog.group_calendar.event_card.close_time") }}
@@ -64,6 +76,7 @@ import dayjs from "dayjs";
 import type {} from "dayjs/plugin/relativeTime";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import { computed } from "vue";
 
 import { AppDebug } from "../../../services/app-config";
 import { webApiService } from "../../../services/webapi";
@@ -77,7 +90,12 @@ type CalendarEventEntry = Omit<Json<CalendarEvent>, "userInterest"> & {
 
 const { t } = useI18n();
 
-withDefaults(
+function countField(event: object, key: string): number | undefined {
+  const value: unknown = Reflect.get(event, key);
+  return typeof value === "number" ? value : undefined;
+}
+
+const props = withDefaults(
   defineProps<{
     event: CalendarEventEntry;
     relativeTime?: boolean | undefined;
@@ -86,6 +104,9 @@ withDefaults(
     relativeTime: false,
   }
 );
+
+const friendsInterested = computed(() => countField(props.event, "interestedFriendCount"));
+const linkedInstances = computed(() => countField(props.event, "linkedInstanceCount"));
 
 async function openCalendarEvent(event: CalendarEventEntry) {
   const content = await getCalendarIcs(event);

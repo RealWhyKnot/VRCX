@@ -154,7 +154,14 @@ export function useGroupCalendarData(selectedDay: Ref<Date>, showFeaturedEvents:
     }
   }
 
+  async function prepareSearchEvent(event: CalendarEventEntry) {
+    event.title = replaceBioSymbols(event.title);
+    event.description = replaceBioSymbols(event.description);
+    await getGroupNameFromCache(ownerIdOf(event));
+  }
+
   return {
+    prepareSearchEvent,
     calendar,
     followingCalendar,
     featuredCalendar,

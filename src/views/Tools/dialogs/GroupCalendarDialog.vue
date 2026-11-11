@@ -43,7 +43,13 @@
         </div>
         <div v-else key="grid" class="grid-view">
           <div class="search-container">
-            <InputGroupSearch v-model="searchQuery" size="sm" :placeholder="t('dialog.group_calendar.search_placeholder')" class="search-input" />
+            <InputGroupSearch
+              v-model="searchQuery"
+              size="sm"
+              :maxlength="CALENDAR_SEARCH_MAX_LENGTH"
+              :placeholder="t('dialog.group_calendar.search_placeholder')"
+              class="search-input"
+            />
           </div>
 
           <div class="groups-grid">
@@ -102,6 +108,7 @@ import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";
 import { configRepository } from "../../../services/config";
 import { type CalendarEventEntry, ownerIdOf, useGroupCalendarData } from "../composables/use-group-calendar-data";
+import { CALENDAR_SEARCH_MAX_LENGTH, mergeSearchGroups, useCalendarSearch } from "../composables/use-calendar-search";
 
 const groupStore = useGroupStore();
 const { groupEventRevision } = storeToRefs(groupStore);
@@ -122,8 +129,18 @@ const searchQuery = ref("");
 const groupCollapsed = ref<Record<string, boolean>>({});
 const showFeaturedEvents = ref(false);
 
-const { calendar, followingCalendar, featuredCalendar, isLoading, groupRefsCache, groupNamesCache, updateCalenderData, updateFollowingCalendarData } =
-  useGroupCalendarData(selectedDay, showFeaturedEvents);
+const {
+  calendar,
+  followingCalendar,
+  featuredCalendar,
+  isLoading,
+  groupRefsCache,
+  groupNamesCache,
+  updateCalenderData,
+  updateFollowingCalendarData,
+  prepareSearchEvent,
+} = useGroupCalendarData(selectedDay, showFeaturedEvents);
+const { searchResults } = useCalendarSearch(searchQuery, prepareSearchEvent);
 
 function addToDateGroup<T>(groups: Map<string, T[]>, dateKey: string, item: T) {
   const bucket = groups.get(dateKey) ?? [];
@@ -216,16 +233,18 @@ const groupedByGroupEvents = computed(() => {
 
 const filteredGroupEvents = computed(() => {
   const hasSearch = searchQuery.value.trim();
-  return !hasSearch
-    ? groupedByGroupEvents.value
-    : groupedByGroupEvents.value.filter((group) => {
-        if ((group.groupName ?? "").toLowerCase().includes(searchQuery.value.toLowerCase())) return true;
+  if (!hasSearch) {
+    return groupedByGroupEvents.value;
+  }
+  const local = groupedByGroupEvents.value.filter((group) => {
+    if ((group.groupName ?? "").toLowerCase().includes(searchQuery.value.toLowerCase())) return true;
 
-        return group.events.some(
-          (event) =>
-            event.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || event.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-        );
-      });
+    return group.events.some(
+      (event) =>
+        event.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || event.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+  });
+  return mergeSearchGroups(local, searchResults.value, (groupId) => groupNamesCache.get(groupId));
 });
 
 watch(

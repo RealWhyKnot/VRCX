@@ -5,6 +5,7 @@ import type { UpdateAvatarRequest } from "vrchat";
 import { isLinuxHost } from "@/shared/constants/platform";
 import { avatarRequest } from "../../../api/avatar";
 import { applyAvatar, selectAvatarWithoutConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
+import { announceImpostorQueued } from "../../../coordinators/impostor-queue-coordinator";
 import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../../coordinators/image-upload-coordinator";
 import { logFailure } from "../../../stores/log-failure";
 import { useModalStore } from "../../../stores/modal";
@@ -135,9 +136,7 @@ export function useMyAvatarActions({ t, avatars, avatarTagsMap, currentAvatarId,
         confirmAndRun("dialog.avatar.actions.create_impostor", () => {
           void avatarRequest
             .createImposter({ avatarId: avatarRef.id })
-            .then(() => {
-              toast.success(t("message.avatar.impostor_queued"));
-            })
+            .then(() => announceImpostorQueued())
             .catch(logFailure("Failed to create avatar impostor"));
         });
         break;

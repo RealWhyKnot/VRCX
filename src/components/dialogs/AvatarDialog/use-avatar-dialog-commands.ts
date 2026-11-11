@@ -7,6 +7,7 @@ import { avatarModerationRequest } from "../../../api/avatar-moderation";
 import { avatarRequest } from "../../../api/avatar";
 import { favoriteRequest } from "../../../api/favorite";
 import { removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
+import { announceImpostorQueued } from "../../../coordinators/impostor-queue-coordinator";
 import type { applyAvatar, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";
@@ -415,10 +416,7 @@ export function useAvatarDialogCommands(
         handler: (id: string) => {
           void avatarRequest
             .createImposter({ avatarId: id })
-            .then((args) => {
-              toast.success(t("message.avatar.impostor_queued"));
-              return args;
-            })
+            .then(() => announceImpostorQueued())
             .catch(logError);
         },
       },

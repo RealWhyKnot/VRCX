@@ -14,6 +14,7 @@ import FriendsLocations from "./../views/FriendsLocations/FriendsLocations.vue";
 import Dashboard from "./../views/Dashboard/Dashboard.vue";
 import Gallery from "./../views/Tools/Gallery.vue";
 import GameLog from "./../views/GameLog/GameLog.vue";
+import InstanceBrowser from "./../views/Tools/InstanceBrowser.vue";
 import Login from "./../views/Login/Login.vue";
 import MainLayout from "../views/Layout/MainLayout.vue";
 import Moderation from "./../views/Moderation/Moderation.vue";
@@ -133,6 +134,12 @@ const routes: RouteRecordRaw[] = [
         name: "vrchat-store",
         component: VRChatStore,
         meta: { navKeys: ["tool-vrchat-store", "tools"] },
+      },
+      {
+        path: "tools/instance-browser",
+        name: "instance-browser",
+        component: InstanceBrowser,
+        meta: { navKeys: ["tool-instance-browser", "tools"] },
       },
       {
         path: "settings",

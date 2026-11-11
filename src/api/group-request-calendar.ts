@@ -11,6 +11,7 @@ import type {
   GetGroupRoleTemplatesResponse,
   Group,
   PaginatedCalendarEventList,
+  SearchCalendarEvents,
   Success,
   UpdateGroupRequest,
 } from "vrchat";
@@ -62,6 +63,13 @@ export const groupCalendarRequest = {
 
   getFeaturedGroupCalendars(params: Json<GetFeaturedCalendarEvents["query"]>): Promise<Json<PaginatedCalendarEventList>> {
     return requestJson<Json<PaginatedCalendarEventList>>("calendar/featured", {
+      method: "GET",
+      params,
+    });
+  },
+
+  searchGroupCalendars(params: Json<SearchCalendarEvents["query"]>): Promise<Json<PaginatedCalendarEventList>> {
+    return requestJson<Json<PaginatedCalendarEventList>>("calendar/search", {
       method: "GET",
       params,
     });

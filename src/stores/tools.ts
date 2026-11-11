@@ -13,6 +13,7 @@ const initialDialogState = () => ({
   autoChangeStatus: false,
   moderationReports: false,
   purchaseHistory: false,
+  creatorEarnings: false,
   infoPush: false,
 });
 
