@@ -292,7 +292,7 @@ internal partial class AppApiCef
         }
     }
 
-    public override async Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "")
+    public override async Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "", CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<string>();
         var staThread = new Thread(() =>
@@ -321,10 +321,10 @@ internal partial class AppApiCef
         staThread.SetApartmentState(ApartmentState.STA);
         staThread.Start();
 
-        return await tcs.Task;
+        return await tcs.Task.WaitAsync(cancellationToken);
     }
 
-    public override async Task<string> OpenFileSelectorDialogAsync(string defaultPath = "", string defaultExt = "", string defaultFilter = "All files (*.*)|*.*")
+    public override async Task<string> OpenFileSelectorDialogAsync(string defaultPath = "", string defaultExt = "", string defaultFilter = "All files (*.*)|*.*", CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<string>();
         var staThread = new Thread(() =>
@@ -359,6 +359,6 @@ internal partial class AppApiCef
         staThread.SetApartmentState(ApartmentState.STA);
         staThread.Start();
 
-        return await tcs.Task;
+        return await tcs.Task.WaitAsync(cancellationToken);
     }
 }

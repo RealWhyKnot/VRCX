@@ -1,6 +1,11 @@
 namespace VRCX;
 
-internal sealed class MonitoredProcessEventArgs(MonitoredProcess monitoredProcess) : EventArgs
+internal sealed class MonitoredProcessEventArgs : EventArgs
 {
-    public MonitoredProcess MonitoredProcess { get; } = monitoredProcess;
+    public MonitoredProcessEventArgs(MonitoredProcess monitoredProcess)
+    {
+        MonitoredProcess = monitoredProcess;
+    }
+
+    public MonitoredProcess MonitoredProcess { get; }
 }

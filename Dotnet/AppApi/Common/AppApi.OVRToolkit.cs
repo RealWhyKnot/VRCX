@@ -55,9 +55,9 @@ partial class AppApi
         return client;
     }
 
-    private static async Task<WebsocketClient> GetOvrtClientAsync()
+    private static async Task<WebsocketClient> GetOvrtClientAsync(CancellationToken cancellationToken)
     {
-        await OvrtGate.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        await OvrtGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (OvrtWebsocketClient is { } existing)
@@ -75,14 +75,14 @@ partial class AppApi
         }
     }
 
-    private static async Task SendMessagesAsync(List<OvrtMessage> ovrtMessages)
+    private static async Task SendMessagesAsync(List<OvrtMessage> ovrtMessages, CancellationToken cancellationToken)
     {
         if (ovrtMessages.Count == 0)
         {
             return;
         }
 
-        WebsocketClient client = await GetOvrtClientAsync().ConfigureAwait(false);
+        WebsocketClient client = await GetOvrtClientAsync(cancellationToken).ConfigureAwait(false);
         if (!client.IsRunning)
         {
             return;
@@ -138,7 +138,7 @@ partial class AppApi
             });
         }
 
-        _ = SendMessagesAsync(messages);
+        _ = SendMessagesAsync(messages, CancellationToken.None);
     }
 
     private struct OvrtMessage

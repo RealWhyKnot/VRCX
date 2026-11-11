@@ -11,7 +11,7 @@ abstract partial class AppApi
     public abstract void ShowDevTools();
     public abstract void SetVR(bool active, bool hmdOverlay, bool wristOverlay, bool menuButton, int overlayHand);
     public abstract void SetZoom(double zoomLevel);
-    public abstract Task<double> GetZoomAsync();
+    public abstract Task<double> GetZoomAsync(CancellationToken cancellationToken = default);
     public abstract void DesktopNotification(string boldText, string text = "", string image = "");
     public abstract void SetTrayIconNotification(bool notify);
 
@@ -42,10 +42,10 @@ abstract partial class AppApi
     public abstract bool OpenCrashVrcCrashDumps();
     public abstract void OpenShortcutFolder();
     public abstract void OpenFolderAndSelectItem(string path, bool isFolder = false);
-    public abstract Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "");
+    public abstract Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "", CancellationToken cancellationToken = default);
 
     public abstract Task<string> OpenFileSelectorDialogAsync(string defaultPath = "", string defaultExt = "",
-        string defaultFilter = "All files (*.*)|*.*");
+        string defaultFilter = "All files (*.*)|*.*", CancellationToken cancellationToken = default);
 
 
     internal abstract void OnProcessStateChanged(MonitoredProcess monitoredProcess);

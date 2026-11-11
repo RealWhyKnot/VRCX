@@ -129,19 +129,13 @@ public partial class AppApiElectron
                 switch (valueType)
                 {
                     case "REG_BINARY":
-                        try
+                        if (!TryParseHexBytes(SplitHexPairs(value), out byte[] hexValues))
                         {
-                            byte[] hexValues = [.. Enumerable.Range(0, value.Length / 2)
-                                .Select(i => value.Substring(i * 2, 2))
-                                .Select(hex => Convert.ToByte(hex, 16))];
-
-                            return Encoding.ASCII.GetString(hexValues).TrimEnd('\0');
-                        }
-                        catch (FormatException ex)
-                        {
-                            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error parsing REG_BINARY as plain hex string: {ex.Message}");
+                            LogRegistryParseError("REG_BINARY as plain hex string", InvalidHexMessage);
                             return null;
                         }
+
+                        return Encoding.ASCII.GetString(hexValues).TrimEnd('\0');
 
                     case "REG_DWORD":
                         return "REG_DWORD";
@@ -185,9 +179,18 @@ public partial class AppApiElectron
                         currentValue = multiLineValue.ToString();
                     }
 
-                    return currentValue.StartsWith("dword:", StringComparison.Ordinal)
-                        ? int.Parse(currentValue[6..], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture).ToString(System.Globalization.CultureInfo.InvariantCulture)
-                        : currentValue.StartsWith("hex:", StringComparison.Ordinal) ? DecodeWineHexValue(currentValue) : currentValue;
+                    if (!currentValue.StartsWith("dword:", StringComparison.Ordinal))
+                    {
+                        return currentValue.StartsWith("hex:", StringComparison.Ordinal) ? DecodeWineHexValue(currentValue) : currentValue;
+                    }
+
+                    if (!int.TryParse(currentValue[6..], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out int dword))
+                    {
+                        LogRegistryParseError("REG_DWORD", InvalidHexMessage);
+                        return null;
+                    }
+
+                    return dword.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 }
             }
         }
@@ -197,10 +200,38 @@ public partial class AppApiElectron
         return null;
     }
 
-    private static string DecodeWineHexValue(string currentValue)
+    private const string InvalidHexMessage = "Input is not a valid hexadecimal value.";
+
+    private static IEnumerable<string> SplitHexPairs(string value) =>
+        Enumerable.Range(0, value.Length / 2).Select(i => value.Substring(i * 2, 2));
+
+    private static bool TryParseHexBytes(IEnumerable<string> hexValues, out byte[] bytes)
+    {
+        List<byte> parsed = [];
+        foreach (string hex in hexValues)
+        {
+            if (!byte.TryParse(hex, System.Globalization.NumberStyles.AllowHexSpecifier, System.Globalization.CultureInfo.InvariantCulture, out byte parsedByte))
+            {
+                bytes = [];
+                return false;
+            }
+
+            parsed.Add(parsedByte);
+        }
+
+        bytes = [.. parsed];
+        return true;
+    }
+
+    private static string? DecodeWineHexValue(string currentValue)
     {
         string[] hexValues = currentValue[4..].Replace("\\", "", StringComparison.Ordinal).Split(',');
-        byte[] bytes = [.. hexValues.Select(hex => Convert.ToByte(hex, 16))];
+        if (!TryParseHexBytes(hexValues, out byte[] bytes))
+        {
+            LogRegistryParseError("hex value", InvalidHexMessage);
+            return null;
+        }
+
         string decodedString = Encoding.UTF8.GetString(bytes);
 
         if (decodedString.StartsWith('[') && decodedString.EndsWith(']'))
@@ -526,14 +557,6 @@ public partial class AppApiElectron
         {
             return LogRegistryReadFailure(ex);
         }
-        catch (FormatException ex)
-        {
-            return LogRegistryReadFailure(ex);
-        }
-        catch (OverflowException ex)
-        {
-            return LogRegistryReadFailure(ex);
-        }
         catch (IndexOutOfRangeException ex)
         {
             return LogRegistryReadFailure(ex);
@@ -555,12 +578,12 @@ public partial class AppApiElectron
         GetVRChatRegistryKey(key)?.ToString();
 
 
-    public async Task SetVRChatRegistryKeyAsync(string key, object value, int typeInt)
+    public async Task SetVRChatRegistryKeyAsync(string key, object value, int typeInt, CancellationToken cancellationToken = default)
     {
         await Task.Run(() =>
         {
             SetVRChatRegistryKey(key, value, typeInt);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public override bool SetVRChatRegistryKey(string key, object value, int typeInt)
@@ -711,22 +734,20 @@ public partial class AppApiElectron
 
     private static void ParseRegistryBinaryEntry(Dictionary<string, Dictionary<string, object>> registry, string keyName, string value)
     {
+        if (!TryParseHexBytes(SplitHexPairs(value), out byte[] hexValues))
+        {
+            LogRegistryParseError("REG_BINARY as plain hex string", InvalidHexMessage);
+            return;
+        }
+
         try
         {
-            byte[] hexValues = [.. Enumerable.Range(0, value.Length / 2)
-                .Select(i => value.Substring(i * 2, 2))
-                .Select(hex => Convert.ToByte(hex, 16))];
-
             var binDict = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 { "data", Encoding.ASCII.GetString(hexValues).TrimEnd('\0') },
                 { "type", 3 },
             };
             registry.Add(keyName, binDict);
-        }
-        catch (FormatException ex)
-        {
-            LogRegistryParseError("REG_BINARY as plain hex string", ex);
         }
         catch (ArgumentException ex)
         {
@@ -749,11 +770,12 @@ public partial class AppApiElectron
             if (resultExDword.StartsWith("hex(4)", StringComparison.Ordinal))
             {
                 string[] hexValues = resultExDword.Split(':')[1].Split(',');
-                byte[] byteValues = [.. hexValues.Select(h => Convert.ToByte(h, 16))];
-                if (byteValues.Length != 8)
+                if (!TryParseHexBytes(hexValues, out byte[] byteValues) || byteValues.Length != 8)
                 {
-                    throw new FormatException("Input does not represent a valid 8-byte double-precision float.");
+                    LogRegistryParseError("REG_DWORD", "Input does not represent a valid 8-byte double-precision float.");
+                    return;
                 }
+
                 double parsedDouble = BitConverter.ToDouble(byteValues, 0);
                 var doubleDict = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
@@ -764,7 +786,12 @@ public partial class AppApiElectron
             }
             else
             {
-                int parsedInt = int.Parse(resultExDword, System.Globalization.CultureInfo.InvariantCulture);
+                if (!int.TryParse(resultExDword, System.Globalization.CultureInfo.InvariantCulture, out int parsedInt))
+                {
+                    LogRegistryParseError("REG_DWORD", "Input is not a valid 32-bit integer.");
+                    return;
+                }
+
                 var dwordDict = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     { "data", parsedInt },
@@ -772,14 +799,6 @@ public partial class AppApiElectron
                 };
                 registry.Add(keyName, dwordDict);
             }
-        }
-        catch (FormatException ex)
-        {
-            LogRegistryParseError("REG_DWORD", ex);
-        }
-        catch (OverflowException ex)
-        {
-            LogRegistryParseError("REG_DWORD", ex);
         }
         catch (IndexOutOfRangeException ex)
         {
@@ -791,8 +810,10 @@ public partial class AppApiElectron
         }
     }
 
-    private static void LogRegistryParseError(string valueKind, Exception ex) =>
-        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error parsing {valueKind}: {ex.Message}");
+    private static void LogRegistryParseError(string valueKind, Exception ex) => LogRegistryParseError(valueKind, ex.Message);
+
+    private static void LogRegistryParseError(string valueKind, string message) =>
+        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error parsing {valueKind}: {message}");
 
     public override void SetVRChatRegistry(string json)
     {

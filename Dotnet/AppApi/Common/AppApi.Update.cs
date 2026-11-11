@@ -7,7 +7,7 @@ internal
 #endif
 partial class AppApi
 {
-    public virtual async Task DownloadUpdateAsync(string fileLink, string hashString, int downloadSize) => await Update.DownloadUpdateAsync(fileLink, hashString, downloadSize).ConfigureAwait(false);
+    public virtual async Task DownloadUpdateAsync(string fileLink, string hashString, int downloadSize, CancellationToken cancellationToken = default) => await Update.DownloadUpdateAsync(fileLink, hashString, downloadSize, cancellationToken).ConfigureAwait(false);
 
     public virtual void CancelUpdate() => _ = Update.CancelUpdateAsync();
 

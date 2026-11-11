@@ -18,7 +18,7 @@ public sealed partial class AppApiElectron : AppApi
     {
     }
 
-    public override Task<double> GetZoomAsync() => Task.FromResult<double>(1);
+    public override Task<double> GetZoomAsync(CancellationToken cancellationToken = default) => Task.FromResult<double>(1);
 
     public override void DesktopNotification(string boldText, string text = "", string image = "")
     {

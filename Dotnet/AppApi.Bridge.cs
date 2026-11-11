@@ -3,14 +3,14 @@ namespace VRCX;
 
 public abstract partial class AppApi
 {
-    public Func<Task<double>> GetZoom => GetZoomAsync;
+    public Func<Task<double>> GetZoom => () => GetZoomAsync();
 
-    public FolderSelectorCallback OpenFolderSelectorDialog => OpenFolderSelectorDialogAsync;
+    public FolderSelectorCallback OpenFolderSelectorDialog => defaultPath => OpenFolderSelectorDialogAsync(defaultPath);
 
     public FileSelectorCallback OpenFileSelectorDialog =>
-        OpenFileSelectorDialogAsync;
+        (defaultPath, defaultExt, defaultFilter) => OpenFileSelectorDialogAsync(defaultPath, defaultExt, defaultFilter);
 
-    public Func<string, Task<bool>> TryOpenInstanceInVrc => TryOpenInstanceInVrcAsync;
+    public Func<string, Task<bool>> TryOpenInstanceInVrc => launchLink => TryOpenInstanceInVrcAsync(launchLink);
 
     public Func<string, string, string, Task<string>> GetImage =>
         (url, fileId, version) => GetImageAsync(url, fileId, version);
@@ -29,6 +29,6 @@ public abstract partial class AppApi
         (url, folder, month, fileName) => SaveEmojiToFileAsync(url, folder, month, fileName);
 
     public Func<string, string, int, Task> DownloadUpdate =>
-        DownloadUpdateAsync;
+        (fileLink, hashString, downloadSize) => DownloadUpdateAsync(fileLink, hashString, downloadSize);
 }
 #endif

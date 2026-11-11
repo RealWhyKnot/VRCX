@@ -123,7 +123,7 @@ public partial class AppApiElectron
 
         false;
 
-    public override Task<bool> TryOpenInstanceInVrcAsync(string launchLink)
+    public override Task<bool> TryOpenInstanceInVrcAsync(string launchLink, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -33,7 +33,7 @@ internal sealed partial class AppApiCef : AppApi
 
     public override void SetZoom(double zoomLevel) => MainWindow.Browser.SetZoomLevel(zoomLevel);
 
-    public override async Task<double> GetZoomAsync() => await MainWindow.Browser.GetZoomLevelAsync();
+    public override async Task<double> GetZoomAsync(CancellationToken cancellationToken = default) => await MainWindow.Browser.GetZoomLevelAsync().WaitAsync(cancellationToken);
 
     public override void DesktopNotification(string boldText, string text = "", string image = "")
     {

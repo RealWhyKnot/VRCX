@@ -360,13 +360,13 @@ public partial class AppApiElectron
         }
     }
 
-    public override Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "") =>
+    public override Task<string> OpenFolderSelectorDialogAsync(string defaultPath = "", CancellationToken cancellationToken = default) =>
 
 
         Task.FromResult(string.Empty);
 
     public override Task<string> OpenFileSelectorDialogAsync(string defaultPath = "", string defaultExt = "",
-        string defaultFilter = "All files (*.*)|*.*") =>
+        string defaultFilter = "All files (*.*)|*.*", CancellationToken cancellationToken = default) =>
 
 
         Task.FromResult(string.Empty);
