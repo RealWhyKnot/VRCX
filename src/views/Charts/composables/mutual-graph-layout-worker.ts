@@ -37,11 +37,24 @@ export function createMutualGraphLayoutWorker() {
     }
   }
 
-  function handleError(err: ErrorEvent) {
+  function rejectPending(reason: unknown) {
     for (const [id, resolver] of resolvers) {
-      resolver.reject(err);
+      resolver.reject(reason);
       resolvers.delete(id);
     }
+  }
+
+  function stopWorker() {
+    if (!worker) return;
+    worker.removeEventListener("message", handleMessage);
+    worker.removeEventListener("error", handleError);
+    worker.terminate();
+    worker = null;
+  }
+
+  function handleError(err: ErrorEvent) {
+    rejectPending(err);
+    stopWorker();
   }
 
   function getWorker() {
@@ -63,14 +76,8 @@ export function createMutualGraphLayoutWorker() {
   }
 
   function dispose() {
-    if (worker) {
-      for (const [id, resolver] of resolvers) {
-        resolver.reject(new Error("Component unmounted"));
-        resolvers.delete(id);
-      }
-      worker.terminate();
-      worker = null;
-    }
+    rejectPending(new Error("Component unmounted"));
+    stopWorker();
   }
 
   return { request, dispose };

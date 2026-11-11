@@ -216,6 +216,7 @@ export function useMutualGraph({
     applyEdgeCurvature(graph);
     if (shouldRunLayout) {
       await runLayout(graph, { reinitialize: false });
+      if (currentGraph !== graph) return;
       applyCommunitySeparation(graph);
     }
     renderGraph(graph);
@@ -320,6 +321,7 @@ export function useMutualGraph({
       if (pendingRender !== null) return;
       pendingRender = requestAnimationFrame(() => {
         pendingRender = null;
+        if (currentGraph !== graph) return;
         renderGraph(graph, shouldRecreate);
       });
       return;
@@ -496,6 +498,14 @@ export function useMutualGraph({
   }
 
   function dispose() {
+    if (pendingLayoutUpdate) {
+      clearTimeout(pendingLayoutUpdate);
+      pendingLayoutUpdate = null;
+    }
+    if (pendingRender !== null) {
+      cancelAnimationFrame(pendingRender);
+      pendingRender = null;
+    }
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;
