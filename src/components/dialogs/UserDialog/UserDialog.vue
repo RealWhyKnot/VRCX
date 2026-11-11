@@ -1,5 +1,5 @@
 <template>
-  <div class="user-dialog-scrollbars flex-1 min-h-0 min-w-0 flex flex-row">
+  <div class="user-dialog-scrollbars flex-1 min-h-0 min-w-0 flex flex-row" :style="{ '--user-dialog-scrollbar-thumb': scrollbarThumbColor }">
     <DialogHeader class="sr-only">
       <DialogTitle>{{ userDialog.ref?.displayName || userDialog.id || t("dialog.user.info.header") }}</DialogTitle>
       <DialogDescription>{{ getUserStateText(userDialog.ref || {}) }}</DialogDescription>
@@ -414,7 +414,7 @@ function closeInviteDialog() {
 
 <style scoped>
 .user-dialog-scrollbars {
-  --user-dialog-scrollbar-thumb: v-bind("scrollbarThumbColor");
+  --user-dialog-scrollbar-thumb: transparent;
   --user-dialog-scrollbar-track: transparent;
 }
 
