@@ -187,11 +187,9 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import type { CSSProperties } from "vue";
 import { ChevronDown, Clock, User } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import type { VirtualItem } from "@tanstack/vue-virtual";
-import type { UserStatus } from "vrchat";
 
 import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "../../../components/ui/context-menu/ContextMenuCheckboxItem.vue";
@@ -221,22 +219,21 @@ import type { FriendRow, InstanceHeaderRow, MeRow, ToggleRow } from "../friends-
 import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../friends-sidebar-utils";
 import { getFriendsSortFunction } from "../../../shared/utils/friend";
 import { isRealInstance } from "../../../shared/utils/instance";
-import { instanceRequest } from "../../../api/instance";
-import { notificationRequest } from "../../../api/notification";
-import { queryRequest } from "../../../api/query-request";
-import { userRequest } from "../../../api/user";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
-import { isActionRecent, recordRecentAction } from "../../../composables/use-recent-actions";
+import { isActionRecent } from "../../../composables/use-recent-actions";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { getFriendsLocations } from "../../../shared/utils/location.ts";
-import { parseLocation } from "../../../shared/utils/location-parser";
 
 import BackToTop from "../../../components/BackToTop.vue";
 import FriendItem from "./FriendItem.vue";
 import Location from "../../../components/Location.vue";
 import EditProfileDialog from "../../../components/dialogs/UserDialog/EditProfileDialog.vue";
-import { configRepository } from "../../../services/config";
 import { useStatusPresets } from "../../../components/dialogs/UserDialog/composables/use-status-presets";
+import { useFriendsGroupStates } from "../composables/use-friends-group-states";
+import { useFriendSidebarStatus } from "../composables/use-friend-sidebar-status";
+import type { StatusPreset } from "../composables/use-friend-sidebar-status";
+import { useFriendSidebarActions } from "../composables/use-friend-sidebar-actions";
+import { useFriendFavoriteGroups } from "../composables/use-friend-favorite-groups";
 
 import "@/styles/status-icon.css";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
@@ -244,9 +241,6 @@ import { showUserDialog } from "../../../coordinators/user-coordinator";
 type SidebarRow = ToggleRow | MeRow | FriendRow<FriendContext> | InstanceHeaderRow;
 type VirtualRowItem = { virtualItem: VirtualItem; row: SidebarRow | undefined };
 type FavoriteFriendEntry = FriendContext & { groupName: string; key: string };
-type FavoriteGroupSelection = { key: string; groupName: string; memberIds: Set<string> };
-type StatusOption = { value: UserStatus; statusClass: string; label: string };
-type StatusPreset = { status: UserStatus; statusDescription: string };
 
 const { t } = useI18n();
 
@@ -267,7 +261,7 @@ const { gameLogDisabled } = storeToRefs(useAdvancedSettingsStore());
 const userStore = useUserStore();
 const { showSendBoopDialog, showEditProfileDialog } = userStore;
 const launchStore = useLaunchStore();
-const { favoriteFriendGroups, groupedByGroupKeyFavoriteFriends, localFriendFavorites } = storeToRefs(useFavoriteStore());
+const favoriteStore = useFavoriteStore();
 const { lastLocation, lastLocationDestination } = storeToRefs(useLocationStore());
 const { isGameRunning } = storeToRefs(useGameStore());
 const { currentUser, editProfileDialog } = storeToRefs(userStore);
@@ -276,12 +270,21 @@ const { userImage, userStatusClass } = useUserDisplay();
 const { presets, getStatusClass: presetStatusClass } = useStatusPresets();
 const statusPresets = computed<StatusPreset[]>(() => presets.value);
 
-const isFriendsGroupMe = ref(true);
-const isVIPFriends = ref(true);
-const isOnlineFriends = ref(true);
-const isActiveFriends = ref(true);
-const isOfflineFriends = ref(true);
-const isSidebarGroupByInstanceCollapsed = ref(false);
+const {
+  isFriendsGroupMe,
+  isVIPFriends,
+  isOnlineFriends,
+  isActiveFriends,
+  isOfflineFriends,
+  isSidebarGroupByInstanceCollapsed,
+  loadFriendsGroupStates,
+  toggleSwitchGroupByInstanceCollapsed,
+  toggleFriendsGroupMe,
+  toggleVIPFriends,
+  toggleOnlineFriends,
+  toggleActiveFriends,
+  toggleOfflineFriends,
+} = useFriendsGroupStates();
 const collapsedFavGroups = reactive(new Set<string | number>());
 const scrollViewportRef = ref<HTMLDivElement | null>(null);
 
@@ -301,38 +304,7 @@ const sameInstanceFriendId = computed(() => {
 
 const shouldHideSameInstance = computed(() => isSidebarGroupByInstance.value && isHideFriendsInSameInstance.value);
 
-const selectedFavoriteGroups = computed<FavoriteGroupSelection[]>(() => {
-  const remoteFriendsByGroup = groupedByGroupKeyFavoriteFriends.value;
-  const selectedGroups = new Set(sidebarFavoriteGroups.value);
-  const hasFilter = selectedGroups.size > 0;
-  const groups: FavoriteGroupSelection[] = [];
-
-  for (const [key, members] of Object.entries(remoteFriendsByGroup)) {
-    if (hasFilter && !selectedGroups.has(key)) continue;
-    if (!members) continue;
-    const groupName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName ?? "";
-    const memberIds = new Set(members.map((f) => f.id));
-    groups.push({ key, groupName, memberIds });
-  }
-
-  for (const [groupName, userIds] of Object.entries(localFriendFavorites.value)) {
-    const key = `local:${groupName}`;
-    if (hasFilter && !selectedGroups.has(key)) continue;
-    if (userIds?.length) {
-      groups.push({ key, groupName, memberIds: new Set(userIds) });
-    }
-  }
-  return groups;
-});
-
-const selectedFavoriteGroupIds = computed(() => {
-  const ids = new Set<string>();
-  for (const { memberIds } of selectedFavoriteGroups.value) {
-    for (const id of memberIds) ids.add(id);
-  }
-  return ids;
-});
-
+const { selectedFavoriteGroups, selectedFavoriteGroupIds } = useFriendFavoriteGroups({ favoriteStore, sidebarFavoriteGroups });
 const allOnlineFriends = computed(() => [...vipFriends.value, ...onlineFriends.value].sort(getFriendsSortFunction(sidebarSortMethods.value)));
 
 const visibleFavoriteOnlineFriends = computed(() => {
@@ -584,57 +556,6 @@ function rowStyle(item: VirtualRowItem): CSSProperties {
   };
 }
 
-function saveBoolConfig(key: string, isEnabled: boolean) {
-  void configRepository.setBool(key, isEnabled).catch(logFailure(`save ${key}`));
-}
-
-function saveFriendsGroupStates() {
-  saveBoolConfig("VRCX_isFriendsGroupMe", isFriendsGroupMe.value);
-  saveBoolConfig("VRCX_isFriendsGroupFavorites", isVIPFriends.value);
-  saveBoolConfig("VRCX_isFriendsGroupOnline", isOnlineFriends.value);
-  saveBoolConfig("VRCX_isFriendsGroupActive", isActiveFriends.value);
-  saveBoolConfig("VRCX_isFriendsGroupOffline", isOfflineFriends.value);
-}
-
-async function loadFriendsGroupStates() {
-  isFriendsGroupMe.value = await configRepository.getBool("VRCX_isFriendsGroupMe", true);
-  isVIPFriends.value = await configRepository.getBool("VRCX_isFriendsGroupFavorites", true);
-  isOnlineFriends.value = await configRepository.getBool("VRCX_isFriendsGroupOnline", true);
-  isActiveFriends.value = await configRepository.getBool("VRCX_isFriendsGroupActive", true);
-  isOfflineFriends.value = await configRepository.getBool("VRCX_isFriendsGroupOffline", true);
-  isSidebarGroupByInstanceCollapsed.value = await configRepository.getBool("VRCX_sidebarGroupByInstanceCollapsed", false);
-}
-
-function toggleSwitchGroupByInstanceCollapsed() {
-  isSidebarGroupByInstanceCollapsed.value = !isSidebarGroupByInstanceCollapsed.value;
-  saveBoolConfig("VRCX_sidebarGroupByInstanceCollapsed", isSidebarGroupByInstanceCollapsed.value);
-}
-
-function toggleFriendsGroupMe() {
-  isFriendsGroupMe.value = !isFriendsGroupMe.value;
-  saveFriendsGroupStates();
-}
-
-function toggleVIPFriends() {
-  isVIPFriends.value = !isVIPFriends.value;
-  saveFriendsGroupStates();
-}
-
-function toggleOnlineFriends() {
-  isOnlineFriends.value = !isOnlineFriends.value;
-  saveFriendsGroupStates();
-}
-
-function toggleActiveFriends() {
-  isActiveFriends.value = !isActiveFriends.value;
-  saveFriendsGroupStates();
-}
-
-function toggleOfflineFriends() {
-  isOfflineFriends.value = !isOfflineFriends.value;
-  saveFriendsGroupStates();
-}
-
 function remeasureVirtualRows() {
   void nextTick(() => {
     virtualizer.value.measure();
@@ -650,148 +571,9 @@ watch(virtualRowCount, () => {
   remeasureVirtualRows();
 });
 
-const statusOptions = computed<StatusOption[]>(() => [
-  {
-    value: "join me",
-    statusClass: "joinme",
-    label: t("dialog.user.status.join_me"),
-  },
-  {
-    value: "active",
-    statusClass: "online",
-    label: t("dialog.user.status.online"),
-  },
-  {
-    value: "ask me",
-    statusClass: "askme",
-    label: t("dialog.user.status.ask_me"),
-  },
-  {
-    value: "busy",
-    statusClass: "busy",
-    label: t("dialog.user.status.busy"),
-  },
-]);
+const { statusOptions, recentStatuses, changeStatus, setStatusFromHistory, getPresetDisplayText, applyStatusPreset, openEditProfileFromSidebar } =
+  useFriendSidebarStatus({ t, currentUser, showEditProfileDialog });
 
-const recentStatuses = computed(() => {
-  const history = currentUser.value.statusHistory;
-  if (!history.length) return [];
-  return history.slice(0, 10);
-});
-
-function changeStatus(value: UserStatus) {
-  void userRequest
-    .saveCurrentUser({ status: value })
-    .then(() => {
-      toast.success("Status updated");
-    })
-    .catch(logFailure("change status"));
-}
-
-function setStatusFromHistory(status: string) {
-  void userRequest
-    .saveCurrentUser({ statusDescription: status })
-    .then(() => {
-      toast.success("Status updated");
-    })
-    .catch(logFailure("set status from history"));
-}
-
-function getPresetDisplayText(preset: StatusPreset): string {
-  if (preset.statusDescription) return preset.statusDescription;
-  const option = statusOptions.value.find((o) => o.value === preset.status);
-  const label = option?.label;
-  if (label) return label;
-  return preset.status;
-}
-
-function applyStatusPreset(preset: StatusPreset) {
-  void userRequest
-    .saveCurrentUser({
-      status: preset.status,
-      statusDescription: preset.statusDescription,
-    })
-    .then(() => {
-      toast.success("Status updated");
-    })
-    .catch(logFailure("apply status preset"));
-}
-
-function openEditProfileFromSidebar() {
-  showEditProfileDialog();
-}
-
-const canInviteToMyLocation = computed(() => checkCanInvite(lastLocation.value.location));
-
-function hasFriendLocation(friend: FriendContext): boolean {
-  const loc = friend.ref?.location;
-  return !!loc && isRealInstance(loc);
-}
-
-function canJoinFriend(friend: FriendContext): boolean {
-  const loc = friend.ref?.location;
-  if (!loc || !isRealInstance(loc)) return false;
-  return checkCanInviteSelf(loc);
-}
-
-function friendRequestInvite(friend: FriendContext) {
-  void notificationRequest
-    .sendRequestInvite({ platform: "standalonewindows" }, friend.id)
-    .then(() => {
-      recordRecentAction(friend.id, "Request Invite");
-      toast.success("Request invite sent");
-    })
-    .catch(logFailure("send request invite"));
-}
-
-function friendInvite(friend: FriendContext) {
-  let currentLocation = lastLocation.value.location;
-  if (currentLocation === "traveling") {
-    currentLocation = lastLocationDestination.value;
-  }
-  const L = parseLocation(currentLocation);
-  void queryRequest
-    .fetch("world.location", { worldId: L.worldId })
-    .then((args) => {
-      return notificationRequest
-        .sendInvite(
-          {
-            instanceId: L.tag,
-            worldId: L.tag,
-            worldName: args.ref.name,
-          },
-          friend.id
-        )
-        .then(() => {
-          recordRecentAction(friend.id, "Invite");
-          toast.success(t("message.invite.sent"));
-        });
-    })
-    .catch(logFailure("send invite"));
-}
-
-function friendSendBoop(friend: FriendContext) {
-  showSendBoopDialog(friend.id);
-}
-
-function friendJoin(friend: FriendContext) {
-  const loc = friend.ref?.location;
-  if (!loc) return;
-  void launchStore.showLaunchDialog(loc).catch(logFailure("show launch dialog"));
-}
-
-function friendInviteSelf(friend: FriendContext) {
-  const loc = friend.ref?.location;
-  if (!loc) return;
-  const L = parseLocation(loc);
-  void instanceRequest
-    .selfInvite({
-      instanceId: L.instanceId,
-      worldId: L.worldId,
-    })
-    .then(() => {
-      toast.success(t("message.invite.self_sent"));
-    })
-    .catch(logFailure("send self invite"));
-}
+const { canInviteToMyLocation, hasFriendLocation, canJoinFriend, friendRequestInvite, friendInvite, friendSendBoop, friendJoin, friendInviteSelf } =
+  useFriendSidebarActions({ t, lastLocation, lastLocationDestination, checkCanInvite, checkCanInviteSelf, showSendBoopDialog, launchStore });
 </script>

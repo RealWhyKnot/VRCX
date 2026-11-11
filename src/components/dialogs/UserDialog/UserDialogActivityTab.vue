@@ -218,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
@@ -229,47 +229,24 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
-import { Image as ImageIcon, RefreshCw, Sprout, Tractor } from "lucide-vue-next";
+import { Image as ImageIcon, RefreshCw } from "lucide-vue-next";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import * as echarts from "echarts";
-
 import { configRepository } from "../../../services/config";
-import { worldRequest } from "../../../api/world";
-import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { parseLocation } from "../../../shared/utils/location-parser";
-import { timeToText } from "../../../shared/utils/base/format";
 import { useActivityStore } from "../../../stores/activity";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
 import { logError } from "../../../stores/notification/errors";
-import type { OverlapViewSummary } from "../../../stores/activity-types";
 import type { ActivitySession } from "../../../types/activity";
-import { buildHeatmapOption, toHeatmapSeriesData } from "./activity/build-heatmap-option";
+import { useActivityCharts } from "./activity/use-activity-charts";
+import { useActivityOverlap } from "./activity/use-activity-overlap";
+import { useActivityTopWorlds } from "./activity/use-activity-top-worlds";
+import type { HeatmapView } from "./activity/activity-tab-types";
 import DailyPlaytime from "./activity/DailyPlaytime.vue";
-
-type ActivityTopWorld = {
-  worldId: string | null;
-  worldName: string | null;
-  visitCount: number | null;
-  totalTime: number;
-};
-
-type HeatmapView = {
-  rawBuckets: number[];
-  normalizedBuckets: number[];
-};
-
-type TopWorldsSection = {
-  userId: string;
-  rangeDays: number;
-  sortBy: string;
-  period: string;
-};
 
 const { t, locale } = useI18n();
 const { userDialog, currentUser } = storeToRefs(useUserStore());
@@ -284,14 +261,6 @@ const cachedSessions = ref<ActivitySession[]>([]);
 const filteredEventCount = ref(0);
 const peakDayText = ref("");
 const peakTimeText = ref("");
-const isOverlapLoading = ref(false);
-const isOverlapLoadingVisible = ref(false);
-const hasOverlapData = ref(false);
-const overlapPercent = ref(0);
-const bestOverlapTime = ref("");
-const topWorldsLoading = ref(false);
-const topWorldsLoadingVisible = ref(false);
-const topWorlds = ref<ActivityTopWorld[]>([]);
 const topWorldsSortBy = ref("count");
 const excludeHomeWorldEnabled = ref(false);
 const excludeHoursEnabled = ref(false);
@@ -301,19 +270,7 @@ const mainHeatmapView = ref<HeatmapView>({
   rawBuckets: [],
   normalizedBuckets: [],
 });
-const overlapHeatmapView = ref<HeatmapView>({
-  rawBuckets: [],
-  normalizedBuckets: [],
-});
 const isRestoringSettings = ref(false);
-
-let topWorldsLoadingTimer: ReturnType<typeof setTimeout> | undefined;
-let overlapLoadingTimer: ReturnType<typeof setTimeout> | undefined;
-let overlapRenderTimer: ReturnType<typeof setTimeout> | undefined;
-const pendingWorldThumbnailFetches = new Set<string>();
-const TOP_WORLDS_LOADING_DELAY = 150;
-const OVERLAP_LOADING_DELAY = 120;
-const OVERLAP_RENDER_DELAY = 80;
 
 const isSelf = computed(() => userDialog.value.id === currentUser.value.id);
 const currentHomeWorldId = computed(() => {
@@ -323,7 +280,6 @@ const currentHomeWorldId = computed(() => {
   }
   return parseLocation(homeLocation).worldId || homeLocation;
 });
-const sortedTopWorlds = computed(() => topWorlds.value);
 const dayLabels = computed<string[]>(() => [
   t("dialog.user.activity.days.sun"),
   t("dialog.user.activity.days.mon"),
@@ -340,6 +296,77 @@ const displayDayLabels = computed(() => {
 const hourLabels = Array.from({ length: 24 }, (_, index) => `${String(index).padStart(2, "0")}:00`);
 const ACTIVITY_SELF_TOP_WORLDS_SORT_KEY = "VRCX_activitySelfTopWorldsSortBy";
 const ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY = "VRCX_activitySelfExcludeHomeWorld";
+
+const {
+  isOverlapLoading,
+  isOverlapLoadingVisible,
+  hasOverlapData,
+  overlapPercent,
+  bestOverlapTime,
+  overlapHeatmapView,
+  beginOverlapLoading,
+  finishOverlapLoading,
+  applyOverlapView,
+  resetOverlapState,
+  clearOverlapLoadingTimer,
+  refreshOverlapOnly,
+} = useActivityOverlap({
+  activityStore,
+  userDialog,
+  currentUser,
+  isSelf,
+  dayLabels,
+  excludeHoursEnabled,
+  excludeStartHour,
+  excludeEndHour,
+});
+const {
+  topWorlds,
+  topWorldsLoading,
+  topWorldsLoadingVisible,
+  sortedTopWorlds,
+  loadTopWorldsSection,
+  refreshTopWorldsOnly,
+  resetTopWorldsState,
+  clearTopWorldsLoadingTimer,
+  getWorldThumbnail,
+  openWorld,
+  formatWorldTime,
+  getTopWorldBarWidth,
+} = useActivityTopWorlds({
+  activityStore,
+  worldStore,
+  userDialog,
+  isSelf,
+  currentHomeWorldId,
+  topWorldsSortBy,
+  excludeHomeWorldEnabled,
+});
+const activityChartRef = ref<HTMLDivElement | null>(null);
+const overlapChartRef = ref<HTMLDivElement | null>(null);
+const {
+  renderActivityChart,
+  rebuildCharts,
+  scheduleOverlapChartRender,
+  clearOverlapRenderTimer,
+  onChartRightClick,
+  onOverlapChartRightClick,
+  clearEasterEggTimer,
+  disposeCharts,
+} = useActivityCharts({
+  t,
+  activityChartRef,
+  overlapChartRef,
+  isDarkMode,
+  weekStartsOn,
+  displayDayLabels,
+  hourLabels,
+  mainHeatmapView,
+  filteredEventCount,
+  overlapHeatmapView,
+  hasOverlapData,
+  isOverlapLoading,
+});
 
 async function applySettingsAndRefresh() {
   isRestoringSettings.value = true;
@@ -365,139 +392,10 @@ function resetActivityState() {
   filteredEventCount.value = 0;
   peakDayText.value = "";
   peakTimeText.value = "";
-  hasOverlapData.value = false;
-  overlapPercent.value = 0;
-  bestOverlapTime.value = "";
-  topWorldsLoading.value = false;
-  topWorldsLoadingVisible.value = false;
-  topWorlds.value = [];
-  isOverlapLoading.value = false;
-  isOverlapLoadingVisible.value = false;
+  resetOverlapState();
+  resetTopWorldsState();
   mainHeatmapView.value = { rawBuckets: [], normalizedBuckets: [] };
-  overlapHeatmapView.value = { rawBuckets: [], normalizedBuckets: [] };
-  clearOverlapLoadingTimer();
   clearOverlapRenderTimer();
-  clearTimeout(topWorldsLoadingTimer);
-  topWorldsLoadingTimer = undefined;
-}
-
-function clearOverlapLoadingTimer() {
-  if (overlapLoadingTimer !== undefined) {
-    clearTimeout(overlapLoadingTimer);
-    overlapLoadingTimer = undefined;
-  }
-}
-
-function clearOverlapRenderTimer() {
-  if (overlapRenderTimer !== undefined) {
-    clearTimeout(overlapRenderTimer);
-    overlapRenderTimer = undefined;
-  }
-}
-
-function beginOverlapLoading(requestId: number) {
-  isOverlapLoading.value = true;
-  isOverlapLoadingVisible.value = false;
-  clearOverlapLoadingTimer();
-  overlapLoadingTimer = setTimeout(() => {
-    overlapLoadingTimer = undefined;
-    if (requestId === userActivity.value.activeOverlapRequestId && isOverlapLoading.value) {
-      isOverlapLoadingVisible.value = true;
-    }
-  }, OVERLAP_LOADING_DELAY);
-}
-
-function finishOverlapLoading(requestId: number) {
-  if (requestId !== userActivity.value.activeOverlapRequestId) {
-    return;
-  }
-  clearOverlapLoadingTimer();
-  isOverlapLoading.value = false;
-  isOverlapLoadingVisible.value = false;
-}
-
-function scheduleOverlapChartRender() {
-  clearOverlapRenderTimer();
-  overlapRenderTimer = setTimeout(() => {
-    overlapRenderTimer = undefined;
-    renderOverlapChart();
-  }, OVERLAP_RENDER_DELAY);
-}
-
-function applyOverlapView(overlapView: OverlapViewSummary) {
-  overlapHeatmapView.value = {
-    rawBuckets: overlapView.rawBuckets,
-    normalizedBuckets: overlapView.normalizedBuckets,
-  };
-  hasOverlapData.value = overlapView.hasOverlapData;
-  overlapPercent.value = overlapView.overlapPercent;
-  bestOverlapTime.value = overlapView.bestOverlapTime;
-}
-
-function scheduleTopWorldsLoading(requestId: number) {
-  clearTimeout(topWorldsLoadingTimer);
-  topWorldsLoadingTimer = setTimeout(() => {
-    topWorldsLoadingTimer = undefined;
-    if (requestId === userActivity.value.activeTopWorldsRequestId) {
-      topWorldsLoadingVisible.value = true;
-    }
-  }, TOP_WORLDS_LOADING_DELAY);
-}
-
-function finishTopWorldsLoading(requestId: number) {
-  if (requestId !== userActivity.value.activeTopWorldsRequestId) {
-    return;
-  }
-  clearTimeout(topWorldsLoadingTimer);
-  topWorldsLoadingTimer = undefined;
-  topWorldsLoadingVisible.value = false;
-  topWorldsLoading.value = false;
-}
-
-async function loadTopWorldsSection({ userId, rangeDays, sortBy, period }: TopWorldsSection) {
-  const requestId = ++userActivity.value.activeTopWorldsRequestId;
-  topWorldsLoading.value = true;
-  scheduleTopWorldsLoading(requestId);
-
-  try {
-    const result = await activityStore.loadTopWorldsView({
-      userId,
-      rangeDays,
-      limit: 5,
-      sortBy,
-      excludeWorldId: excludeHomeWorldEnabled.value ? currentHomeWorldId.value : "",
-    });
-    if (
-      requestId !== userActivity.value.activeTopWorldsRequestId ||
-      userDialog.value.id !== userId ||
-      topWorldsSortBy.value !== sortBy ||
-      userDialog.value.activityPeriodDays !== period
-    ) {
-      return;
-    }
-
-    topWorlds.value = result;
-    fetchMissingTopWorldThumbnails(topWorlds.value).catch((err: unknown) => {
-      console.error(err);
-    });
-  } finally {
-    finishTopWorldsLoading(requestId);
-  }
-}
-
-async function refreshTopWorldsOnly() {
-  const userId = userDialog.value.id;
-  if (!isSelf.value || !userId) {
-    return;
-  }
-
-  const rangeDays = Number(userDialog.value.activityPeriodDays) === 0 ? 3650 : Number(userDialog.value.activityPeriodDays) || 30;
-  await loadTopWorldsSection({
-    userId,
-    rangeDays,
-    sortBy: topWorldsSortBy.value,
-    period: userDialog.value.activityPeriodDays,
-  });
 }
 
 async function refreshData({ silent = false, forceRefresh = false }: { silent?: boolean; forceRefresh?: boolean } = {}) {
@@ -584,38 +482,6 @@ async function onPeriodChange(period: string) {
   await refreshData();
 }
 
-async function refreshOverlapOnly() {
-  const userId = userDialog.value.id;
-  if (!userId || isSelf.value) {
-    return;
-  }
-
-  const requestId = ++userActivity.value.activeOverlapRequestId;
-  beginOverlapLoading(requestId);
-
-  try {
-    const rangeDays = Number(userDialog.value.activityPeriodDays) === 0 ? 3650 : Number(userDialog.value.activityPeriodDays) || 30;
-    const overlapView = await activityStore.loadOverlapView({
-      currentUserId: currentUser.value.id,
-      targetUserId: userId,
-      rangeDays,
-      dayLabels: dayLabels.value,
-      forceRefresh: false,
-      excludeHours: {
-        enabled: excludeHoursEnabled.value,
-        startHour: Number(excludeStartHour.value),
-        endHour: Number(excludeEndHour.value),
-      },
-    });
-    if (requestId !== userActivity.value.activeOverlapRequestId || userDialog.value.id !== userId) {
-      return;
-    }
-    applyOverlapView(overlapView);
-  } finally {
-    finishOverlapLoading(requestId);
-  }
-}
-
 async function onExcludeToggle(isEnabled: boolean) {
   excludeHoursEnabled.value = isEnabled;
   await configRepository.setBool("VRCX_overlapExcludeEnabled", isEnabled);
@@ -632,186 +498,6 @@ async function onExcludeHomeWorldToggle(isEnabled: boolean) {
   excludeHomeWorldEnabled.value = isEnabled;
   await configRepository.setBool(ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY, isEnabled);
   await refreshTopWorldsOnly();
-}
-
-async function fetchMissingTopWorldThumbnails(worlds: ActivityTopWorld[]) {
-  const missingWorldIds = worlds
-    .map((world) => world.worldId)
-    .filter((worldId): worldId is string => {
-      if (!worldId || pendingWorldThumbnailFetches.has(worldId)) {
-        return false;
-      }
-      return !worldStore.cachedWorlds.get(worldId)?.thumbnailImageUrl;
-    });
-
-  if (missingWorldIds.length === 0) {
-    return;
-  }
-
-  const fetches = missingWorldIds.map(async (worldId) => {
-    pendingWorldThumbnailFetches.add(worldId);
-    try {
-      await worldRequest.getWorld({ worldId });
-    } finally {
-      pendingWorldThumbnailFetches.delete(worldId);
-    }
-  });
-
-  await Promise.allSettled(fetches);
-  topWorlds.value = [...topWorlds.value];
-}
-
-function getWorldThumbnail(worldId: string | null) {
-  const cached = worldId === null ? undefined : worldStore.cachedWorlds.get(worldId);
-  if (!cached?.thumbnailImageUrl) {
-    return null;
-  }
-  return cached.thumbnailImageUrl.replace("256", "128");
-}
-
-function openWorld(worldId: string | null) {
-  if (worldId) {
-    showWorldDialog(worldId);
-  }
-}
-
-function formatWorldTime(ms: number) {
-  if (!ms || ms <= 0) {
-    return "0m";
-  }
-  return timeToText(ms);
-}
-
-function getTopWorldBarWidth(value: number) {
-  if (sortedTopWorlds.value.length === 0) {
-    return "0%";
-  }
-  const key = topWorldsSortBy.value === "count" ? "visitCount" : "totalTime";
-  const maxVal = Math.max(...sortedTopWorlds.value.map((world) => world[key] ?? 0), 0);
-  if (maxVal <= 0) {
-    return "0%";
-  }
-  return `${Math.max((value / maxVal) * 100, 8)}%`;
-}
-
-const activityChartRef = ref<HTMLDivElement | null>(null);
-const overlapChartRef = ref<HTMLDivElement | null>(null);
-let activityChart: echarts.ECharts | null = null;
-let overlapChart: echarts.ECharts | null = null;
-let activityResizeObserver: ResizeObserver | null = null;
-let overlapResizeObserver: ResizeObserver | null = null;
-let easterEggTimer: ReturnType<typeof setTimeout> | undefined;
-
-function ensureActivityChart() {
-  if (!activityChart && activityChartRef.value) {
-    activityChart = echarts.init(activityChartRef.value, isDarkMode.value ? "dark" : null, { height: 240 });
-    activityResizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        activityChart?.resize({ width: entry.contentRect.width });
-      }
-    });
-    activityResizeObserver.observe(activityChartRef.value);
-  }
-}
-
-function ensureOverlapChart() {
-  if (!overlapChart && overlapChartRef.value) {
-    overlapChart = echarts.init(overlapChartRef.value, isDarkMode.value ? "dark" : null, { height: 240 });
-    overlapResizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        overlapChart?.resize({ width: entry.contentRect.width });
-      }
-    });
-    overlapResizeObserver.observe(overlapChartRef.value);
-  }
-}
-
-function disposeCharts() {
-  activityResizeObserver?.disconnect();
-  overlapResizeObserver?.disconnect();
-  activityResizeObserver = null;
-  overlapResizeObserver = null;
-  activityChart?.dispose();
-  overlapChart?.dispose();
-  activityChart = null;
-  overlapChart = null;
-}
-
-function renderActivityChart() {
-  if (mainHeatmapView.value.normalizedBuckets.length === 0 || filteredEventCount.value === 0) {
-    activityChart?.clear();
-    return;
-  }
-  ensureActivityChart();
-  if (!activityChart) return;
-
-  activityChart.setOption(
-    buildHeatmapOption({
-      data: toHeatmapSeriesData(mainHeatmapView.value.normalizedBuckets, weekStartsOn.value),
-      rawBuckets: mainHeatmapView.value.rawBuckets,
-      dayLabels: displayDayLabels.value,
-      hourLabels,
-      weekStartsOn: weekStartsOn.value,
-      isDarkMode: isDarkMode.value,
-      emptyColor: isDarkMode.value ? "hsl(220, 15%, 12%)" : "hsl(210, 30%, 95%)",
-      scaleColors: isDarkMode.value
-        ? ["hsl(160, 40%, 24%)", "hsl(150, 48%, 32%)", "hsl(142, 55%, 38%)", "hsl(142, 65%, 46%)", "hsl(142, 80%, 55%)"]
-        : ["hsl(160, 40%, 82%)", "hsl(155, 45%, 68%)", "hsl(142, 55%, 55%)", "hsl(142, 65%, 40%)", "hsl(142, 76%, 30%)"],
-      unitLabel: t("dialog.user.activity.minutes_online"),
-    }),
-    { replaceMerge: ["series"] }
-  );
-}
-
-function renderOverlapChart() {
-  if (!hasOverlapData.value || overlapHeatmapView.value.normalizedBuckets.length === 0) {
-    if (!isOverlapLoading.value) {
-      overlapChart?.clear();
-    }
-    return;
-  }
-  ensureOverlapChart();
-  if (!overlapChart) return;
-
-  overlapChart.setOption(
-    buildHeatmapOption({
-      data: toHeatmapSeriesData(overlapHeatmapView.value.normalizedBuckets, weekStartsOn.value),
-      rawBuckets: overlapHeatmapView.value.rawBuckets,
-      dayLabels: displayDayLabels.value,
-      hourLabels,
-      weekStartsOn: weekStartsOn.value,
-      isDarkMode: isDarkMode.value,
-      emptyColor: isDarkMode.value ? "hsl(220, 15%, 12%)" : "hsl(210, 30%, 95%)",
-      scaleColors: isDarkMode.value
-        ? ["hsl(260, 30%, 26%)", "hsl(260, 42%, 36%)", "hsl(260, 50%, 45%)", "hsl(260, 60%, 54%)", "hsl(260, 70%, 62%)"]
-        : ["hsl(260, 35%, 85%)", "hsl(260, 42%, 70%)", "hsl(260, 48%, 58%)", "hsl(260, 55%, 48%)", "hsl(260, 60%, 38%)"],
-      unitLabel: t("dialog.user.activity.overlap.minutes_overlap"),
-    }),
-    { replaceMerge: ["series"] }
-  );
-}
-
-function rebuildCharts() {
-  disposeCharts();
-  clearOverlapRenderTimer();
-  nextTick(() => {
-    renderActivityChart();
-    renderOverlapChart();
-  }).catch(logError);
-}
-
-function onChartRightClick() {
-  toast(t("dialog.user.activity.chart_hint"), { position: "bottom-center", icon: h(Tractor) });
-  clearTimeout(easterEggTimer);
-  easterEggTimer = setTimeout(() => {
-    easterEggTimer = undefined;
-  }, 5000);
-}
-
-function onOverlapChartRightClick() {
-  if (easterEggTimer) {
-    toast(t("dialog.user.activity.chart_hint_reply"), { position: "bottom-center", icon: h(Sprout) });
-  }
 }
 
 async function loadOnlineFrequency(userId: string) {
@@ -887,8 +573,8 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  clearTimeout(easterEggTimer);
-  clearTimeout(topWorldsLoadingTimer);
+  clearEasterEggTimer();
+  clearTopWorldsLoadingTimer();
   clearOverlapLoadingTimer();
   clearOverlapRenderTimer();
   disposeCharts();

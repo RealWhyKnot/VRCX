@@ -3,7 +3,8 @@ import type { useI18n } from "vue-i18n";
 
 import { avatarRequest } from "../api/avatar";
 import { queryRequest } from "../api/query-request";
-import { addLocalWorldFavorite, addLocalAvatarFavorite } from "../coordinators/favorite-coordinator";
+import { addLocalWorldFavorite } from "../coordinators/favorite-coordinator";
+import { addLocalAvatarFavorite } from "../coordinators/favorite-local-avatars";
 import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { showAvatarDialog, selectAvatarWithConfirmation, selectAvatarWithoutConfirmation } from "../coordinators/avatar-coordinator";

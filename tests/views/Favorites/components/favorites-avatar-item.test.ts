@@ -40,7 +40,7 @@ vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
   selectAvatarWithConfirmation: (...args: Parameters<typeof mocks.selectAvatarWithConfirmation>) => mocks.selectAvatarWithConfirmation(...args),
 }));
 
-vi.mock("../../../../src/coordinators/favorite-coordinator", () => ({
+vi.mock("../../../../src/coordinators/favorite-local-avatars", () => ({
   removeLocalAvatarFavorite: (...args: Parameters<typeof mocks.removeLocalAvatarFavorite>) => mocks.removeLocalAvatarFavorite(...args),
 }));
 

@@ -18,7 +18,8 @@ import { removeFromArray } from "../shared/utils/base/array";
 import type { Json } from "../types/vrcx";
 import type { FavoriteCachedRef, FavoriteObjectCtx, LocalFavoriteEntry, LocalFavoriteGroups } from "./favorite-payload-guards";
 import { logFavoriteError, readDisplayName, readFavoriteCachedRef, readFavoriteObjectCtx, readName } from "./favorite-payload-guards";
-import { getLocalAvatarFavorites, getLocalFriendFavorites, getLocalWorldFavorites, handleFavoriteWorldList, refreshFavorites } from "./favorite-coordinator";
+import { getLocalFriendFavorites, getLocalWorldFavorites, handleFavoriteWorldList, refreshFavorites } from "./favorite-coordinator";
+import { getLocalAvatarFavorites } from "./favorite-local-avatars";
 
 export type FavoriteWorldPage = Awaited<ReturnType<typeof favoriteRequest.getFavoriteWorlds>>;
 

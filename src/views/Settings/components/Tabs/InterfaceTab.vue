@@ -16,56 +16,7 @@
         </Select>
       </SettingsItem>
 
-      <SettingsItem :label="t('view.settings.appearance.appearance.font_family')">
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <Button variant="outline" size="sm" class="min-w-[180px] justify-between font-normal">
-              <span class="truncate">{{ fontDropdownDisplayText }}</span>
-              <ChevronDown class="ml-2 size-4 shrink-0 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuCheckboxItem
-              v-for="option in westernFontItems"
-              :key="option.key"
-              :model-value="appFontFamily === option.key"
-              @select="handleSelectWesternFont(option.key)"
-            >
-              {{ option.label }}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              v-for="option in cjkFontItems"
-              :key="option.key"
-              :model-value="appCjkFontPack === option.key && appFontFamily !== 'custom'"
-              @select="handleSelectCjkFont(option.key)"
-            >
-              {{ option.label }}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem :model-value="appFontFamily === 'custom'" @select="handleSelectCustomFont">
-              {{ t("view.settings.appearance.appearance.font_family_custom") }}
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Dialog v-model:open="customFontDialogOpen">
-          <DialogContent class="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{{ t("view.settings.appearance.appearance.font_family_custom_dialog_title") }}</DialogTitle>
-              <DialogDescription>{{ t("view.settings.appearance.appearance.font_family_custom_dialog_description") }}</DialogDescription>
-            </DialogHeader>
-            <Input v-model="customFontInput" placeholder="'My Font', Arial, sans-serif" />
-            <DialogFooter>
-              <Button variant="outline" @click="customFontDialogOpen = false">
-                {{ t("dialog.alertdialog.cancel") }}
-              </Button>
-              <Button @click="saveCustomFont">
-                {{ t("dialog.alertdialog.ok") }}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SettingsItem>
+      <InterfaceFontFamilySetting />
 
       <SettingsItem v-if="!isLinux" :label="t('view.settings.appearance.appearance.zoom')">
         <NumberField v-model="zoomLevel" :step="1" :format-options="{ maximumFractionDigits: 0 }" class="w-32" @update:model-value="setZoomLevel">
@@ -279,67 +230,7 @@
         </ToggleGroup>
       </SettingsItem>
 
-      <SettingsItem :label="t('view.settings.appearance.appearance.table_page_sizes')">
-        <Button size="sm" variant="outline" :aria-label="t('view.settings.appearance.appearance.table_page_sizes')" @click="tablePageSizesDialogOpen = true">{{
-          t("common.actions.configure")
-        }}</Button>
-
-        <Dialog v-model:open="tablePageSizesDialogOpen">
-          <DialogContent class="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>{{ t("view.settings.appearance.appearance.table_page_sizes") }}</DialogTitle>
-            </DialogHeader>
-
-            <Popover v-model:open="tablePageSizesOpen">
-              <ListboxRoot v-model="tablePageSizesModel" highlight-on-hover multiple>
-                <PopoverAnchor class="inline-flex w-full">
-                  <TagsInput v-slot="{ modelValue: tags }" v-model="tablePageSizesModel" class="w-full">
-                    <TagsInputItem v-for="item in tags" :key="item.toString()" :value="item.toString()">
-                      <TagsInputItemText />
-                      <TagsInputItemDelete />
-                    </TagsInputItem>
-
-                    <ListboxFilter v-model="tablePageSizesSearchTerm" as-child>
-                      <TagsInputInput :placeholder="t('view.settings.appearance.appearance.table_page_sizes')" @keydown.down="tablePageSizesOpen = true" />
-                    </ListboxFilter>
-
-                    <PopoverTrigger as-child>
-                      <Button size="icon-sm" variant="ghost" class="order-last ml-auto self-start">
-                        <ChevronDown class="size-3.5" />
-                      </Button>
-                    </PopoverTrigger>
-                  </TagsInput>
-                </PopoverAnchor>
-
-                <PopoverContent class="w-[var(--reka-popover-trigger-width)] p-1" @open-auto-focus.prevent>
-                  <ListboxContent
-                    class="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto empty:after:block empty:after:content-['No_options'] empty:p-1"
-                    tabindex="0"
-                  >
-                    <ListboxItem
-                      v-for="size in filteredTablePageSizeOptions"
-                      :key="size"
-                      class="data-highlighted:bg-accent data-highlighted:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
-                      :value="size"
-                      @select="tablePageSizesSearchTerm = ''"
-                    >
-                      <span>{{ size }}</span>
-
-                      <ListboxItemIndicator class="ml-auto inline-flex items-center justify-center">
-                        <CheckIcon />
-                      </ListboxItemIndicator>
-                    </ListboxItem>
-                  </ListboxContent>
-                </PopoverContent>
-              </ListboxRoot>
-            </Popover>
-
-            <DialogFooter>
-              <Button variant="outline" @click="tablePageSizesDialogOpen = false">{{ t("dialog.alertdialog.ok") }}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </SettingsItem>
+      <InterfaceTablePageSizesSetting />
 
       <SettingsItem
         :label="t('view.settings.appearance.appearance.table_entries_settings')"
@@ -421,36 +312,13 @@ import SelectGroup from "@/components/ui/select/SelectGroup.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
-import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
-import DropdownMenuCheckboxItem from "@/components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
-import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
-import DropdownMenuSeparator from "@/components/ui/dropdown-menu/DropdownMenuSeparator.vue";
-import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
-import { ListboxContent, ListboxFilter, ListboxItem, ListboxItemIndicator, ListboxRoot, useFilter } from "reka-ui";
 import NumberField from "@/components/ui/number-field/NumberField.vue";
 import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
 import NumberFieldDecrement from "@/components/ui/number-field/NumberFieldDecrement.vue";
 import NumberFieldIncrement from "@/components/ui/number-field/NumberFieldIncrement.vue";
 import NumberFieldInput from "@/components/ui/number-field/NumberFieldInput.vue";
-import TagsInput from "@/components/ui/tags-input/TagsInput.vue";
-import TagsInputInput from "@/components/ui/tags-input/TagsInputInput.vue";
-import TagsInputItem from "@/components/ui/tags-input/TagsInputItem.vue";
-import TagsInputItemDelete from "@/components/ui/tags-input/TagsInputItemDelete.vue";
-import TagsInputItemText from "@/components/ui/tags-input/TagsInputItemText.vue";
-import Dialog from "@/components/ui/dialog/Dialog.vue";
-import DialogContent from "@/components/ui/dialog/DialogContent.vue";
-import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
-import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
-import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
-import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
-import Input from "@/components/ui/input/Input.vue";
-import Popover from "@/components/ui/popover/Popover.vue";
-import PopoverAnchor from "@/components/ui/popover/PopoverAnchor.vue";
-import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
-import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 
-import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { CheckIcon, ChevronDown } from "lucide-vue-next";
+import { computed, onBeforeUnmount, ref } from "vue";
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { useVrStore } from "@/stores/vr";
 import { logError } from "@/stores/notification/errors";
@@ -460,10 +328,8 @@ import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { getLanguageName } from "@/localization";
 import { languageCodes } from "@/localization/locales";
-import { APP_CJK_FONT_PACKS, APP_FONT_CONFIG, APP_FONT_DEFAULT_KEY, APP_FONT_FAMILIES } from "@/shared/constants/fonts";
 import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import ColorPickerButton from "@/components/ColorPickerButton.vue";
@@ -472,6 +338,8 @@ import { saveSortFavoritesOption } from "@/coordinators/favorite-coordinator";
 
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";
+import InterfaceFontFamilySetting from "./InterfaceFontFamilySetting.vue";
+import InterfaceTablePageSizesSetting from "./InterfaceTablePageSizesSetting.vue";
 
 const { t } = useI18n();
 
@@ -484,9 +352,6 @@ const {
   displayVRCProfileBackgrounds,
   profileBackgroundOpacity,
   displayVRCProfileCosmetics,
-  appFontFamily,
-  customFontFamily,
-  appCjkFontPack,
   hideNicknames,
   showInstanceIdInLocation,
   isAgeGatedInstancesVisible,
@@ -502,7 +367,6 @@ const {
   randomUserColours,
   trustColor,
   notificationIconDot,
-  tablePageSizes,
   isDataTableStriped,
   accessibleStatusIndicators,
   showNewDashboardButton,
@@ -530,13 +394,9 @@ const {
   changeAppLanguage,
   showTableLimitsDialog,
   setNotificationIconDot,
-  setTablePageSizes,
   toggleStripedDataTable,
   toggleAccessibleStatusIndicators,
   setShowNewDashboardButton,
-  setAppFontFamily,
-  setCustomFontFamily,
-  setAppCjkFontPack,
 } = appearanceSettingsStore;
 
 const trustColorEntries = [
@@ -584,70 +444,6 @@ const trustColorEntries = [
   },
 ];
 
-const fontDropdownDisplayText = computed(() => {
-  if (appFontFamily.value === "custom") {
-    return t("view.settings.appearance.appearance.font_family_custom");
-  }
-  const western = t(`view.settings.appearance.appearance.font_family_${appFontFamily.value}`);
-  const cjk =
-    appCjkFontPack.value === "system"
-      ? t("view.settings.appearance.appearance.font_family_system_ui")
-      : t(`view.settings.appearance.appearance.cjk_font_pack_${appCjkFontPack.value}`);
-  return `${western} / ${cjk}`;
-});
-
-const westernFontItems = computed(() => {
-  return APP_FONT_FAMILIES.filter((key) => key !== "custom" && key !== "system_ui").map((key) => ({
-    key,
-    label: t(`view.settings.appearance.appearance.font_family_${key}`),
-  }));
-});
-
-const cjkFontItems = computed(() => {
-  return APP_CJK_FONT_PACKS.map((key) => ({
-    key,
-    label: key === "system" ? t("view.settings.appearance.appearance.font_family_system_ui") : t(`view.settings.appearance.appearance.cjk_font_pack_${key}`),
-  }));
-});
-
-const FONT_FAMILY_REGEX = /^\s*(([-_\p{L}][\p{L}\p{N}_\s-]*)|'[^']+'|"[^"]+")\s*(,\s*(([-_\p{L}][\p{L}\p{N}_\s-]*)|'[^']+'|"[^"]+")\s*)*$/u;
-
-const customFontDialogOpen = ref(false);
-const customFontInput = ref("");
-
-function handleSelectWesternFont(key: string) {
-  setAppFontFamily(key);
-}
-
-function handleSelectCjkFont(key: string) {
-  if (appFontFamily.value === "custom") {
-    setAppFontFamily(APP_FONT_DEFAULT_KEY);
-  }
-  setAppCjkFontPack(key);
-}
-
-const fontConfigByKey: Record<string, { readonly cssName: string } | undefined> = APP_FONT_CONFIG;
-
-function handleSelectCustomFont() {
-  const cssVarValue = getComputedStyle(document.documentElement).getPropertyValue("--font-western-primary").trim();
-  const currentKey = (appFontFamily.value === "" ? APP_FONT_DEFAULT_KEY : appFontFamily.value).trim().toLowerCase();
-  const fallbackFont = fontConfigByKey[currentKey]?.cssName ?? APP_FONT_CONFIG[APP_FONT_DEFAULT_KEY].cssName;
-  const customValue = customFontFamily.value.trim();
-  customFontInput.value = [customValue, cssVarValue, fallbackFont].find((candidate) => candidate !== "") ?? "";
-  customFontDialogOpen.value = true;
-}
-
-function saveCustomFont() {
-  const trimmed = customFontInput.value.trim();
-  if (!trimmed || !FONT_FAMILY_REGEX.test(trimmed)) {
-    toast.error(t("view.settings.appearance.appearance.font_family_custom_invalid"));
-    return;
-  }
-  setCustomFontFamily(trimmed);
-  setAppFontFamily("custom");
-  customFontDialogOpen.value = false;
-}
-
 const zoomLevel = ref(100);
 const isLinux = computed(() => isLinuxHost());
 let cleanupWheel: (() => void) | null = null;
@@ -685,43 +481,6 @@ function handleDtHour12Radio(value: unknown) {
 function handleWeekStartsOnChange(value: unknown) {
   setWeekStartsOn(Number(value));
 }
-
-const tablePageSizesModel = computed({
-  get: () => tablePageSizes.value.map(String),
-  set: (values: unknown) => {
-    const rawValues: readonly unknown[] = Array.isArray(values) ? values : [];
-    setTablePageSizes(rawValues.map((value) => Number(value)));
-    if (rawValues.length > 0 && rawValues.length !== tablePageSizes.value.length) {
-      toast.error(t("view.settings.appearance.appearance.table_page_sizes_error"));
-    }
-  },
-});
-
-const TABLE_PAGE_SIZE_SUGGESTIONS = Object.freeze([5, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200, 250, 500, 1000]);
-
-const tablePageSizesDialogOpen = ref(false);
-const tablePageSizesOpen = ref(false);
-const tablePageSizesSearchTerm = ref("");
-
-const { contains } = useFilter({ sensitivity: "base" });
-
-const tablePageSizeOptions = computed(() => {
-  const merged = new Set([...TABLE_PAGE_SIZE_SUGGESTIONS, ...tablePageSizes.value].map((v) => String(v)));
-  return Array.from(merged).sort((a, b) => Number(a) - Number(b));
-});
-
-const filteredTablePageSizeOptions = computed(() => {
-  if (tablePageSizesSearchTerm.value === "") {
-    return tablePageSizeOptions.value;
-  }
-  return tablePageSizeOptions.value.filter((option) => contains(option, tablePageSizesSearchTerm.value));
-});
-
-watch(tablePageSizesSearchTerm, (value) => {
-  if (value) {
-    tablePageSizesOpen.value = true;
-  }
-});
 
 async function initGetZoomLevel() {
   const handleWheel = (event: WheelEvent) => {

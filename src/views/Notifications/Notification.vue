@@ -116,7 +116,7 @@ import { logFailure } from "../../stores/log-failure";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { convertFileUrlToImageUrl } from "../../shared/utils/common";
 import { createColumns } from "./columns.tsx";
-import type { NotificationRow } from "./columns.tsx";
+import type { NotificationRow } from "./notification-column-types";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import SendInviteRequestResponseDialog from "./dialogs/SendInviteRequestResponseDialog.vue";

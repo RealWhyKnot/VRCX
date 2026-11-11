@@ -214,6 +214,27 @@ export function useFavoritesCardScaling(options: CardScalingOptions = {}) {
     void loadCardPreferences().catch((error: unknown) => console.error("Failed to load favorites card preferences", error));
   });
 
+  const cardScalePercent = computed(() => Math.round(cardScale.value * 100));
+  const cardSpacingPercent = computed(() => Math.round(cardSpacing.value * 100));
+  const cardScaleValue = computed({
+    get: () => [cardScale.value],
+    set: (value: number[] | undefined) => {
+      const next = value?.[0];
+      if (next !== undefined) {
+        cardScale.value = next;
+      }
+    },
+  });
+  const cardSpacingValue = computed({
+    get: () => [cardSpacing.value],
+    set: (value: number[] | undefined) => {
+      const next = value?.[0];
+      if (next !== undefined) {
+        cardSpacing.value = next;
+      }
+    },
+  });
+
   return {
     cardScale,
     cardSpacing,
@@ -221,5 +242,9 @@ export function useFavoritesCardScaling(options: CardScalingOptions = {}) {
     spacingSlider,
     containerRef,
     gridStyle,
+    cardScalePercent,
+    cardSpacingPercent,
+    cardScaleValue,
+    cardSpacingValue,
   };
 }

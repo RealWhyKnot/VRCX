@@ -117,7 +117,7 @@ import { useI18n } from "vue-i18n";
 import { useFavoriteStore } from "../../../stores/favorite";
 import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 import { useGalleryStore } from "../../../stores/gallery";
-import { addLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
+import { addLocalAvatarFavorite } from "../../../coordinators/favorite-local-avatars";
 import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { avatarRequest } from "../../../api/avatar";

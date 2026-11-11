@@ -27,205 +27,35 @@
           collapsible
           :order="1"
         >
-          <div class="h-full pr-2 overflow-auto flex flex-col gap-3">
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between font-semibold text-sm mb-[9px]">
-                <span>{{ t("view.favorite.avatars.vrchat_favorites") }}</span>
-                <TooltipWrapper side="bottom" :content="t('view.favorite.refresh_favorites_tooltip')">
-                  <Button
-                    class="rounded-full"
-                    variant="ghost"
-                    size="icon-sm"
-                    :disabled="isFavoriteLoading"
-                    :aria-label="t('view.favorite.refresh_favorites_tooltip')"
-                    @click.stop="handleRefreshFavorites"
-                  >
-                    <Spinner v-if="isFavoriteLoading" />
-                    <RefreshCw v-else />
-                  </Button>
-                </TooltipWrapper>
-              </div>
-              <div class="flex flex-col gap-2">
-                <template v-if="favoriteAvatarGroups.length">
-                  <div
-                    v-for="group in favoriteAvatarGroups"
-                    :key="group.key"
-                    :class="[
-                      'group-item x-hover-card hover:shadow-sm',
-                      `group-item-${group.visibility}`,
-                      { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
-                    ]"
-                    @click="handleGroupClick('remote', group.key)"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group.displayName }}</span>
-                      <span class="text-xs">{{ group.count }}/{{ group.capacity }}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="flex items-center gap-1.5">
-                        <span class="text-[11px] text-muted-foreground">{{ t(`view.favorite.visibility.${group.visibility}`) }}</span>
-                      </span>
-                      <DropdownMenu
-                        :open="activeGroupMenu === remoteGroupMenuKey(group.key)"
-                        @update:open="handleGroupMenuVisible(remoteGroupMenuKey(group.key), $event)"
-                      >
-                        <DropdownMenuTrigger as-child>
-                          <Button class="rounded-full" variant="ghost" size="icon-sm" :aria-label="t('nav_tooltip.manage')" @click.stop>
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="right" class="w-55">
-                          <DropdownMenuItem @click="handleRemoteRename(group)">
-                            <span>{{ t("view.favorite.rename_tooltip") }}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <span>{{ t("view.favorite.visibility_tooltip") }}</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                              <DropdownMenuSubContent side="right" align="start" class="w-45">
-                                <DropdownMenuCheckboxItem
-                                  v-for="visibility in avatarGroupVisibilityOptions"
-                                  :key="visibility"
-                                  :model-value="group.visibility === visibility"
-                                  indicator-position="right"
-                                  @select="handleVisibilitySelection(group, visibility)"
-                                >
-                                  <span>{{ t(`view.favorite.visibility.${visibility}`) }}</span>
-                                </DropdownMenuCheckboxItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                          </DropdownMenuSub>
-                          <DropdownMenuItem variant="destructive" @click="handleRemoteClear(group)">
-                            <span>{{ t("view.favorite.clear") }}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </template>
-                <template v-else>
-                  <div
-                    v-for="group in avatarGroupPlaceholders"
-                    :key="group.key"
-                    :class="[
-                      'group-item x-hover-card hover:shadow-sm',
-                      'pointer-events-none opacity-70',
-                      { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
-                    ]"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group.displayName }}</span>
-                      <span class="text-xs">--/--</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="w-16 h-[18px] rounded-full"></div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between font-semibold text-sm mb-[9px]">
-                <span>{{ t("view.favorite.worlds.local_favorites") }}</span>
-                <template v-if="!refreshingLocalFavorites">
-                  <Button class="rounded-full" size="icon" variant="ghost" :aria-label="t('common.actions.refresh')" @click.stop="refreshLocalAvatarFavorites"
-                    ><RefreshCcw
-                  /></Button>
-                </template>
-                <Button v-else size="sm" variant="ghost" @click.stop="cancelLocalAvatarRefresh">
-                  <Loader />
-
-                  {{ t("view.favorite.avatars.cancel_refresh") }}
-                </Button>
-              </div>
-              <div class="flex flex-col gap-2">
-                <template v-if="localAvatarFavoriteGroups.length">
-                  <div
-                    v-for="group in localAvatarFavoriteGroups"
-                    :key="group"
-                    :class="['group-item x-hover-card hover:shadow-sm', { 'is-active': !hasSearchInput && isGroupActive('local', group) }]"
-                    @click="handleGroupClick('local', group)"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group }}</span>
-                      <div class="flex items-center flex-col">
-                        <span class="text-xs">{{ localAvatarFavGroupLength(group) }}</span>
-                        <DropdownMenu
-                          :open="activeGroupMenu === localGroupMenuKey(group)"
-                          @update:open="handleGroupMenuVisible(localGroupMenuKey(group), $event)"
-                        >
-                          <DropdownMenuTrigger as-child>
-                            <Button class="rounded-full" size="icon-sm" variant="ghost" @click.stop><Ellipsis /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent side="right" class="w-50">
-                            <DropdownMenuItem @click="handleLocalRename(group)">
-                              <span>{{ t("view.favorite.rename_tooltip") }}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem @click="handleCheckInvalidAvatars(group)">
-                              <span>{{ t("view.favorite.avatars.check_invalid") }}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem variant="destructive" @click="handleLocalDelete(group)">
-                              <span>{{ t("view.favorite.delete_tooltip") }}</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <div v-else class="text-center text-xs py-3">
-                  <DataTableEmpty type="nodata" />
-                </div>
-                <TooltipWrapper v-if="!isCreatingLocalGroup" :content="t('view.favorite.worlds.local_favorites')">
-                  <div
-                    :class="['group-item x-hover-card hover:shadow-sm', 'border-dashed flex items-center justify-center gap-2 text-sm']"
-                    @click="startLocalGroupCreation"
-                  >
-                    <Plus />
-                    <span>{{ t("view.favorite.avatars.new_group") }}</span>
-                  </div>
-                </TooltipWrapper>
-                <InputGroupField
-                  v-else
-                  :ref="localGroups.newLocalGroupInput"
-                  v-model="newLocalGroupName"
-                  size="sm"
-                  class="w-full"
-                  :placeholder="t('view.favorite.avatars.new_group')"
-                  @keyup.enter="handleLocalGroupCreationConfirm"
-                  @keyup.esc="cancelLocalGroupCreation"
-                  @blur="cancelLocalGroupCreation"
-                />
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between font-semibold text-sm mb-[9px]">
-                <span>{{ t("view.favorite.avatars.local_history") }}</span>
-                <DropdownMenu :open="activeGroupMenu === historyGroupMenuKey" @update:open="handleGroupMenuVisible(historyGroupMenuKey, $event)">
-                  <DropdownMenuTrigger as-child>
-                    <Button class="rounded-full" size="icon-sm" variant="ghost" @click.stop><Ellipsis /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" class="w-45">
-                    <DropdownMenuItem variant="destructive" @click="handleHistoryClear">
-                      <span>{{ t("view.favorite.clear_tooltip") }}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div class="flex flex-col gap-2">
-                <div
-                  :class="['group-item x-hover-card hover:shadow-sm', { 'is-active': !hasSearchInput && isGroupActive('history', historyGroupKey) }]"
-                  @click="handleGroupClick('history', historyGroupKey)"
-                >
-                  <div class="flex items-start justify-between mb-1 text-[13px]">
-                    <span class="font-semibold">{{ t("view.favorite.avatars.local_history") }}</span>
-                    <span class="text-xs">{{ avatarHistory.length }}/100</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <FavoritesAvatarGroupSidebar
+            v-model:new-local-group-name="newLocalGroupName"
+            :has-search-input="hasSearchInput"
+            :is-group-active="isGroupActive"
+            :handle-group-click="handleGroupClick"
+            :avatar-group-placeholders="avatarGroupPlaceholders"
+            :active-group-menu="activeGroupMenu"
+            :remote-group-menu-key="remoteGroupMenuKey"
+            :handle-group-menu-visible="handleGroupMenuVisible"
+            :handle-visibility-selection="handleVisibilitySelection"
+            :handle-remote-rename="handleRemoteRename"
+            :handle-remote-clear="handleRemoteClear"
+            :handle-refresh-favorites="handleRefreshFavorites"
+            :is-refreshing-local-favorites="refreshingLocalFavorites"
+            :refresh-local-avatar-favorites="refreshLocalAvatarFavorites"
+            :cancel-local-refresh="cancelLocalRefresh"
+            :local-group-menu-key="localGroupMenuKey"
+            :handle-local-rename="handleLocalRename"
+            :handle-check-invalid-avatars="handleCheckInvalidAvatars"
+            :handle-local-delete="handleLocalDelete"
+            :is-creating-local-group="isCreatingLocalGroup"
+            :start-local-group-creation="startLocalGroupCreation"
+            :new-local-group-input="localGroups.newLocalGroupInput"
+            :handle-local-group-creation-confirm="handleLocalGroupCreationConfirm"
+            :cancel-local-group-creation="cancelLocalGroupCreation"
+            :history-group-menu-key="historyGroupMenuKey"
+            :history-group-key="historyGroupKey"
+            :handle-history-clear="handleHistoryClear"
+          />
         </ResizablePanel>
         <ResizableHandle @dragging="splitterSetDragging" />
         <ResizablePanel :order="2">
@@ -369,31 +199,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, markRaw, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
-import { Ellipsis, Loader, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
-import Button from "@/components/ui/button/Button.vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
-import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import ScrollArea from "@/components/ui/scroll-area/ScrollArea.vue";
-import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue";
-import DropdownMenuCheckboxItem from "../../components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
-import DropdownMenuContent from "../../components/ui/dropdown-menu/DropdownMenuContent.vue";
-import DropdownMenuItem from "../../components/ui/dropdown-menu/DropdownMenuItem.vue";
-import { DropdownMenuPortal } from "reka-ui";
-import DropdownMenuSub from "../../components/ui/dropdown-menu/DropdownMenuSub.vue";
-import DropdownMenuSubContent from "../../components/ui/dropdown-menu/DropdownMenuSubContent.vue";
-import DropdownMenuSubTrigger from "../../components/ui/dropdown-menu/DropdownMenuSubTrigger.vue";
-import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useAvatarStore } from "../../stores/avatar";
 import { useFavoriteStore } from "../../stores/favorite";
 import { useModalStore } from "../../stores/modal";
-import type { FavoriteGroupSlot, FavoriteObjectCtx } from "../../stores/favorite-types";
+import type { FavoriteGroupSlot } from "../../stores/favorite-types";
 import { logFailure } from "../../stores/log-failure";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
@@ -406,52 +222,22 @@ import { useFavoritesCardScaling } from "./composables/use-favorites-card-scalin
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
 import { useFavoritesSplitter } from "./composables/use-favorites-splitter.ts";
-import {
-  deleteLocalAvatarFavoriteGroup,
-  renameLocalAvatarFavoriteGroup,
-  newLocalAvatarFavoriteGroup,
-  refreshFavorites,
-  getLocalAvatarFavorites,
-  checkInvalidLocalAvatars,
-  removeInvalidLocalAvatars,
-} from "../../coordinators/favorite-coordinator";
+import { refreshFavorites } from "../../coordinators/favorite-coordinator";
+import { getLocalAvatarFavorites, newLocalAvatarFavoriteGroup } from "../../coordinators/favorite-local-avatars";
+import { useAvatarGroupActions } from "./composables/use-avatar-group-actions.ts";
+import { useAvatarInvalidCheck } from "./composables/use-avatar-invalid-check.ts";
+import { useFavoritesLocalRefresh } from "./composables/use-favorites-local-refresh.ts";
+import { isAvatarSearchEntry, toAvatarFavoriteEntry } from "./avatar-favorite-entries";
+import type { AvatarFavoriteEntry, AvatarGroupVisibility, AvatarSearchEntry } from "./avatar-favorite-entries";
 
 import AvatarExportDialog from "./dialogs/AvatarExportDialog.vue";
+import FavoritesAvatarGroupSidebar from "./components/FavoritesAvatarGroupSidebar.vue";
 import FavoritesAvatarItem from "./components/FavoritesAvatarItem.vue";
 import FavoritesAvatarLocalHistoryItem from "./components/FavoritesAvatarLocalHistoryItem.vue";
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
-import { InvalidAvatarsProgressToast } from "./components/invalid-avatars-progress-toast.tsx";
 
-import * as workerTimers from "worker-timers";
 import "./favorites-layout.css";
-
-type AvatarFavoriteDetails = {
-  id: string;
-  name?: string | null;
-  authorName?: string | null;
-  thumbnailImageUrl?: string | null;
-  releaseStatus?: string | null;
-};
-
-type AvatarFavoriteEntry = {
-  id: string;
-  name?: string | null;
-  deleted?: boolean;
-  ref?: AvatarFavoriteDetails | null;
-};
-
-type AvatarSearchEntry = {
-  id: string;
-  name: string;
-  authorName: string;
-  thumbnailImageUrl?: string | null | undefined;
-};
-
-type RefreshToken = {
-  cancelled: boolean;
-  resolve: (() => void) | null;
-};
 
 const AVATAR_GROUP_PLACEHOLDERS = Array.from({ length: 5 }, (_, index) => ({
   key: `avatar:avatars${index + 1}`,
@@ -460,8 +246,6 @@ const AVATAR_GROUP_PLACEHOLDERS = Array.from({ length: 5 }, (_, index) => ({
 
 const AVATAR_FAVORITES_LOG_LABEL = "Avatar favorites view";
 
-const avatarGroupVisibilityOptions = ["public", "friends", "private"] as const;
-type AvatarGroupVisibility = (typeof avatarGroupVisibilityOptions)[number];
 const historyGroupKey = "local-history";
 const splitter = useFavoritesSplitter({ configKey: "VRCX_FavoritesAvatarSplitter" });
 const { defaultSize: splitterDefaultSize, minSize: splitterMinSize, maxSize: splitterMaxSize, handleLayout, setDragging: splitterSetDragging } = splitter;
@@ -475,11 +259,11 @@ const {
   favoriteAvatarGroups,
   localAvatarFavorites,
   selectedFavoriteAvatars,
-  isFavoriteLoading,
+
   localAvatarFavoriteGroups,
   avatarImportDialogInput,
 } = storeToRefs(favoriteStore);
-const { showAvatarImportDialog, localAvatarFavGroupLength, localAvatarFavoritesList, handleFavoriteGroup } = favoriteStore;
+const { showAvatarImportDialog, localAvatarFavoritesList } = favoriteStore;
 const { avatarHistory } = storeToRefs(useAvatarStore());
 const { t } = useI18n();
 
@@ -501,42 +285,20 @@ const avatarCardScaling = useFavoritesCardScaling({
   baseCheckboxMargin: 10,
 });
 const {
-  cardScale: avatarCardScale,
-  cardSpacing: avatarCardSpacing,
   slider: avatarCardScaleSlider,
   spacingSlider: avatarCardSpacingSlider,
   gridStyle: avatarFavoritesGridStyle,
+  cardScalePercent: avatarCardScalePercent,
+  cardSpacingPercent: avatarCardSpacingPercent,
+  cardScaleValue: avatarCardScaleValue,
+  cardSpacingValue: avatarCardSpacingValue,
 } = avatarCardScaling;
-
-const avatarCardScalePercent = computed(() => Math.round(avatarCardScale.value * 100));
-const avatarCardSpacingPercent = computed(() => Math.round(avatarCardSpacing.value * 100));
-const avatarCardScaleValue = computed({
-  get: () => [avatarCardScale.value],
-  set: (value: number[]) => {
-    const next = value[0];
-    if (next !== undefined) {
-      avatarCardScale.value = next;
-    }
-  },
-});
-const avatarCardSpacingValue = computed({
-  get: () => [avatarCardSpacing.value],
-  set: (value: number[]) => {
-    const next = value[0];
-    if (next !== undefined) {
-      avatarCardSpacing.value = next;
-    }
-  },
-});
 
 const avatarExportDialogVisible = ref(false);
 const avatarFavoriteSearch = ref("");
 const avatarFavoriteSearchResults = ref<AvatarSearchEntry[]>([]);
 const avatarEditMode = ref(false);
 const avatarToolbarMenuOpen = ref(false);
-const refreshingLocalFavorites = ref(false);
-const worker = ref<ReturnType<typeof workerTimers.setTimeout> | null>(null);
-const refreshCancelToken = ref<RefreshToken | null>(null);
 const avatarGroupPlaceholders = AVATAR_GROUP_PLACEHOLDERS;
 
 const {
@@ -568,30 +330,23 @@ const {
 
 const historyGroupMenuKey = "history";
 
-function isAvatarFavoriteDetails(value: unknown): value is AvatarFavoriteDetails {
-  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
-}
+const { refreshingLocalFavorites, refreshLocalFavorites, cancelLocalRefresh } = useFavoritesLocalRefresh(async (avatarId) => {
+  const args = await avatarRequest.getAvatar({
+    avatarId,
+  });
+  applyAvatar(args.json);
+});
+const { changeFavoriteGroupName, changeAvatarGroupVisibility, clearFavoriteGroup, promptLocalAvatarFavoriteGroupRename, promptLocalAvatarFavoriteGroupDelete } =
+  useAvatarGroupActions({
+    logLabel: AVATAR_FAVORITES_LOG_LABEL,
+    handleGroupMenuVisible,
+    selectGroup,
+    localAvatarFavoriteGroups,
+  });
+const { handleCheckInvalidAvatars } = useAvatarInvalidCheck({ handleGroupMenuVisible, localGroupMenuKey });
 
-function isAvatarSearchEntry(value: unknown): value is AvatarSearchEntry {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "name" in value &&
-    "authorName" in value &&
-    typeof value.id === "string" &&
-    typeof value.name === "string" &&
-    typeof value.authorName === "string"
-  );
-}
-
-function toAvatarFavoriteEntry(favorite: FavoriteObjectCtx): AvatarFavoriteEntry {
-  return {
-    id: favorite.id,
-    name: favorite.name,
-    deleted: favorite.deleted ?? false,
-    ref: isAvatarFavoriteDetails(favorite.ref) ? favorite.ref : null,
-  };
+function refreshLocalAvatarFavorites() {
+  return refreshLocalFavorites(localAvatarFavoritesList);
 }
 
 function handleSortFavoritesChange(value: string) {
@@ -749,227 +504,9 @@ function handleLocalDelete(groupName: string) {
   promptLocalAvatarFavoriteGroupDelete(groupName);
 }
 
-async function handleCheckInvalidAvatars(groupName: string) {
-  handleGroupMenuVisible(localGroupMenuKey(groupName), false);
-
-  const startCheckResult = await modalStore.confirm({
-    description: t("view.favorite.avatars.check_description"),
-    title: t("view.favorite.avatars.check_invalid"),
-    confirmText: t("confirm.confirm_button"),
-    cancelText: t("confirm.cancel_button"),
-  });
-
-  if (!startCheckResult.ok) {
-    return;
-  }
-
-  const progressState = reactive({
-    current: 0,
-    total: 0,
-    percentage: 0,
-  });
-
-  let progressToastId: string | number | undefined;
-
-  try {
-    progressToastId = toast(markRaw(InvalidAvatarsProgressToast), {
-      duration: Infinity,
-      componentProps: {
-        t,
-        progress: progressState,
-        onDismiss: () => {
-          if (progressToastId) {
-            toast.dismiss(progressToastId);
-          }
-        },
-      },
-    });
-
-    const result = await checkInvalidLocalAvatars(groupName, (current, total) => {
-      progressState.current = current;
-      progressState.total = total;
-      progressState.percentage = total ? Math.floor((current / total) * 100) : 0;
-    });
-
-    if (progressToastId) {
-      toast.dismiss(progressToastId);
-    }
-
-    if (result.invalid === 0) {
-      toast.success(t("view.favorite.avatars.no_invalid_found"));
-      return;
-    }
-
-    const invalidIdsText = result.invalidIds.join("\n");
-
-    const confirmDeleteResult = await modalStore.confirm({
-      description:
-        t("view.favorite.avatars.confirm_delete_description", { count: result.invalid }) +
-        `\n\n${t("view.favorite.avatars.removed_list_header")}\n` +
-        invalidIdsText,
-      title: t("view.favorite.avatars.confirm_delete_invalid"),
-      confirmText: t("confirm.confirm_button"),
-      cancelText: t("view.favorite.avatars.copy_removed_ids"),
-      destructive: true,
-    });
-
-    if (!confirmDeleteResult.ok) {
-      if (confirmDeleteResult.reason === "cancel") {
-        navigator.clipboard
-          .writeText(invalidIdsText)
-          .then(() => {
-            toast.success(t("view.favorite.avatars.copied_ids"));
-          })
-          .catch(() => {
-            toast.error(t("view.favorite.avatars.copy_failed"));
-          });
-      }
-      toast.info(t("view.favorite.avatars.delete_cancelled"));
-      return;
-    }
-
-    const removeResult = await removeInvalidLocalAvatars(result.invalidIds, groupName);
-
-    toast.success(
-      t("view.favorite.avatars.delete_summary", {
-        removed: removeResult.removed,
-      })
-    );
-  } catch (err) {
-    if (progressToastId) {
-      toast.dismiss(progressToastId);
-    }
-    console.error(err);
-    toast.error(err instanceof Error && err.message ? err.message : String(err));
-  }
-}
-
 function handleHistoryClear() {
   handleGroupMenuVisible(historyGroupMenuKey, false);
   promptClearAvatarHistory();
-}
-
-function changeFavoriteGroupName(group: FavoriteGroupSlot) {
-  const currentName = group.displayName || group.name;
-  modalStore
-    .prompt({
-      title: t("prompt.change_favorite_group_name.header"),
-      description: t("prompt.change_favorite_group_name.description"),
-      confirmText: t("prompt.change_favorite_group_name.change"),
-      cancelText: t("prompt.change_favorite_group_name.cancel"),
-      pattern: /\S+/,
-      inputValue: currentName,
-      errorMessage: t("prompt.change_favorite_group_name.input_error"),
-    })
-    .then(({ ok, value }) => {
-      if (!ok) return;
-      const newName = value.trim();
-      if (!newName || newName === currentName) {
-        return;
-      }
-      void favoriteRequest
-        .saveFavoriteGroup({
-          type: "avatar",
-          group: group.name,
-          displayName: newName,
-        })
-        .then((args) => {
-          handleFavoriteGroup({
-            json: args.json,
-            params: {
-              favoriteGroupId: args.json.id,
-            },
-          });
-          toast.success(t("prompt.change_favorite_group_name.message.success"));
-          refreshFavorites();
-        })
-        .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-    })
-    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-}
-
-function changeAvatarGroupVisibility(name: string, visibility: AvatarGroupVisibility, menuKey: string | null = null) {
-  const params = {
-    type: "avatar",
-    group: name,
-    visibility,
-  };
-  void favoriteRequest
-    .saveFavoriteGroup(params)
-    .then((args) => {
-      handleFavoriteGroup({
-        json: args.json,
-        params: {
-          favoriteGroupId: args.json.id,
-        },
-      });
-      toast.success("Group visibility changed");
-      if (menuKey) {
-        handleGroupMenuVisible(menuKey, false);
-      }
-      refreshFavorites();
-    })
-    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-}
-
-function clearFavoriteGroup(ctx: FavoriteGroupSlot) {
-  modalStore
-    .confirm({
-      description: t("confirm.clear_group"),
-      title: t("confirm.title"),
-      destructive: true,
-    })
-    .then(({ ok }) => {
-      if (ok) {
-        void favoriteRequest
-          .clearFavoriteGroup({
-            type: ctx.type,
-            group: ctx.name,
-          })
-          .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-      }
-    })
-    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-}
-
-function promptLocalAvatarFavoriteGroupRename(group: string) {
-  modalStore
-    .prompt({
-      title: t("prompt.local_favorite_group_rename.header"),
-      description: t("prompt.local_favorite_group_rename.description"),
-      confirmText: t("prompt.local_favorite_group_rename.save"),
-      cancelText: t("prompt.local_favorite_group_rename.cancel"),
-      pattern: /\S+/,
-      errorMessage: t("prompt.local_favorite_group_rename.input_error"),
-      inputValue: group,
-    })
-    .then(({ ok, value }) => {
-      if (!ok) return;
-      if (value) {
-        renameLocalAvatarFavoriteGroup(value, group);
-        void nextTick(() => {
-          if (localAvatarFavoriteGroups.value.includes(value)) {
-            selectGroup("local", value);
-          }
-        }).catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-      }
-    })
-    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
-}
-
-function promptLocalAvatarFavoriteGroupDelete(group: string) {
-  modalStore
-    .confirm({
-      description: t("confirm.delete_group", { name: group }),
-      title: t("confirm.title"),
-      destructive: true,
-    })
-    .then(({ ok }) => {
-      if (ok) {
-        deleteLocalAvatarFavoriteGroup(group);
-      }
-    })
-    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
 function doSearchAvatarFavorites(searchTerm?: string) {
@@ -999,68 +536,6 @@ function doSearchAvatarFavorites(searchTerm?: string) {
   avatarFavoriteSearchResults.value = results;
 }
 const searchAvatarFavorites = debounce(doSearchAvatarFavorites, 200);
-
-async function refreshLocalAvatarFavorites() {
-  if (refreshingLocalFavorites.value) {
-    return;
-  }
-  refreshingLocalFavorites.value = true;
-  const token: RefreshToken = {
-    cancelled: false,
-    resolve: null,
-  };
-  refreshCancelToken.value = token;
-  const isRefreshCancelled = () => token.cancelled;
-  try {
-    for (const avatarId of localAvatarFavoritesList) {
-      if (isRefreshCancelled()) {
-        break;
-      }
-      try {
-        const args = await avatarRequest.getAvatar({
-          avatarId,
-        });
-        applyAvatar(args.json);
-      } catch (err) {
-        console.error(err);
-      }
-      if (isRefreshCancelled()) {
-        break;
-      }
-      await new Promise<void>((resolve) => {
-        token.resolve = resolve;
-        worker.value = workerTimers.setTimeout(() => {
-          worker.value = null;
-          resolve();
-        }, 1000);
-      });
-    }
-  } finally {
-    if (worker.value) {
-      workerTimers.clearTimeout(worker.value);
-      worker.value = null;
-    }
-    if (refreshCancelToken.value === token) {
-      refreshCancelToken.value = null;
-    }
-    refreshingLocalFavorites.value = false;
-  }
-}
-
-function cancelLocalAvatarRefresh() {
-  if (!refreshingLocalFavorites.value) {
-    return;
-  }
-  if (refreshCancelToken.value) {
-    refreshCancelToken.value.cancelled = true;
-    refreshCancelToken.value.resolve?.();
-  }
-  if (worker.value) {
-    workerTimers.clearTimeout(worker.value);
-    worker.value = null;
-  }
-  refreshingLocalFavorites.value = false;
-}
 
 function toggleSelectAllAvatars() {
   if (!activeRemoteGroup.value) {
@@ -1114,6 +589,6 @@ function bulkUnfavoriteSelectedAvatars(ids: string[]) {
 }
 
 onBeforeUnmount(() => {
-  cancelLocalAvatarRefresh();
+  cancelLocalRefresh();
 });
 </script>

@@ -53,93 +53,15 @@
       }}</span>
     </div>
 
-    <div v-if="searchViewMode === 'table'" class="flex-1 min-h-0 overflow-auto">
-      <table class="w-full border-collapse text-[13px]">
-        <thead class="sticky top-0 z-1 bg-background">
-          <tr>
-            <th
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none cursor-pointer hover:text-foreground"
-              @click="toggleSearchSort('dateTime')"
-            >
-              {{ t("dialog.screenshot_metadata.col_date") }}
-              <span v-if="searchSort.key === 'dateTime'" class="ml-1 text-[10px]">{{ searchSort.asc ? "↑" : "↓" }}</span>
-            </th>
-            <th
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none cursor-pointer hover:text-foreground"
-              @click="toggleSearchSort('world')"
-            >
-              {{ t("dialog.screenshot_metadata.col_world") }}
-              <span v-if="searchSort.key === 'world'" class="ml-1 text-[10px]">{{ searchSort.asc ? "↑" : "↓" }}</span>
-            </th>
-            <th
-              v-if="searchHasMatchColumn"
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none cursor-pointer hover:text-foreground"
-              @click="toggleSearchSort('match')"
-            >
-              {{ t("dialog.screenshot_metadata.col_match") }}
-              <span v-if="searchSort.key === 'match'" class="ml-1 text-[10px]">{{ searchSort.asc ? "↑" : "↓" }}</span>
-            </th>
-            <th
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none cursor-pointer hover:text-foreground"
-              @click="toggleSearchSort('author')"
-            >
-              {{ t("dialog.screenshot_metadata.col_author") }}
-              <span v-if="searchSort.key === 'author'" class="ml-1 text-[10px]">{{ searchSort.asc ? "↑" : "↓" }}</span>
-            </th>
-            <th
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none cursor-pointer hover:text-foreground w-20"
-              @click="toggleSearchSort('players')"
-            >
-              {{ t("dialog.screenshot_metadata.col_players") }}
-              <span v-if="searchSort.key === 'players'" class="ml-1 text-[10px]">{{ searchSort.asc ? "↑" : "↓" }}</span>
-            </th>
-            <th
-              class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground text-left px-3 py-2 border-b whitespace-nowrap select-none w-[100px]"
-            >
-              {{ t("dialog.screenshot_metadata.col_resolution") }}
-            </th>
-            <th class="w-8 border-b"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(row, idx) in sortedSearchResults"
-            :key="row.filePath"
-            class="group/row cursor-pointer transition-colors duration-100 hover:bg-accent"
-            :class="row.filePath === selectedSearchFilePath ? 'bg-accent border-l-[3px] border-l-primary' : ''"
-            @click="selectSearchResult(idx)"
-          >
-            <td
-              class="text-sm px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis"
-              :class="row.filePath === selectedSearchFilePath ? 'pl-[9px]' : ''"
-            >
-              {{ row.dateFormatted }}
-            </td>
-            <td class="text-sm px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis">
-              {{ row.world || "—" }}
-            </td>
-            <td v-if="searchHasMatchColumn" class="text-sm px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis text-primary">
-              {{ row.match || "—" }}
-            </td>
-            <td class="text-sm px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis text-muted-foreground">
-              {{ row.author || "—" }}
-            </td>
-            <td class="text-sm px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis">
-              <span class="inline-flex items-center gap-1">
-                <Users class="size-3 text-muted-foreground" />
-                {{ row.playerCount }}
-              </span>
-            </td>
-            <td class="text-xs text-muted-foreground px-3 py-2 border-b whitespace-nowrap overflow-hidden text-ellipsis">
-              {{ row.resolution }}
-            </td>
-            <td class="py-2 pr-2 border-b">
-              <ChevronRight class="size-4 text-muted-foreground opacity-0 group-hover/row:opacity-100 transition-opacity duration-150" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ScreenshotSearchTable
+      v-if="searchViewMode === 'table'"
+      :rows="sortedSearchResults"
+      :sort="searchSort"
+      :has-match-column="searchHasMatchColumn"
+      :selected-file-path="selectedSearchFilePath"
+      @sort="toggleSearchSort"
+      @select="selectSearchResult"
+    />
 
     <div v-else class="grid flex-1 min-h-0 overflow-hidden gap-4 grid-cols-[1fr_380px]">
       <div class="flex flex-col items-center min-h-0" @dragover.prevent @dragenter.prevent @drop="handleDrop">
@@ -295,17 +217,29 @@ import SelectGroup from "@/components/ui/select/SelectGroup.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
-import { useMagicKeys, whenever } from "@vueuse/core";
-import { onMounted, onUnmounted, reactive, ref, computed } from "vue";
+import { onMounted, reactive, ref, computed } from "vue";
 import { useGalleryStore } from "@/stores/gallery";
 import { useUserStore } from "@/stores/user";
 import { useVrcxStore } from "@/stores/vrcx";
-import { ArrowLeft, ArrowRight, Camera, ChevronLeft, ChevronRight, Copy, FolderOpen, FolderSearch, ImageIcon, Trash2, Upload, Users } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, Camera, ChevronLeft, ChevronRight, Copy, FolderOpen, FolderSearch, ImageIcon, Trash2, Upload } from "lucide-vue-next";
 import Badge from "@/components/ui/badge/Badge.vue";
 import Button from "@/components/ui/button/Button.vue";
 import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";
 import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
 import Kbd from "@/components/ui/kbd/Kbd.vue";
+import ScreenshotSearchTable from "./components/ScreenshotSearchTable.vue";
+import { loadSearchResultsMetadata } from "./composables/screenshot-search-results";
+import { useScreenshotNavigation } from "./composables/use-screenshot-navigation";
+import {
+  isString,
+  parseJsonRecord,
+  readScreenshotMetadata,
+  readString,
+  toLookupRef,
+  type ScreenshotDialogState,
+  type ScreenshotSearchRow,
+  type ScreenshotSortKey,
+} from "./composables/screenshot-metadata-parse";
 
 import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { storeToRefs } from "pinia";
@@ -314,122 +248,6 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { vrcPlusImageRequest } from "@/api/vrc-plus-image";
 import { lookupUser } from "@/coordinators/user-coordinator";
-
-type ScreenshotPlayer = {
-  id?: string | undefined;
-  displayName?: string | undefined;
-};
-
-type ScreenshotMetadata = {
-  sourceFile?: string | undefined;
-  filePath?: string | undefined;
-  fileName?: string | undefined;
-  previousFilePath?: string | undefined;
-  nextFilePath?: string | undefined;
-  fileResolution?: string | undefined;
-  fileSize?: string | undefined;
-  fileSizeBytes?: string | undefined;
-  creationDate?: string | undefined;
-  timestamp?: string | undefined;
-  application?: string | undefined;
-  dateTime?: number | undefined;
-  note?: string | undefined;
-  error?: string | undefined;
-  world?: { name?: string | undefined; instanceId?: string | undefined } | undefined;
-  author?: ScreenshotPlayer | undefined;
-  players?: ScreenshotPlayer[] | undefined;
-};
-
-type ScreenshotDialogState = {
-  loading: boolean;
-  search: string;
-  searchType: string;
-  searchTypes: string[];
-  searchIndex: number | null;
-  searchResults: string[] | null;
-  metadata: ScreenshotMetadata;
-  isUploading: boolean;
-};
-
-type ScreenshotSearchRow = {
-  filePath: string;
-  dateTime: number;
-  dateFormatted: string;
-  world: string;
-  playerCount: number;
-  players: number;
-  resolution: string;
-  match: string;
-  author: string;
-};
-
-type ScreenshotSortKey = "dateTime" | "world" | "match" | "author" | "players";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function readString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function readNumber(record: Record<string, unknown>, key: string): number | undefined {
-  const value = record[key];
-  return typeof value === "number" ? value : undefined;
-}
-
-function readPlayer(value: unknown): ScreenshotPlayer {
-  if (!isRecord(value)) {
-    return {};
-  }
-  return { id: readString(value, "id"), displayName: readString(value, "displayName") };
-}
-
-function toLookupRef(player: ScreenshotPlayer): { userId?: string; displayName?: string } {
-  const ref: { userId?: string; displayName?: string } = {};
-  if (player.id !== undefined) {
-    ref.userId = player.id;
-  }
-  if (player.displayName !== undefined) {
-    ref.displayName = player.displayName;
-  }
-  return ref;
-}
-
-function readScreenshotMetadata(record: Record<string, unknown>): ScreenshotMetadata {
-  const world = record["world"];
-  const author = record["author"];
-  const players = record["players"];
-  return {
-    sourceFile: readString(record, "sourceFile"),
-    filePath: readString(record, "filePath"),
-    fileName: readString(record, "fileName"),
-    previousFilePath: readString(record, "previousFilePath"),
-    nextFilePath: readString(record, "nextFilePath"),
-    fileResolution: readString(record, "fileResolution"),
-    fileSize: readString(record, "fileSize"),
-    fileSizeBytes: readString(record, "fileSizeBytes"),
-    creationDate: readString(record, "creationDate"),
-    timestamp: readString(record, "timestamp"),
-    application: readString(record, "application"),
-    dateTime: readNumber(record, "dateTime"),
-    note: readString(record, "note"),
-    error: readString(record, "error"),
-    world: isRecord(world) ? { name: readString(world, "name"), instanceId: readString(world, "instanceId") } : undefined,
-    author: isRecord(author) ? readPlayer(author) : undefined,
-    players: Array.isArray(players) ? players.map(readPlayer) : undefined,
-  };
-}
-
-function parseJsonRecord(json: string): Record<string, unknown> | null {
-  const parsed: unknown = JSON.parse(json);
-  return isRecord(parsed) ? parsed : null;
-}
 
 function logError(error: unknown) {
   console.error(error);
@@ -506,58 +324,6 @@ function selectSearchResult(idx: number) {
   getAndDisplayScreenshot(row.filePath, false);
 }
 
-async function loadSearchResultsMetadata(filePaths: string[], query: string, searchType: number) {
-  const results: ScreenshotSearchRow[] = [];
-  const lowerQuery = query.toLowerCase();
-  const promises = filePaths.map(async (filePath) => {
-    try {
-      const meta = parseJsonRecord(await window.AppApi.GetScreenshotMetadata(filePath));
-      const extra = parseJsonRecord(await window.AppApi.GetExtraScreenshotData(filePath, false));
-      if (!meta || !extra) {
-        throw new Error("Screenshot metadata is not an object");
-      }
-      const metadata = readScreenshotMetadata(meta);
-      const extraData = readScreenshotMetadata(extra);
-
-      let dateTime = 0;
-      let dateFormatted = "—";
-      if (metadata.timestamp) {
-        dateTime = Date.parse(metadata.timestamp);
-      } else if (extraData.creationDate) {
-        dateTime = Date.parse(extraData.creationDate);
-      }
-      if (dateTime) {
-        dateFormatted = formatDateFilter(new Date(dateTime).toISOString(), "short");
-      }
-
-      let match = "";
-      if (searchType === 0) {
-        const matched = (metadata.players ?? []).filter((p) => p.displayName?.toLowerCase().includes(lowerQuery));
-        match = matched.map((p) => p.displayName).join(", ");
-      } else if (searchType === 1) {
-        const matched = metadata.players?.find((p) => p.id === query);
-        match = matched?.displayName ?? "";
-      }
-
-      results.push({
-        filePath,
-        dateTime,
-        dateFormatted,
-        world: metadata.world?.name ?? "",
-        playerCount: metadata.players?.length ?? 0,
-        players: metadata.players?.length ?? 0,
-        resolution: extraData.fileResolution ?? "",
-        match,
-        author: metadata.author?.displayName ?? "",
-      });
-    } catch (e) {
-      console.error("Error loading metadata for", filePath, e);
-    }
-  });
-  await Promise.all(promises);
-  return results;
-}
-
 const screenshotMetadataSearchInputs = ref(0);
 
 onMounted(() => {
@@ -566,67 +332,7 @@ onMounted(() => {
   }
 });
 
-const keys = useMagicKeys();
-const stopPrevWatch = whenever(
-  () => keys["Alt+ArrowLeft"]?.value === true,
-  () => {
-    navigatePrev();
-  }
-);
-const stopNextWatch = whenever(
-  () => keys["Alt+ArrowRight"]?.value === true,
-  () => {
-    navigateNext();
-  }
-);
-onUnmounted(() => {
-  stopPrevWatch();
-  stopNextWatch();
-});
-
-function navigatePrev() {
-  const D = screenshotMetadataDialog;
-  const filesArr = D.searchResults;
-
-  if (D.searchIndex !== null && filesArr) {
-    let searchIndex = D.searchIndex;
-    if (searchIndex > 0) {
-      getAndDisplayScreenshot(filesArr[searchIndex - 1], false);
-      searchIndex--;
-    } else {
-      getAndDisplayScreenshot(filesArr[filesArr.length - 1], false);
-      searchIndex = filesArr.length - 1;
-    }
-    D.searchIndex = searchIndex;
-    return;
-  }
-
-  if (D.metadata.previousFilePath) {
-    getAndDisplayScreenshot(D.metadata.previousFilePath);
-  }
-}
-
-function navigateNext() {
-  const D = screenshotMetadataDialog;
-  const filesArr = D.searchResults;
-
-  if (D.searchIndex !== null && filesArr) {
-    let searchIndex = D.searchIndex;
-    if (searchIndex < filesArr.length - 1) {
-      getAndDisplayScreenshot(filesArr[searchIndex + 1], false);
-      searchIndex++;
-    } else {
-      getAndDisplayScreenshot(filesArr[0], false);
-      searchIndex = 0;
-    }
-    D.searchIndex = searchIndex;
-    return;
-  }
-
-  if (D.metadata.nextFilePath) {
-    getAndDisplayScreenshot(D.metadata.nextFilePath);
-  }
-}
+const { navigatePrev, navigateNext } = useScreenshotNavigation(screenshotMetadataDialog, getAndDisplayScreenshot);
 
 function goBack() {
   void router.push({ name: "tools" }).catch(logError);

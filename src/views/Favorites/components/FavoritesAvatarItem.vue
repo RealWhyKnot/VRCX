@@ -109,7 +109,7 @@ import { useI18n } from "vue-i18n";
 
 import { favoriteRequest } from "../../../api/favorite";
 import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
-import { removeLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
+import { removeLocalAvatarFavorite } from "../../../coordinators/favorite-local-avatars";
 import { useFavoriteStore } from "../../../stores/favorite";
 import { useUserStore } from "../../../stores/user";
 

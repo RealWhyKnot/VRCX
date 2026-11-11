@@ -7,331 +7,7 @@
       </DialogDescription>
     </DialogHeader>
     <div class="contents">
-      <div class="flex-none w-77 pr-4 overflow-y-auto">
-        <div class="rounded-xl bg-(--profile-card) overflow-hidden flex flex-col">
-          <div class="relative aspect-4/3">
-            <img
-              v-if="!imageError"
-              :src="avatarDialog.ref.thumbnailImageUrl"
-              class="absolute inset-0 size-full cursor-pointer object-cover"
-              loading="lazy"
-              @click="showFullscreenImageDialog(avatarDialog.ref.imageUrl ?? '')"
-              @error="imageError = true"
-            />
-            <div v-else class="absolute inset-0 flex items-center justify-center bg-muted">
-              <Image class="size-8 text-muted-foreground" />
-            </div>
-          </div>
-          <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 p-3">
-            <div class="contents">
-              <div class="col-start-1 row-start-1 overflow-hidden">
-                <span
-                  class="flex flex-wrap font-bold cursor-pointer"
-                  :title="avatarDialog.ref.name || avatarDialog.id"
-                  @click="copyToClipboard(avatarDialog.ref.name ?? '')"
-                  v-text="avatarDialog.ref.name || avatarDialog.id"
-                ></span>
-              </div>
-              <div class="col-start-1 row-start-2 flex flex-col gap-1">
-                <div>
-                  <span
-                    class="flex flex-wrap cursor-pointer x-grey font-mono text-xs max-w-30"
-                    @click="showUserDialog(avatarDialog.ref.authorId)"
-                    v-text="avatarDialog.ref.authorName || avatarDialog.ref.authorId"
-                  />
-                </div>
-              </div>
-              <div class="col-span-2 flex flex-wrap items-center">
-                <Badge v-if="avatarDialog.ref.releaseStatus === 'public'" class="mr-1.5 mt-1.5" variant="outline">
-                  {{ t("dialog.avatar.tags.public") }}
-                </Badge>
-                <Badge v-else class="mr-1.5 mt-1.5" variant="outline">
-                  {{ t("dialog.avatar.tags.private") }}
-                </Badge>
-                <TooltipWrapper v-if="avatarDialog.isPC" side="top" content="PC">
-                  <Badge class="text-platform-pc border-platform-pc! mr-1.5 mt-1.5" variant="outline"
-                    ><Monitor class="h-4 w-4 text-platform-pc" />
-                    <span v-if="performanceLabel('pc')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      performanceLabel("pc")
-                    }}</span>
-                    <span v-if="fileSizeOf('standalonewindows')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      fileSizeOf("standalonewindows")
-                    }}</span>
-                  </Badge>
-                </TooltipWrapper>
-                <TooltipWrapper v-if="avatarDialog.isQuest" side="top" content="Android">
-                  <Badge class="text-platform-quest border-platform-quest! mr-1.5 mt-1.5" variant="outline"
-                    ><Smartphone class="h-4 w-4 text-platform-quest" />
-                    <span v-if="performanceLabel('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      performanceLabel("android")
-                    }}</span>
-                    <span v-if="fileSizeOf('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      fileSizeOf("android")
-                    }}</span>
-                  </Badge>
-                </TooltipWrapper>
-                <TooltipWrapper v-if="avatarDialog.isIos" side="top" content="iOS">
-                  <Badge class="text-platform-ios border-platform-ios mr-1.5 mt-1.5" variant="outline"
-                    ><Apple class="h-4 w-4 text-platform-ios" />
-                    <span v-if="performanceLabel('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      performanceLabel("ios")
-                    }}</span>
-                    <span v-if="fileSizeOf('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      fileSizeOf("ios")
-                    }}</span>
-                  </Badge>
-                </TooltipWrapper>
-                <Badge v-if="avatarDialog.inCache" variant="outline" class="cursor-pointer mr-1.5 mt-1.5" @click="openFolderGeneric(avatarDialog.cachePath)">
-                  <span v-text="avatarDialog.cacheSize"></span>
-                  &nbsp;{{ t("dialog.avatar.tags.cache") }}
-                </Badge>
-                <Badge v-if="avatarDialog.ref.styles?.primary || avatarDialog.ref.styles?.secondary" class="mr-1.5 mt-1.5" variant="outline"
-                  >{{ t("view.favorite.avatars.styles") }}
-                  <span v-if="avatarDialog.ref.styles.primary" class="x-grey border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">{{
-                    avatarDialog.ref.styles.primary
-                  }}</span>
-                  <span v-if="avatarDialog.ref.styles.secondary" class="x-grey border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">{{
-                    avatarDialog.ref.styles.secondary
-                  }}</span>
-                </Badge>
-                <Badge v-if="avatarDialog.isQuestFallback" class="mr-1.5 mt-1.5" variant="outline">
-                  {{ t("dialog.avatar.tags.fallback") }}
-                </Badge>
-                <Badge v-if="avatarDialog.hasImposter" class="mr-1.5 mt-1.5" variant="outline"
-                  >{{ t("dialog.avatar.tags.impostor") }}
-                  <span v-if="avatarDialog.imposterVersion" class="x-grey border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px"
-                    >v{{ avatarDialog.imposterVersion }}</span
-                  >
-                </Badge>
-                <Badge v-if="avatarDialog.ref.unityPackageUrl" class="mr-1.5 mt-1.5" variant="outline">
-                  {{ t("dialog.avatar.tags.future_proofing") }}
-                </Badge>
-                <div>
-                  <template v-for="tag in avatarDialog.ref.tags" :key="tag">
-                    <Badge v-if="tag.startsWith('content_')" class="mr-1.5 mt-1.5" variant="outline">
-                      <span v-if="tag === 'content_horror'">{{ t("dialog.avatar.tags.content_horror") }}</span>
-                      <span v-else-if="tag === 'content_gore'">{{ t("dialog.avatar.tags.content_gore") }}</span>
-                      <span v-else-if="tag === 'content_violence'">{{ t("dialog.avatar.tags.content_violence") }}</span>
-                      <span v-else-if="tag === 'content_adult'">{{ t("dialog.avatar.tags.content_adult") }}</span>
-                      <span v-else-if="tag === 'content_sex'">{{ t("dialog.avatar.tags.content_sex") }}</span>
-                      <span v-else>{{ tag.replace("content_", "") }}</span>
-                    </Badge>
-                  </template>
-                </div>
-              </div>
-            </div>
-            <div class="col-start-2 row-start-1 row-span-2 grid grid-cols-2 flex-none items-center justify-end gap-2 self-start">
-              <TooltipWrapper v-if="avatarDialog.isFavorite" side="top" :content="t('dialog.avatar.actions.favorite_tooltip')">
-                <Button class="rounded-lg" size="icon" :aria-label="t('dialog.avatar.actions.favorite_tooltip')" @click="avatarDialogCommand('Add Favorite')"
-                  ><Star
-                /></Button>
-              </TooltipWrapper>
-              <TooltipWrapper v-else side="top" :content="t('dialog.avatar.actions.favorite_tooltip')">
-                <Button
-                  class="rounded-lg"
-                  size="icon"
-                  variant="outline"
-                  :aria-label="t('dialog.avatar.actions.favorite_tooltip')"
-                  @click="avatarDialogCommand('Add Favorite')"
-                  ><Star
-                /></Button>
-              </TooltipWrapper>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button class="rounded-lg" :variant="avatarDialog.isBlocked ? 'destructive' : 'outline'" size="icon" :aria-label="t('nav_tooltip.manage')">
-                    <Ellipsis />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem @click="avatarDialogCommand('Refresh')">
-                    <RefreshCw class="size-4" />
-                    {{ t("dialog.avatar.actions.refresh") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger @click="avatarDialogCommand('Share')">
-                      <Share2 class="size-4 mr-2" />
-                      <span>{{ t("dialog.avatar.actions.share") }}</span>
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent side="right" align="start" class="w-56">
-                      <DropdownMenuItem @click="avatarDialogCommand('Share')">
-                        <Copy class="size-4" />
-                        {{ t("dialog.avatar.info.copy_url") }}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem @click="avatarDialogCommand('Copy Avatar Name')">
-                        <Copy class="size-4" />
-                        {{ t("dialog.avatar.info.copy_name") }}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem @click="avatarDialogCommand('Copy Avatar ID')">
-                        <Copy class="size-4" />
-                        {{ t("dialog.avatar.info.copy_id") }}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem v-if="avatarDialog.isBlocked" variant="destructive" @click="avatarDialogCommand('Unblock Avatar')">
-                    <CheckCircle class="size-4" />
-                    {{ t("dialog.avatar.actions.unblock") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem v-else @click="avatarDialogCommand('Block Avatar')">
-                    <XCircle class="size-4" />
-                    {{ t("dialog.avatar.actions.block") }}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem v-if="/quest/.test((avatarDialog.ref.tags ?? []).join(','))" @click="avatarDialogCommand('Select Fallback Avatar')">
-                    <Check class="size-4" />
-                    {{ t("dialog.avatar.actions.select_fallback") }}
-                  </DropdownMenuItem>
-                  <template v-if="avatarDialog.ref.authorId === currentUser.id">
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem v-if="avatarDialog.ref.releaseStatus === 'public'" @click="avatarDialogCommand('Make Private')">
-                      <User class="size-4" />
-                      {{ t("dialog.avatar.actions.make_private") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem v-else @click="avatarDialogCommand('Make Public')">
-                      <User class="size-4" />
-                      {{ t("dialog.avatar.actions.make_public") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="avatarDialogCommand('Rename')">
-                      <Pencil class="size-4" />
-                      {{ t("dialog.avatar.actions.rename") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="avatarDialogCommand('Change Description')">
-                      <Pencil class="size-4" />
-                      {{ t("dialog.avatar.actions.change_description") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="avatarDialogCommand('Change Content Tags')">
-                      <Pencil class="size-4" />
-                      {{ t("dialog.avatar.actions.change_content_tags") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="avatarDialogCommand('Change Styles and Author Tags')">
-                      <Pencil class="size-4" />
-                      {{ t("dialog.avatar.actions.change_styles_author_tags") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem @click="avatarDialogCommand('Change Image')">
-                      <Image class="size-4" />
-                      {{ t("dialog.avatar.actions.change_image") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem v-if="avatarDialog.ref.unityPackageUrl" @click="avatarDialogCommand('Download Unity Package')">
-                      <Download class="size-4" />
-                      {{ t("dialog.avatar.actions.download_package") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem v-if="avatarDialog.hasImposter" variant="destructive" @click="avatarDialogCommand('Regenerate Imposter')">
-                      <RefreshCw class="size-4" />
-                      {{ t("dialog.avatar.actions.regenerate_impostor") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem v-if="avatarDialog.hasImposter" variant="destructive" @click="avatarDialogCommand('Delete Imposter')">
-                      <Trash2 class="size-4" />
-                      {{ t("dialog.avatar.actions.delete_impostor") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem v-else @click="avatarDialogCommand('Create Imposter')">
-                      <User class="size-4" />
-                      {{ t("dialog.avatar.actions.create_impostor") }}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem variant="destructive" @click="avatarDialogCommand('Delete')">
-                      <Trash2 class="size-4" />
-                      {{ t("dialog.avatar.actions.delete") }}
-                    </DropdownMenuItem>
-                  </template>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <TooltipWrapper v-if="avatarDialog.inCache" class="col-start-1 row-start-2" side="top" :content="t('dialog.avatar.actions.delete_cache_tooltip')">
-                <Button
-                  class="rounded-lg"
-                  size="icon"
-                  variant="outline"
-                  :disabled="isGameRunning && avatarDialog.cacheLocked"
-                  :aria-label="t('dialog.avatar.actions.delete_cache_tooltip')"
-                  @click="deleteVRChatCache({ unityPackages: avatarDialog.ref.unityPackages ?? [] })"
-                  ><Trash2
-                /></Button>
-              </TooltipWrapper>
-              <TooltipWrapper class="col-start-2 row-start-2" side="top" :content="t('dialog.avatar.actions.select')">
-                <Button
-                  class="rounded-lg"
-                  size="icon"
-                  variant="outline"
-                  :disabled="currentUser.currentAvatar === avatarDialog.id"
-                  :aria-label="t('dialog.avatar.actions.select')"
-                  @click="selectAvatarWithoutConfirmation(avatarDialog.id)"
-                >
-                  <CheckCircle
-                /></Button>
-              </TooltipWrapper>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl bg-(--profile-card) p-3 mt-2.5">
-          <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
-            {{ t("dialog.avatar.info.header") }}
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <TooltipWrapper side="right" :content="formatDateFilter(avatarDialog.ref.created_at, 'long')" :disabled="!avatarDialog.ref.created_at">
-              <div class="flex justify-between items-start gap-2 text-xs">
-                <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.created_at") }}</span>
-                <span class="text-right text-muted-foreground">{{ timeAgo(avatarDialog.ref.created_at) }}</span>
-              </div>
-            </TooltipWrapper>
-            <TooltipWrapper side="right" :content="formatDateFilter(avatarDialog.ref.updated_at, 'long')" :disabled="!avatarDialog.ref.updated_at">
-              <div class="flex justify-between items-start gap-2 text-xs">
-                <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.last_updated") }}</span>
-                <span class="text-right text-muted-foreground">{{ timeAgo(avatarDialog.ref.updated_at) }}</span>
-              </div>
-            </TooltipWrapper>
-            <TooltipWrapper side="right" :content="avatarTags" :disabled="!avatarTags">
-              <div class="flex items-start justify-between gap-2 text-xs">
-                <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.tags") }}</span>
-                <span class="max-w-30 truncate text-right text-muted-foreground">
-                  {{ avatarTags || "—" }}
-                </span>
-              </div>
-            </TooltipWrapper>
-            <div class="flex justify-between items-start gap-2 text-xs">
-              <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.version") }}</span>
-              <span class="text-right text-muted-foreground">{{ avatarDialog.ref.version || "—" }}</span>
-            </div>
-            <TooltipWrapper side="right" :content="avatarDialogPlatform" :disabled="!avatarDialogPlatform">
-              <div class="flex items-start justify-between gap-2 text-xs">
-                <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.platform") }}</span>
-                <span class="block max-w-25 truncate whitespace-nowrap text-right text-muted-foreground">
-                  {{ avatarDialogPlatform || "—" }}
-                </span>
-              </div>
-            </TooltipWrapper>
-            <div class="flex justify-between items-center gap-2 text-xs">
-              <span class="text-muted-foreground">{{ t("dialog.avatar.info.id") }}</span>
-              <Button
-                class="-mr-1.5 h-5 gap-1 px-1.5 text-xs font-normal text-muted-foreground has-[>svg]:px-1.5"
-                size="sm"
-                variant="ghost"
-                @click="copyAvatarId(avatarDialog.id)"
-              >
-                <Copy class="size-3" />
-                {{ t("dialog.avatar.info.copy_id") }}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl bg-(--profile-card) p-3 mt-2.5">
-          <div class="flex items-center mb-2 pb-2 border-b border-muted-foreground/20">
-            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              {{ t("dialog.user.info.vrcx_info") }}
-              <TooltipWrapper side="right" :content="t('dialog.user.info.vrcx_info_tooltip')">
-                <Info class="h-3 w-3 shrink-0" />
-              </TooltipWrapper>
-            </span>
-          </div>
-          <div class="flex justify-between items-start gap-2 text-xs">
-            <span class="text-muted-foreground shrink-0">{{ t("dialog.avatar.info.time_spent") }}</span>
-            <span class="text-right text-muted-foreground">
-              {{ avatarDialog.timeSpent ? timeToText(avatarDialog.timeSpent) : "—" }}
-            </span>
-          </div>
-        </div>
-      </div>
-
+      <AvatarDialogSidebar @command="avatarDialogCommand" />
       <div class="flex-1 min-w-0 flex flex-col min-h-0 pl-4">
         <TabsUnderline
           v-model="avatarDialog.activeTab"
@@ -342,148 +18,7 @@
           @update:model-value="(tabName) => avatarDialogTabClick(String(tabName))"
         >
           <template #Info>
-            <div>
-              <div
-                v-if="avatarDialog.ref.description && avatarDialog.ref.name !== avatarDialog.ref.description"
-                class="my-2 text-xs rounded-xl bg-(--profile-card) p-3"
-              >
-                <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground pb-2 border-b border-border">
-                  {{ t("dialog.world.info.description") }}
-                </div>
-                <div class="flex items-start">
-                  <span class="flex-1 break-words py-2">
-                    {{ avatarDialog.ref.description }}
-                  </span>
-                </div>
-              </div>
-              <div
-                v-if="avatarDialog.galleryImages.length || isAvatarOwner"
-                class="h-full min-h-0 max-h-[unset] overflow-y-auto flex flex-wrap content-start items-start rounded-xl bg-(--profile-card) p-3"
-              >
-                <div class="w-full">
-                  <div class="flex justify-between text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
-                    <span>{{ t("dialog.avatar.info.gallery") }}</span>
-                    <Button
-                      v-if="isAvatarOwner"
-                      size="sm"
-                      variant="outline"
-                      class="h-6"
-                      :disabled="avatarDialog.galleryLoading"
-                      :aria-label="t('dialog.screenshot_metadata.upload')"
-                      @click="displayAvatarGalleryUpload"
-                    >
-                      <span class="text-[10px]">
-                        {{ t("dialog.screenshot_metadata.upload") }}
-                      </span>
-                      <Upload class="text-[10px]" />
-                    </Button>
-                  </div>
-                  <input id="AvatarGalleryUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeAvatarGallery" />
-
-                  <div class="mt-2 w-[80%] ml-20">
-                    <Carousel v-if="avatarDialog.galleryImages.length" class="w-full" @init-api="onGalleryCarouselInit">
-                      <CarouselContent class="h-50">
-                        <CarouselItem v-for="(image, index) in avatarDialog.galleryImages" :key="image.id">
-                          <div class="relative h-50 w-full">
-                            <img
-                              :src="image.url"
-                              class="w-full h-full object-contain cursor-pointer"
-                              loading="lazy"
-                              @click="showFullscreenImageDialog(image.url)"
-                            />
-                            <div v-if="isAvatarOwner" class="absolute top-1 right-1 flex gap-1">
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                :disabled="avatarDialog.galleryLoading || index === 0"
-                                :aria-label="t('dialog.avatar.info.gallery_move_left')"
-                                @click="moveGalleryImage(index, -1)"
-                              >
-                                <ChevronLeft />
-                              </Button>
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                :disabled="avatarDialog.galleryLoading || index === avatarDialog.galleryImages.length - 1"
-                                :aria-label="t('dialog.avatar.info.gallery_move_right')"
-                                @click="moveGalleryImage(index, 1)"
-                              >
-                                <ChevronRight />
-                              </Button>
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                :disabled="avatarDialog.galleryLoading"
-                                :aria-label="t('dialog.avatar.info.gallery_delete')"
-                                @click="deleteGalleryImage(image)"
-                              >
-                                <Trash2 />
-                              </Button>
-                            </div>
-                            <div class="hidden absolute inset-0 items-center justify-center bg-muted">
-                              <Image class="size-8 text-muted-foreground" />
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      </CarouselContent>
-                      <CarouselPrevious />
-                      <CarouselNext />
-                      <div class="mt-1 text-center text-xs text-muted-foreground">{{ galleryCarouselIndex + 1 }}/{{ avatarDialog.galleryImages.length }}</div>
-                    </Carousel>
-                    <div v-else>
-                      <DataTableEmpty type="nodata" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div v-if="avatarDialog.ref.publishedListings?.length" class="my-2 text-xs rounded-xl bg-(--profile-card) p-3">
-                <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
-                  {{ t("dialog.avatar.info.listings") }}
-                </div>
-                <div
-                  v-for="listing in avatarDialog.ref.publishedListings"
-                  :key="listing.listingId"
-                  class="box-border flex items-center p-1.5 text-[13px] w-full cursor-default"
-                >
-                  <div class="relative inline-block flex-none size-24 mr-2.5">
-                    <img
-                      class="size-full rounded-lg object-cover"
-                      :src="getImageUrlFromImageId(listing.imageId)"
-                      loading="lazy"
-                      @click="listing.imageId && showFullscreenImageDialog(getImageUrlFromImageId(listing.imageId))"
-                    />
-                  </div>
-                  <div class="flex-1 overflow-hidden">
-                    <span class="block truncate font-medium leading-[18px]">{{ listing.displayName }}</span>
-                    <span class="block truncate text-xs italic [text-decoration:underline]">${{ commaNumber(listing.priceTokens) }}V</span>
-                    <span class="block truncate text-xs [text-wrap:auto]" v-text="listing.description"></span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    class="flex-none ml-2"
-                    :disabled="isListingOwned(listing) || !canPurchaseListing(listing)"
-                    @click="purchaseListing(listing)"
-                  >
-                    {{ isListingOwned(listing) ? t("view.tools.marketplace.owned") : t("view.tools.marketplace.buy") }}
-                  </Button>
-                </div>
-              </div>
-              <div class="my-2 text-xs rounded-xl bg-(--profile-card) p-3">
-                <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
-                  {{ t("dialog.world.info.memo") }}
-                </div>
-                <InputGroupTextareaField
-                  v-model="memo"
-                  class="text-xs"
-                  :rows="1"
-                  :autosize="true"
-                  :placeholder="t('dialog.avatar.info.memo_placeholder')"
-                  input-class="resize-none min-h-0"
-                  @change="onAvatarMemoChange"
-                />
-              </div>
-            </div>
+            <AvatarDialogInfoPanel v-model:memo="memo" @memo-change="onAvatarMemoChange" />
           </template>
           <template #JSON>
             <DialogJsonTab
@@ -510,115 +45,44 @@
           @update:open="cropDialogOpen = $event"
           @confirm="onCropConfirmAvatar"
         />
-        <ImageCropDialog
-          :open="galleryCropDialogOpen"
-          :title="t('dialog.avatar.info.gallery')"
-          :aspect-ratio="4 / 3"
-          :file="galleryCropDialogFile"
-          @update:open="galleryCropDialogOpen = $event"
-          @confirm="onCropConfirmAvatarGallery"
-        />
       </template>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import {
-  Apple,
-  Check,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Download,
-  Ellipsis,
-  Image,
-  Info,
-  Monitor,
-  Pencil,
-  RefreshCw,
-  Share2,
-  Smartphone,
-  Star,
-  Trash2,
-  Upload,
-  User,
-  XCircle,
-} from "lucide-vue-next";
-import Carousel from "@/components/ui/carousel/Carousel.vue";
-import CarouselContent from "@/components/ui/carousel/CarouselContent.vue";
-import CarouselItem from "@/components/ui/carousel/CarouselItem.vue";
-import CarouselNext from "@/components/ui/carousel/CarouselNext.vue";
-import CarouselPrevious from "@/components/ui/carousel/CarouselPrevious.vue";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
+import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+import { toast } from "vue-sonner";
 import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
-import Button from "@/components/ui/button/Button.vue";
-import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
-import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
-import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
-import { useI18n } from "vue-i18n";
-
-import { useAuthStore } from "../../../stores/auth";
+import DialogJsonTab from "../DialogJsonTab.vue";
+import ImageCropDialog from "../ImageCropDialog.vue";
+import AvatarDialogSidebar from "./AvatarDialogSidebar.vue";
+import AvatarDialogInfoPanel from "./AvatarDialogInfoPanel.vue";
+import SetAvatarStylesDialog from "./SetAvatarStylesDialog.vue";
+import SetAvatarTagsDialog from "./SetAvatarTagsDialog.vue";
+import { useAvatarDialogCommands } from "./use-avatar-dialog-commands";
+import { useAvatarSetDialogs } from "./use-avatar-set-dialogs";
 import { useAvatarStore } from "../../../stores/avatar";
 import { useFavoriteStore } from "../../../stores/favorite";
-import { useGalleryStore } from "../../../stores/gallery";
-import { useGameStore } from "../../../stores/game";
 import { useModalStore } from "../../../stores/modal";
 import { useUiStore } from "../../../stores/ui";
 import { useUserStore } from "../../../stores/user";
-import { commaNumber } from "../../../shared/utils/base/string";
-import { compareUnityVersion } from "../../../shared/utils/avatar";
-import { copyToClipboard, openFolderGeneric } from "../../../shared/utils/app-actions";
-import { formatDateFilter } from "../../../coordinators/date-coordinator";
-import { timeAgo, timeToText } from "../../../shared/utils/base/format";
-import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
-import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
-import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
-import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
-import DropdownMenuSub from "../../ui/dropdown-menu/DropdownMenuSub.vue";
-import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubContent.vue";
-import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
-import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
-import Badge from "../../ui/badge/Badge.vue";
-import { avatarRequest } from "../../../api/avatar";
-import { marketplaceRequest } from "../../../api/marketplace";
-import { miscRequest } from "../../../api/misc";
+import { logError } from "../../../stores/vrcx-messages";
 import { database } from "../../../services/database";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
-import { handleImageUploadInput, resizeImageToFitLimits } from "../../../coordinators/image-upload-coordinator";
-import { readFileAsBase64 } from "../../../shared/utils/image-upload";
-import { runDeleteVRChatCacheFlow as deleteVRChatCache } from "../../../coordinators/game-coordinator";
-import { showAvatarDialog, applyAvatar, selectAvatarWithoutConfirmation } from "../../../coordinators/avatar-coordinator";
-import { useAvatarDialogCommands } from "./use-avatar-dialog-commands";
+import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
 
-import DialogJsonTab from "../DialogJsonTab.vue";
-import ImageCropDialog from "../ImageCropDialog.vue";
-import { showUserDialog } from "../../../coordinators/user-coordinator";
-
-import SetAvatarStylesDialog from "./SetAvatarStylesDialog.vue";
-import SetAvatarTagsDialog from "./SetAvatarTagsDialog.vue";
-import { AppDebug } from "@/services/app-config";
-import { logError } from "../../../stores/vrcx-messages";
-import type { Avatar } from "vrchat";
-import type { AvatarGalleryImage } from "../../../stores/avatar";
-import type { Json } from "../../../types/vrcx";
-import type { SetAvatarStylesState, SetAvatarTagsState } from "./avatar-dialog-types";
-
-const { sortUserDialogAvatars, getAllProductPurchases } = useUserStore();
-const { userDialog, currentUser, currentUserCredits, ownedListingIds, ownedProductIds } = storeToRefs(useUserStore());
+const { sortUserDialogAvatars } = useUserStore();
+const { userDialog, currentUser } = storeToRefs(useUserStore());
 const avatarStore = useAvatarStore();
 const { cachedAvatarModerations, cachedAvatars } = avatarStore;
 const { avatarDialog } = storeToRefs(avatarStore);
-const { getAvatarGallery, applyAvatarModeration } = avatarStore;
+const { applyAvatarModeration } = avatarStore;
 const { showFavoriteDialog } = useFavoriteStore();
-const { isGameRunning } = storeToRefs(useGameStore());
-const { showFullscreenImageDialog } = useGalleryStore();
-const authStore = useAuthStore();
 const modalStore = useModalStore();
 const uiStore = useUiStore();
 
@@ -642,141 +106,19 @@ const { cropDialogOpen, cropDialogFile, avatarDialogCommand, onFileChangeAvatarI
   }
 );
 
-const isAvatarOwner = computed(() => avatarDialog.value.ref.authorId === currentUser.value.id);
-type GalleryCarouselApi = {
-  selectedScrollSnap(): number;
-  on(event: "select" | "reInit", handler: () => void): void;
-  reInit(): void;
-  scrollTo(index: number, jump?: boolean): void;
-};
+const { setAvatarTagsDialog, setAvatarStylesDialog, showSetAvatarTagsDialog, showSetAvatarStylesDialog } = useAvatarSetDialogs(
+  avatarDialog,
+  currentUser,
+  cachedAvatars
+);
 
-const galleryCropDialogOpen = ref(false);
-const galleryCropDialogFile = ref<File | null>(null);
-const galleryCarouselApi = ref<GalleryCarouselApi | null>(null);
-const galleryCarouselIndex = ref(0);
-
-function onGalleryCarouselInit(api: GalleryCarouselApi) {
-  galleryCarouselApi.value = api;
-  const updateIndex = () => {
-    galleryCarouselIndex.value = api.selectedScrollSnap();
-  };
-  updateIndex();
-  api.on("select", updateIndex);
-  api.on("reInit", updateIndex);
-}
-
-async function scrollGalleryToImage(imageId: string | undefined) {
-  await nextTick();
-  const api = galleryCarouselApi.value;
-  if (!api) {
-    return;
-  }
-  let index = avatarDialog.value.galleryImages.findIndex((image) => image.id === imageId);
-  if (index === -1) {
-    index = avatarDialog.value.galleryImages.length - 1;
-  }
-  api.reInit();
-  api.scrollTo(index, true);
-}
-
-function fileSizeOf(platform: string): string | undefined {
-  const analysis = avatarDialog.value.fileAnalysis[platform];
-  if (typeof analysis !== "object" || analysis === null || !("_fileSize" in analysis)) {
-    return undefined;
-  }
-  const size = analysis._fileSize;
-  return typeof size === "string" ? size : undefined;
-}
-
-function performanceLabel(platform: string): string | undefined {
-  const info = avatarDialog.value.platformInfo[platform];
-  if (typeof info !== "object" || info === null || !("performanceRating" in info)) {
-    return undefined;
-  }
-  const rating = info.performanceRating;
-  if (typeof rating !== "string") {
-    return undefined;
-  }
-  return t(`dialog.avatar.tags.performanceRating.${rating.replace(" ", "")}`);
-}
+const treeData = ref<Record<string, unknown>>({});
+const memo = ref("");
 
 const avatarDialogTabs = computed(() => [
   { value: "Info", label: t("dialog.avatar.info.header") },
   { value: "JSON", label: t("dialog.avatar.json.header") },
 ]);
-
-const treeData = ref<Record<string, unknown>>({});
-const memo = ref("");
-const imageError = ref(false);
-
-watch(
-  () => avatarDialog.value.id,
-  () => {
-    imageError.value = false;
-  }
-);
-const setAvatarTagsDialog = ref<SetAvatarTagsState>({
-  visible: false,
-  loading: false,
-  ownAvatars: [],
-  selectedAvatarIds: [],
-  selectedTags: [],
-  selectedTagsCsv: "",
-  contentHorror: false,
-  contentGore: false,
-  contentViolence: false,
-  contentAdult: false,
-  contentSex: false,
-});
-const setAvatarStylesDialog = ref<SetAvatarStylesState>({
-  visible: false,
-  loading: false,
-  avatarId: "",
-  initialPrimaryStyle: "",
-  initialSecondaryStyle: "",
-  primaryStyle: "",
-  secondaryStyle: "",
-  availableAvatarStyles: [],
-  availableAvatarStylesMap: new Map(),
-  initialTags: [],
-  authorTags: "",
-});
-
-const avatarDialogPlatform = computed(() => {
-  const { ref } = avatarDialog.value;
-  const platforms: string[] = [];
-  if (ref.unityPackages) {
-    for (const unityPackage of ref.unityPackages) {
-      if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
-        continue;
-      }
-      if (!compareUnityVersion(unityPackage.unitySortNumber, authStore.cachedConfig.sdkUnityVersion)) {
-        continue;
-      }
-      let platform = "PC";
-      if (unityPackage.platform === "standalonewindows") {
-        platform = "PC";
-      } else if (unityPackage.platform === "android") {
-        platform = "Android";
-      } else if (unityPackage.platform) {
-        platform = unityPackage.platform;
-      }
-      const platformWithVersion = `${platform}/${unityPackage.unityVersion}`;
-      if (platforms.includes(platformWithVersion)) {
-        continue;
-      }
-      platforms.unshift(platformWithVersion);
-    }
-  }
-  return platforms.join("\n");
-});
-
-const avatarTags = computed(() => {
-  return avatarDialog.value.ref.tags
-    ?.filter((tag) => tag.startsWith("author_tag_"))
-    .map((tag) => tag.replace("author_tag_", ""))
-    .join(", ");
-});
 
 watch(
   () => avatarDialog.value.loading,
@@ -811,13 +153,6 @@ function avatarDialogTabClick(tabName: string) {
   handleAvatarDialogTab(tabName);
 }
 
-function getImageUrlFromImageId(imageId: string | undefined) {
-  if (!imageId) {
-    return "";
-  }
-  return `${AppDebug.endpointDomain}/file/${imageId}/1/`;
-}
-
 function handleDialogOpen() {
   setAvatarTagsDialog.value.visible = false;
   avatarDialog.value.timeSpent = 0;
@@ -825,18 +160,6 @@ function handleDialogOpen() {
   treeData.value = {};
   getAvatarTimeSpent();
   getAvatarMemo();
-}
-
-type PublishedListing = NonNullable<Json<Avatar>["publishedListings"]>[number];
-
-function isListingOwned(listing: PublishedListing) {
-  return (listing.listingId !== undefined && ownedListingIds.value.has(listing.listingId)) || ownedProductIds.value.has(avatarDialog.value.ref.productId ?? "");
-}
-
-function canPurchaseListing(listing: PublishedListing) {
-  return (
-    currentUserCredits.value !== null && listing.listingId !== undefined && listing.priceTokens !== undefined && currentUserCredits.value >= listing.priceTokens
-  );
 }
 
 function getAvatarTimeSpent() {
@@ -884,208 +207,7 @@ function onAvatarMemoChange() {
   }
 }
 
-function copyAvatarId(id: string) {
-  copyToClipboard(id);
-}
-
 function refreshAvatarDialogTreeData() {
   treeData.value = formatJsonVars(avatarDialog.value.ref);
-}
-
-function showSetAvatarTagsDialog(avatarId: string) {
-  const D = setAvatarTagsDialog.value;
-  D.selectedAvatarIds = [avatarId];
-  D.visible = true;
-  D.loading = true;
-  D.ownAvatars = [];
-  D.selectedTags = [];
-  D.selectedTagsCsv = "";
-  D.contentHorror = false;
-  D.contentGore = false;
-  D.contentViolence = false;
-  D.contentAdult = false;
-  D.contentSex = false;
-  const oldTags = avatarDialog.value.ref.tags ?? [];
-  oldTags.forEach((tag) => {
-    switch (tag) {
-      case "content_horror":
-        D.contentHorror = true;
-        break;
-      case "content_gore":
-        D.contentGore = true;
-        break;
-      case "content_violence":
-        D.contentViolence = true;
-        break;
-      case "content_adult":
-        D.contentAdult = true;
-        break;
-      case "content_sex":
-        D.contentSex = true;
-        break;
-      default:
-        if (tag.startsWith("content_")) {
-          D.selectedTags.push(tag.substring(8));
-        }
-        break;
-    }
-  });
-  for (const ref of cachedAvatars.values()) {
-    if (ref.authorId === currentUser.value.id) {
-      D.ownAvatars.push(ref);
-    }
-  }
-  void nextTick(() => {
-    D.loading = false;
-  }).catch(logError);
-}
-
-function showSetAvatarStylesDialog() {
-  const D = setAvatarStylesDialog.value;
-  D.visible = true;
-  D.loading = true;
-  D.avatarId = avatarDialog.value.id;
-  D.primaryStyle = avatarDialog.value.ref.styles?.primary ?? "";
-  D.secondaryStyle = avatarDialog.value.ref.styles?.secondary ?? "";
-  D.initialPrimaryStyle = D.primaryStyle;
-  D.initialSecondaryStyle = D.secondaryStyle;
-  D.initialTags = avatarDialog.value.ref.tags ?? [];
-  D.authorTags = "";
-  for (const tag of D.initialTags) {
-    if (tag.startsWith("author_tag_")) {
-      if (D.authorTags) {
-        D.authorTags += ",";
-      }
-      D.authorTags += tag.substring(11);
-    }
-  }
-  void nextTick(() => {
-    D.loading = false;
-  }).catch(logError);
-}
-
-function displayAvatarGalleryUpload() {
-  const uploadButton = document.getElementById("AvatarGalleryUploadButton");
-  if (!uploadButton) {
-    throw new Error("AvatarGalleryUploadButton is not in the document");
-  }
-  uploadButton.click();
-}
-
-function onFileChangeAvatarGallery(e: Event) {
-  const { file, clearInput } = handleImageUploadInput(e, {
-    inputSelector: "#AvatarGalleryUploadButton",
-    tooLargeMessage: () => t("message.file.too_large"),
-    invalidTypeMessage: () => t("message.file.not_image"),
-  });
-  if (!file) {
-    return;
-  }
-  clearInput();
-  galleryCropDialogFile.value = file;
-  galleryCropDialogOpen.value = true;
-}
-
-async function onCropConfirmAvatarGallery(blob: Blob | null) {
-  const avatarId = avatarDialog.value.id;
-  avatarDialog.value.galleryLoading = true;
-  const uploadPromise = (async () => {
-    if (!blob) {
-      throw new Error("No gallery image to upload");
-    }
-    const base64Body = await readFileAsBase64(blob);
-    const base64File = await resizeImageToFitLimits(base64Body);
-    const args = await avatarRequest.uploadAvatarGalleryImage(base64File, avatarId);
-    await getAvatarGallery(avatarId);
-    return args;
-  })();
-  toast.promise(uploadPromise, {
-    loading: t("message.upload.loading"),
-    success: t("message.upload.success"),
-    error: t("message.upload.error"),
-  });
-  try {
-    const args = await uploadPromise;
-    await scrollGalleryToImage(args.json.id);
-  } catch (error) {
-    console.error("Failed to upload image", error);
-  } finally {
-    avatarDialog.value.galleryLoading = false;
-    galleryCropDialogOpen.value = false;
-  }
-}
-
-async function moveGalleryImage(index: number, direction: number) {
-  const avatarId = avatarDialog.value.id;
-  const images = [...avatarDialog.value.galleryImages];
-  const target = index + direction;
-  const movedImage = images[index];
-  const targetImage = images[target];
-  if (!movedImage || !targetImage) {
-    return;
-  }
-  images[index] = targetImage;
-  images[target] = movedImage;
-  avatarDialog.value.galleryLoading = true;
-  try {
-    await avatarRequest.setAvatarGalleryOrder(
-      images.map((image) => image.id),
-      avatarId
-    );
-  } catch (error) {
-    console.error("Failed to reorder gallery", error);
-    toast.error(t("message.upload.error"));
-  }
-  await getAvatarGallery(avatarId);
-  await scrollGalleryToImage(movedImage.id);
-}
-
-async function deleteGalleryImage(image: AvatarGalleryImage) {
-  const avatarId = avatarDialog.value.id;
-  const { ok } = await modalStore.confirm({
-    title: t("confirm.title"),
-    description: t("confirm.command_question", {
-      command: t("dialog.avatar.info.gallery_delete"),
-    }),
-  });
-  if (!ok) {
-    return;
-  }
-  avatarDialog.value.galleryLoading = true;
-  try {
-    await miscRequest.deleteFile(image.id);
-  } catch (error) {
-    console.error("Failed to delete gallery image", error);
-  }
-  await getAvatarGallery(avatarId);
-}
-
-async function purchaseListing(listing: PublishedListing) {
-  const { listingId, priceTokens } = listing;
-  if (listingId === undefined || priceTokens === undefined) {
-    return;
-  }
-  const { ok } = await modalStore.confirm({
-    title: t("confirm.title"),
-    description: t("dialog.avatar.info.purchase_confirm", {
-      name: listing.displayName,
-      price: commaNumber(priceTokens),
-    }),
-  });
-  if (!ok) {
-    return;
-  }
-  try {
-    await marketplaceRequest.purchaseListing({
-      listingId,
-      totalPrice: priceTokens,
-      quantity: 1,
-    });
-    toast.success(t("dialog.avatar.info.purchase_success"));
-  } catch (error) {
-    console.error("Failed to purchase listing", error);
-  } finally {
-    void getAllProductPurchases().catch(logError);
-  }
 }
 </script>

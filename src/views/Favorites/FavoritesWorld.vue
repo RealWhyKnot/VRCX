@@ -30,180 +30,31 @@
           collapsible
           :order="1"
         >
-          <div class="h-full pr-2 overflow-auto flex flex-col gap-3">
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between font-semibold text-sm mb-[9px]">
-                <span>{{ t("view.favorite.worlds.vrchat_favorites") }}</span>
-                <TooltipWrapper side="bottom" :content="t('view.favorite.refresh_favorites_tooltip')">
-                  <Button
-                    class="rounded-full"
-                    variant="ghost"
-                    size="icon-sm"
-                    :disabled="isFavoriteLoading"
-                    :aria-label="t('view.favorite.refresh_favorites_tooltip')"
-                    @click.stop="handleRefreshFavorites"
-                  >
-                    <Spinner v-if="isFavoriteLoading" />
-                    <RefreshCw v-else />
-                  </Button>
-                </TooltipWrapper>
-              </div>
-              <div class="flex flex-col gap-2">
-                <template v-if="favoriteWorldGroups.length">
-                  <div
-                    v-for="group in favoriteWorldGroups"
-                    :key="group.key"
-                    :class="[
-                      'group-item x-hover-card hover:shadow-sm',
-                      `group-item-${group.visibility}`,
-                      { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
-                    ]"
-                    @click="handleGroupClick('remote', group.key)"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group.displayName }}</span>
-                      <span class="text-xs">{{ group.count }}/{{ group.capacity }}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <span class="flex items-center gap-1.5">
-                        <span class="text-[11px] text-muted-foreground">{{ t(`view.favorite.visibility.${group.visibility}`) }}</span>
-                      </span>
-                      <DropdownMenu
-                        :open="activeGroupMenu === remoteGroupMenuKey(group.key)"
-                        @update:open="handleGroupMenuVisible(remoteGroupMenuKey(group.key), $event)"
-                      >
-                        <DropdownMenuTrigger as-child>
-                          <Button class="rounded-full" variant="ghost" size="icon-sm" :aria-label="t('nav_tooltip.manage')" @click.stop>
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="right" class="w-50">
-                          <DropdownMenuItem @click="handleRemoteRename(group)">
-                            <span>{{ t("view.favorite.rename_tooltip") }}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <span>{{ t("view.favorite.visibility_tooltip") }}</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                              <DropdownMenuSubContent side="right" align="start" class="w-[200px]">
-                                <DropdownMenuCheckboxItem
-                                  v-for="visibility in worldGroupVisibilityOptions"
-                                  :key="visibility"
-                                  :model-value="group.visibility === visibility"
-                                  indicator-position="right"
-                                  @select="handleVisibilitySelection(group, visibility)"
-                                >
-                                  <span>{{ t(`view.favorite.visibility.${visibility}`) }}</span>
-                                </DropdownMenuCheckboxItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                          </DropdownMenuSub>
-                          <DropdownMenuItem variant="destructive" @click="handleRemoteClear(group)">
-                            <span>{{ t("view.favorite.clear") }}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </template>
-                <template v-else>
-                  <div
-                    v-for="group in worldGroupPlaceholders"
-                    :key="group.key"
-                    :class="[
-                      'group-item x-hover-card hover:shadow-sm',
-                      'pointer-events-none opacity-70',
-                      { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
-                    ]"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group.displayName }}</span>
-                      <span class="text-xs">--/--</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                      <div class="w-16 h-[18px] rounded-full"></div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <div class="flex items-center justify-between font-semibold text-sm mb-[9px]">
-                <span>{{ t("view.favorite.worlds.local_favorites") }}</span>
-                <Button
-                  v-if="!refreshingLocalFavorites"
-                  class="rounded-full"
-                  size="icon-sm"
-                  variant="ghost"
-                  :aria-label="t('common.actions.refresh')"
-                  @click.stop="refreshLocalWorldFavorites"
-                  ><RefreshCcw
-                /></Button>
-                <Button v-else size="icon-sm" variant="ghost" @click.stop="cancelLocalWorldRefresh">
-                  <RefreshCcw />
-                  {{ t("view.favorite.worlds.cancel_refresh") }}
-                </Button>
-              </div>
-              <div class="flex flex-col gap-2">
-                <template v-if="localWorldFavoriteGroups.length">
-                  <div
-                    v-for="group in localWorldFavoriteGroups"
-                    :key="group"
-                    :class="['group-item x-hover-card hover:shadow-sm', { 'is-active': !hasSearchInput && isGroupActive('local', group) }]"
-                    @click="handleGroupClick('local', group)"
-                  >
-                    <div class="flex items-start justify-between mb-1 text-[13px]">
-                      <span class="font-semibold">{{ group }}</span>
-                      <div class="flex items-center flex-col">
-                        <span class="text-xs">{{ localWorldFavGroupLength(group) }}</span>
-                        <div class="flex items-center justify-between gap-2">
-                          <DropdownMenu
-                            :open="activeGroupMenu === localGroupMenuKey(group)"
-                            @update:open="handleGroupMenuVisible(localGroupMenuKey(group), $event)"
-                          >
-                            <DropdownMenuTrigger as-child>
-                              <Button class="rounded-full" size="icon-sm" variant="ghost" @click.stop><Ellipsis /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent side="right" class="w-50">
-                              <DropdownMenuItem @click="handleLocalRename(group)">
-                                <span>{{ t("view.favorite.rename_tooltip") }}</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem variant="destructive" @click="handleLocalDelete(group)">
-                                <span>{{ t("view.favorite.delete_tooltip") }}</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <div v-else class="text-center text-xs py-3">
-                  <DataTableEmpty type="nodata" />
-                </div>
-                <div
-                  v-if="!isCreatingLocalGroup"
-                  class="group-item x-hover-card hover:shadow-sm border-dashed flex items-center justify-center gap-2 text-sm"
-                  @click="startLocalGroupCreation"
-                >
-                  <Plus />
-                  <span>{{ t("view.favorite.worlds.new_group") }}</span>
-                </div>
-                <InputGroupField
-                  v-else
-                  :ref="localGroups.newLocalGroupInput"
-                  v-model="newLocalGroupName"
-                  size="sm"
-                  class="w-full"
-                  :placeholder="t('view.favorite.worlds.new_group')"
-                  @keyup.enter="handleLocalGroupCreationConfirm"
-                  @keyup.esc="cancelLocalGroupCreation"
-                  @blur="cancelLocalGroupCreation"
-                />
-              </div>
-            </div>
-          </div>
+          <FavoritesWorldGroupSidebar
+            v-model:new-local-group-name="newLocalGroupName"
+            :has-search-input="hasSearchInput"
+            :is-group-active="isGroupActive"
+            :handle-group-click="handleGroupClick"
+            :world-group-placeholders="worldGroupPlaceholders"
+            :active-group-menu="activeGroupMenu"
+            :remote-group-menu-key="remoteGroupMenuKey"
+            :handle-group-menu-visible="handleGroupMenuVisible"
+            :handle-visibility-selection="handleVisibilitySelection"
+            :handle-remote-rename="handleRemoteRename"
+            :handle-remote-clear="handleRemoteClear"
+            :handle-refresh-favorites="handleRefreshFavorites"
+            :is-refreshing-local-favorites="refreshingLocalFavorites"
+            :refresh-local-world-favorites="refreshLocalWorldFavorites"
+            :cancel-local-world-refresh="cancelLocalRefresh"
+            :local-group-menu-key="localGroupMenuKey"
+            :handle-local-rename="handleLocalRename"
+            :handle-local-delete="handleLocalDelete"
+            :is-creating-local-group="isCreatingLocalGroup"
+            :start-local-group-creation="startLocalGroupCreation"
+            :new-local-group-input="localGroups.newLocalGroupInput"
+            :handle-local-group-creation-confirm="handleLocalGroupCreationConfirm"
+            :cancel-local-group-creation="cancelLocalGroupCreation"
+          />
         </ResizablePanel>
         <ResizableHandle @dragging="splitterSetDragging" />
         <ResizablePanel :order="2">
@@ -316,29 +167,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
-import { Ellipsis, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
-import Button from "@/components/ui/button/Button.vue";
-import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
-import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
-import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
-import { useVirtualizer } from "@tanstack/vue-virtual";
-
-import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue";
-import DropdownMenuCheckboxItem from "../../components/ui/dropdown-menu/DropdownMenuCheckboxItem.vue";
-import DropdownMenuContent from "../../components/ui/dropdown-menu/DropdownMenuContent.vue";
-import DropdownMenuItem from "../../components/ui/dropdown-menu/DropdownMenuItem.vue";
-import { DropdownMenuPortal } from "reka-ui";
-import DropdownMenuSub from "../../components/ui/dropdown-menu/DropdownMenuSub.vue";
-import DropdownMenuSubContent from "../../components/ui/dropdown-menu/DropdownMenuSubContent.vue";
-import DropdownMenuSubTrigger from "../../components/ui/dropdown-menu/DropdownMenuSubTrigger.vue";
-import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue";
+import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFavoriteStore } from "../../stores/favorite";
 import { useModalStore } from "../../stores/modal";
-import type { FavoriteGroupSlot, FavoriteObjectCtx, LocalFavoriteEntry } from "../../stores/favorite-types";
 import { logFailure } from "../../stores/log-failure";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
@@ -349,54 +183,22 @@ import { debounce } from "../../shared/utils/common";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.ts";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
+import { useFavoritesLocalRefresh } from "./composables/use-favorites-local-refresh.ts";
+import { useFavoritesLocalVirtualRows } from "./composables/use-favorites-local-virtual-rows.ts";
 import { useFavoritesSplitter } from "./composables/use-favorites-splitter.ts";
-import { renameLocalWorldFavoriteGroup, newLocalWorldFavoriteGroup, refreshFavorites, getLocalWorldFavorites } from "../../coordinators/favorite-coordinator";
+import { useWorldGroupActions } from "./composables/use-world-group-actions.ts";
+import { newLocalWorldFavoriteGroup, refreshFavorites, getLocalWorldFavorites } from "../../coordinators/favorite-coordinator";
+import { isWorldSearchEntry, toLocalWorldEntry, toWorldFavoriteEntry } from "./world-favorite-entries";
+import type { WorldFavoriteEntry, WorldSearchEntry } from "./world-favorite-entries";
 
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
+import FavoritesWorldGroupSidebar from "./components/FavoritesWorldGroupSidebar.vue";
 import FavoritesWorldItem from "./components/FavoritesWorldItem.vue";
 import WorldExportDialog from "./dialogs/WorldExportDialog.vue";
 
-import * as workerTimers from "worker-timers";
 import "./favorites-layout.css";
 import "./favorites-world-layout.css";
-
-type WorldFavoriteDetails = {
-  name?: string | null;
-  authorName?: string | null;
-  thumbnailImageUrl?: string | null;
-  releaseStatus?: string | null;
-  occupants?: number | null;
-};
-
-type WorldFavoriteEntry = WorldFavoriteDetails & {
-  id: string;
-  deleted?: boolean;
-  ref?: WorldFavoriteDetails | null;
-};
-
-type WorldSearchEntry = {
-  id: string;
-  name: string;
-  authorName?: string | null;
-  tags?: string[];
-};
-
-type LocalVirtualItem = {
-  key: string;
-  favorite: WorldFavoriteEntry;
-};
-
-type LocalVirtualRow = {
-  type: string;
-  key: string;
-  items: LocalVirtualItem[];
-};
-
-type RefreshToken = {
-  cancelled: boolean;
-  resolve: (() => void) | null;
-};
 
 const WORLD_GROUP_PLACEHOLDERS = Array.from({ length: 4 }, (_, index) => ({
   key: `world:worlds${index + 1}`,
@@ -405,24 +207,14 @@ const WORLD_GROUP_PLACEHOLDERS = Array.from({ length: 4 }, (_, index) => ({
 
 const WORLD_FAVORITES_LOG_LABEL = "World favorites view";
 
-const worldGroupVisibilityOptions = ["public", "friends", "private"] as const;
-type WorldGroupVisibility = (typeof worldGroupVisibilityOptions)[number];
-
 const { t } = useI18n();
 const { sortFavorites } = storeToRefs(useAppearanceSettingsStore());
 const { setSortFavorites } = useAppearanceSettingsStore();
 const favoriteStore = useFavoriteStore();
 const modalStore = useModalStore();
-const {
-  favoriteWorlds,
-  favoriteWorldGroups,
-  localWorldFavorites,
-  selectedFavoriteWorlds,
-  worldImportDialogInput,
-  isFavoriteLoading,
-  localWorldFavoriteGroups,
-} = storeToRefs(favoriteStore);
-const { showWorldImportDialog, localWorldFavGroupLength, deleteLocalWorldFavoriteGroup, handleFavoriteGroup, localWorldFavoritesList } = favoriteStore;
+const { favoriteWorlds, favoriteWorldGroups, localWorldFavorites, selectedFavoriteWorlds, worldImportDialogInput, localWorldFavoriteGroups } =
+  storeToRefs(favoriteStore);
+const { showWorldImportDialog, localWorldFavoritesList } = favoriteStore;
 
 const worldCardScaling = useFavoritesCardScaling({
   configKey: "VRCX_FavoritesWorldCardScale",
@@ -447,28 +239,11 @@ const {
   slider: worldCardScaleSlider,
   spacingSlider: worldCardSpacingSlider,
   gridStyle: worldFavoritesGridStyle,
+  cardScalePercent: worldCardScalePercent,
+  cardSpacingPercent: worldCardSpacingPercent,
+  cardScaleValue: worldCardScaleValue,
+  cardSpacingValue: worldCardSpacingValue,
 } = worldCardScaling;
-
-const worldCardScalePercent = computed(() => Math.round(worldCardScale.value * 100));
-const worldCardSpacingPercent = computed(() => Math.round(worldCardSpacing.value * 100));
-const worldCardScaleValue = computed({
-  get: () => [worldCardScale.value],
-  set: (value: number[]) => {
-    const next = value[0];
-    if (next !== undefined) {
-      worldCardScale.value = next;
-    }
-  },
-});
-const worldCardSpacingValue = computed({
-  get: () => [worldCardSpacing.value],
-  set: (value: number[]) => {
-    const next = value[0];
-    if (next !== undefined) {
-      worldCardSpacing.value = next;
-    }
-  },
-});
 
 const splitter = useFavoritesSplitter({ configKey: "VRCX_FavoritesWorldSplitter" });
 const { defaultSize: splitterDefaultSize, minSize: splitterMinSize, maxSize: splitterMaxSize, handleLayout, setDragging: splitterSetDragging } = splitter;
@@ -476,9 +251,6 @@ const worldExportDialogVisible = ref(false);
 const worldFavoriteSearch = ref("");
 const worldFavoriteSearchResults = ref<WorldSearchEntry[]>([]);
 const worldGroupPlaceholders = WORLD_GROUP_PLACEHOLDERS;
-const refreshingLocalFavorites = ref(false);
-const worker = ref<ReturnType<typeof workerTimers.setTimeout> | null>(null);
-const refreshCancelToken = ref<RefreshToken | null>(null);
 const worldEditMode = ref(false);
 const worldToolbarMenuOpen = ref(false);
 const worldSortMode = ref("none");
@@ -518,6 +290,15 @@ const {
   placeholders: WORLD_GROUP_PLACEHOLDERS,
 });
 
+const { handleVisibilitySelection, handleRemoteRename, handleRemoteClear, handleLocalRename, handleLocalDelete } = useWorldGroupActions({
+  logLabel: WORLD_FAVORITES_LOG_LABEL,
+  handleGroupMenuVisible,
+  selectGroup,
+  localWorldFavoriteGroups,
+  remoteGroupMenuKey,
+  localGroupMenuKey,
+});
+
 const hasWorldSelection = computed(() => selectedFavoriteWorlds.value.length > 0);
 const hasSearchInput = computed(() => worldFavoriteSearch.value.trim().length > 0);
 const isSearchActive = computed(() => worldFavoriteSearch.value.trim().length >= 3);
@@ -534,27 +315,6 @@ function handleWorldImportClick() {
 function handleWorldExportClick() {
   closeWorldToolbarMenu();
   showExportDialog();
-}
-
-function isWorldRecord(value: unknown): value is WorldFavoriteEntry {
-  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
-}
-
-function isWorldSearchEntry(value: unknown): value is WorldSearchEntry {
-  return typeof value === "object" && value !== null && "id" in value && "name" in value && typeof value.id === "string" && typeof value.name === "string";
-}
-
-function toWorldFavoriteEntry(favorite: FavoriteObjectCtx): WorldFavoriteEntry {
-  return {
-    id: favorite.id,
-    name: favorite.name,
-    deleted: favorite.deleted ?? false,
-    ref: isWorldRecord(favorite.ref) ? favorite.ref : null,
-  };
-}
-
-function toLocalWorldEntry(entry: LocalFavoriteEntry): WorldFavoriteEntry {
-  return isWorldRecord(entry) ? entry : { id: entry.id };
 }
 
 const groupedWorldFavorites = computed(() => {
@@ -615,84 +375,12 @@ const currentLocalFavorites = computed<WorldFavoriteEntry[]>(() => {
 
 const localFavoritesViewportRef = ref<HTMLDivElement | null>(null);
 
-const getFavoritesGridMetrics = (count = 1, options: { matchMaxColumnWidth?: boolean } = {}) => {
-  const styles = worldFavoritesGridStyle.value(count, options);
-  const columns = Math.max(1, Number(styles["--favorites-grid-columns"]) || 1);
-  const gap = Number(styles["--favorites-card-gap"].replace("px", "")) || 0;
-
-  return {
-    columns,
-    gap,
-    styles,
-  };
-};
-
-const chunkLocalFavorites = (favorites: WorldFavoriteEntry[]): LocalVirtualRow[] => {
-  if (!favorites.length) {
-    return [];
-  }
-  const { columns } = getFavoritesGridMetrics(favorites.length, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns);
-  const rows: LocalVirtualRow[] = [];
-
-  for (let index = 0; index < favorites.length; index += safeColumns) {
-    rows.push({
-      type: "cards",
-      key: `local:${activeLocalGroupName.value}:${index}`,
-      items: favorites.slice(index, index + safeColumns).map((favorite) => ({
-        key: favorite.id,
-        favorite,
-      })),
-    });
-  }
-
-  return rows;
-};
-
-const localVirtualRows = computed(() => chunkLocalFavorites(currentLocalFavorites.value));
-
-const estimateLocalRowSize = (row: LocalVirtualRow | undefined) => {
-  if (!row) {
-    return 120;
-  }
-  const itemCount = row.items.length;
-  const { columns, gap } = getFavoritesGridMetrics(itemCount, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns);
-  const rows = Math.max(1, Math.ceil(itemCount / safeColumns));
-  const baseCardHeight = 220;
-  const rowGap = Math.max(0, gap);
-
-  return rows * baseCardHeight + (rows - 1) * rowGap + 8;
-};
-
-const localVirtualizer = useVirtualizer(
-  computed(() => ({
-    count: localVirtualRows.value.length,
-    getScrollElement: () => localFavoritesViewportRef.value,
-    estimateSize: (index: number) => estimateLocalRowSize(localVirtualRows.value[index]),
-    overscan: 8,
-  }))
-);
-
-const localVirtualItems = computed(() =>
-  localVirtualizer.value.getVirtualItems().map((virtualItem) => ({
-    virtualItem,
-    row: localVirtualRows.value[virtualItem.index],
-  }))
-);
-
-const localVirtualContainerStyle = computed(() => ({
-  ...getFavoritesGridMetrics(currentLocalFavorites.value.length, { matchMaxColumnWidth: true }).styles,
-  "--favorites-virtual-height": `${localVirtualizer.value.getTotalSize()}px`,
-}));
-
-const getLocalRowItems = (row: LocalVirtualRow | undefined) => row?.items ?? [];
-
-function measureLocalRow(node: unknown) {
-  if (node instanceof Element) {
-    localVirtualizer.value.measureElement(node);
-  }
-}
+const { localVirtualizer, localVirtualItems, localVirtualContainerStyle, getLocalRowItems, measureLocalRow } = useFavoritesLocalVirtualRows({
+  items: currentLocalFavorites,
+  groupName: activeLocalGroupName,
+  getGridStyles: (count, options) => worldFavoritesGridStyle.value(count, options),
+  getScrollElement: () => localFavoritesViewportRef.value,
+});
 
 function handleSortValueChange(value: string) {
   if (value === "players") {
@@ -846,88 +534,6 @@ function handleRefreshFavorites() {
   void getLocalWorldFavorites().catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function changeWorldGroupVisibility(group: FavoriteGroupSlot, visibility: WorldGroupVisibility, menuKey: string | null = null) {
-  const params = {
-    type: group.type,
-    group: group.name,
-    visibility,
-  };
-  void favoriteRequest
-    .saveFavoriteGroup(params)
-    .then((args) => {
-      handleFavoriteGroup({
-        json: args.json,
-        params: {
-          favoriteGroupId: args.json.id,
-        },
-      });
-      toast.success(t("message.group.visibility_updated"));
-      if (menuKey) {
-        handleGroupMenuVisible(menuKey, false);
-      }
-      refreshFavorites();
-    })
-    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-}
-
-function promptLocalWorldFavoriteGroupRename(group: string) {
-  modalStore
-    .prompt({
-      title: t("prompt.local_favorite_group_rename.header"),
-      description: t("prompt.local_favorite_group_rename.description"),
-      confirmText: t("prompt.local_favorite_group_rename.save"),
-      cancelText: t("prompt.local_favorite_group_rename.cancel"),
-      pattern: /\S+/,
-      errorMessage: t("prompt.local_favorite_group_rename.input_error"),
-      inputValue: group,
-    })
-    .then(({ ok, value }) => {
-      if (!ok) return;
-      if (value) {
-        renameLocalWorldFavoriteGroup(value, group);
-        void nextTick(() => {
-          if (localWorldFavoriteGroups.value.includes(value)) {
-            selectGroup("local", value, { userInitiated: true });
-          }
-        }).catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-      }
-    })
-    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-}
-
-function promptLocalWorldFavoriteGroupDelete(group: string) {
-  modalStore
-    .confirm({
-      description: t("confirm.delete_group", { name: group }),
-      title: t("confirm.title"),
-    })
-    .then(({ ok }) => {
-      if (ok) {
-        deleteLocalWorldFavoriteGroup(group);
-      }
-    })
-    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-}
-
-function clearFavoriteGroup(ctx: FavoriteGroupSlot) {
-  modalStore
-    .confirm({
-      description: t("confirm.clear_group"),
-      title: t("confirm.title"),
-    })
-    .then(({ ok }) => {
-      if (ok) {
-        void favoriteRequest
-          .clearFavoriteGroup({
-            type: ctx.type,
-            group: ctx.name,
-          })
-          .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-      }
-    })
-    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-}
-
 function doSearchWorldFavorites(searchInput?: string) {
   const search = (searchInput ?? worldFavoriteSearch.value).trim().toLowerCase();
   if (search.length < 3) {
@@ -945,132 +551,17 @@ function doSearchWorldFavorites(searchInput?: string) {
 }
 const searchWorldFavorites = debounce(doSearchWorldFavorites, 200);
 
-function handleVisibilitySelection(group: FavoriteGroupSlot, visibility: WorldGroupVisibility) {
-  const menuKey = remoteGroupMenuKey(group.key);
-  changeWorldGroupVisibility(group, visibility, menuKey);
-}
+const { refreshingLocalFavorites, refreshLocalFavorites, cancelLocalRefresh } = useFavoritesLocalRefresh(async (worldId) => {
+  await worldRequest.getWorld({
+    worldId,
+  });
+});
 
-function handleRemoteRename(group: FavoriteGroupSlot) {
-  handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
-  changeFavoriteGroupName(group);
-}
-
-function handleRemoteClear(group: FavoriteGroupSlot) {
-  handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
-  clearFavoriteGroup(group);
-}
-
-function handleLocalRename(groupName: string) {
-  handleGroupMenuVisible(localGroupMenuKey(groupName), false);
-  promptLocalWorldFavoriteGroupRename(groupName);
-}
-
-function handleLocalDelete(groupName: string) {
-  handleGroupMenuVisible(localGroupMenuKey(groupName), false);
-  promptLocalWorldFavoriteGroupDelete(groupName);
-}
-
-function changeFavoriteGroupName(group: FavoriteGroupSlot) {
-  const currentName = group.displayName || group.name;
-  modalStore
-    .prompt({
-      title: t("prompt.change_favorite_group_name.header"),
-      description: t("prompt.change_favorite_group_name.description"),
-      confirmText: t("prompt.change_favorite_group_name.change"),
-      cancelText: t("prompt.change_favorite_group_name.cancel"),
-      pattern: /\S+/,
-      inputValue: currentName,
-      errorMessage: t("prompt.change_favorite_group_name.input_error"),
-    })
-    .then(({ ok, value }) => {
-      if (!ok) return;
-      const newName = value.trim();
-      if (!newName || newName === currentName) {
-        return;
-      }
-      void favoriteRequest
-        .saveFavoriteGroup({
-          type: group.type,
-          group: group.name,
-          displayName: newName,
-        })
-        .then((args) => {
-          handleFavoriteGroup({
-            json: args.json,
-            params: {
-              favoriteGroupId: args.json.id,
-            },
-          });
-          toast.success(t("prompt.change_favorite_group_name.message.success"));
-          refreshFavorites();
-        })
-        .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-    })
-    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
-}
-
-async function refreshLocalWorldFavorites() {
-  if (refreshingLocalFavorites.value) {
-    return;
-  }
-  refreshingLocalFavorites.value = true;
-  const token: RefreshToken = {
-    cancelled: false,
-    resolve: null,
-  };
-  refreshCancelToken.value = token;
-  const isRefreshCancelled = () => token.cancelled;
-  try {
-    for (const worldId of localWorldFavoritesList) {
-      if (isRefreshCancelled()) {
-        break;
-      }
-      try {
-        await worldRequest.getWorld({
-          worldId,
-        });
-      } catch (err) {
-        console.error(err);
-      }
-      if (isRefreshCancelled()) {
-        break;
-      }
-      await new Promise<void>((resolve) => {
-        token.resolve = resolve;
-        worker.value = workerTimers.setTimeout(() => {
-          worker.value = null;
-          resolve();
-        }, 1000);
-      });
-    }
-  } finally {
-    if (worker.value) {
-      workerTimers.clearTimeout(worker.value);
-      worker.value = null;
-    }
-    if (refreshCancelToken.value === token) {
-      refreshCancelToken.value = null;
-    }
-    refreshingLocalFavorites.value = false;
-  }
-}
-
-function cancelLocalWorldRefresh() {
-  if (!refreshingLocalFavorites.value) {
-    return;
-  }
-  if (refreshCancelToken.value) {
-    refreshCancelToken.value.cancelled = true;
-    refreshCancelToken.value.resolve?.();
-  }
-  if (worker.value) {
-    workerTimers.clearTimeout(worker.value);
-    worker.value = null;
-  }
-  refreshingLocalFavorites.value = false;
+function refreshLocalWorldFavorites() {
+  return refreshLocalFavorites(localWorldFavoritesList);
 }
 
 onBeforeUnmount(() => {
-  cancelLocalWorldRefresh();
+  cancelLocalRefresh();
 });
 </script>
