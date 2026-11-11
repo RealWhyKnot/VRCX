@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { ref } from "vue";
+import type * as VueI18n from "vue-i18n";
+import type * as VueRouter from "vue-router";
 
 import en from "../../src/localization/en.json";
 
@@ -19,7 +21,7 @@ vi.mock("../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof VueRouter>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -46,11 +48,11 @@ vi.mock("../../src/services/config", () => ({
     init: vi.fn(),
     getString: vi.fn().mockResolvedValue(""),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_key: string, defaultValue: unknown) => defaultValue ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -64,7 +66,7 @@ vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
 vi.mock("vue-i18n", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof VueI18n>();
   const i18n = actual.createI18n({
     locale: "en",
     fallbackLocale: "en",
@@ -79,10 +81,10 @@ vi.mock("vue-i18n", async (importOriginal) => {
   };
 });
 
-const mockGetInstanceShortName = vi.fn();
+const mockGetInstanceShortName = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 vi.mock("../../src/api/instance", () => ({
   instanceRequest: {
-    getInstanceShortName: (...args) => mockGetInstanceShortName(...args),
+    getInstanceShortName: (...args: unknown[]) => mockGetInstanceShortName(...args),
     selfInvite: vi.fn().mockResolvedValue({}),
   },
 }));
@@ -100,7 +102,7 @@ vi.mock("vue-sonner", () => ({
 import { useLaunchStore } from "../../src/stores/launch";
 
 describe("useLaunchStore", () => {
-  let store;
+  let store: ReturnType<typeof useLaunchStore>;
 
   beforeEach(() => {
     setActivePinia(createPinia());

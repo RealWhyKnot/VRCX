@@ -9,6 +9,7 @@ import { useGameLogStore } from "./gameLog";
 import { useGameStore } from "./game";
 import { useLocationStore } from "./location";
 import { useNotificationsSettingsStore } from "./settings/notifications";
+import { logFailure } from "./log-failure";
 import { usePhotonStore } from "./photon";
 import { useSharedFeedStore } from "./shared-feed";
 import { useUserStore } from "./user";
@@ -43,29 +44,29 @@ export const useVrStore = defineStore("Vr", () => {
     updateVRLastLocation();
     updateVrNowPlaying();
 
-    sharedFeedStore.sendSharedFeed();
+    sharedFeedStore.sendSharedFeed().catch(logFailure("Failed to send shared feed to VR:"));
     friendStore.updateOnlineFriendCounter(true);
   }
 
-  async function saveOpenVROption() {
+  function saveOpenVROption() {
     updateVRConfigVars();
     updateVRLastLocation();
-    AppApi.ExecuteVrOverlayFunction("notyClear", "");
+    AppApi.ExecuteVrOverlayFunction("notyClear", "").catch(logFailure("Failed to clear VR notifications:"));
     updateOpenVR();
   }
 
   function updateVrNowPlaying() {
     const json = JSON.stringify(gameLogStore.nowPlaying);
-    AppApi.ExecuteVrOverlayFunction("nowPlayingUpdate", json);
+    AppApi.ExecuteVrOverlayFunction("nowPlayingUpdate", json).catch(logFailure("Failed to update VR now playing:"));
   }
 
   function updateVRLastLocation() {
-    let progressPie = false;
+    let isProgressPie = false;
     if (advancedSettingsStore.progressPie) {
-      progressPie = true;
+      isProgressPie = true;
       if (advancedSettingsStore.progressPieFilter) {
         if (!isRpcWorld(locationStore.lastLocation.location)) {
-          progressPie = false;
+          isProgressPie = false;
         }
       }
     }
@@ -79,11 +80,11 @@ export const useVrStore = defineStore("Vr", () => {
       name: locationStore.lastLocation.name,
       playerList: Array.from(locationStore.lastLocation.playerList.values()),
       friendList: Array.from(locationStore.lastLocation.friendList.values()),
-      progressPie,
+      progressPie: isProgressPie,
       onlineFor,
     };
     const json = JSON.stringify(lastLocation);
-    AppApi.ExecuteVrOverlayFunction("lastLocationUpdate", json);
+    AppApi.ExecuteVrOverlayFunction("lastLocationUpdate", json).catch(logFailure("Failed to update VR last location:"));
   }
 
   function updateVRConfigVars() {
@@ -106,11 +107,11 @@ export const useVrStore = defineStore("Vr", () => {
       pcUptimeOnFeed: wristOverlaySettingsStore.pcUptimeOnFeed,
       appLanguage: appearanceSettingsStore.appLanguage,
       notificationOpacity: advancedSettingsStore.notificationOpacity,
-      isWristDisabled: wristOverlaySettingsStore.overlayWrist === false,
+      isWristDisabled: !wristOverlaySettingsStore.overlayWrist,
     };
 
     const json = JSON.stringify(VRConfigVars);
-    AppApi.ExecuteVrOverlayFunction("configUpdate", json);
+    AppApi.ExecuteVrOverlayFunction("configUpdate", json).catch(logFailure("Failed to update VR config:"));
   }
 
   function updateOpenVR() {
@@ -126,31 +127,36 @@ export const useVrStore = defineStore("Vr", () => {
       gameStore.isSteamVRRunning &&
       ((gameStore.isGameRunning && !gameStore.isGameNoVR) || wristOverlaySettingsStore.openVRAlways)
     ) {
-      let hmdOverlay = false;
+      let hasHmdOverlay = false;
       if (
         notificationsSettingsStore.overlayNotifications ||
         advancedSettingsStore.progressPie ||
         photonStore.photonEventOverlay ||
         photonStore.timeoutHudOverlay
       ) {
-        hmdOverlay = true;
+        hasHmdOverlay = true;
       }
+      const overlayHand = Number(wristOverlaySettingsStore.overlayHand);
       newState = {
         active: true,
-        hmdOverlay,
+        hmdOverlay: hasHmdOverlay,
         wristOverlay: wristOverlaySettingsStore.overlayWrist,
         menuButton: wristOverlaySettingsStore.overlaybutton,
-        overlayHand: parseInt(wristOverlaySettingsStore.overlayHand, 10),
+        overlayHand: Number.isFinite(overlayHand) ? overlayHand : 0,
       };
     }
 
-    AppApi.SetVR(newState.active, newState.hmdOverlay, newState.wristOverlay, newState.menuButton, newState.overlayHand);
+    AppApi.SetVR(newState.active, newState.hmdOverlay, newState.wristOverlay, newState.menuButton, newState.overlayHand).catch(
+      logFailure("Failed to set VR overlay state:")
+    );
     if (!newState.active) {
       gameStore.setIsHmdAfk(false);
     }
 
     if (isHostLinux) {
-      window.electron.updateVr(newState.active, newState.hmdOverlay, newState.wristOverlay, newState.menuButton, newState.overlayHand);
+      window.electron
+        .updateVr(newState.active, newState.hmdOverlay, newState.wristOverlay, newState.menuButton, newState.overlayHand)
+        .catch(logFailure("Failed to update VR overlay on Linux:"));
 
       vrInit();
     }

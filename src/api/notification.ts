@@ -11,11 +11,18 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
+import { requestJson } from "./request-json";
 import { useGalleryStore } from "../stores/gallery";
 
+type InviteParams = InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean };
+type RequestInviteParams = RequestInviteRequest & { platform?: string };
+type NotificationListParams = GetNotifications["query"];
+type NotificationV2ListParams = { n?: number; offset?: number; type?: string };
+type NotificationIdParams = { notificationId: string };
+
 const notificationRequest = {
-  getNotifications(params: GetNotifications["query"]): Promise<{ json: Json<Notification[]>; params: GetNotifications["query"] }> {
-    return request("auth/user/notifications", {
+  getNotifications(params: NotificationListParams): Promise<{ json: Json<Notification[]>; params: NotificationListParams }> {
+    return requestJson<Json<Notification[]>>("auth/user/notifications", {
       method: "GET",
       params,
     }).then((json) => {
@@ -28,8 +35,8 @@ const notificationRequest = {
     });
   },
 
-  getHiddenFriendRequests(params: GetNotifications["query"]): Promise<{ json: Json<Notification[]>; params: GetNotifications["query"] }> {
-    return request("auth/user/notifications", {
+  getHiddenFriendRequests(params: NotificationListParams): Promise<{ json: Json<Notification[]>; params: NotificationListParams }> {
+    return requestJson<Json<Notification[]>>("auth/user/notifications", {
       method: "GET",
       params: {
         type: "friendRequest",
@@ -45,8 +52,8 @@ const notificationRequest = {
     });
   },
 
-  getNotificationsV2(params: { n?: number; offset?: number; type?: string }): Promise<{ json: Json<NotificationV2[]>; params: any }> {
-    return request("notifications", {
+  getNotificationsV2(params: NotificationV2ListParams): Promise<{ json: Json<NotificationV2[]>; params: NotificationV2ListParams }> {
+    return requestJson<Json<NotificationV2[]>>("notifications", {
       method: "GET",
       params,
     }).then((json) => {
@@ -59,14 +66,14 @@ const notificationRequest = {
   },
 
   sendInvite(
-    params: InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean },
+    params: InviteParams,
     receiverUserId: string
   ): Promise<{
     json: Json<SentNotification>;
-    params: InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean };
+    params: InviteParams;
     receiverUserId: string;
   }> {
-    return request(`invite/${receiverUserId}`, {
+    return requestJson<Json<SentNotification>>(`invite/${receiverUserId}`, {
       method: "POST",
       params,
     }).then((json) => {
@@ -79,14 +86,14 @@ const notificationRequest = {
     });
   },
   sendInvitePhoto(
-    params: InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean },
+    params: InviteParams,
     receiverUserId: string
   ): Promise<{
     json: Json<SentNotification>;
-    params: InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean };
+    params: InviteParams;
     receiverUserId: string;
   }> {
-    return request(`invite/${receiverUserId}/photo`, {
+    return requestJson<Json<SentNotification>>(`invite/${receiverUserId}/photo`, {
       uploadImageLegacy: true,
       postData: JSON.stringify(params),
       imageData: useGalleryStore().uploadImage,
@@ -101,14 +108,14 @@ const notificationRequest = {
   },
 
   sendRequestInvite(
-    params: RequestInviteRequest & { platform?: string },
+    params: RequestInviteParams,
     receiverUserId: string
   ): Promise<{
     json: Json<Notification>;
-    params: RequestInviteRequest & { platform?: string };
+    params: RequestInviteParams;
     receiverUserId: string;
   }> {
-    return request(`requestInvite/${receiverUserId}`, {
+    return requestJson<Json<Notification>>(`requestInvite/${receiverUserId}`, {
       method: "POST",
       params,
     }).then((json) => {
@@ -122,14 +129,14 @@ const notificationRequest = {
   },
 
   sendRequestInvitePhoto(
-    params: RequestInviteRequest & { platform?: string },
+    params: RequestInviteParams,
     receiverUserId: string
   ): Promise<{
     json: Json<Notification>;
-    params: RequestInviteRequest & { platform?: string };
+    params: RequestInviteParams;
     receiverUserId: string;
   }> {
-    return request(`requestInvite/${receiverUserId}/photo`, {
+    return requestJson<Json<Notification>>(`requestInvite/${receiverUserId}/photo`, {
       uploadImageLegacy: true,
       postData: JSON.stringify(params),
       imageData: useGalleryStore().uploadImage,
@@ -144,7 +151,7 @@ const notificationRequest = {
   },
 
   sendInviteResponse(params: InviteResponse, inviteId: string): Promise<{ json: Json<Notification>; params: InviteResponse; inviteId: string }> {
-    return request(`invite/${inviteId}/response`, {
+    return requestJson<Json<Notification>>(`invite/${inviteId}/response`, {
       method: "POST",
       params,
     }).then((json) => {
@@ -158,7 +165,7 @@ const notificationRequest = {
   },
 
   sendInviteResponsePhoto(params: InviteResponse, inviteId: string): Promise<{ json: Json<Notification>; params: InviteResponse; inviteId: string }> {
-    return request(`invite/${inviteId}/response/photo`, {
+    return requestJson<Json<Notification>>(`invite/${inviteId}/response/photo`, {
       uploadImageLegacy: true,
       postData: JSON.stringify(params),
       imageData: useGalleryStore().uploadImage,
@@ -173,8 +180,8 @@ const notificationRequest = {
     });
   },
 
-  acceptFriendRequestNotification(params: { notificationId: string }): Promise<{ json: Json<Success>; params }> {
-    return request(`auth/user/notifications/${params.notificationId}/accept`, {
+  acceptFriendRequestNotification(params: NotificationIdParams): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
+    return requestJson<Json<Success>>(`auth/user/notifications/${params.notificationId}/accept`, {
       method: "PUT",
     }).then((json) => {
       const args = {
@@ -185,8 +192,8 @@ const notificationRequest = {
     });
   },
 
-  hideNotification(params: { notificationId: string }): Promise<{ json: Json<Success>; params }> {
-    return request(`auth/user/notifications/${params.notificationId}/hide`, {
+  hideNotification(params: NotificationIdParams): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
+    return requestJson<Json<Success>>(`auth/user/notifications/${params.notificationId}/hide`, {
       method: "PUT",
     }).then((json) => {
       const args = {
@@ -197,8 +204,8 @@ const notificationRequest = {
     });
   },
 
-  seeNotification(params: { notificationId: string }): Promise<{ json: Json<Notification>; params }> {
-    return request(`auth/user/notifications/${params.notificationId}/see`, {
+  seeNotification(params: NotificationIdParams): Promise<{ json: Json<Notification>; params: NotificationIdParams }> {
+    return requestJson<Json<Notification>>(`auth/user/notifications/${params.notificationId}/see`, {
       method: "PUT",
     }).then((json) => {
       const args = {
@@ -209,8 +216,8 @@ const notificationRequest = {
     });
   },
 
-  seeNotificationV2(params: { notificationId: string }): Promise<{ json: Json<NotificationV2>; params }> {
-    return request(`notifications/${params.notificationId}/see`, {
+  seeNotificationV2(params: NotificationIdParams): Promise<{ json: Json<NotificationV2>; params: NotificationIdParams }> {
+    return requestJson<Json<NotificationV2>>(`notifications/${params.notificationId}/see`, {
       method: "POST",
     }).then((json) => {
       const args = {
@@ -222,12 +229,15 @@ const notificationRequest = {
   },
 
   sendNotificationResponse(
-    params: { notificationId: string } & RespondNotificationV2Request
-  ): Promise<{ json: string; params: { notificationId: string } & RespondNotificationV2Request }> {
+    params: NotificationIdParams & RespondNotificationV2Request
+  ): Promise<{ json: string; params: NotificationIdParams & RespondNotificationV2Request }> {
     return request(`notifications/${params.notificationId}/respond`, {
       method: "POST",
       params,
     }).then((json) => {
+      if (typeof json !== "string") {
+        throw new Error(`API response is not text: notifications/${params.notificationId}/respond`);
+      }
       const args = {
         json,
         params,
@@ -236,8 +246,8 @@ const notificationRequest = {
     });
   },
 
-  hideNotificationV2(notificationId: string): Promise<{ json: Json<Success>; params: { notificationId: string } }> {
-    return request(`notifications/${notificationId}`, {
+  hideNotificationV2(notificationId: string): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
+    return requestJson<Json<Success>>(`notifications/${notificationId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {

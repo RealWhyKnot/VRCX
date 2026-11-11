@@ -10,8 +10,8 @@ import type {
   StoreShelf,
 } from "vrchat";
 import type { Json, MarketplaceAvatarSearchParams } from "../types/vrcx";
-import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
+import { requestJson } from "./request-json";
 
 type MarketplaceAvatarSearchResponse = {
   hasNext: boolean;
@@ -21,8 +21,8 @@ type MarketplaceAvatarSearchResponse = {
 
 const marketplaceRequest = {
   searchAvatars(params: MarketplaceAvatarSearchParams): Promise<{ json: MarketplaceAvatarSearchResponse; params: MarketplaceAvatarSearchParams }> {
-    const query = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
-    return request("avatars", {
+    const query = Object.fromEntries(Object.entries<unknown>(params).filter(([, value]) => value !== undefined));
+    return requestJson<MarketplaceAvatarSearchResponse>("avatars", {
       method: "GET",
       params: query,
     }).then((json) => {
@@ -35,7 +35,7 @@ const marketplaceRequest = {
   },
 
   getStoreShelves(params: GetStoreShelves["query"]): Promise<{ json: Json<StoreShelf>[]; params: GetStoreShelves["query"] }> {
-    return request("economy/store/shelves", {
+    return requestJson<Json<StoreShelf>[]>("economy/store/shelves", {
       method: "GET",
       params,
     }).then((json) => {
@@ -48,7 +48,7 @@ const marketplaceRequest = {
   },
 
   getProductPurchases(params: GetProductPurchases["query"]): Promise<{ json: Json<ProductPurchase>[]; params: GetProductPurchases["query"] }> {
-    return request("economy/purchases", {
+    return requestJson<Json<ProductPurchase>[]>("economy/purchases", {
       method: "GET",
       params,
     }).then((json) => {
@@ -62,7 +62,7 @@ const marketplaceRequest = {
   },
 
   getProductListing(params: { listingId: string }): Promise<{ json: Json<ProductListing>; params: { listingId: string } }> {
-    return request(`listing/${params.listingId}`, {
+    return requestJson<Json<ProductListing>>(`listing/${params.listingId}`, {
       method: "GET",
       params: { hydrate: true },
     }).then((json) => {
@@ -74,8 +74,12 @@ const marketplaceRequest = {
     });
   },
 
-  purchaseListing(params: { listingId: string; totalPrice: number; quantity: number }) {
-    return request("economy/purchase/listing", {
+  purchaseListing(params: {
+    listingId: string;
+    totalPrice: number;
+    quantity: number;
+  }): Promise<{ json: Json<ProductPurchase>; params: { listingId: string; totalPrice: number; quantity: number } }> {
+    return requestJson<Json<ProductPurchase>>("economy/purchase/listing", {
       method: "POST",
       params,
     }).then((json) => {
@@ -88,7 +92,7 @@ const marketplaceRequest = {
   },
 
   getEconomySubscriptions(params: { subscriberId: string; n?: number; offset?: number }) {
-    return request("economy/subscriptions", {
+    return requestJson<unknown>("economy/subscriptions", {
       method: "GET",
       params,
     }).then((json) => {
@@ -103,7 +107,7 @@ const marketplaceRequest = {
   getEconomyTransactions(
     params: GetProductPurchaseHistory["query"]
   ): Promise<{ json: Json<ProductPurchaseHistory>; params: GetProductPurchaseHistory["query"] }> {
-    return request(`user/${useUserStore().currentUser.id}/economy/transactions`, {
+    return requestJson<Json<ProductPurchaseHistory>>(`user/${useUserStore().currentUser.id}/economy/transactions`, {
       method: "GET",
       params,
     }).then((json) => {
@@ -116,7 +120,7 @@ const marketplaceRequest = {
   },
 
   getVRChatCredits(): Promise<{ json: Json<Balance> }> {
-    return request(`user/${useUserStore().currentUser.id}/economy/balance`, {
+    return requestJson<Json<Balance>>(`user/${useUserStore().currentUser.id}/economy/balance`, {
       method: "GET",
     }).then((json) => {
       const args = {

@@ -18,6 +18,24 @@ import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } fro
 import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 
+type FavoriteParams = {
+  type: string;
+  favoriteId: string;
+  tags: string;
+};
+
+function isObjectJson<T>(value: unknown): value is Json<T> {
+  return typeof value === "object" && value !== null;
+}
+
+function isListJson<T>(value: unknown): value is Json<T[]> {
+  return Array.isArray(value);
+}
+
+function unexpectedResponse(endpoint: string) {
+  return new Error(`Unexpected favorite response: ${endpoint}`);
+}
+
 function getCurrentUserId() {
   return useUserStore().currentUser.id;
 }
@@ -28,45 +46,46 @@ function refetchActiveFavoriteQueries() {
       queryKey: ["favorite"],
       refetchType: "active",
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Failed to refresh favorite queries:", err);
     });
 }
 
 const favoriteRequest = {
   getFavoriteLimits(): Promise<{ json: Json<FavoriteLimits> }> {
-    return request("auth/user/favoritelimits", {
+    const endpoint = "auth/user/favoritelimits";
+    return request(endpoint, {
       method: "GET",
     }).then((json) => {
-      const args = {
-        json,
-      };
-      return args;
+      if (!isObjectJson<FavoriteLimits>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
+      return { json };
     });
   },
 
   getFavorites(params: GetFavorites["query"]): Promise<{ json: Json<Favorite[]>; params: GetFavorites["query"] }> {
-    return request("favorites", {
+    const endpoint = "favorites";
+    return request(endpoint, {
       method: "GET",
       params,
     }).then((json) => {
-      const args = {
-        json,
-        params,
-      };
-      return args;
+      if (!isListJson<Favorite>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
+      return { json, params };
     });
   },
 
-  addFavorite(params: {
-    type: string;
-    favoriteId: string;
-    tags: string;
-  }): Promise<{ json: Json<Favorite>; params: { type: string; favoriteId: string; tags: string } }> {
-    return request("favorites", {
+  addFavorite(params: FavoriteParams): Promise<{ json: Json<Favorite>; params: FavoriteParams }> {
+    const endpoint = "favorites";
+    return request(endpoint, {
       method: "POST",
       params,
     }).then((json) => {
+      if (!isObjectJson<Favorite>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
       const args = {
         json,
         params,
@@ -77,10 +96,14 @@ const favoriteRequest = {
     });
   },
 
-  deleteFavorite(params: { objectId: string }): Promise<{ json: Json<Success>; params }> {
-    return request(`favorites/${params.objectId}`, {
+  deleteFavorite(params: { objectId: string }): Promise<{ json: Json<Success>; params: { objectId: string } }> {
+    const endpoint = `favorites/${params.objectId}`;
+    return request(endpoint, {
       method: "DELETE",
     }).then((json) => {
+      if (!isObjectJson<Success>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
       const args = {
         json,
         params,
@@ -92,15 +115,15 @@ const favoriteRequest = {
   },
 
   getFavoriteGroups(params: GetFavoriteGroups["query"]): Promise<{ json: Json<FavoriteGroup[]>; params: GetFavoriteGroups["query"] }> {
-    return request("favorite/groups", {
+    const endpoint = "favorite/groups";
+    return request(endpoint, {
       method: "GET",
       params,
     }).then((json) => {
-      const args = {
-        json,
-        params,
-      };
-      return args;
+      if (!isListJson<FavoriteGroup>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
+      return { json, params };
     });
   },
 
@@ -108,10 +131,14 @@ const favoriteRequest = {
     json: Json<UpdateFavoriteGroupResponse>;
     params: UpdateFavoriteGroupRequest & { type: string; group: string };
   }> {
-    return request(`favorite/group/${params.type}/${params.group}/${getCurrentUserId()}`, {
+    const endpoint = `favorite/group/${params.type}/${params.group}/${getCurrentUserId()}`;
+    return request(endpoint, {
       method: "PUT",
       params,
     }).then((json) => {
+      if (!isObjectJson<UpdateFavoriteGroupResponse>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
       const args = {
         json,
         params,
@@ -121,11 +148,15 @@ const favoriteRequest = {
     });
   },
 
-  clearFavoriteGroup(params: { type: string; group: string }): Promise<{ json: Json<Success>; params }> {
-    return request(`favorite/group/${params.type}/${params.group}/${getCurrentUserId()}`, {
+  clearFavoriteGroup(params: { type: string; group: string }): Promise<{ json: Json<Success>; params: { type: string; group: string } }> {
+    const endpoint = `favorite/group/${params.type}/${params.group}/${getCurrentUserId()}`;
+    return request(endpoint, {
       method: "DELETE",
       params,
     }).then((json) => {
+      if (!isObjectJson<Success>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
       const args = {
         json,
         params,
@@ -137,28 +168,28 @@ const favoriteRequest = {
   },
 
   getFavoriteWorlds(params: GetFavoritedWorlds["query"]): Promise<{ json: Json<FavoritedWorld[]>; params: GetFavoritedWorlds["query"] }> {
-    return request("worlds/favorites", {
+    const endpoint = "worlds/favorites";
+    return request(endpoint, {
       method: "GET",
       params,
     }).then((json) => {
-      const args = {
-        json,
-        params,
-      };
-      return args;
+      if (!isListJson<FavoritedWorld>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
+      return { json, params };
     });
   },
 
   getFavoriteAvatars(params: GetFavoritedAvatars["query"]): Promise<{ json: Json<Avatar[]>; params: GetFavoritedAvatars["query"] }> {
-    return request("avatars/favorites", {
+    const endpoint = "avatars/favorites";
+    return request(endpoint, {
       method: "GET",
       params,
     }).then((json) => {
-      const args = {
-        json,
-        params,
-      };
-      return args;
+      if (!isListJson<Avatar>(json)) {
+        throw unexpectedResponse(endpoint);
+      }
+      return { json, params };
     });
   },
 };

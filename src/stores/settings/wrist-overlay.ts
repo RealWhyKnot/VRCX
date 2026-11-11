@@ -22,17 +22,17 @@ export const useWristOverlaySettingsStore = defineStore("WristOverlaySettings", 
 
   async function initWristOverlaySettings() {
     const [
-      overlayWristConfig,
-      hidePrivateFromFeedConfig,
-      openVRAlwaysConfig,
-      overlaybuttonConfig,
+      isOverlayWristConfig,
+      isHidePrivateFromFeedConfig,
+      isOpenVRAlwaysConfig,
+      isOverlaybuttonConfig,
       overlayHandConfig,
-      vrBackgroundEnabledConfig,
-      minimalFeedConfig,
-      hideDevicesFromFeedConfig,
-      vrOverlayCpuUsageConfig,
-      hideUptimeFromFeedConfig,
-      pcUptimeOnFeedConfig,
+      isVrBackgroundEnabledConfig,
+      isMinimalFeedConfig,
+      isHideDevicesFromFeedConfig,
+      isVrOverlayCpuUsageConfig,
+      isHideUptimeFromFeedConfig,
+      isPcUptimeOnFeedConfig,
     ] = await Promise.all([
       configRepository.getBool("VRCX_overlayWrist", false),
       configRepository.getBool("VRCX_hidePrivateFromFeed", false),
@@ -47,71 +47,68 @@ export const useWristOverlaySettingsStore = defineStore("WristOverlaySettings", 
       configRepository.getBool("VRCX_pcUptimeOnFeed", false),
     ]);
 
-    overlayWrist.value = overlayWristConfig;
-    hidePrivateFromFeed.value = hidePrivateFromFeedConfig;
-    openVRAlways.value = openVRAlwaysConfig;
-    overlaybutton.value = overlaybuttonConfig;
+    overlayWrist.value = isOverlayWristConfig;
+    hidePrivateFromFeed.value = isHidePrivateFromFeedConfig;
+    openVRAlways.value = isOpenVRAlwaysConfig;
+    overlaybutton.value = isOverlaybuttonConfig;
     overlayHand.value = String(overlayHandConfig);
-    vrBackgroundEnabled.value = vrBackgroundEnabledConfig;
-    minimalFeed.value = minimalFeedConfig;
-    hideDevicesFromFeed.value = hideDevicesFromFeedConfig;
-    vrOverlayCpuUsage.value = vrOverlayCpuUsageConfig;
-    hideUptimeFromFeed.value = hideUptimeFromFeedConfig;
-    pcUptimeOnFeed.value = pcUptimeOnFeedConfig;
+    vrBackgroundEnabled.value = isVrBackgroundEnabledConfig;
+    minimalFeed.value = isMinimalFeedConfig;
+    hideDevicesFromFeed.value = isHideDevicesFromFeedConfig;
+    vrOverlayCpuUsage.value = isVrOverlayCpuUsageConfig;
+    hideUptimeFromFeed.value = isHideUptimeFromFeedConfig;
+    pcUptimeOnFeed.value = isPcUptimeOnFeedConfig;
   }
 
   function setOverlayWrist() {
     overlayWrist.value = !overlayWrist.value;
-    configRepository.setBool("VRCX_overlayWrist", overlayWrist.value);
+    void configRepository.setBool("VRCX_overlayWrist", overlayWrist.value).catch((err: unknown) => console.error(err));
   }
   function setHidePrivateFromFeed() {
     hidePrivateFromFeed.value = !hidePrivateFromFeed.value;
-    configRepository.setBool("VRCX_hidePrivateFromFeed", hidePrivateFromFeed.value);
-    sharedFeed.loadSharedFeed();
+    void configRepository.setBool("VRCX_hidePrivateFromFeed", hidePrivateFromFeed.value).catch((err: unknown) => console.error(err));
+    void sharedFeed.loadSharedFeed().catch((err: unknown) => console.error(err));
   }
   function setOpenVRAlways() {
     openVRAlways.value = !openVRAlways.value;
-    configRepository.setBool("openVRAlways", openVRAlways.value);
+    void configRepository.setBool("openVRAlways", openVRAlways.value).catch((err: unknown) => console.error(err));
   }
   function setOverlaybutton() {
     overlaybutton.value = !overlaybutton.value;
-    configRepository.setBool("VRCX_overlaybutton", overlaybutton.value);
+    void configRepository.setBool("VRCX_overlaybutton", overlaybutton.value).catch((err: unknown) => console.error(err));
   }
 
-  function setOverlayHand(value) {
+  function setOverlayHand(value: string) {
     overlayHand.value = value;
-    let overlayHandInt = parseInt(value, 10);
-    if (isNaN(overlayHandInt)) {
-      overlayHandInt = 0;
-    }
-    configRepository.setInt("VRCX_overlayHand", overlayHandInt);
+    const overlayHandNumber = Number(value);
+    void configRepository.setInt("VRCX_overlayHand", Number.isInteger(overlayHandNumber) ? overlayHandNumber : 0).catch((err: unknown) => console.error(err));
   }
   function setVrBackgroundEnabled() {
     vrBackgroundEnabled.value = !vrBackgroundEnabled.value;
-    configRepository.setBool("VRCX_vrBackgroundEnabled", vrBackgroundEnabled.value);
+    void configRepository.setBool("VRCX_vrBackgroundEnabled", vrBackgroundEnabled.value).catch((err: unknown) => console.error(err));
   }
   function setMinimalFeed() {
     minimalFeed.value = !minimalFeed.value;
-    configRepository.setBool("VRCX_minimalFeed", minimalFeed.value);
+    void configRepository.setBool("VRCX_minimalFeed", minimalFeed.value).catch((err: unknown) => console.error(err));
   }
   function setHideDevicesFromFeed() {
     hideDevicesFromFeed.value = !hideDevicesFromFeed.value;
-    configRepository.setBool("VRCX_hideDevicesFromFeed", hideDevicesFromFeed.value);
+    void configRepository.setBool("VRCX_hideDevicesFromFeed", hideDevicesFromFeed.value).catch((err: unknown) => console.error(err));
   }
   function setVrOverlayCpuUsage() {
     vrOverlayCpuUsage.value = !vrOverlayCpuUsage.value;
-    configRepository.setBool("VRCX_vrOverlayCpuUsage", vrOverlayCpuUsage.value);
+    void configRepository.setBool("VRCX_vrOverlayCpuUsage", vrOverlayCpuUsage.value).catch((err: unknown) => console.error(err));
   }
   function setHideUptimeFromFeed() {
     hideUptimeFromFeed.value = !hideUptimeFromFeed.value;
-    configRepository.setBool("VRCX_hideUptimeFromFeed", hideUptimeFromFeed.value);
+    void configRepository.setBool("VRCX_hideUptimeFromFeed", hideUptimeFromFeed.value).catch((err: unknown) => console.error(err));
   }
   function setPcUptimeOnFeed() {
     pcUptimeOnFeed.value = !pcUptimeOnFeed.value;
-    configRepository.setBool("VRCX_pcUptimeOnFeed", pcUptimeOnFeed.value);
+    void configRepository.setBool("VRCX_pcUptimeOnFeed", pcUptimeOnFeed.value).catch((err: unknown) => console.error(err));
   }
 
-  initWristOverlaySettings();
+  void initWristOverlaySettings().catch((err: unknown) => console.error(err));
 
   return {
     overlayWrist,

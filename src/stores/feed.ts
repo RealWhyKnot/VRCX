@@ -2,18 +2,74 @@ import { ref, shallowRef, watch } from "vue";
 import { defineStore } from "pinia";
 
 import { database } from "../services/database";
+import type { FeedRow } from "../services/database/feed";
+import { logFailure } from "./log-failure";
 import { useFriendStore } from "./friend";
 import { useVrcxStore } from "./vrcx";
 import { watchState } from "../services/watch-state";
 
 import { configRepository } from "../services/config";
 
+type FeedTableState = {
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+  vip: boolean;
+  loading: boolean;
+  filter: string[];
+  pageSize: number;
+  pageSizeLinked: boolean;
+};
+
+function toFilterList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const items: unknown[] = value;
+  return items.filter((item): item is string => typeof item === "string");
+}
+
+function containsFeedSearchValue(text: string | null | undefined, value: string): boolean {
+  return String(text).toUpperCase().includes(value);
+}
+
+function feedSearch(row: FeedRow, search: string): boolean {
+  const value = search.trim().toUpperCase();
+  if (!value) {
+    return true;
+  }
+  if (value.startsWith("wrld_") || value.startsWith("grp_")) {
+    if ("location" in row && containsFeedSearchValue(row.location, value)) {
+      return true;
+    }
+  }
+  switch (row.type) {
+    case "GPS":
+    case "Online":
+    case "Offline":
+      return containsFeedSearchValue(row.displayName, value) || containsFeedSearchValue(row.worldName, value);
+    case "Status":
+      return (
+        containsFeedSearchValue(row.displayName, value) || containsFeedSearchValue(row.status, value) || containsFeedSearchValue(row.statusDescription, value)
+      );
+    case "Avatar":
+      return containsFeedSearchValue(row.displayName, value) || containsFeedSearchValue(row.avatarName, value);
+    case "Bio":
+      return (
+        containsFeedSearchValue(row.displayName, value) ||
+        containsFeedSearchValue(row.bio, value) ||
+        containsFeedSearchValue(row.previousBio, value) ||
+        row.bioLinks.some((link) => String(link).toUpperCase().includes(value))
+      );
+  }
+}
+
 export const useFeedStore = defineStore("Feed", () => {
   const friendStore = useFriendStore();
   const vrcxStore = useVrcxStore();
 
-  const feedTableData = shallowRef([]);
-  const feedTable = ref({
+  const feedTableData = shallowRef<FeedRow[]>([]);
+  const feedTable = ref<FeedTableState>({
     search: "",
     dateFrom: "",
     dateTo: "",
@@ -29,7 +85,7 @@ export const useFeedStore = defineStore("Feed", () => {
     (isLoggedIn) => {
       feedTableData.value = [];
       if (isLoggedIn) {
-        initFeedTable();
+        initFeedTable().catch(logFailure("Failed to load feed table:"));
       }
     },
     { flush: "sync" }
@@ -39,94 +95,25 @@ export const useFeedStore = defineStore("Feed", () => {
     () => watchState.isFavoritesLoaded,
     (isFavoritesLoaded) => {
       if (isFavoritesLoaded && feedTable.value.vip) {
-        feedTableLookup();
+        feedTableLookup().catch(logFailure("Failed to look up feed table:"));
       }
     }
   );
 
   async function init() {
-    feedTable.value.filter = JSON.parse(await configRepository.getString("VRCX_feedTableFilters", "[]"));
+    const parsedFilters: unknown = JSON.parse(await configRepository.getString("VRCX_feedTableFilters", "[]"));
+    feedTable.value.filter = toFilterList(parsedFilters);
     feedTable.value.vip = await configRepository.getBool("VRCX_feedTableVIPFilter", false);
   }
 
-  init();
-
-  function feedSearch(row) {
-    const value = feedTable.value.search.trim().toUpperCase();
-    if (!value) {
-      return true;
-    }
-    if ((value.startsWith("wrld_") || value.startsWith("grp_")) && String(row.location).toUpperCase().includes(value)) {
-      return true;
-    }
-    switch (row.type) {
-      case "GPS":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.worldName).toUpperCase().includes(value)) {
-          return true;
-        }
-        return false;
-      case "Online":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.worldName).toUpperCase().includes(value)) {
-          return true;
-        }
-        return false;
-      case "Offline":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.worldName).toUpperCase().includes(value)) {
-          return true;
-        }
-        return false;
-      case "Status":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.status).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.statusDescription).toUpperCase().includes(value)) {
-          return true;
-        }
-        return false;
-      case "Avatar":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.avatarName).toUpperCase().includes(value)) {
-          return true;
-        }
-        return false;
-      case "Bio":
-        if (String(row.displayName).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.bio).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (String(row.previousBio).toUpperCase().includes(value)) {
-          return true;
-        }
-        if (row.bioLinks?.some((link) => String(link).toUpperCase().includes(value))) {
-          return true;
-        }
-        return false;
-    }
-    return true;
-  }
+  init().catch(logFailure("Failed to load feed table filters:"));
 
   async function feedTableLookup() {
     await configRepository.setString("VRCX_feedTableFilters", JSON.stringify(feedTable.value.filter));
     await configRepository.setBool("VRCX_feedTableVIPFilter", feedTable.value.vip);
     feedTable.value.loading = true;
     try {
-      let vipList = [];
+      let vipList: string[] = [];
       if (feedTable.value.vip) {
         vipList = Array.from(friendStore.localFavoriteFriends.values());
       }
@@ -143,20 +130,20 @@ export const useFeedStore = defineStore("Feed", () => {
     }
   }
 
-  function addFeedEntry(feed) {
+  function addFeedEntry(feed: FeedRow) {
     if (feedTable.value.filter.length > 0 && !feedTable.value.filter.includes(feed.type)) {
       return;
     }
-    if (feedTable.value.vip && !friendStore.localFavoriteFriends.has(feed.userId)) {
+    if (feedTable.value.vip && (feed.userId === null || !friendStore.localFavoriteFriends.has(feed.userId))) {
       return;
     }
-    if (!feedSearch(feed)) {
+    if (!feedSearch(feed, feedTable.value.search)) {
       return;
     }
-    if (feedTable.value.dateFrom && feed.created_at < feedTable.value.dateFrom) {
+    if (feedTable.value.dateFrom && feed.created_at !== null && feed.created_at < feedTable.value.dateFrom) {
       return;
     }
-    if (feedTable.value.dateTo && feed.created_at > feedTable.value.dateTo) {
+    if (feedTable.value.dateTo && feed.created_at !== null && feed.created_at > feedTable.value.dateTo) {
       return;
     }
     feedTableData.value = [feed, ...feedTableData.value];

@@ -7,10 +7,10 @@ export const useExternalLinkStore = defineStore("ExternalLink", () => {
     link: "",
   });
 
-  function showExternalLinkDialog(link) {
+  function showExternalLinkDialog(link: string) {
     externalLinkDialog.value = {
       visible: true,
-      link: String(link),
+      link,
     };
   }
 

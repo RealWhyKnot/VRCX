@@ -296,17 +296,16 @@ import { useAuthStore } from "../../../stores/auth";
 import { useGroupStore } from "../../../stores/group";
 import { useUiStore } from "../../../stores/ui";
 import { useUserStore } from "../../../stores/user";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
+import { applyGroup, saveCurrentUserGroups } from "../../../coordinators/group-coordinator";
 import {
-  showGroupDialog,
-  applyGroup,
-  saveCurrentUserGroups,
   updateInGameGroupOrder,
   isSoleGroupOwner,
   leaveGroup,
   leaveGroupPrompt,
   setGroupVisibility,
   handleGroupList,
-} from "../../../coordinators/group-coordinator";
+} from "../../../coordinators/group-membership-coordinator";
 import { compareByMemberCount, compareByName } from "../../../shared/utils/compare";
 import { groupRequest } from "../../../api/group";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";

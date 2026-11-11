@@ -74,7 +74,7 @@ import { useInstanceStore } from "../stores/instance";
 import { useInviteStore } from "../stores/invite";
 import { useSearchStore } from "../stores/search";
 import { useWorldStore } from "../stores/world";
-import { showGroupDialog } from "../coordinators/group-coordinator";
+import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { runNewInstanceSelfInviteFlow } from "../coordinators/invite-coordinator";
 import Spinner from "./ui/spinner/Spinner.vue";

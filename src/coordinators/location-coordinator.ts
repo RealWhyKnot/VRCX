@@ -3,6 +3,7 @@ import { getWorldName } from "../shared/utils/world";
 import { isRealInstance } from "../shared/utils/instance";
 import { parseLocation } from "../shared/utils/location-parser";
 import { database } from "../services/database";
+import type { ParsedLocation } from "../types/vrcx";
 import { useAdvancedSettingsStore } from "../stores/settings/advanced";
 import { useFriendStore } from "../stores/friend";
 import { useGameLogStore } from "../stores/gameLog";
@@ -14,6 +15,46 @@ import { usePhotonStore } from "../stores/photon";
 import { useUserStore } from "../stores/user";
 import { useVrStore } from "../stores/vr";
 
+type PlayerLeftEntry = {
+  created_at: string;
+  type: "OnPlayerLeft";
+  displayName: string;
+  location: string;
+  userId: string;
+  time: number;
+};
+
+type CachedUserRef = {
+  location: string;
+  travelingToLocation: string;
+  $online_for: number;
+  $offline_for: number | null;
+  $active_for: number | null;
+  $location: Partial<ParsedLocation>;
+  $location_at: number | null;
+  $travelingToTime: number | null;
+};
+
+function isCachedUser(value: unknown): value is CachedUserRef {
+  return typeof value === "object" && value !== null;
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+function isLocationRow(value: unknown): value is { location: string } {
+  return typeof value === "object" && value !== null && "location" in value && typeof value.location === "string";
+}
+
+function readLastLocation(rows: unknown): string {
+  if (!isUnknownArray(rows) || rows.length === 0) {
+    return "";
+  }
+  const [row] = rows;
+  return isLocationRow(row) ? row.location : "";
+}
+
 export function runUpdateCurrentUserLocationFlow() {
   const advancedSettingsStore = useAdvancedSettingsStore();
   const userStore = useUserStore();
@@ -21,8 +62,8 @@ export function runUpdateCurrentUserLocationFlow() {
   const gameStore = useGameStore();
   const locationStore = useLocationStore();
 
-  const ref = userStore.cachedUsers.get(userStore.currentUser.id);
-  if (typeof ref === "undefined") {
+  const ref: unknown = userStore.cachedUsers.get(userStore.currentUser.id);
+  if (!isCachedUser(ref)) {
     return;
   }
 
@@ -43,7 +84,7 @@ export function runUpdateCurrentUserLocationFlow() {
     ref.travelingToLocation = locationStore.lastLocationDestination;
   }
 
-  ref.$online_for = userStore.currentUser.$online_for;
+  ref.$online_for = userStore.currentUser.$online_for ?? 0;
   ref.$offline_for = userStore.currentUser.$offline_for;
   ref.$active_for = null;
   ref.$location = parseLocation(currentLocation);
@@ -60,7 +101,7 @@ export function runUpdateCurrentUserLocationFlow() {
   }
 }
 
-export async function runSetCurrentUserLocationFlow(location, travelingToLocation) {
+export async function runSetCurrentUserLocationFlow(location: string, travelingToLocation: string) {
   const userStore = useUserStore();
   const instanceStore = useInstanceStore();
   const notificationStore = useNotificationStore();
@@ -74,8 +115,8 @@ export async function runSetCurrentUserLocationFlow(location, travelingToLocatio
   if (gameStore.isGameRunning) {
     return;
   }
-  const lastLocationArray = await database.lookupGameLogDatabase(["Location"], [], 1);
-  const lastLocationTemp = lastLocationArray.length > 0 ? lastLocationArray[0].location : "";
+  const lastLocationRows: unknown = await database.lookupGameLogDatabase(["Location"], [], 1);
+  const lastLocationTemp = readLastLocation(lastLocationRows);
   if (lastLocationTemp === location) {
     return;
   }
@@ -103,7 +144,7 @@ export async function runSetCurrentUserLocationFlow(location, travelingToLocatio
     };
     notificationStore.queueGameLogNoty(entry);
     const persistedEntry = await database.addGamelogLocationToDatabase(entry);
-    if (persistedEntry) {
+    if (persistedEntry !== undefined) {
       gameLogStore.addGameLog(persistedEntry);
     }
     instanceStore.addInstanceJoinHistory(location, dt);
@@ -120,7 +161,7 @@ export async function runSetCurrentUserLocationFlow(location, travelingToLocatio
   }
 }
 
-export async function runLastLocationResetFlow(gameLogDate) {
+export async function runLastLocationResetFlow(gameLogDate?: string) {
   const photonStore = usePhotonStore();
   const instanceStore = useInstanceStore();
   const gameLogStore = useGameLogStore();
@@ -129,16 +170,13 @@ export async function runLastLocationResetFlow(gameLogDate) {
   const locationStore = useLocationStore();
   const friendStore = useFriendStore();
 
-  let dateTime = gameLogDate;
-  if (!gameLogDate) {
-    dateTime = new Date().toJSON();
-  }
+  const dateTime = gameLogDate === undefined || gameLogDate === "" ? new Date().toJSON() : gameLogDate;
   const dateTimeStamp = Date.parse(dateTime);
   photonStore.resetLocationPhotonState();
   const playerList = Array.from(locationStore.lastLocation.playerList.values());
-  const dataBaseEntries = [];
+  const dataBaseEntries: PlayerLeftEntry[] = [];
   for (const ref of playerList) {
-    const entry = {
+    const entry: PlayerLeftEntry = {
       created_at: dateTime,
       type: "OnPlayerLeft",
       displayName: ref.displayName,

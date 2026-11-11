@@ -3,12 +3,10 @@ import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import { APP_CJK_FONT_PACK_DEFAULT_KEY, APP_CJK_FONT_PACKS, APP_FONT_DEFAULT_KEY, APP_FONT_FAMILIES } from "../../shared/constants/fonts";
+import { APP_CJK_FONT_PACK_DEFAULT_KEY } from "../../shared/constants/fonts";
 import { SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN, TABLE_MAX_SIZE_MAX, TABLE_MAX_SIZE_MIN } from "../../shared/constants/settings";
-import { THEME_CONFIG } from "../../shared/constants/themes";
 import {
   applyAppCjkFontPack,
-  HueToHex,
   applyAppFontFamily,
   changeAppThemeStyle,
   changeHtmlLangAttribute,
@@ -16,10 +14,31 @@ import {
   setSystemIsDarkMode,
   updateTrustColorClasses,
 } from "../../shared/utils/base/ui";
-import { computeTrustLevel } from "../../shared/utils/user-transforms";
-import { getNameColour } from "../../shared/utils/user";
-import { database } from "../../services/database";
-
+import { createSidebarSortControls } from "./appearance-sidebar";
+import { createTrustColourControls } from "./appearance-trust";
+import { openTableLimitsDialog, saveTableLimits } from "./appearance-limits";
+import { readAppearanceConfig, readLegacySortMethods } from "./appearance-config";
+import {
+  applyAccessibleStatusClass,
+  applyTableDensity,
+  clampInt,
+  createBooleanToggle,
+  DEFAULT_SIDEBAR_SORT_METHODS,
+  DEFAULT_TABLE_PAGE_SIZES,
+  isDarkThemeMode,
+  MAX_TABLE_PAGE_SIZE,
+  normalizeAppCjkFontPack,
+  normalizeAppFontFamily,
+  normalizeTableDensity,
+  normalizeTablePageSizes,
+  parseJsonValue,
+  parseStringArray,
+  resolveLastDarkTheme,
+  saveSetting,
+  TRUST_COLOR_DEFAULTS,
+} from "./appearance-helpers";
+import type { TableDensity, TableLimitsDialogState, TrustColors } from "./appearance-helpers";
+import { configRepository } from "../../services/config";
 import { loadLocalizedStrings } from "../../plugins/i18n";
 import { useFeedStore } from "../feed";
 import { useGameLogStore } from "../gameLog";
@@ -29,895 +48,551 @@ import { useVrStore } from "../vr";
 import { useVrcxStore } from "../vrcx";
 import { watchState } from "../../services/watch-state";
 
-import { configRepository } from "../../services/config";
+export const useAppearanceSettingsStore = defineStore("AppearanceSettings", () => {
+  const vrStore = useVrStore();
+  const feedStore = useFeedStore();
+  const gameLogStore = useGameLogStore();
+  const vrcxStore = useVrcxStore();
+  const userStore = useUserStore();
+  const router = useRouter();
+  const uiStore = useUiStore();
+  const { locale } = useI18n();
 
-export const useAppearanceSettingsStore = defineStore(
-  "AppearanceSettings",
+  const appLanguage = ref<string>("en");
+  const themeMode = ref<string>("");
+  const isDarkMode = ref<boolean>(false);
+  const lastDarkTheme = ref<string>("dark");
+  const appFontFamily = ref<string>("inter");
+  const customFontFamily = ref<string>("");
+  const appCjkFontPack = ref<string>(APP_CJK_FONT_PACK_DEFAULT_KEY);
+  const displayVRCProfileThemes = ref<boolean>(false);
+  const displayVRCProfileBackgrounds = ref<boolean>(false);
+  const profileBackgroundOpacity = ref<number>(0.5);
+  const displayVRCProfileCosmetics = ref<boolean>(false);
+  const hideNicknames = ref<boolean>(false);
+  const showInstanceIdInLocation = ref<boolean>(false);
+  const isAgeGatedInstancesVisible = ref<boolean>(false);
+  const isClosedInstancesVisible = ref<boolean>(true);
+  const sortFavorites = ref<boolean>(true);
+  const instanceUsersSortAlphabetical = ref<boolean>(false);
+  const tablePageSize = ref<number>(15);
+  const tablePageSizes = ref<number[]>([...DEFAULT_TABLE_PAGE_SIZES]);
+  const dtHour12 = ref<boolean>(false);
+  const dtIsoFormat = ref<boolean>(false);
+  const weekStartsOn = ref<number>(1);
+  const sidebarSortMethod1 = ref<string>("Sort Private to Bottom");
+  const sidebarSortMethod2 = ref<string>("Sort by Time in Instance");
+  const sidebarSortMethod3 = ref<string>("Sort by Last Active");
+  const sidebarSortMethods = ref<string[]>([...DEFAULT_SIDEBAR_SORT_METHODS]);
+  const navWidth = ref<number>(240);
+  const isSidebarGroupByInstance = ref<boolean>(true);
+  const isHideFriendsInSameInstance = ref<boolean>(false);
+  const isSameInstanceAboveFavorites = ref<boolean>(false);
+  const isSidebarDivideByFriendGroup = ref<boolean>(false);
+  const sidebarFavoriteGroups = ref<string[]>([]);
+  const sidebarFavoriteGroupOrder = ref<string[]>([]);
+  const sidebarCosmetics = ref<boolean>(false);
+  const hideUserNotes = ref<boolean>(false);
+  const hideUserMemos = ref<boolean>(false);
+  const hideUnfriends = ref<boolean>(false);
+  const randomUserColours = ref<boolean>(false);
+  const tableDensity = ref<TableDensity>("standard");
+  const trustColor = ref<TrustColors>({ ...TRUST_COLOR_DEFAULTS });
+  const currentCulture = ref<string>("");
+  const notificationIconDot = ref<boolean>(false);
+  const isNavCollapsed = ref<boolean>(true);
+  const isSideBarTabShow = computed(() => {
+    const currentRouteName = router.currentRoute.value.name;
+    return !["friend-list", "charts-instance", "charts-mutual", "charts-hot-worlds"].includes(String(currentRouteName));
+  });
 
-  () => {
-    const vrStore = useVrStore();
-    const feedStore = useFeedStore();
-    const gameLogStore = useGameLogStore();
-    const vrcxStore = useVrcxStore();
-    const userStore = useUserStore();
-    const router = useRouter();
-    const uiStore = useUiStore();
-    const { locale } = useI18n();
+  const isDataTableStriped = ref<boolean>(false);
+  const accessibleStatusIndicators = ref<boolean>(false);
+  const showNewDashboardButton = ref<boolean>(true);
+  const tableLimitsDialog = ref<TableLimitsDialogState>({
+    visible: false,
+    maxTableSize: 500,
+    searchLimit: 5000,
+  });
 
-    const MAX_TABLE_PAGE_SIZE = 1000;
-    const DEFAULT_TABLE_PAGE_SIZES = [10, 15, 20, 25, 50, 100];
-
-    const appLanguage = ref("en");
-    const themeMode = ref("");
-    const isDarkMode = ref(false);
-    const lastDarkTheme = ref("dark");
-    const appFontFamily = ref("inter");
-    const customFontFamily = ref("");
-    const appCjkFontPack = ref(APP_CJK_FONT_PACK_DEFAULT_KEY);
-    const displayVRCProfileThemes = ref(false);
-    const displayVRCProfileBackgrounds = ref(false);
-    const profileBackgroundOpacity = ref(0.5);
-    const displayVRCProfileCosmetics = ref(false);
-    const hideNicknames = ref(false);
-    const showInstanceIdInLocation = ref(false);
-    const isAgeGatedInstancesVisible = ref(false);
-    const isClosedInstancesVisible = ref(true);
-    const sortFavorites = ref(true);
-    const instanceUsersSortAlphabetical = ref(false);
-    const tablePageSize = ref(15);
-    const tablePageSizes = ref([...DEFAULT_TABLE_PAGE_SIZES]);
-    const dtHour12 = ref(false);
-    const dtIsoFormat = ref(false);
-    const weekStartsOn = ref(1);
-    const sidebarSortMethod1 = ref("Sort Private to Bottom");
-    const sidebarSortMethod2 = ref("Sort by Time in Instance");
-    const sidebarSortMethod3 = ref("Sort by Last Active");
-    const sidebarSortMethods = ref(["Sort Private to Bottom", "Sort by Time in Instance", "Sort by Last Active"]);
-    const navWidth = ref(240);
-    const isSidebarGroupByInstance = ref(true);
-    const isHideFriendsInSameInstance = ref(false);
-    const isSameInstanceAboveFavorites = ref(false);
-    const isSidebarDivideByFriendGroup = ref(false);
-    const sidebarFavoriteGroups = ref([]);
-    const sidebarFavoriteGroupOrder = ref([]);
-    const sidebarCosmetics = ref(false);
-    const hideUserNotes = ref(false);
-    const hideUserMemos = ref(false);
-    const hideUnfriends = ref(false);
-    const randomUserColours = ref(false);
-    const tableDensity = ref("standard");
-    const TRUST_COLOR_DEFAULTS = Object.freeze({
-      untrusted: "#CCCCCC",
-      basic: "#1778FF",
-      known: "#2BCF5C",
-      trusted: "#FF7B42",
-      veteran: "#B18FFF",
-      vip: "#FF2626",
-      troll: "#782F2F",
-    });
-    const trustColor = ref({ ...TRUST_COLOR_DEFAULTS });
-    const currentCulture = ref("");
-    const notificationIconDot = ref(false);
-    const isNavCollapsed = ref(true);
-    const isSideBarTabShow = computed(() => {
-      const currentRouteName = router.currentRoute.value?.name;
-      return !["friend-list", "charts-instance", "charts-mutual", "charts-hot-worlds"].includes(String(currentRouteName));
-    });
-
-    const isDataTableStriped = ref(false);
-    const accessibleStatusIndicators = ref(false);
-    const showNewDashboardButton = ref(true);
-    const tableLimitsDialog = ref({
-      visible: false,
-      maxTableSize: 500,
-      searchLimit: 5000,
-    });
-
-    const clampInt = (value, min, max) => {
-      const n = parseInt(value, 10);
-      return Math.min(max, Math.max(min, n));
-    };
-
-    const resolveLastDarkTheme = (value, fallback = "dark") => {
-      const normalized = String(value || "").trim();
-      return THEME_CONFIG[normalized]?.isDark === true ? normalized : fallback;
-    };
-
-    async function initAppearanceSettings() {
-      const { initThemeMode, isDarkMode: initDarkMode } = await getThemeMode(configRepository);
-      const fallbackDarkTheme = THEME_CONFIG[initThemeMode]?.isDark === true ? initThemeMode : "dark";
-      const [
-        appLanguageConfig,
-        displayVRCProfileThemesConfig,
-        displayVRCProfileBackgroundsConfig,
-        profileBackgroundOpacityConfig,
-        displayVRCProfileCosmeticsConfig,
-        hideNicknamesConfig,
-        showInstanceIdInLocationConfig,
-        isAgeGatedInstancesVisibleConfig,
-        isClosedInstancesVisibleConfig,
-        sortFavoritesConfig,
-        instanceUsersSortAlphabeticalConfig,
-        tablePageSizeConfig,
-        tablePageSizesConfig,
-        dtHour12Config,
-        dtIsoFormatConfig,
-        weekStartsOnConfig,
-        sidebarSortMethodsConfig,
-        navWidthConfig,
-        isSidebarGroupByInstanceConfig,
-        isHideFriendsInSameInstanceConfig,
-        isSameInstanceAboveFavoritesConfig,
-        isSidebarDivideByFriendGroupConfig,
-        sidebarFavoriteGroupsConfig,
-        sidebarFavoriteGroupOrderConfig,
-        sidebarCosmeticsConfig,
-        hideUserNotesConfig,
-        hideUserMemosConfig,
-        hideUnfriendsConfig,
-        randomUserColoursConfig,
-        tableDensityConfig,
-        compactTableModeConfig,
-        trustColorConfig,
-        notificationIconDotConfig,
-        navIsCollapsedConfig,
-        dataTableStripedConfig,
-        accessibleStatusIndicatorsConfig,
-        showNewDashboardButtonConfig,
-        appFontFamilyConfig,
-        customFontFamilyConfig,
-        appCjkFontPackConfig,
-        lastDarkThemeConfig,
-      ] = await Promise.all([
-        configRepository.getString("VRCX_appLanguage"),
-        configRepository.getBool("VRCX_displayVRCProfileThemes", true),
-        configRepository.getBool("VRCX_displayVRCProfileBackgrounds", false),
-        configRepository.getFloat("VRCX_profileBackgroundOpacity", 0.5),
-        configRepository.getBool("VRCX_displayVRCProfileCosmetics", false),
-        configRepository.getBool("VRCX_hideNicknames", false),
-        configRepository.getBool("VRCX_showInstanceIdInLocation", false),
-        configRepository.getBool("VRCX_isAgeGatedInstancesVisible", true),
-        configRepository.getBool("VRCX_isClosedInstancesVisible", true),
-        configRepository.getBool("VRCX_sortFavorites", true),
-        configRepository.getBool("VRCX_instanceUsersSortAlphabetical", false),
-        configRepository.getInt("VRCX_tablePageSize", 20),
-        configRepository.getString("VRCX_tablePageSizes", JSON.stringify(DEFAULT_TABLE_PAGE_SIZES)),
-        configRepository.getBool("VRCX_dtHour12", false),
-        configRepository.getBool("VRCX_dtIsoFormat", false),
-        configRepository.getInt("VRCX_weekStartsOn", 1),
-        configRepository.getString("VRCX_sidebarSortMethods", JSON.stringify(["Sort Private to Bottom", "Sort by Time in Instance", "Sort by Last Active"])),
-        configRepository.getInt("VRCX_navPanelWidth", 240),
-        configRepository.getBool("VRCX_sidebarGroupByInstance", true),
-        configRepository.getBool("VRCX_hideFriendsInSameInstance", false),
-        configRepository.getBool("VRCX_sameInstanceAboveFavorites", false),
-        configRepository.getBool("VRCX_sidebarDivideByFriendGroup", true),
-        configRepository.getString("VRCX_sidebarFavoriteGroups", "[]"),
-        configRepository.getString("VRCX_sidebarFavoriteGroupOrder", "[]"),
-        configRepository.getBool("VRCX_sidebarCosmetics", false),
-        configRepository.getBool("VRCX_hideUserNotes", false),
-        configRepository.getBool("VRCX_hideUserMemos", false),
-        configRepository.getBool("VRCX_hideUnfriends", false),
-        configRepository.getBool("VRCX_randomUserColours", false),
-        configRepository.getString("VRCX_tableDensity"),
-        configRepository.getBool("VRCX_compactTableMode", false),
-        configRepository.getString("VRCX_trustColor", JSON.stringify(TRUST_COLOR_DEFAULTS)),
-        configRepository.getBool("VRCX_notificationIconDot", true),
-        configRepository.getBool("VRCX_navIsCollapsed", false),
-        configRepository.getBool("VRCX_dataTableStriped", false),
-        configRepository.getBool("VRCX_accessibleStatusIndicators", false),
-        configRepository.getBool("VRCX_showNewDashboardButton", true),
-        configRepository.getString("VRCX_fontFamily", APP_FONT_DEFAULT_KEY),
-        configRepository.getString("VRCX_customFontFamily", ""),
-        configRepository.getString("VRCX_cjkFontPack", APP_CJK_FONT_PACK_DEFAULT_KEY),
-        configRepository.getString("VRCX_lastDarkTheme", fallbackDarkTheme),
-      ]);
-
-      if (appLanguageConfig) {
-        await changeAppLanguage(appLanguageConfig);
-      } else {
-        await loadLocalizedStrings("en");
-        appLanguage.value = "en";
-        locale.value = "en";
-        changeHtmlLangAttribute("en");
-      }
-
-      themeMode.value = initThemeMode;
-      isDarkMode.value = initDarkMode;
-      lastDarkTheme.value = resolveLastDarkTheme(lastDarkThemeConfig, fallbackDarkTheme);
-      const normalizedAppFontFamily = normalizeAppFontFamily(appFontFamilyConfig);
-      appFontFamily.value = normalizedAppFontFamily;
-      customFontFamily.value = customFontFamilyConfig || "";
-      appCjkFontPack.value = normalizeAppCjkFontPack(appCjkFontPackConfig);
-      applyAppFontFamily(appFontFamily.value, customFontFamily.value);
-      applyAppCjkFontPack(appCjkFontPack.value);
-      if (normalizedAppFontFamily !== appFontFamilyConfig) {
-        configRepository.setString("VRCX_fontFamily", normalizedAppFontFamily);
-      }
-
-      displayVRCProfileThemes.value = displayVRCProfileThemesConfig;
-      displayVRCProfileBackgrounds.value = displayVRCProfileBackgroundsConfig;
-      profileBackgroundOpacity.value = profileBackgroundOpacityConfig;
-      displayVRCProfileCosmetics.value = displayVRCProfileCosmeticsConfig;
-      hideNicknames.value = hideNicknamesConfig;
-      showInstanceIdInLocation.value = showInstanceIdInLocationConfig;
-      isAgeGatedInstancesVisible.value = isAgeGatedInstancesVisibleConfig;
-      isClosedInstancesVisible.value = isClosedInstancesVisibleConfig;
-      sortFavorites.value = sortFavoritesConfig;
-      instanceUsersSortAlphabetical.value = instanceUsersSortAlphabeticalConfig;
-
-      tablePageSizes.value = normalizeTablePageSizes(JSON.parse(tablePageSizesConfig));
-
-      setTablePageSize(tablePageSizeConfig);
-
-      dtHour12.value = dtHour12Config;
-      dtIsoFormat.value = dtIsoFormatConfig;
-      weekStartsOn.value = [0, 1, 6].includes(weekStartsOnConfig) ? weekStartsOnConfig : 1;
-
-      currentCulture.value = await AppApi.CurrentCulture();
-
-      sidebarSortMethods.value = JSON.parse(sidebarSortMethodsConfig);
-      if (sidebarSortMethods.value?.length === 3) {
-        sidebarSortMethod1.value = sidebarSortMethods.value[0];
-        sidebarSortMethod2.value = sidebarSortMethods.value[1];
-        sidebarSortMethod3.value = sidebarSortMethods.value[2];
-      }
-
-      if (trustColorConfig !== JSON.stringify(TRUST_COLOR_DEFAULTS)) {
-        await configRepository.setString("VRCX_trustColor", JSON.stringify(TRUST_COLOR_DEFAULTS));
-      }
-      trustColor.value = { ...TRUST_COLOR_DEFAULTS };
-      navWidth.value = clampInt(navWidthConfig, 64, 480);
-      isSidebarGroupByInstance.value = isSidebarGroupByInstanceConfig;
-      isHideFriendsInSameInstance.value = isHideFriendsInSameInstanceConfig;
-      isSameInstanceAboveFavorites.value = isSameInstanceAboveFavoritesConfig;
-      isSidebarDivideByFriendGroup.value = isSidebarDivideByFriendGroupConfig;
-      sidebarFavoriteGroups.value = JSON.parse(sidebarFavoriteGroupsConfig);
-      sidebarFavoriteGroupOrder.value = JSON.parse(sidebarFavoriteGroupOrderConfig);
-      sidebarCosmetics.value = sidebarCosmeticsConfig;
-      hideUserNotes.value = hideUserNotesConfig;
-      hideUserMemos.value = hideUserMemosConfig;
-      hideUnfriends.value = hideUnfriendsConfig;
-      randomUserColours.value = randomUserColoursConfig;
-      notificationIconDot.value = notificationIconDotConfig;
-      const resolvedTableDensity = normalizeTableDensity(tableDensityConfig || (compactTableModeConfig ? "compact" : "standard"));
-      tableDensity.value = resolvedTableDensity;
-      applyTableDensity(tableDensity.value);
-      if (!tableDensityConfig) {
-        configRepository.setString("VRCX_tableDensity", tableDensity.value);
-      }
-      isNavCollapsed.value = navIsCollapsedConfig;
-      isDataTableStriped.value = dataTableStripedConfig;
-      accessibleStatusIndicators.value = accessibleStatusIndicatorsConfig;
-      showNewDashboardButton.value = showNewDashboardButtonConfig;
-
-      applyAccessibleStatusClass();
-
-      await configRepository.remove("VRCX_navWidth");
-
-      await mergeOldSortMethodsSettings();
-
-      updateTrustColorClasses(trustColor.value);
-
-      vrStore.updateVRConfigVars();
+  const resolveNavWidth = (widthOrArray: number | number[]): number | null => {
+    if (Array.isArray(widthOrArray) && widthOrArray.length > 0) {
+      return widthOrArray[widthOrArray.length - 1] ?? null;
     }
+    return typeof widthOrArray === "number" ? widthOrArray : null;
+  };
 
-    initAppearanceSettings();
+  async function initAppearanceSettings() {
+    const { initThemeMode, isDarkMode: isInitDarkMode } = await getThemeMode(configRepository);
+    const fallbackDarkTheme = isDarkThemeMode(initThemeMode) ? initThemeMode : "dark";
+    const [
+      appLanguageConfig,
+      isDisplayVRCProfileThemesConfig,
+      isDisplayVRCProfileBackgroundsConfig,
+      profileBackgroundOpacityConfig,
+      isDisplayVRCProfileCosmeticsConfig,
+      isHideNicknamesConfig,
+      isShowInstanceIdInLocationConfig,
+      isAgeGatedInstancesVisibleConfig,
+      isClosedInstancesVisibleConfig,
+      isSortFavoritesConfig,
+      isInstanceUsersSortAlphabeticalConfig,
+      tablePageSizeConfig,
+      tablePageSizesConfig,
+      isDtHour12Config,
+      isDtIsoFormatConfig,
+      weekStartsOnConfig,
+      sidebarSortMethodsConfig,
+      navWidthConfig,
+      isSidebarGroupByInstanceConfig,
+      isHideFriendsInSameInstanceConfig,
+      isSameInstanceAboveFavoritesConfig,
+      isSidebarDivideByFriendGroupConfig,
+      sidebarFavoriteGroupsConfig,
+      sidebarFavoriteGroupOrderConfig,
+      isSidebarCosmeticsConfig,
+      isHideUserNotesConfig,
+      isHideUserMemosConfig,
+      isHideUnfriendsConfig,
+      isRandomUserColoursConfig,
+      tableDensityConfig,
+      isCompactTableModeConfig,
+      trustColorConfig,
+      isNotificationIconDotConfig,
+      isNavIsCollapsedConfig,
+      isDataTableStripedConfig,
+      isAccessibleStatusIndicatorsConfig,
+      isShowNewDashboardButtonConfig,
+      appFontFamilyConfig,
+      customFontFamilyConfig,
+      appCjkFontPackConfig,
+      lastDarkThemeConfig,
+    ] = await readAppearanceConfig(fallbackDarkTheme);
 
-    watch(
-      () => watchState.isFriendsLoaded,
-      (isFriendsLoaded) => {
-        if (isFriendsLoaded) {
-          tryInitUserColours();
-        }
-      },
-      { flush: "sync" }
-    );
-
-    async function changeAppLanguage(language) {
-      await setAppLanguage(language);
-      vrStore.updateVRConfigVars();
-    }
-
-    async function setAppLanguage(language) {
-      console.log("Language changed:", language);
-
-      await loadLocalizedStrings(language);
-
-      appLanguage.value = language;
-      configRepository.setString("VRCX_appLanguage", language);
-      locale.value = appLanguage.value;
-
-      changeHtmlLangAttribute(language);
-    }
-
-    async function updateTrustColor(field, color, setRandomColor = false) {
-      if (setRandomColor) {
-        setRandomUserColours();
-      }
-      if (typeof userStore.currentUser?.id === "undefined") {
-        return;
-      }
-      if (field && color) {
-        setTrustColor({
-          ...trustColor.value,
-          [field]: color,
-        });
-      }
-      if (randomUserColours.value) {
-        const colour = await getNameColour(userStore.currentUser.id, isDarkMode.value);
-        userStore.setCurrentUserColour(colour);
-        userColourInit();
-      } else {
-        applyUserTrustLevel(userStore.currentUser);
-        userStore.cachedUsers.forEach((ref) => {
-          applyUserTrustLevel(ref);
-        });
-      }
-      updateTrustColorClasses(trustColor.value);
-    }
-
-    async function userColourInit(customFunc) {
-      let dictObject = null;
-      if (typeof customFunc === "function") {
-        dictObject = customFunc(userStore.cachedUsers.keys());
-      } else {
-        dictObject = await AppApi.GetColourBulk(Array.from(userStore.cachedUsers.keys()));
-      }
-      if (!dictObject) {
-        console.warn("No user colour data found");
-        return;
-      }
-      if (isHostLinux) {
-        dictObject = Object.fromEntries(dictObject);
-      }
-      for (const [userId, hue] of Object.entries(dictObject)) {
-        const ref = userStore.cachedUsers.get(userId);
-        if (typeof ref !== "undefined") {
-          ref.$userColour = HueToHex(hue, isDarkMode.value);
-        }
-      }
-    }
-
-    function applyUserTrustLevel(ref) {
-      const trust = computeTrustLevel(ref.tags, ref.developerType);
-      ref.$isModerator = trust.isModerator;
-      ref.$isTroll = trust.isTroll;
-      ref.$isProbableTroll = trust.isProbableTroll;
-      ref.$trustLevel = trust.trustLevel;
-      ref.$trustClass = trust.trustClass;
-      ref.$trustSortNum = trust.trustSortNum;
-      if (randomUserColours.value && watchState.isFriendsLoaded) {
-        if (!ref.$userColour) {
-          getNameColour(ref.id, isDarkMode.value).then((colour) => {
-            ref.$userColour = colour;
-          });
-        }
-      } else {
-        ref.$userColour = trustColor.value[trust.trustColorKey];
-      }
-    }
-
-    if (isHostLinux) {
-      window.electron.onSystemThemeChanged((_event, isDark) => {
-        setSystemIsDarkMode(isDark);
-        if (themeMode.value === "system" && isDarkMode.value !== isDark) {
-          setThemeMode(themeMode.value);
-        }
-      });
+    if (appLanguageConfig) {
+      await changeAppLanguage(appLanguageConfig);
     } else {
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", async () => {
-        if (themeMode.value === "system") {
-          setThemeMode(themeMode.value);
-        }
+      await loadLocalizedStrings("en");
+      appLanguage.value = "en";
+      locale.value = "en";
+      changeHtmlLangAttribute("en");
+    }
+
+    themeMode.value = initThemeMode;
+    isDarkMode.value = isInitDarkMode;
+    lastDarkTheme.value = resolveLastDarkTheme(lastDarkThemeConfig, fallbackDarkTheme);
+    const normalizedAppFontFamily = normalizeAppFontFamily(appFontFamilyConfig);
+    appFontFamily.value = normalizedAppFontFamily;
+    customFontFamily.value = customFontFamilyConfig;
+    appCjkFontPack.value = normalizeAppCjkFontPack(appCjkFontPackConfig, APP_CJK_FONT_PACK_DEFAULT_KEY);
+    applyAppFontFamily(appFontFamily.value, customFontFamily.value);
+    applyAppCjkFontPack(appCjkFontPack.value);
+    if (normalizedAppFontFamily !== appFontFamilyConfig) {
+      saveSetting(configRepository.setString("VRCX_fontFamily", normalizedAppFontFamily));
+    }
+
+    displayVRCProfileThemes.value = isDisplayVRCProfileThemesConfig;
+    displayVRCProfileBackgrounds.value = isDisplayVRCProfileBackgroundsConfig;
+    profileBackgroundOpacity.value = profileBackgroundOpacityConfig;
+    displayVRCProfileCosmetics.value = isDisplayVRCProfileCosmeticsConfig;
+    hideNicknames.value = isHideNicknamesConfig;
+    showInstanceIdInLocation.value = isShowInstanceIdInLocationConfig;
+    isAgeGatedInstancesVisible.value = isAgeGatedInstancesVisibleConfig;
+    isClosedInstancesVisible.value = isClosedInstancesVisibleConfig;
+    sortFavorites.value = isSortFavoritesConfig;
+    instanceUsersSortAlphabetical.value = isInstanceUsersSortAlphabeticalConfig;
+
+    tablePageSizes.value = normalizeTablePageSizes(parseJsonValue(tablePageSizesConfig));
+
+    setTablePageSize(tablePageSizeConfig);
+
+    dtHour12.value = isDtHour12Config;
+    dtIsoFormat.value = isDtIsoFormatConfig;
+    weekStartsOn.value = [0, 1, 6].includes(weekStartsOnConfig) ? weekStartsOnConfig : 1;
+
+    currentCulture.value = await AppApi.CurrentCulture();
+
+    sidebarSortMethods.value = parseStringArray(sidebarSortMethodsConfig);
+    if (sidebarSortMethods.value.length === 3) {
+      const [method1, method2, method3] = sidebarSortMethods.value;
+      sidebarSortMethod1.value = method1 ?? "";
+      sidebarSortMethod2.value = method2 ?? "";
+      sidebarSortMethod3.value = method3 ?? "";
+    }
+
+    if (trustColorConfig !== JSON.stringify(TRUST_COLOR_DEFAULTS)) {
+      await configRepository.setString("VRCX_trustColor", JSON.stringify(TRUST_COLOR_DEFAULTS));
+    }
+    trustColor.value = { ...TRUST_COLOR_DEFAULTS };
+    navWidth.value = clampInt(navWidthConfig, 64, 480);
+    isSidebarGroupByInstance.value = isSidebarGroupByInstanceConfig;
+    isHideFriendsInSameInstance.value = isHideFriendsInSameInstanceConfig;
+    isSameInstanceAboveFavorites.value = isSameInstanceAboveFavoritesConfig;
+    isSidebarDivideByFriendGroup.value = isSidebarDivideByFriendGroupConfig;
+    sidebarFavoriteGroups.value = parseStringArray(sidebarFavoriteGroupsConfig);
+    sidebarFavoriteGroupOrder.value = parseStringArray(sidebarFavoriteGroupOrderConfig);
+    sidebarCosmetics.value = isSidebarCosmeticsConfig;
+    hideUserNotes.value = isHideUserNotesConfig;
+    hideUserMemos.value = isHideUserMemosConfig;
+    hideUnfriends.value = isHideUnfriendsConfig;
+    randomUserColours.value = isRandomUserColoursConfig;
+    notificationIconDot.value = isNotificationIconDotConfig;
+    const storedTableDensity = tableDensityConfig ?? "";
+    tableDensity.value = normalizeTableDensity(storedTableDensity || (isCompactTableModeConfig ? "compact" : "standard"));
+    applyTableDensity(tableDensity.value);
+    if (!tableDensityConfig) {
+      saveSetting(configRepository.setString("VRCX_tableDensity", tableDensity.value));
+    }
+    isNavCollapsed.value = isNavIsCollapsedConfig;
+    isDataTableStriped.value = isDataTableStripedConfig;
+    accessibleStatusIndicators.value = isAccessibleStatusIndicatorsConfig;
+    showNewDashboardButton.value = isShowNewDashboardButtonConfig;
+
+    applyAccessibleStatusClass(accessibleStatusIndicators.value);
+
+    await configRepository.remove("VRCX_navWidth");
+
+    const legacySortOrder = await readLegacySortMethods();
+    if (legacySortOrder !== null) {
+      if (legacySortOrder.length > 0) {
+        sidebarSortMethods.value = legacySortOrder;
+        sidebarSortMethod1.value = legacySortOrder[0] ?? "";
+        sidebarSortMethod2.value = legacySortOrder[1] ?? "";
+        sidebarSortMethod3.value = legacySortOrder[2] ?? "";
+      }
+      setSidebarSortMethods(legacySortOrder);
+    }
+
+    updateTrustColorClasses(trustColor.value);
+
+    vrStore.updateVRConfigVars();
+  }
+
+  watch(
+    () => watchState.isFriendsLoaded,
+    (isFriendsLoaded) => {
+      if (isFriendsLoaded) {
+        tryInitUserColours().catch((error: unknown) => console.error(error));
+      }
+    },
+    { flush: "sync" }
+  );
+
+  async function changeAppLanguage(language: string) {
+    await setAppLanguage(language);
+    vrStore.updateVRConfigVars();
+  }
+
+  async function setAppLanguage(language: string) {
+    console.log("Language changed:", language);
+
+    await loadLocalizedStrings(language);
+
+    appLanguage.value = language;
+    saveSetting(configRepository.setString("VRCX_appLanguage", language));
+    locale.value = appLanguage.value;
+
+    changeHtmlLangAttribute(language);
+  }
+
+  if (isHostLinux) {
+    window.electron.onSystemThemeChanged((_event, isDark) => {
+      setSystemIsDarkMode(isDark);
+      if (themeMode.value === "system" && isDarkMode.value !== isDark) {
+        setThemeMode(themeMode.value);
+      }
+    });
+  } else {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (themeMode.value === "system") {
+        setThemeMode(themeMode.value);
+      }
+    });
+  }
+
+  function setThemeMode(mode: string) {
+    themeMode.value = mode;
+    saveSetting(configRepository.setString("VRCX_ThemeMode", mode));
+    if (isDarkThemeMode(mode)) {
+      const normalized = resolveLastDarkTheme(mode);
+      lastDarkTheme.value = normalized;
+      saveSetting(configRepository.setString("VRCX_lastDarkTheme", normalized));
+    }
+    const { isDark } = changeAppThemeStyle(mode);
+    isDarkMode.value = isDark;
+    vrStore.updateVRConfigVars();
+    updateTrustColor(undefined, undefined).catch((error: unknown) => console.error(error));
+  }
+
+  function toggleThemeMode() {
+    const nextMode = isDarkMode.value ? "light" : resolveLastDarkTheme(lastDarkTheme.value);
+    setThemeMode(nextMode);
+  }
+
+  function setAppFontFamily(value: string) {
+    const normalized = normalizeAppFontFamily(value);
+    appFontFamily.value = normalized;
+    saveSetting(configRepository.setString("VRCX_fontFamily", normalized));
+    applyAppFontFamily(normalized, customFontFamily.value);
+  }
+
+  function setCustomFontFamily(value: string) {
+    customFontFamily.value = value;
+    saveSetting(configRepository.setString("VRCX_customFontFamily", value));
+    if (appFontFamily.value === "custom") {
+      applyAppFontFamily("custom", value);
+    }
+  }
+
+  function setAppCjkFontPack(value: string) {
+    const normalized = normalizeAppCjkFontPack(value, APP_CJK_FONT_PACK_DEFAULT_KEY);
+    appCjkFontPack.value = normalized;
+    saveSetting(configRepository.setString("VRCX_cjkFontPack", normalized));
+    applyAppCjkFontPack(normalized);
+  }
+
+  const setDisplayVRCProfileThemes = createBooleanToggle(displayVRCProfileThemes, "VRCX_displayVRCProfileThemes");
+  const setDisplayVRCProfileBackgrounds = createBooleanToggle(displayVRCProfileBackgrounds, "VRCX_displayVRCProfileBackgrounds");
+
+  function setProfileBackgroundOpacity(value: number) {
+    profileBackgroundOpacity.value = value;
+    saveSetting(configRepository.setFloat("VRCX_profileBackgroundOpacity", value));
+  }
+
+  const setDisplayVRCProfileCosmetics = createBooleanToggle(displayVRCProfileCosmetics, "VRCX_displayVRCProfileCosmetics");
+
+  function setNotificationIconDot() {
+    notificationIconDot.value = !notificationIconDot.value;
+    saveSetting(configRepository.setBool("VRCX_notificationIconDot", notificationIconDot.value));
+    uiStore.updateTrayIconNotify();
+  }
+
+  const setHideNicknames = createBooleanToggle(hideNicknames, "VRCX_hideNicknames");
+  const setShowInstanceIdInLocation = createBooleanToggle(showInstanceIdInLocation, "VRCX_showInstanceIdInLocation");
+  const setIsAgeGatedInstancesVisible = createBooleanToggle(isAgeGatedInstancesVisible, "VRCX_isAgeGatedInstancesVisible");
+  const setIsClosedInstancesVisible = createBooleanToggle(isClosedInstancesVisible, "VRCX_isClosedInstancesVisible");
+  const setSortFavorites = createBooleanToggle(sortFavorites, "VRCX_sortFavorites");
+  const setInstanceUsersSortAlphabetical = createBooleanToggle(instanceUsersSortAlphabetical, "VRCX_instanceUsersSortAlphabetical");
+
+  function setTablePageSize(size: number) {
+    const processedSize = clampInt(size, 1, MAX_TABLE_PAGE_SIZE);
+    tablePageSize.value = processedSize;
+    saveSetting(configRepository.setInt("VRCX_tablePageSize", processedSize));
+
+    return processedSize;
+  }
+
+  function setTablePageSizes(sizes: number[]) {
+    tablePageSizes.value = normalizeTablePageSizes(sizes);
+    saveSetting(configRepository.setString("VRCX_tablePageSizes", JSON.stringify(tablePageSizes.value)));
+
+    const [firstSize] = tablePageSizes.value;
+    if (firstSize !== undefined && !tablePageSizes.value.includes(tablePageSize.value)) {
+      setTablePageSize(firstSize);
+    }
+  }
+
+  const setDtHour12 = createBooleanToggle(dtHour12, "VRCX_dtHour12");
+  const setDtIsoFormat = createBooleanToggle(dtIsoFormat, "VRCX_dtIsoFormat");
+
+  function setWeekStartsOn(value: number) {
+    const v = [0, 1, 6].includes(value) ? value : 1;
+    weekStartsOn.value = v;
+    saveSetting(configRepository.setInt("VRCX_weekStartsOn", v));
+  }
+
+  const { setSidebarSortMethod1, setSidebarSortMethod2, setSidebarSortMethod3, setSidebarSortMethods } = createSidebarSortControls(
+    sidebarSortMethod1,
+    sidebarSortMethod2,
+    sidebarSortMethod3,
+    sidebarSortMethods
+  );
+
+  function setNavCollapsed(isCollapsed: boolean) {
+    isNavCollapsed.value = isCollapsed;
+    saveSetting(configRepository.setBool("VRCX_navIsCollapsed", isCollapsed));
+  }
+
+  function toggleNavCollapsed() {
+    setNavCollapsed(!isNavCollapsed.value);
+  }
+
+  function setNavWidth(widthOrArray: number | number[]) {
+    const width = resolveNavWidth(widthOrArray);
+    if (width) {
+      requestAnimationFrame(() => {
+        navWidth.value = clampInt(width, 64, 480);
+        saveSetting(configRepository.setInt("VRCX_navPanelWidth", navWidth.value));
       });
     }
-
-    function setThemeMode(mode) {
-      themeMode.value = mode;
-      configRepository.setString("VRCX_ThemeMode", mode);
-      if (THEME_CONFIG[mode]?.isDark === true) {
-        const normalized = resolveLastDarkTheme(mode);
-        lastDarkTheme.value = normalized;
-        configRepository.setString("VRCX_lastDarkTheme", normalized);
-      }
-      const { isDark } = changeAppThemeStyle(mode);
-      isDarkMode.value = isDark;
-      vrStore.updateVRConfigVars();
-      updateTrustColor(undefined, undefined);
-    }
-
-    function toggleThemeMode() {
-      const nextMode = isDarkMode.value ? "light" : resolveLastDarkTheme(lastDarkTheme.value);
-      setThemeMode(nextMode);
-    }
-
-    function normalizeAppFontFamily(value) {
-      if (value === "custom") return "custom";
-      return APP_FONT_FAMILIES.includes(value) ? value : APP_FONT_DEFAULT_KEY;
-    }
-
-    function normalizeAppCjkFontPack(value) {
-      return APP_CJK_FONT_PACKS.includes(value) ? value : APP_CJK_FONT_PACK_DEFAULT_KEY;
-    }
-
-    function setAppFontFamily(value) {
-      const normalized = normalizeAppFontFamily(value);
-      appFontFamily.value = normalized;
-      configRepository.setString("VRCX_fontFamily", normalized);
-      applyAppFontFamily(normalized, customFontFamily.value);
-    }
-
-    function setCustomFontFamily(value) {
-      customFontFamily.value = value;
-      configRepository.setString("VRCX_customFontFamily", value);
-      if (appFontFamily.value === "custom") {
-        applyAppFontFamily("custom", value);
-      }
-    }
-
-    function setAppCjkFontPack(value) {
-      const normalized = normalizeAppCjkFontPack(value);
-      appCjkFontPack.value = normalized;
-      configRepository.setString("VRCX_cjkFontPack", normalized);
-      applyAppCjkFontPack(normalized);
-    }
-
-    function setDisplayVRCProfileThemes() {
-      displayVRCProfileThemes.value = !displayVRCProfileThemes.value;
-      configRepository.setBool("VRCX_displayVRCProfileThemes", displayVRCProfileThemes.value);
-    }
-
-    function setDisplayVRCProfileBackgrounds() {
-      displayVRCProfileBackgrounds.value = !displayVRCProfileBackgrounds.value;
-      configRepository.setBool("VRCX_displayVRCProfileBackgrounds", displayVRCProfileBackgrounds.value);
-    }
-
-    function setProfileBackgroundOpacity(value) {
-      profileBackgroundOpacity.value = value;
-      configRepository.setFloat("VRCX_profileBackgroundOpacity", value);
-    }
-
-    function setDisplayVRCProfileCosmetics() {
-      displayVRCProfileCosmetics.value = !displayVRCProfileCosmetics.value;
-      configRepository.setBool("VRCX_displayVRCProfileCosmetics", displayVRCProfileCosmetics.value);
-    }
-
-    function setNotificationIconDot() {
-      notificationIconDot.value = !notificationIconDot.value;
-      configRepository.setBool("VRCX_notificationIconDot", notificationIconDot.value);
-      uiStore.updateTrayIconNotify();
-    }
-    function setHideNicknames() {
-      hideNicknames.value = !hideNicknames.value;
-      configRepository.setBool("VRCX_hideNicknames", hideNicknames.value);
-    }
-    function setShowInstanceIdInLocation() {
-      showInstanceIdInLocation.value = !showInstanceIdInLocation.value;
-      configRepository.setBool("VRCX_showInstanceIdInLocation", showInstanceIdInLocation.value);
-    }
-    function setIsAgeGatedInstancesVisible() {
-      isAgeGatedInstancesVisible.value = !isAgeGatedInstancesVisible.value;
-      configRepository.setBool("VRCX_isAgeGatedInstancesVisible", isAgeGatedInstancesVisible.value);
-    }
-    function setIsClosedInstancesVisible() {
-      isClosedInstancesVisible.value = !isClosedInstancesVisible.value;
-      configRepository.setBool("VRCX_isClosedInstancesVisible", isClosedInstancesVisible.value);
-    }
-    function setSortFavorites() {
-      sortFavorites.value = !sortFavorites.value;
-      configRepository.setBool("VRCX_sortFavorites", sortFavorites.value);
-    }
-    function setInstanceUsersSortAlphabetical() {
-      instanceUsersSortAlphabetical.value = !instanceUsersSortAlphabetical.value;
-      configRepository.setBool("VRCX_instanceUsersSortAlphabetical", instanceUsersSortAlphabetical.value);
-    }
-
-    function setTablePageSize(size) {
-      const processedSize = clampInt(size, 1, MAX_TABLE_PAGE_SIZE);
-      tablePageSize.value = processedSize;
-      configRepository.setInt("VRCX_tablePageSize", processedSize);
-
-      return processedSize;
-    }
-
-    function normalizeTablePageSizes(input) {
-      const values = (Array.isArray(input) ? input : DEFAULT_TABLE_PAGE_SIZES).map((v) => parseInt(v, 10)).filter((v) => v > 0 && v <= MAX_TABLE_PAGE_SIZE);
-      const uniqueSorted = Array.from(new Set(values)).sort((a, b) => a - b);
-      return uniqueSorted.length ? uniqueSorted : [...DEFAULT_TABLE_PAGE_SIZES];
-    }
-
-    function setTablePageSizes(sizes) {
-      tablePageSizes.value = normalizeTablePageSizes(sizes);
-      configRepository.setString("VRCX_tablePageSizes", JSON.stringify(tablePageSizes.value));
-
-      if (!tablePageSizes.value.includes(tablePageSize.value)) {
-        setTablePageSize(tablePageSizes.value[0]);
-      }
-    }
-    function setDtHour12() {
-      dtHour12.value = !dtHour12.value;
-      configRepository.setBool("VRCX_dtHour12", dtHour12.value);
-    }
-    function setDtIsoFormat() {
-      dtIsoFormat.value = !dtIsoFormat.value;
-      configRepository.setBool("VRCX_dtIsoFormat", dtIsoFormat.value);
-    }
-
-    function setWeekStartsOn(value) {
-      const v = [0, 1, 6].includes(value) ? value : 1;
-      weekStartsOn.value = v;
-      configRepository.setInt("VRCX_weekStartsOn", v);
-    }
-
-    function setSidebarSortMethod1(method) {
-      sidebarSortMethod1.value = method;
-      handleSaveSidebarSortOrder();
-    }
-
-    function setSidebarSortMethod2(method) {
-      sidebarSortMethod2.value = method;
-      handleSaveSidebarSortOrder();
-    }
-
-    function setSidebarSortMethod3(method) {
-      sidebarSortMethod3.value = method;
-      handleSaveSidebarSortOrder();
-    }
-
-    function setSidebarSortMethods(methods) {
-      sidebarSortMethods.value = methods;
-      configRepository.setString("VRCX_sidebarSortMethods", JSON.stringify(methods));
-    }
-
-    function setNavCollapsed(collapsed) {
-      isNavCollapsed.value = collapsed;
-      configRepository.setBool("VRCX_navIsCollapsed", collapsed);
-    }
-    function toggleNavCollapsed() {
-      setNavCollapsed(!isNavCollapsed.value);
-    }
-
-    function setNavWidth(widthOrArray) {
-      let width = null;
-      if (Array.isArray(widthOrArray) && widthOrArray.length) {
-        width = widthOrArray[widthOrArray.length - 1];
-      } else if (typeof widthOrArray === "number") {
-        width = widthOrArray;
-      }
-      if (width) {
-        requestAnimationFrame(() => {
-          navWidth.value = clampInt(width, 64, 480);
-          configRepository.setInt("VRCX_navPanelWidth", navWidth.value);
-        });
-      }
-    }
-    function setIsSidebarGroupByInstance() {
-      isSidebarGroupByInstance.value = !isSidebarGroupByInstance.value;
-      configRepository.setBool("VRCX_sidebarGroupByInstance", isSidebarGroupByInstance.value);
-    }
-    function setIsHideFriendsInSameInstance() {
-      isHideFriendsInSameInstance.value = !isHideFriendsInSameInstance.value;
-      configRepository.setBool("VRCX_hideFriendsInSameInstance", isHideFriendsInSameInstance.value);
-    }
-    function setIsSameInstanceAboveFavorites() {
-      isSameInstanceAboveFavorites.value = !isSameInstanceAboveFavorites.value;
-      configRepository.setBool("VRCX_sameInstanceAboveFavorites", isSameInstanceAboveFavorites.value);
-    }
-    function setIsSidebarDivideByFriendGroup() {
-      isSidebarDivideByFriendGroup.value = !isSidebarDivideByFriendGroup.value;
-      configRepository.setBool("VRCX_sidebarDivideByFriendGroup", isSidebarDivideByFriendGroup.value);
-    }
-
-    function setSidebarFavoriteGroups(value) {
-      sidebarFavoriteGroups.value = value;
-      configRepository.setString("VRCX_sidebarFavoriteGroups", JSON.stringify(value));
-    }
-
-    function setSidebarFavoriteGroupOrder(value) {
-      sidebarFavoriteGroupOrder.value = value;
-      configRepository.setString("VRCX_sidebarFavoriteGroupOrder", JSON.stringify(value));
-    }
-    function setSidebarCosmetics() {
-      sidebarCosmetics.value = !sidebarCosmetics.value;
-      configRepository.setBool("VRCX_sidebarCosmetics", sidebarCosmetics.value);
-    }
-    function setHideUserNotes() {
-      hideUserNotes.value = !hideUserNotes.value;
-      configRepository.setBool("VRCX_hideUserNotes", hideUserNotes.value);
-    }
-    function setHideUserMemos() {
-      hideUserMemos.value = !hideUserMemos.value;
-      configRepository.setBool("VRCX_hideUserMemos", hideUserMemos.value);
-    }
-    function setHideUnfriends() {
-      hideUnfriends.value = !hideUnfriends.value;
-      configRepository.setBool("VRCX_hideUnfriends", hideUnfriends.value);
-    }
-    function setRandomUserColours() {
-      randomUserColours.value = !randomUserColours.value;
-      configRepository.setBool("VRCX_randomUserColours", randomUserColours.value);
-    }
-
-    function normalizeTableDensity(value) {
-      if (value === "compact" || value === "comfortable" || value === "standard") {
-        return value;
-      }
-      return "standard";
-    }
-
-    function setTableDensity(density) {
-      const normalized = normalizeTableDensity(density);
-      tableDensity.value = normalized;
-      applyTableDensity(tableDensity.value);
-      configRepository.setString("VRCX_tableDensity", tableDensity.value);
-    }
-
-    function toggleStripedDataTable() {
-      isDataTableStriped.value = !isDataTableStriped.value;
-      configRepository.setBool("VRCX_dataTableStriped", isDataTableStriped.value);
-    }
-
-    function applyAccessibleStatusClass() {
-      const classList = document.documentElement.classList;
-      classList.remove("accessible-status-indicators");
-
-      if (accessibleStatusIndicators.value) {
-        classList.add("accessible-status-indicators");
-      }
-    }
-
-    function toggleAccessibleStatusIndicators() {
-      accessibleStatusIndicators.value = !accessibleStatusIndicators.value;
-      configRepository.setBool("VRCX_accessibleStatusIndicators", accessibleStatusIndicators.value);
-      applyAccessibleStatusClass();
-    }
-
-    function setShowNewDashboardButton() {
-      showNewDashboardButton.value = !showNewDashboardButton.value;
-      configRepository.setBool("VRCX_showNewDashboardButton", showNewDashboardButton.value);
-    }
-
-    function setTrustColor(color) {
-      trustColor.value = color;
-      configRepository.setString("VRCX_trustColor", JSON.stringify(trustColor.value));
-    }
-
-    function handleSaveSidebarSortOrder() {
-      if (sidebarSortMethod1.value === sidebarSortMethod2.value) {
-        sidebarSortMethod2.value = "";
-      }
-      if (sidebarSortMethod1.value === sidebarSortMethod3.value) {
-        sidebarSortMethod3.value = "";
-      }
-      if (sidebarSortMethod2.value === sidebarSortMethod3.value) {
-        sidebarSortMethod3.value = "";
-      }
-      if (!sidebarSortMethod1.value) {
-        sidebarSortMethod2.value = "";
-      }
-      if (!sidebarSortMethod2.value) {
-        sidebarSortMethod3.value = "";
-      }
-      const sidebarSortMethods = [sidebarSortMethod1.value, sidebarSortMethod2.value, sidebarSortMethod3.value];
-      setSidebarSortMethods(sidebarSortMethods);
-    }
-
-    async function mergeOldSortMethodsSettings() {
-      const orderFriendsGroupPrivate = await configRepository.getBool("orderFriendGroupPrivate");
-      if (orderFriendsGroupPrivate !== null) {
-        await configRepository.remove("orderFriendGroupPrivate");
-
-        const orderFriendsGroupStatus = await configRepository.getBool("orderFriendsGroupStatus");
-        await configRepository.remove("orderFriendsGroupStatus");
-
-        const orderFriendsGroupGPS = await configRepository.getBool("orderFriendGroupGPS");
-        await configRepository.remove("orderFriendGroupGPS");
-
-        const orderOnlineFor = await configRepository.getBool("orderFriendGroup0");
-        await configRepository.remove("orderFriendGroup0");
-        await configRepository.remove("orderFriendGroup1");
-        await configRepository.remove("orderFriendGroup2");
-        await configRepository.remove("orderFriendGroup3");
-
-        const sortOrder = [];
-        if (orderFriendsGroupPrivate) {
-          sortOrder.push("Sort Private to Bottom");
-        }
-        if (orderFriendsGroupStatus) {
-          sortOrder.push("Sort by Status");
-        }
-        if (orderOnlineFor && orderFriendsGroupGPS) {
-          sortOrder.push("Sort by Time in Instance");
-        }
-        if (!orderOnlineFor) {
-          sortOrder.push("Sort Alphabetically");
-        }
-
-        if (sortOrder.length > 0) {
-          while (sortOrder.length < 3) {
-            sortOrder.push("");
-          }
-          sidebarSortMethods.value = sortOrder;
-          sidebarSortMethod1.value = sortOrder[0];
-          sidebarSortMethod2.value = sortOrder[1];
-          sidebarSortMethod3.value = sortOrder[2];
-        }
-        setSidebarSortMethods(sortOrder);
-      }
-    }
-
-    const clampLimit = (value, min, max) => {
-      const n = Number.parseInt(value, 10);
-      if (!Number.isFinite(n)) {
-        return null;
-      }
-      if (n < min || n > max) {
-        return null;
-      }
-      return n;
-    };
-
-    function showTableLimitsDialog() {
-      tableLimitsDialog.value.maxTableSize = Number(vrcxStore.maxTableSize ?? 500);
-      tableLimitsDialog.value.searchLimit = Number(vrcxStore.searchLimit ?? 50000);
-      tableLimitsDialog.value.visible = true;
-    }
-
-    function closeTableLimitsDialog() {
-      tableLimitsDialog.value.visible = false;
-    }
-
-    async function saveTableLimitsDialog() {
-      const nextMaxTableSize = clampLimit(tableLimitsDialog.value.maxTableSize, TABLE_MAX_SIZE_MIN, TABLE_MAX_SIZE_MAX);
-      if (nextMaxTableSize === null) {
-        return;
-      }
-
-      const nextSearchLimit = clampLimit(tableLimitsDialog.value.searchLimit, SEARCH_LIMIT_MIN, SEARCH_LIMIT_MAX);
-      if (nextSearchLimit === null) {
-        return;
-      }
-
-      vrcxStore.setMaxTableSize(nextMaxTableSize);
-      await configRepository.setInt("VRCX_maxTableSize_v2", vrcxStore.maxTableSize);
-      database.setMaxTableSize(vrcxStore.maxTableSize);
-
-      vrcxStore.setSearchLimit(nextSearchLimit);
-      await configRepository.setInt("VRCX_searchLimit", vrcxStore.searchLimit);
-      database.setSearchTableSize(vrcxStore.searchLimit);
-
-      feedStore.feedTableLookup();
-      gameLogStore.gameLogTableLookup();
-      tableLimitsDialog.value.visible = false;
-    }
-
-    async function tryInitUserColours() {
-      if (!randomUserColours.value) {
-        return;
-      }
-      const colour = await getNameColour(userStore.currentUser.id, isDarkMode.value);
-      userStore.setCurrentUserColour(colour);
-      await userColourInit();
-    }
-
-    function applyTableDensity(density) {
-      const classList = document.documentElement.classList;
-      classList.remove("is-compact-table", "is-comfortable-table");
-      if (density === "compact") {
-        classList.add("is-compact-table");
-      }
-      if (density === "comfortable") {
-        classList.add("is-comfortable-table");
-      }
-    }
-
-    return {
-      appLanguage,
-      themeMode,
-      isDarkMode,
-      appFontFamily,
-      appCjkFontPack,
-      displayVRCProfileThemes,
-      displayVRCProfileBackgrounds,
-      profileBackgroundOpacity,
-      displayVRCProfileCosmetics,
-      hideNicknames,
-      showInstanceIdInLocation,
-      isAgeGatedInstancesVisible,
-      isClosedInstancesVisible,
-      sortFavorites,
-      instanceUsersSortAlphabetical,
-      tablePageSize,
-      tablePageSizes,
-      dtHour12,
-      dtIsoFormat,
-      weekStartsOn,
-      sidebarSortMethod1,
-      sidebarSortMethod2,
-      sidebarSortMethod3,
-      sidebarSortMethods,
-      navWidth,
-      isSidebarGroupByInstance,
-      isHideFriendsInSameInstance,
-      isSameInstanceAboveFavorites,
-      isSidebarDivideByFriendGroup,
-      sidebarFavoriteGroups,
-      sidebarFavoriteGroupOrder,
-      sidebarCosmetics,
-      hideUserNotes,
-      hideUserMemos,
-      hideUnfriends,
-      randomUserColours,
-      tableDensity,
-      trustColor,
-      currentCulture,
-      isSideBarTabShow,
-      notificationIconDot,
-      isNavCollapsed,
-      isDataTableStriped,
-      accessibleStatusIndicators,
-      showNewDashboardButton,
-      tableLimitsDialog,
-      TABLE_MAX_SIZE_MIN,
-      TABLE_MAX_SIZE_MAX,
-      SEARCH_LIMIT_MIN,
-      SEARCH_LIMIT_MAX,
-
-      setAppLanguage,
-      setDisplayVRCProfileThemes,
-      setDisplayVRCProfileBackgrounds,
-      setProfileBackgroundOpacity,
-      setDisplayVRCProfileCosmetics,
-      setHideNicknames,
-      setShowInstanceIdInLocation,
-      setIsAgeGatedInstancesVisible,
-      setIsClosedInstancesVisible,
-      setSortFavorites,
-      setInstanceUsersSortAlphabetical,
-      setTablePageSize,
-      setTablePageSizes,
-      setDtHour12,
-      setDtIsoFormat,
-      setWeekStartsOn,
-      setSidebarSortMethod1,
-      setSidebarSortMethod2,
-      setSidebarSortMethod3,
-      setSidebarSortMethods,
-      setNavWidth,
-      setIsSidebarGroupByInstance,
-      setIsHideFriendsInSameInstance,
-      setIsSameInstanceAboveFavorites,
-      setIsSidebarDivideByFriendGroup,
-      setSidebarFavoriteGroups,
-      setSidebarFavoriteGroupOrder,
-      setSidebarCosmetics,
-      setHideUserNotes,
-      setHideUserMemos,
-      setHideUnfriends,
-      setRandomUserColours,
-      toggleStripedDataTable,
-      toggleAccessibleStatusIndicators,
-      setShowNewDashboardButton,
-      setTableDensity,
-      setTrustColor,
-      tryInitUserColours,
-      updateTrustColor,
-      userColourInit,
-      applyUserTrustLevel,
-      changeAppLanguage,
-      showTableLimitsDialog,
-      closeTableLimitsDialog,
-      saveTableLimitsDialog,
-      setNotificationIconDot,
-      applyTableDensity,
-      setNavCollapsed,
-      toggleNavCollapsed,
-      setAppFontFamily,
-      customFontFamily,
-      setCustomFontFamily,
-      setAppCjkFontPack,
-      setThemeMode,
-      toggleThemeMode,
-    };
   }
-);
+
+  const setIsSidebarGroupByInstance = createBooleanToggle(isSidebarGroupByInstance, "VRCX_sidebarGroupByInstance");
+  const setIsHideFriendsInSameInstance = createBooleanToggle(isHideFriendsInSameInstance, "VRCX_hideFriendsInSameInstance");
+  const setIsSameInstanceAboveFavorites = createBooleanToggle(isSameInstanceAboveFavorites, "VRCX_sameInstanceAboveFavorites");
+  const setIsSidebarDivideByFriendGroup = createBooleanToggle(isSidebarDivideByFriendGroup, "VRCX_sidebarDivideByFriendGroup");
+
+  function setSidebarFavoriteGroups(value: string[]) {
+    sidebarFavoriteGroups.value = value;
+    saveSetting(configRepository.setString("VRCX_sidebarFavoriteGroups", JSON.stringify(value)));
+  }
+
+  function setSidebarFavoriteGroupOrder(value: string[]) {
+    sidebarFavoriteGroupOrder.value = value;
+    saveSetting(configRepository.setString("VRCX_sidebarFavoriteGroupOrder", JSON.stringify(value)));
+  }
+
+  const setSidebarCosmetics = createBooleanToggle(sidebarCosmetics, "VRCX_sidebarCosmetics");
+  const setHideUserNotes = createBooleanToggle(hideUserNotes, "VRCX_hideUserNotes");
+  const setHideUserMemos = createBooleanToggle(hideUserMemos, "VRCX_hideUserMemos");
+  const setHideUnfriends = createBooleanToggle(hideUnfriends, "VRCX_hideUnfriends");
+  const setRandomUserColours = createBooleanToggle(randomUserColours, "VRCX_randomUserColours");
+  const { setTrustColor, applyUserTrustLevel, userColourInit, tryInitUserColours, updateTrustColor } = createTrustColourControls({
+    userStore,
+    trustColor,
+    randomUserColours,
+    isDarkMode,
+    setRandomUserColours,
+  });
+
+  function setTableDensity(density: unknown) {
+    const normalized = normalizeTableDensity(density);
+    tableDensity.value = normalized;
+    applyTableDensity(tableDensity.value);
+    saveSetting(configRepository.setString("VRCX_tableDensity", tableDensity.value));
+  }
+
+  const toggleStripedDataTable = createBooleanToggle(isDataTableStriped, "VRCX_dataTableStriped");
+
+  const flipAccessibleStatusIndicators = createBooleanToggle(accessibleStatusIndicators, "VRCX_accessibleStatusIndicators");
+
+  function toggleAccessibleStatusIndicators() {
+    flipAccessibleStatusIndicators();
+    applyAccessibleStatusClass(accessibleStatusIndicators.value);
+  }
+
+  const setShowNewDashboardButton = createBooleanToggle(showNewDashboardButton, "VRCX_showNewDashboardButton");
+
+  function showTableLimitsDialog() {
+    openTableLimitsDialog(tableLimitsDialog, vrcxStore);
+  }
+
+  function closeTableLimitsDialog() {
+    tableLimitsDialog.value.visible = false;
+  }
+
+  async function saveTableLimitsDialog() {
+    await saveTableLimits(tableLimitsDialog, vrcxStore, feedStore, gameLogStore);
+  }
+
+  initAppearanceSettings().catch((error: unknown) => console.error(error));
+
+  return {
+    appLanguage,
+    themeMode,
+    isDarkMode,
+    appFontFamily,
+    appCjkFontPack,
+    displayVRCProfileThemes,
+    displayVRCProfileBackgrounds,
+    profileBackgroundOpacity,
+    displayVRCProfileCosmetics,
+    hideNicknames,
+    showInstanceIdInLocation,
+    isAgeGatedInstancesVisible,
+    isClosedInstancesVisible,
+    sortFavorites,
+    instanceUsersSortAlphabetical,
+    tablePageSize,
+    tablePageSizes,
+    dtHour12,
+    dtIsoFormat,
+    weekStartsOn,
+    sidebarSortMethod1,
+    sidebarSortMethod2,
+    sidebarSortMethod3,
+    sidebarSortMethods,
+    navWidth,
+    isSidebarGroupByInstance,
+    isHideFriendsInSameInstance,
+    isSameInstanceAboveFavorites,
+    isSidebarDivideByFriendGroup,
+    sidebarFavoriteGroups,
+    sidebarFavoriteGroupOrder,
+    sidebarCosmetics,
+    hideUserNotes,
+    hideUserMemos,
+    hideUnfriends,
+    randomUserColours,
+    tableDensity,
+    trustColor,
+    currentCulture,
+    isSideBarTabShow,
+    notificationIconDot,
+    isNavCollapsed,
+    isDataTableStriped,
+    accessibleStatusIndicators,
+    showNewDashboardButton,
+    tableLimitsDialog,
+    TABLE_MAX_SIZE_MIN,
+    TABLE_MAX_SIZE_MAX,
+    SEARCH_LIMIT_MIN,
+    SEARCH_LIMIT_MAX,
+
+    setAppLanguage,
+    setDisplayVRCProfileThemes,
+    setDisplayVRCProfileBackgrounds,
+    setProfileBackgroundOpacity,
+    setDisplayVRCProfileCosmetics,
+    setHideNicknames,
+    setShowInstanceIdInLocation,
+    setIsAgeGatedInstancesVisible,
+    setIsClosedInstancesVisible,
+    setSortFavorites,
+    setInstanceUsersSortAlphabetical,
+    setTablePageSize,
+    setTablePageSizes,
+    setDtHour12,
+    setDtIsoFormat,
+    setWeekStartsOn,
+    setSidebarSortMethod1,
+    setSidebarSortMethod2,
+    setSidebarSortMethod3,
+    setSidebarSortMethods,
+    setNavWidth,
+    setIsSidebarGroupByInstance,
+    setIsHideFriendsInSameInstance,
+    setIsSameInstanceAboveFavorites,
+    setIsSidebarDivideByFriendGroup,
+    setSidebarFavoriteGroups,
+    setSidebarFavoriteGroupOrder,
+    setSidebarCosmetics,
+    setHideUserNotes,
+    setHideUserMemos,
+    setHideUnfriends,
+    setRandomUserColours,
+    toggleStripedDataTable,
+    toggleAccessibleStatusIndicators,
+    setShowNewDashboardButton,
+    setTableDensity,
+    setTrustColor,
+    tryInitUserColours,
+    updateTrustColor,
+    userColourInit,
+    applyUserTrustLevel,
+    changeAppLanguage,
+    showTableLimitsDialog,
+    closeTableLimitsDialog,
+    saveTableLimitsDialog,
+    setNotificationIconDot,
+    applyTableDensity,
+    setNavCollapsed,
+    toggleNavCollapsed,
+    setAppFontFamily,
+    customFontFamily,
+    setCustomFontFamily,
+    setAppCjkFontPack,
+    setThemeMode,
+    toggleThemeMode,
+  };
+});

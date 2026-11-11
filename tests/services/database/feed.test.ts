@@ -62,7 +62,8 @@ describe("feed inserts", () => {
   });
 
   test("addGPSToDatabase passes every field to AddFeedGps and returns the entry with its row id", async () => {
-    const entry = {
+    const entry: Parameters<typeof feed.addGPSToDatabase>[0] = {
+      type: "GPS",
       created_at: "2026-01-02T03:04:05.000Z",
       userId: "usr_1",
       displayName: "Alice",
@@ -82,6 +83,7 @@ describe("feed inserts", () => {
   test("addGPSToDatabase returns undefined when the insert was ignored", async () => {
     api.AddFeedGps.mockResolvedValueOnce(0);
     const result = await feed.addGPSToDatabase({
+      type: "GPS",
       created_at: "t",
       userId: "usr_1",
       displayName: "Alice",
@@ -96,6 +98,7 @@ describe("feed inserts", () => {
 
   test("addStatusToDatabase passes the status fields in order", async () => {
     await feed.addStatusToDatabase({
+      type: "Status",
       created_at: "t",
       userId: "usr_1",
       displayName: "Alice",
@@ -109,6 +112,7 @@ describe("feed inserts", () => {
 
   test("addBioToDatabase sends the bio links as JSON and empty arrays when they are missing", async () => {
     const result = await feed.addBioToDatabase({
+      type: "Bio",
       created_at: "t",
       userId: "usr_1",
       displayName: "Alice",
@@ -118,6 +122,7 @@ describe("feed inserts", () => {
     });
     expect(api.AddFeedBio).toHaveBeenCalledWith("t", "usr_1", "Alice", "hello", null, '["https://example.com"]', "[]");
     expect(result).toEqual({
+      type: "Bio",
       created_at: "t",
       userId: "usr_1",
       displayName: "Alice",
@@ -130,6 +135,7 @@ describe("feed inserts", () => {
 
   test("addAvatarToDatabase passes the avatar fields in order", async () => {
     await feed.addAvatarToDatabase({
+      type: "Avatar",
       created_at: "t",
       userId: "usr_1",
       displayName: "Alice",

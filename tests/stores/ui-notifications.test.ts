@@ -13,19 +13,19 @@ vi.mock("../../src/plugins/router", () => ({
     beforeEach: vi.fn(),
     push: vi.fn(),
     replace: vi.fn(),
-    currentRoute: ref({ path: "/", name: "", meta: {} }),
+    currentRoute: ref({ path: "/", name: "", params: {}, meta: {} }),
     isReady: vi.fn().mockResolvedValue(true),
   },
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", params: {}, meta: {} }),
     })),
   };
 });
@@ -44,13 +44,13 @@ vi.mock("../../src/services/database", () => ({
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn().mockImplementation((_k: string, d?: string) => d ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_k: string, isDefault?: boolean) => isDefault ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_k: string, d?: number) => d ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_k: string, d?: number) => d ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -64,7 +64,7 @@ vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
 vi.mock("vue-i18n", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-i18n")>();
   const i18n = actual.createI18n({
     locale: "en",
     fallbackLocale: "en",
@@ -82,7 +82,7 @@ vi.mock("vue-i18n", async (importOriginal) => {
 import { useUiStore } from "../../src/stores/ui";
 
 describe("useUiStore - notification methods", () => {
-  let store;
+  let store: ReturnType<typeof useUiStore>;
 
   beforeEach(() => {
     setActivePinia(createPinia());

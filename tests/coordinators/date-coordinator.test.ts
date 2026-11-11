@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  useAppearanceSettingsStore: vi.fn(),
+  useAppearanceSettingsStore: vi.fn<(...args: unknown[]) => unknown>(),
 }));
 
 vi.mock("../../src/stores/settings/appearance", () => ({
-  useAppearanceSettingsStore: (...args) => mocks.useAppearanceSettingsStore(...args),
+  useAppearanceSettingsStore: (...args: unknown[]) => mocks.useAppearanceSettingsStore(...args),
 }));
 
 import { formatDateFilter } from "../../src/coordinators/date-coordinator";
@@ -117,7 +117,7 @@ describe("dateCoordinator.formatDateFilter", () => {
   });
 
   test('returns "-" and warns when format is unknown', () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const result = formatDateFilter("2024-01-02T03:04:05Z", "unknown");
 

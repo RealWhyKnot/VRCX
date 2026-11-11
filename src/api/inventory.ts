@@ -10,7 +10,7 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { queryClient } from "../queries/client";
-import { request } from "../services/request";
+import { requestJson } from "./request-json";
 
 function refetchActiveInventoryQueries() {
   queryClient
@@ -18,14 +18,17 @@ function refetchActiveInventoryQueries() {
       queryKey: ["inventory"],
       refetchType: "active",
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Failed to refresh inventory queries:", err);
     });
 }
 
 const inventoryRequest = {
-  getUserInventoryItem(params: { inventoryId: string; userId: string; flags }): Promise<{ json: Json<InventoryItem>; params }> {
-    return request(`user/${params.userId}/inventory/${params.inventoryId}`, {
+  getUserInventoryItem(params: { inventoryId: string; userId: string }): Promise<{
+    json: Json<InventoryItem>;
+    params: { inventoryId: string; userId: string };
+  }> {
+    return requestJson<Json<InventoryItem>>(`user/${params.userId}/inventory/${params.inventoryId}`, {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -36,8 +39,8 @@ const inventoryRequest = {
     });
   },
 
-  getInventoryItem(params: { inventoryId: string }): Promise<{ json: Json<InventoryItem>; params }> {
-    return request(`inventory/${params.inventoryId}`, {
+  getInventoryItem(params: { inventoryId: string }): Promise<{ json: Json<InventoryItem>; params: { inventoryId: string } }> {
+    return requestJson<Json<InventoryItem>>(`inventory/${params.inventoryId}`, {
       method: "GET",
       params,
     }).then((json) => {
@@ -50,7 +53,7 @@ const inventoryRequest = {
   },
 
   getInventoryItems(params: GetInventory["query"]): Promise<{ json: Json<Inventory>; params: GetInventory["query"] }> {
-    return request("inventory", {
+    return requestJson<Json<Inventory>>("inventory", {
       method: "GET",
       params,
     }).then((json) => {
@@ -62,8 +65,8 @@ const inventoryRequest = {
     });
   },
 
-  consumeInventoryBundle(params: { inventoryId: string }): Promise<{ json: Json<InventoryConsumptionResults>; params }> {
-    return request(`inventory/${params.inventoryId}/consume`, {
+  consumeInventoryBundle(params: { inventoryId: string }): Promise<{ json: Json<InventoryConsumptionResults>; params: { inventoryId: string } }> {
+    return requestJson<Json<InventoryConsumptionResults>>(`inventory/${params.inventoryId}/consume`, {
       method: "PUT",
       params,
     }).then((json) => {
@@ -76,8 +79,11 @@ const inventoryRequest = {
     });
   },
 
-  getInventoryTemplate(params: { inventoryTemplateId: string }): Promise<{ json: Json<InventoryTemplate>; params }> {
-    return request(`inventory/template/${params.inventoryTemplateId}`, {
+  getInventoryTemplate(params: { inventoryTemplateId: string }): Promise<{
+    json: Json<InventoryTemplate>;
+    params: { inventoryTemplateId: string };
+  }> {
+    return requestJson<Json<InventoryTemplate>>(`inventory/template/${params.inventoryTemplateId}`, {
       method: "GET",
       params,
     }).then((json) => {
@@ -90,7 +96,7 @@ const inventoryRequest = {
   },
 
   redeemReward(params: RewardRedemptionRequest): Promise<{ json: Json<RewardRedemptionResult[]>; params: RewardRedemptionRequest }> {
-    return request("reward/redeem", {
+    return requestJson<Json<RewardRedemptionResult[]>>("reward/redeem", {
       method: "POST",
       params,
     }).then((json) => {
@@ -103,8 +109,8 @@ const inventoryRequest = {
     });
   },
 
-  getGlobalInventory(): Promise<{ json: any; params }> {
-    return request("inventory/global", {
+  getGlobalInventory(): Promise<{ json: Json<InventoryItem>[]; params: Record<string, never> }> {
+    return requestJson<Json<InventoryItem>[]>("inventory/global", {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -116,7 +122,7 @@ const inventoryRequest = {
   },
 
   getEquipSlot(params: GetInventory["query"]): Promise<{ json: Json<Inventory>; params: GetInventory["query"] }> {
-    return request("inventory", {
+    return requestJson<Json<Inventory>>("inventory", {
       method: "GET",
       params,
     }).then((json) => {
@@ -131,7 +137,7 @@ const inventoryRequest = {
   equipItem(
     params: { inventoryId: string } & EquipInventoryItemRequest
   ): Promise<{ json: Json<InventoryItem>; params: { inventoryId: string } & EquipInventoryItemRequest }> {
-    return request(`inventory/${params.inventoryId}/equip`, {
+    return requestJson<Json<InventoryItem>>(`inventory/${params.inventoryId}/equip`, {
       method: "PUT",
       params,
     }).then((json) => {
@@ -144,7 +150,7 @@ const inventoryRequest = {
   },
 
   archiveItem(params: { inventoryId: string }): Promise<{ json: Json<InventoryItem>; params: { inventoryId: string } }> {
-    return request(`inventory/${params.inventoryId}`, {
+    return requestJson<Json<InventoryItem>>(`inventory/${params.inventoryId}`, {
       method: "PUT",
       params: {
         isArchived: true,
@@ -159,7 +165,7 @@ const inventoryRequest = {
   },
 
   unArchiveItem(params: { inventoryId: string }): Promise<{ json: Json<InventoryItem>; params: { inventoryId: string } }> {
-    return request(`inventory/${params.inventoryId}`, {
+    return requestJson<Json<InventoryItem>>(`inventory/${params.inventoryId}`, {
       method: "PUT",
       params: {
         isArchived: false,

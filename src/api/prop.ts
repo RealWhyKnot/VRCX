@@ -1,10 +1,10 @@
 import type { Prop } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { request } from "../services/request";
+import { requestJson } from "./request-json";
 
 const propRequest = {
-  getProp(params: { propId: string }): Promise<{ json: Json<Prop>; params }> {
-    return request(`props/${params.propId}`, {
+  getProp(params: { propId: string }): Promise<{ json: Json<Prop>; params: { propId: string } }> {
+    return requestJson<Json<Prop>>(`props/${params.propId}`, {
       method: "GET",
       params,
     }).then((json) => {

@@ -1,26 +1,26 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockRequest = vi.fn();
-const mockInvalidateQueries = vi.fn().mockResolvedValue();
-const mockApplyUser = vi.fn((json) => json);
+const mockRequest = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+const mockInvalidateQueries = vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const mockApplyUser = vi.fn((json: unknown) => json);
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mockRequest(...args),
+  request: (...args: unknown[]) => mockRequest(...args),
 }));
 
 vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
-    applyUser: (...args) => mockApplyUser(...args),
+    applyUser: (json: unknown) => mockApplyUser(json),
   }),
 }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  applyUser: (...args) => mockApplyUser(...args),
+  applyUser: (json: unknown) => mockApplyUser(json),
 }));
 
 vi.mock("../../src/queries/client", () => ({
   queryClient: {
-    invalidateQueries: (...args) => mockInvalidateQueries(...args),
+    invalidateQueries: (...args: unknown[]) => mockInvalidateQueries(...args),
   },
 }));
 vi.mock("../../src/queries/policies", () => ({

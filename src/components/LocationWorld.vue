@@ -29,7 +29,7 @@ import { useI18n } from "vue-i18n";
 
 import { useInstanceStore } from "../stores/instance";
 import { useLaunchStore } from "../stores/launch";
-import { showGroupDialog } from "../coordinators/group-coordinator";
+import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { formatDateFilter } from "../coordinators/date-coordinator";
 import { getGroupName } from "../shared/utils/group";
 import { parseLocation } from "../shared/utils/location-parser";

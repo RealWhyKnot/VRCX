@@ -8,6 +8,40 @@ import { useVrStore } from "../vr";
 
 import { configRepository } from "../../services/config";
 
+type FeedFilterMap = Record<string, string | undefined>;
+
+type SharedFeedFilters = {
+  noty: FeedFilterMap;
+  wrist: FeedFilterMap;
+};
+
+type PromptResult = {
+  ok: boolean;
+  value?: unknown;
+};
+
+function logRejection(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
+
+function saveSetting(save: Promise<void>): void {
+  save.catch(logRejection("Failed to save notification setting:"));
+}
+
+function isFeedFilterMap(value: unknown): value is FeedFilterMap {
+  return typeof value === "object" && value !== null && Object.values(value).every((entry: unknown) => typeof entry === "string");
+}
+
+function isSharedFeedFilters(value: unknown): value is SharedFeedFilters {
+  return typeof value === "object" && value !== null && "noty" in value && isFeedFilterMap(value.noty) && "wrist" in value && isFeedFilterMap(value.wrist);
+}
+
+function isPromptResult(value: unknown): value is PromptResult {
+  return typeof value === "object" && value !== null && "ok" in value && typeof value.ok === "boolean";
+}
+
 export const useNotificationsSettingsStore = defineStore("NotificationsSettings", () => {
   const vrStore = useVrStore();
   const modalStore = useModalStore();
@@ -27,7 +61,7 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
   const notificationTTSNickName = ref(false);
   const inventoryBundleNotifications = ref(true);
   const freeStoreItemNotifications = ref(true);
-  const sharedFeedFilters = ref({
+  const sharedFeedFilters = ref<SharedFeedFilters>({
     noty: {
       Location: "Off",
       OnPlayerJoined: "VIP",
@@ -119,7 +153,7 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
   });
   const isTestTTSVisible = ref(false);
   const notificationTTSVoice = ref(0);
-  const TTSvoices = ref([]);
+  const ttsVoices = ref<SpeechSynthesisVoice[]>([]);
   const notificationTTSTest = ref("");
   const notificationPosition = ref("topCenter");
   const notificationTimeout = ref(3000);
@@ -127,18 +161,18 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
   async function initNotificationsSettings() {
     const [
       overlayToastConfig,
-      overlayNotificationsConfig,
-      openVRConfig,
-      xsNotificationsConfig,
-      ovrtHudNotificationsConfig,
-      ovrtWristNotificationsConfig,
-      imageNotificationsConfig,
+      isOverlayNotificationsConfig,
+      isOpenVRConfig,
+      isXsNotificationsConfig,
+      isOvrtHudNotificationsConfig,
+      isOvrtWristNotificationsConfig,
+      isImageNotificationsConfig,
       desktopToastConfig,
-      afkDesktopToastConfig,
+      isAfkDesktopToastConfig,
       notificationTTSConfig,
-      notificationTTSNickNameConfig,
-      inventoryBundleNotificationsConfig,
-      freeStoreItemNotificationsConfig,
+      isNotificationTTSNickNameConfig,
+      isInventoryBundleNotificationsConfig,
+      isFreeStoreItemNotificationsConfig,
       sharedFeedFiltersConfig,
       notificationTTSVoiceConfig,
       notificationPositionConfig,
@@ -164,21 +198,24 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     ]);
 
     overlayToast.value = overlayToastConfig;
-    openVR.value = openVRConfig;
-    overlayNotifications.value = overlayNotificationsConfig;
-    xsNotifications.value = xsNotificationsConfig;
-    ovrtHudNotifications.value = ovrtHudNotificationsConfig;
-    ovrtWristNotifications.value = ovrtWristNotificationsConfig;
-    imageNotifications.value = imageNotificationsConfig;
+    openVR.value = isOpenVRConfig;
+    overlayNotifications.value = isOverlayNotificationsConfig;
+    xsNotifications.value = isXsNotificationsConfig;
+    ovrtHudNotifications.value = isOvrtHudNotificationsConfig;
+    ovrtWristNotifications.value = isOvrtWristNotificationsConfig;
+    imageNotifications.value = isImageNotificationsConfig;
     desktopToast.value = desktopToastConfig;
-    afkDesktopToast.value = afkDesktopToastConfig;
+    afkDesktopToast.value = isAfkDesktopToastConfig;
     notificationTTS.value = notificationTTSConfig;
-    notificationTTSNickName.value = notificationTTSNickNameConfig;
-    inventoryBundleNotifications.value = inventoryBundleNotificationsConfig;
-    freeStoreItemNotifications.value = freeStoreItemNotificationsConfig;
-    sharedFeedFilters.value = JSON.parse(sharedFeedFiltersConfig);
+    notificationTTSNickName.value = isNotificationTTSNickNameConfig;
+    inventoryBundleNotifications.value = isInventoryBundleNotificationsConfig;
+    freeStoreItemNotifications.value = isFreeStoreItemNotificationsConfig;
+    const parsedSharedFeedFilters: unknown = JSON.parse(sharedFeedFiltersConfig);
+    if (isSharedFeedFilters(parsedSharedFeedFilters)) {
+      sharedFeedFilters.value = parsedSharedFeedFilters;
+    }
     notificationTTSVoice.value = Number(notificationTTSVoiceConfig);
-    TTSvoices.value = speechSynthesis.getVoices();
+    ttsVoices.value = speechSynthesis.getVoices();
     notificationPosition.value = notificationPositionConfig;
     notificationTimeout.value = Number(notificationTimeoutConfig);
 
@@ -189,78 +226,78 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     }, 5000);
   }
 
-  initNotificationsSettings();
+  initNotificationsSettings().catch(logRejection("Failed to load notification settings:"));
 
-  function setOverlayToast(value) {
+  function setOverlayToast(value: string) {
     overlayToast.value = value;
-    configRepository.setString("VRCX_overlayToast", value);
+    saveSetting(configRepository.setString("VRCX_overlayToast", value));
   }
   function setOverlayNotifications() {
     overlayNotifications.value = !overlayNotifications.value;
-    configRepository.setBool("VRCX_overlayNotifications", overlayNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_overlayNotifications", overlayNotifications.value));
   }
   function setOpenVR() {
     openVR.value = !openVR.value;
-    configRepository.setBool("openVR", openVR.value);
+    saveSetting(configRepository.setBool("openVR", openVR.value));
   }
   function setXsNotifications() {
     xsNotifications.value = !xsNotifications.value;
-    configRepository.setBool("VRCX_xsNotifications", xsNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_xsNotifications", xsNotifications.value));
   }
   function setOvrtHudNotifications() {
     ovrtHudNotifications.value = !ovrtHudNotifications.value;
-    configRepository.setBool("VRCX_ovrtHudNotifications", ovrtHudNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_ovrtHudNotifications", ovrtHudNotifications.value));
   }
   function setOvrtWristNotifications() {
     ovrtWristNotifications.value = !ovrtWristNotifications.value;
-    configRepository.setBool("VRCX_ovrtWristNotifications", ovrtWristNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_ovrtWristNotifications", ovrtWristNotifications.value));
   }
   function setImageNotifications() {
     imageNotifications.value = !imageNotifications.value;
-    configRepository.setBool("VRCX_imageNotifications", imageNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_imageNotifications", imageNotifications.value));
   }
 
-  function changeNotificationPosition(value) {
+  function changeNotificationPosition(value: string) {
     notificationPosition.value = value;
-    configRepository.setString("VRCX_notificationPosition", notificationPosition.value);
+    saveSetting(configRepository.setString("VRCX_notificationPosition", notificationPosition.value));
     vrStore.updateVRConfigVars();
   }
 
-  function setDesktopToast(value) {
+  function setDesktopToast(value: string) {
     desktopToast.value = value;
-    configRepository.setString("VRCX_desktopToast", value);
+    saveSetting(configRepository.setString("VRCX_desktopToast", value));
   }
   function setAfkDesktopToast() {
     afkDesktopToast.value = !afkDesktopToast.value;
-    configRepository.setBool("VRCX_afkDesktopToast", afkDesktopToast.value);
+    saveSetting(configRepository.setBool("VRCX_afkDesktopToast", afkDesktopToast.value));
   }
 
-  function setNotificationTTS(value) {
+  function setNotificationTTS(value: string) {
     notificationTTS.value = value;
-    configRepository.setString("VRCX_notificationTTS", value);
+    saveSetting(configRepository.setString("VRCX_notificationTTS", value));
   }
   function setNotificationTTSNickName() {
     notificationTTSNickName.value = !notificationTTSNickName.value;
-    configRepository.setBool("VRCX_notificationTTSNickName", notificationTTSNickName.value);
+    saveSetting(configRepository.setBool("VRCX_notificationTTSNickName", notificationTTSNickName.value));
   }
   function setInventoryBundleNotifications() {
     inventoryBundleNotifications.value = !inventoryBundleNotifications.value;
-    configRepository.setBool("VRCX_inventoryBundleNotifications", inventoryBundleNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_inventoryBundleNotifications", inventoryBundleNotifications.value));
   }
   function setFreeStoreItemNotifications() {
     freeStoreItemNotifications.value = !freeStoreItemNotifications.value;
-    configRepository.setBool("VRCX_freeStoreItemNotifications", freeStoreItemNotifications.value);
+    saveSetting(configRepository.setBool("VRCX_freeStoreItemNotifications", freeStoreItemNotifications.value));
   }
   function initSharedFeedFilters() {
-    if (!sharedFeedFilters.value.noty.Blocked) {
-      sharedFeedFilters.value.noty.Blocked = "Off";
-      sharedFeedFilters.value.noty.Unblocked = "Off";
-      sharedFeedFilters.value.noty.Muted = "Off";
-      sharedFeedFilters.value.noty.Unmuted = "Off";
-      sharedFeedFilters.value.wrist.Blocked = "On";
-      sharedFeedFilters.value.wrist.Unblocked = "On";
-      sharedFeedFilters.value.wrist.Muted = "On";
-      sharedFeedFilters.value.wrist.Unmuted = "On";
+    if (!sharedFeedFilters.value.noty["Blocked"]) {
+      sharedFeedFilters.value.noty["Blocked"] = "Off";
+      sharedFeedFilters.value.noty["Unblocked"] = "Off";
+      sharedFeedFilters.value.noty["Muted"] = "Off";
+      sharedFeedFilters.value.noty["Unmuted"] = "Off";
+      sharedFeedFilters.value.wrist["Blocked"] = "On";
+      sharedFeedFilters.value.wrist["Unblocked"] = "On";
+      sharedFeedFilters.value.wrist["Muted"] = "On";
+      sharedFeedFilters.value.wrist["Unmuted"] = "On";
     }
     if (!sharedFeedFilters.value.noty["group.announcement"]) {
       sharedFeedFilters.value.noty["group.announcement"] = "On";
@@ -286,36 +323,36 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
       sharedFeedFilters.value.noty["instance.closed"] = "On";
       sharedFeedFilters.value.wrist["instance.closed"] = "On";
     }
-    if (!sharedFeedFilters.value.noty.External) {
-      sharedFeedFilters.value.noty.External = "On";
-      sharedFeedFilters.value.wrist.External = "On";
+    if (!sharedFeedFilters.value.noty["External"]) {
+      sharedFeedFilters.value.noty["External"] = "On";
+      sharedFeedFilters.value.wrist["External"] = "On";
     }
-    if (!sharedFeedFilters.value.noty.groupChange) {
-      sharedFeedFilters.value.noty.groupChange = "On";
-      sharedFeedFilters.value.wrist.groupChange = "On";
+    if (!sharedFeedFilters.value.noty["groupChange"]) {
+      sharedFeedFilters.value.noty["groupChange"] = "On";
+      sharedFeedFilters.value.wrist["groupChange"] = "On";
     }
     if (!sharedFeedFilters.value.noty["group.transfer"]) {
       sharedFeedFilters.value.noty["group.transfer"] = "On";
       sharedFeedFilters.value.wrist["group.transfer"] = "On";
     }
-    if (!sharedFeedFilters.value.noty.boop || sharedFeedFilters.value.noty.boop === "On") {
-      sharedFeedFilters.value.noty.boop = "Friends";
+    if (!sharedFeedFilters.value.noty["boop"] || sharedFeedFilters.value.noty["boop"] === "On") {
+      sharedFeedFilters.value.noty["boop"] = "Friends";
     }
-    if (!sharedFeedFilters.value.wrist.boop || sharedFeedFilters.value.wrist.boop === "On") {
-      sharedFeedFilters.value.wrist.boop = "Friends";
+    if (!sharedFeedFilters.value.wrist["boop"] || sharedFeedFilters.value.wrist["boop"] === "On") {
+      sharedFeedFilters.value.wrist["boop"] = "Friends";
     }
   }
-  function setNotificationTTSVoice(index) {
+  function setNotificationTTSVoice(index: number) {
     notificationTTSVoice.value = index;
-    configRepository.setString("VRCX_notificationTTSVoice", notificationTTSVoice.value.toString());
+    saveSetting(configRepository.setString("VRCX_notificationTTSVoice", notificationTTSVoice.value.toString()));
   }
 
-  function getTTSVoiceName() {
-    let voices;
+  function getTTSVoiceName(): string {
+    let voices: SpeechSynthesisVoice[];
     if (isHostWindows) {
       voices = speechSynthesis.getVoices();
     } else {
-      voices = TTSvoices.value;
+      voices = ttsVoices.value;
     }
     if (voices.length === 0) {
       return "";
@@ -323,40 +360,42 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     if (notificationTTSVoice.value >= voices.length) {
       setNotificationTTSVoice(0);
     }
-    return voices[notificationTTSVoice.value].name;
+    return voices[notificationTTSVoice.value]?.name ?? "";
   }
 
-  async function changeTTSVoice(index) {
+  function changeTTSVoice(index: number) {
     setNotificationTTSVoice(index);
-    let voices;
+    let voices: SpeechSynthesisVoice[];
     if (isHostWindows) {
       voices = speechSynthesis.getVoices();
     } else {
-      voices = TTSvoices.value;
+      voices = ttsVoices.value;
     }
     if (voices.length === 0) {
       return;
     }
-    const voiceName = voices[index].name;
+    const voice = voices[index];
+    if (!voice) {
+      return;
+    }
     speechSynthesis.cancel();
-    speak(voiceName);
+    speak(voice.name);
   }
 
   function updateTTSVoices() {
-    TTSvoices.value = speechSynthesis.getVoices();
+    ttsVoices.value = speechSynthesis.getVoices();
     if (isHostLinux) {
       const voices = speechSynthesis.getVoices();
-      let uniqueVoices = [];
+      const uniqueVoices: SpeechSynthesisVoice[] = [];
       voices.forEach((voice) => {
         if (!uniqueVoices.some((v) => v.lang === voice.lang)) {
           uniqueVoices.push(voice);
         }
       });
-      uniqueVoices = uniqueVoices.filter((v) => v.lang.startsWith("en"));
-      TTSvoices.value = uniqueVoices;
+      ttsVoices.value = uniqueVoices.filter((v) => v.lang.startsWith("en"));
     }
   }
-  async function saveNotificationTTS(value) {
+  async function saveNotificationTTS(value: string) {
     speechSynthesis.cancel();
     if ((await configRepository.getString("VRCX_notificationTTS")) === "Never" && value !== "Never") {
       speak("Notification text-to-speech enabled");
@@ -369,7 +408,7 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     speak(notificationTTSTest.value);
   }
 
-  function speak(text) {
+  function speak(text: string) {
     const tts = new SpeechSynthesisUtterance();
     const voices = speechSynthesis.getVoices();
     if (voices.length === 0) {
@@ -379,16 +418,16 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     if (notificationTTSVoice.value < voices.length) {
       index = notificationTTSVoice.value;
     }
-    tts.voice = voices[index];
+    tts.voice = voices[index] ?? null;
     tts.text = text;
     speechSynthesis.speak(tts);
   }
 
-  function setNotificationTimeout(seconds) {
-    const ms = Math.trunc(Number(seconds) * 1000);
+  function setNotificationTimeout(seconds: number) {
+    const ms = Math.trunc(seconds * 1000);
     if (isNaN(ms) || ms < 0) return;
     notificationTimeout.value = ms;
-    configRepository.setString("VRCX_notificationTimeout", ms.toString());
+    saveSetting(configRepository.setString("VRCX_notificationTimeout", ms.toString()));
     vrStore.updateVRConfigVars();
   }
 
@@ -403,15 +442,16 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
         pattern: /\d+$/,
         errorMessage: t("prompt.notification_timeout.input_error"),
       })
-      .then(async ({ ok, value }) => {
-        if (!ok) return;
-        if (value && !isNaN(Number(value))) {
+      .then(async (result: unknown) => {
+        if (!isPromptResult(result) || !result.ok) return;
+        const { value } = result;
+        if (typeof value === "string" && value && !isNaN(Number(value))) {
           notificationTimeout.value = Math.trunc(Number(value) * 1000);
           await configRepository.setString("VRCX_notificationTimeout", notificationTimeout.value.toString());
           vrStore.updateVRConfigVars();
         }
       })
-      .catch(() => {});
+      .catch(logRejection("Failed to update notification timeout:"));
   }
 
   return {
@@ -431,7 +471,7 @@ export const useNotificationsSettingsStore = defineStore("NotificationsSettings"
     sharedFeedFilters,
     isTestTTSVisible,
     notificationTTSVoice,
-    TTSvoices,
+    TTSvoices: ttsVoices,
     notificationTTSTest,
     notificationPosition,
     notificationTimeout,

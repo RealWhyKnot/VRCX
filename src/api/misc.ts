@@ -16,6 +16,7 @@ import { queryClient } from "../queries/client";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
+import { requestJson } from "./request-json";
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;
@@ -23,7 +24,7 @@ function getCurrentUserId() {
 
 const miscRequest = {
   getFile(params: { fileId: string }): Promise<{ json: Json<File>; params: { fileId: string } }> {
-    return request(`file/${params.fileId}`, {
+    return requestJson<Json<File>>(`file/${params.fileId}`, {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -35,7 +36,7 @@ const miscRequest = {
   },
 
   saveNote(params: UpdateUserNoteRequest): Promise<{ json: Json<UpdateUserNoteResponse>; params: UpdateUserNoteRequest }> {
-    return request("userNotes", {
+    return requestJson<Json<UpdateUserNoteResponse>>("userNotes", {
       method: "POST",
       params,
     }).then((json) => {
@@ -47,8 +48,12 @@ const miscRequest = {
     });
   },
 
-  getFileAnalysis(params: { fileId: string; version: number; variant: string }): Promise<{ json: Json<FileAnalysis>; params }> {
-    return request(`analysis/${params.fileId}/${params.version}/${params.variant}`, {
+  getFileAnalysis(params: {
+    fileId: string;
+    version: number;
+    variant: string;
+  }): Promise<{ json: Json<FileAnalysis>; params: { fileId: string; version: number; variant: string } }> {
+    return requestJson<Json<FileAnalysis>>(`analysis/${params.fileId}/${params.version}/${params.variant}`, {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -60,7 +65,7 @@ const miscRequest = {
   },
 
   getStore(params: GetStore["query"]): Promise<{ json: Json<Store>; params: GetStore["query"] }> {
-    return request("economy/store", {
+    return requestJson<Json<Store>>("economy/store", {
       method: "GET",
       params,
     }).then((json) => {
@@ -72,8 +77,8 @@ const miscRequest = {
     });
   },
 
-  closeInstance(params: { location: string; hardClose: boolean }): Promise<{ json: Json<Instance>; params }> {
-    return request(`instances/${params.location}`, {
+  closeInstance(params: { location: string; hardClose?: boolean }): Promise<{ json: Json<Instance>; params: { location: string; hardClose?: boolean } }> {
+    return requestJson<Json<Instance>>(`instances/${params.location}`, {
       method: "DELETE",
       params: {
         hardClose: params.hardClose ?? false,
@@ -87,7 +92,7 @@ const miscRequest = {
     });
   },
 
-  deleteWorldPersistData(params: { worldId: string }): Promise<{ json: unknown; params }> {
+  deleteWorldPersistData(params: { worldId: string }): Promise<{ json: unknown; params: { worldId: string } }> {
     return request(`users/${getCurrentUserId()}/${params.worldId}/persist`, {
       method: "DELETE",
     }).then((json) => {
@@ -99,7 +104,7 @@ const miscRequest = {
     });
   },
 
-  hasWorldPersistData(params: { worldId: string }): Promise<{ json: unknown; params }> {
+  hasWorldPersistData(params: { worldId: string }): Promise<{ json: unknown; params: { worldId: string } }> {
     return request(`users/${getCurrentUserId()}/${params.worldId}/persist/exists`, {
       method: "GET",
     }).then((json) => {
@@ -133,6 +138,9 @@ const miscRequest = {
     return request("visits", {
       method: "GET",
     }).then((json) => {
+      if (typeof json !== "number") {
+        throw new Error("API response is not a number: visits");
+      }
       const args = {
         json,
       };
@@ -141,7 +149,7 @@ const miscRequest = {
   },
 
   deleteFile(fileId: string): Promise<{ json: Json<File>; fileId: string }> {
-    return request(`file/${fileId}`, {
+    return requestJson<Json<File>>(`file/${fileId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -157,7 +165,7 @@ const miscRequest = {
   },
 
   sendBoop(params: { userId: string } & BoopRequest): Promise<{ json: Json<Success>; params: { userId: string } & BoopRequest }> {
-    return request(`users/${params.userId}/boop`, {
+    return requestJson<Json<Success>>(`users/${params.userId}/boop`, {
       method: "POST",
       params: {
         emojiId: params.emojiId,
@@ -171,12 +179,12 @@ const miscRequest = {
     });
   },
 
-  getInfoPush(params: { require?: string; include?: string[] }): Promise<{ json: Json<InfoPush[]>; params }> {
-    const query: Record<string, any> = {
+  getInfoPush(params: { require?: string; include?: string[] }): Promise<{ json: Json<InfoPush[]>; params: { require?: string; include?: string[] } }> {
+    const query = {
       require: params.require,
       include: params.include,
     };
-    return request("infoPush", {
+    return requestJson<Json<InfoPush[]>>("infoPush", {
       method: "GET",
       params: query,
     }).then((json) => {

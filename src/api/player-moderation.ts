@@ -1,10 +1,10 @@
 import type { ModerateUserRequest, PlayerModeration, Success } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { request } from "../services/request";
+import { requestJson } from "./request-json";
 
 const playerModerationRequest = {
   getPlayerModerations(): Promise<{ json: Json<PlayerModeration[]> }> {
-    return request("auth/user/playermoderations", {
+    return requestJson<Json<PlayerModeration[]>>("auth/user/playermoderations", {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -15,7 +15,7 @@ const playerModerationRequest = {
   },
 
   sendPlayerModeration(params: ModerateUserRequest): Promise<{ json: Json<PlayerModeration>; params: ModerateUserRequest }> {
-    return request("auth/user/playermoderations", {
+    return requestJson<Json<PlayerModeration>>("auth/user/playermoderations", {
       method: "POST",
       params,
     }).then((json) => {
@@ -28,7 +28,7 @@ const playerModerationRequest = {
   },
 
   deletePlayerModeration(params: ModerateUserRequest): Promise<{ json: Json<Success>; params: ModerateUserRequest }> {
-    return request("auth/user/unplayermoderate", {
+    return requestJson<Json<Success>>("auth/user/unplayermoderate", {
       method: "PUT",
       params,
     }).then((json) => {
@@ -41,7 +41,7 @@ const playerModerationRequest = {
   },
 
   deletePlayerModerations(params: Pick<ModerateUserRequest, "type">): Promise<{ json: Json<Success>; params: Pick<ModerateUserRequest, "type"> }> {
-    return request("auth/user/unplayermoderate", {
+    return requestJson<Json<Success>>("auth/user/unplayermoderate", {
       method: "PUT",
       params,
     }).then((json) => {

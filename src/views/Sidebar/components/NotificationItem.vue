@@ -227,7 +227,7 @@ import { useGroupStore } from "../../../stores/group";
 import { useLocationStore } from "../../../stores/location";
 import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { useUserDisplay } from "../../../composables/use-user-display";

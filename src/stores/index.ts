@@ -44,55 +44,65 @@ import { useWristOverlaySettingsStore } from "./settings/wrist-overlay";
 
 export const pinia = createPinia();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function stateSlice(state: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = state[key];
+  return isRecord(value) ? value : {};
+}
+
 async function registerSentryPiniaPlugin() {
   if (!isBuildNightly) return;
   if (!(await isSentryOptedIn())) return;
 
   const Sentry = await getSentry();
+  if (Sentry === null) return;
 
   pinia.use(
     Sentry.createSentryPiniaPlugin({
-      stateTransformer: (state) => ({
+      stateTransformer: (state: Record<string, unknown>) => ({
         ...state,
         Auth: null,
         Feed: null,
         Favorite: null,
         Friend: null,
         User: {
-          ...state.User,
+          ...stateSlice(state, "User"),
           currentUser: null,
           subsetOfLanguages: null,
         },
         GameLog: {
-          ...state.GameLog,
+          ...stateSlice(state, "GameLog"),
           gameLogTable: null,
         },
         Notification: {
-          ...state.Notification,
+          ...stateSlice(state, "Notification"),
           notificationTable: null,
         },
         Moderation: {
-          ...state.Moderation,
+          ...stateSlice(state, "Moderation"),
           playerModerationTable: null,
           cachedPlayerModerations: null,
           cachedPlayerModerationsUserIds: null,
         },
         Photon: null,
         SharedFeed: {
-          ...state.SharedFeed,
+          ...stateSlice(state, "SharedFeed"),
           sharedFeedData: null,
         },
         Group: {
-          ...state.Group,
+          ...stateSlice(state, "Group"),
           groupInstances: null,
           inGameGroupOrder: null,
         },
         Avatar: {
-          ...state.Avatar,
+          ...stateSlice(state, "Avatar"),
           avatarHistory: null,
         },
         Gallery: {
-          ...state.Gallery,
+          ...stateSlice(state, "Gallery"),
           emojiTable: null,
           galleryTable: null,
           instanceStickersCache: null,

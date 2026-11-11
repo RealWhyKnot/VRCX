@@ -1,4 +1,17 @@
-const charToConfusables = new Map([
+import { COMBINING_MARK_RANGES, LINE_BREAK_COMBINING_MARK_RANGES, SYMBOL_LEADING_RANGES, type CodeRange } from "./quick-search-character-ranges";
+import {
+  parseWorkerRequest,
+  type FriendMatchField,
+  type FriendSearchResult,
+  type IndexEntry,
+  type IndexPayload,
+  type ItemSearchResult,
+  type ItemType,
+  type SearchRequest,
+  type SearchWorkerResponse,
+} from "./quick-search-worker-protocol";
+
+const characterToConfusables = new Map<string, string>([
   [" ", " "],
   ["0", "⓿"],
   ["1", "11⓵➊⑴¹𝟏𝟙１𝟷𝟣⒈𝟭1➀₁①❶⥠"],
@@ -38,127 +51,123 @@ const charToConfusables = new Map([
   ["z", "ⓩꮓ"],
 ]);
 
-const confusablesToChar = new Map();
-for (const [char_, confusables] of charToConfusables) {
+const confusableToCharacter = new Map<string, string>();
+for (const [character, confusables] of characterToConfusables) {
   for (const confusable of confusables) {
-    confusablesToChar.set(confusable, char_);
+    confusableToCharacter.set(confusable, character);
   }
+}
+
+function escapeCodeUnit(codeUnit: number): string {
+  return `\\u${codeUnit.toString(16).padStart(4, "0")}`;
+}
+
+function toCharacterClass(ranges: readonly CodeRange[]): string {
+  const body = ranges.map(([start, end]) => `${escapeCodeUnit(start)}-${escapeCodeUnit(end)}`).join("");
+  return `[${body}]`;
 }
 
 const nonConfusables = /^[!-~]*$/;
-const regexLineBreakCombiningMarks =
-  /[\0-\x08\x0E-\x1F\x7F-\x84\x86-\x9F\u0300-\u034E\u0350-\u035B\u0363-\u036F\u0483-\u0489\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u0610-\u061A\u061C\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E4\u06E7\u06E8\u06EA-\u06ED\u0711\u0730-\u074A\u07A6-\u07B0\u07EB-\u07F3\u0816-\u0819\u081B-\u0823\u0825-\u0827\u0829-\u082D\u0859-\u085B\u08D4-\u08E1\u08E3-\u0903\u093A-\u093C\u093E-\u094F\u0951-\u0957\u0962\u0963\u0981-\u0983\u09BC\u09BE-\u09C4\u09C7\u09C8\u09CB-\u09CD\u09D7\u09E2\u09E3\u0A01-\u0A03\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A70\u0A71\u0A75\u0A81-\u0A83\u0ABC\u0ABE-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AE2\u0AE3\u0B01-\u0B03\u0B3C\u0B3E-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B62\u0B63\u0B82\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD7\u0C00-\u0C03\u0C3E-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C62\u0C63\u0C81-\u0C83\u0CBC\u0CBE-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CE2\u0CE3\u0D01-\u0D03\u0D3E-\u0D44\u0D46-\u0D48\u0D4A-\u0D4D\u0D57\u0D62\u0D63\u0D82\u0D83\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DF2\u0DF3\u0F18\u0F19\u0F35\u0F37\u0F39\u0F3E\u0F3F\u0F71-\u0F7E\u0F80-\u0F84\u0F86\u0F87\u0F8D-\u0F97\u0F99-\u0FBC\u0FC6\u135D-\u135F\u1712-\u1714\u1732-\u1734\u1752\u1753\u1772\u1773\u180B-\u180D\u1885\u1886\u18A9\u1920-\u192B\u1930-\u193B\u1A17-\u1A1B\u1A7F\u1AB0-\u1ABE\u1B00-\u1B04\u1B34-\u1B44\u1B6B-\u1B73\u1B80-\u1B82\u1BA1-\u1BAD\u1BE6-\u1BF3\u1C24-\u1C37\u1CD0-\u1CD2\u1CD4-\u1CE8\u1CED\u1CF2-\u1CF4\u1CF8\u1CF9\u1DC0-\u1DF5\u1DFB-\u1DFF\u200C\u200E\u200F\u202A-\u202E\u2066-\u206F\u20D0-\u20F0\u2CEF-\u2CF1\u2D7F\u2DE0-\u2DFF\u302A-\u302F\u3035\u3099\u309A\uA66F-\uA672\uA674-\uA67D\uA69E\uA69F\uA6F0\uA6F1\uA802\uA806\uA80B\uA823-\uA827\uA880\uA881\uA8B4-\uA8C5\uA8E0-\uA8F1\uA926-\uA92D\uA947-\uA953\uA980-\uA983\uA9B3-\uA9C0\uAA29-\uAA36\uAA43\uAA4C\uAA4D\uAAEB-\uAAEF\uAAF5\uAAF6\uABE3-\uABEA\uABEC\uABED\uFB1E\uFE00-\uFE0F\uFE20-\uFE2F\uFFF9-\uFFFB]/g;
-const regexSymbolWithCombiningMarks =
-  /([\0-\u02FF\u0370-\u1AAF\u1B00-\u1DBF\u1E00-\u20CF\u2100-\uD7FF\uE000-\uFE1F\uFE30-\uFFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF])([\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]+)/g;
+const lineBreakCombiningMarks = new RegExp(toCharacterClass(LINE_BREAK_COMBINING_MARK_RANGES), "g");
+const symbolWithCombiningMarks = new RegExp(
+  `(${toCharacterClass(SYMBOL_LEADING_RANGES)}|[\\uD800-\\uDBFF][\\uDC00-\\uDFFF]|[\\uD800-\\uDBFF](?![\\uDC00-\\uDFFF])|(?:[^\\uD800-\\uDBFF]|^)[\\uDC00-\\uDFFF])(${toCharacterClass(COMBINING_MARK_RANGES)}+)`,
+  "g"
+);
 
-function removeConfusables(a) {
-  if (nonConfusables.test(a)) {
-    return a;
+function removeConfusables(text: string): string {
+  if (nonConfusables.test(text)) {
+    return text;
   }
-  let ret = "";
-  for (const char_ of a.normalize().replace(regexLineBreakCombiningMarks, "").replace(regexSymbolWithCombiningMarks, "$1").replace(/\s/g, "")) {
-    ret += confusablesToChar.get(char_) || char_;
+  let result = "";
+  const stripped = text.normalize().replace(lineBreakCombiningMarks, "").replace(symbolWithCombiningMarks, "$1").replace(/\s/g, "");
+  for (const character of stripped) {
+    result += confusableToCharacter.get(character) ?? character;
   }
-  return ret;
+  return result;
 }
 
-function removeWhitespace(a) {
-  return a.replace(/\s/g, "");
+function removeWhitespace(text: string): string {
+  return text.replace(/\s/g, "");
 }
 
-function localeIncludes(str, search, comparer) {
+function localeIncludes(text: string, search: string, comparer: Intl.Collator): boolean {
   if (search === "") return true;
-  if (!str || !search) return false;
-  const strObj = String(str);
-  const searchObj = String(search);
-  if (strObj.length === 0) return false;
-  if (searchObj.length > strObj.length) return false;
-  for (let i = 0; i < str.length - searchObj.length + 1; i++) {
-    const substr = strObj.substring(i, i + searchObj.length);
-    if (comparer.compare(substr, searchObj) === 0) return true;
+  if (search.length > text.length) return false;
+  for (let index = 0; index <= text.length - search.length; index++) {
+    if (comparer.compare(text.substring(index, index + search.length), search) === 0) return true;
   }
   return false;
 }
 
-function matchName(name, cleanQuery, comparer, normalizedName) {
+function matchName(name: string | undefined, cleanQuery: string, comparer: Intl.Collator, normalizedName: string | undefined): boolean {
   if (!name || !cleanQuery) return false;
-  const cleanName = normalizedName || removeConfusables(name);
+  const cleanName = normalizedName ?? removeConfusables(name);
   if (localeIncludes(cleanName, cleanQuery, comparer)) return true;
   return localeIncludes(name, cleanQuery, comparer);
 }
 
-function isPrefixMatch(name, cleanQuery, comparer) {
+function isPrefixMatch(name: string | undefined, cleanQuery: string, comparer: Intl.Collator): boolean {
   if (!name || !cleanQuery) return false;
   return comparer.compare(name.substring(0, cleanQuery.length), cleanQuery) === 0;
 }
 
-let indexedFriends = [];
-let indexedAvatars = [];
-let indexedWorlds = [];
-let indexedGroups = [];
-let indexedFavAvatars = [];
-let indexedFavWorlds = [];
-
-function updateIndex(payload) {
-  if (payload.friends) {
-    indexedFriends = payload.friends;
-    for (const f of indexedFriends) {
-      f._normalized = f.name ? removeConfusables(f.name) : "";
-    }
+function withNormalizedNames(entries: IndexEntry[]): IndexEntry[] {
+  for (const entry of entries) {
+    entry.normalized = entry.name ? removeConfusables(entry.name) : "";
   }
-  if (payload.avatars) {
-    indexedAvatars = payload.avatars;
-    for (const a of indexedAvatars) {
-      a._normalized = a.name ? removeConfusables(a.name) : "";
-    }
-  }
-  if (payload.worlds) {
-    indexedWorlds = payload.worlds;
-    for (const w of indexedWorlds) {
-      w._normalized = w.name ? removeConfusables(w.name) : "";
-    }
-  }
-  if (payload.groups) {
-    indexedGroups = payload.groups;
-    for (const g of indexedGroups) {
-      g._normalized = g.name ? removeConfusables(g.name) : "";
-    }
-  }
-  if (payload.favAvatars) {
-    indexedFavAvatars = payload.favAvatars;
-    for (const a of indexedFavAvatars) {
-      a._normalized = a.name ? removeConfusables(a.name) : "";
-    }
-  }
-  if (payload.favWorlds) {
-    indexedFavWorlds = payload.favWorlds;
-    for (const w of indexedFavWorlds) {
-      w._normalized = w.name ? removeConfusables(w.name) : "";
-    }
-  }
+  return entries;
 }
 
-function searchFriends(query, cleanQuery, comparer, limit = 10) {
-  const results = [];
-  for (const ctx of indexedFriends) {
-    let match = matchName(ctx.name, cleanQuery, comparer, ctx._normalized);
-    let matchedField = match ? "name" : null;
-    if (!match && ctx.memo && query.length >= 2) {
-      match = localeIncludes(ctx.memo, query, comparer);
-      if (match) matchedField = "memo";
-    }
-    if (!match && ctx.note && query.length >= 2) {
-      match = localeIncludes(ctx.note, query, comparer);
-      if (match) matchedField = "note";
-    }
-    if (match) {
+let indexedFriends: IndexEntry[] = [];
+let indexedAvatars: IndexEntry[] = [];
+let indexedWorlds: IndexEntry[] = [];
+let indexedGroups: IndexEntry[] = [];
+let indexedFavAvatars: IndexEntry[] = [];
+let indexedFavWorlds: IndexEntry[] = [];
+
+function updateIndex(payload: IndexPayload) {
+  if (payload.friends) indexedFriends = withNormalizedNames(payload.friends);
+  if (payload.avatars) indexedAvatars = withNormalizedNames(payload.avatars);
+  if (payload.worlds) indexedWorlds = withNormalizedNames(payload.worlds);
+  if (payload.groups) indexedGroups = withNormalizedNames(payload.groups);
+  if (payload.favAvatars) indexedFavAvatars = withNormalizedNames(payload.favAvatars);
+  if (payload.favWorlds) indexedFavWorlds = withNormalizedNames(payload.favWorlds);
+}
+
+type SortableResult = { name: string | undefined };
+
+function sortAndLimit<Result extends SortableResult>(results: Result[], cleanQuery: string, comparer: Intl.Collator, limit: number): Result[] {
+  const prefixMatches = new Set(results.filter((result) => isPrefixMatch(result.name, cleanQuery, comparer)));
+  results.sort((a, b) => {
+    const isPrefixA = prefixMatches.has(a);
+    const isPrefixB = prefixMatches.has(b);
+    if (isPrefixA && !isPrefixB) return -1;
+    if (isPrefixB && !isPrefixA) return 1;
+    return comparer.compare(String(a.name), String(b.name));
+  });
+  if (results.length > limit) results.length = limit;
+  return results;
+}
+
+function matchFriendField(entry: IndexEntry, query: string, cleanQuery: string, comparer: Intl.Collator): FriendMatchField | undefined {
+  if (matchName(entry.name, cleanQuery, comparer, entry.normalized)) return "name";
+  if (entry.memo && query.length >= 2 && localeIncludes(entry.memo, query, comparer)) return "memo";
+  if (entry.note && query.length >= 2 && localeIncludes(entry.note, query, comparer)) return "note";
+  return undefined;
+}
+
+function searchFriends(query: string, cleanQuery: string, comparer: Intl.Collator, limit = 10): FriendSearchResult[] {
+  const results: FriendSearchResult[] = [];
+  for (const entry of indexedFriends) {
+    const matchedField = matchFriendField(entry, query, cleanQuery, comparer);
+    if (matchedField) {
       results.push({
-        id: ctx.id,
-        name: ctx.name,
+        id: entry.id,
+        name: entry.name,
         type: "friend",
-        imageUrl: ctx.imageUrl,
-        memo: ctx.memo || "",
-        note: ctx.note || "",
+        imageUrl: entry.imageUrl,
+        memo: entry.memo ?? "",
+        note: entry.note ?? "",
         matchedField,
       });
     }
@@ -166,57 +175,52 @@ function searchFriends(query, cleanQuery, comparer, limit = 10) {
   return sortAndLimit(results, cleanQuery, comparer, limit);
 }
 
-function sortAndLimit(results, cleanQuery, comparer, limit) {
-  const prefixMatches = new Set(results.filter((r) => isPrefixMatch(r.name, cleanQuery, comparer)));
-  results.sort((a, b) => {
-    const aIsPrefix = prefixMatches.has(a);
-    const bIsPrefix = prefixMatches.has(b);
-    if (aIsPrefix && !bIsPrefix) return -1;
-    if (bIsPrefix && !aIsPrefix) return 1;
-    return comparer.compare(a.name, b.name);
-  });
-  if (results.length > limit) results.length = limit;
-  return results;
-}
-
-function searchItems(cleanQuery, items, type, comparer, ownerKey, ownerId, limit = 10) {
-  const results = [];
-  for (const ref of items) {
-    if (!ref || !ref.name) continue;
-    if (ownerId && ref[ownerKey] !== ownerId) continue;
-    if (matchName(ref.name, cleanQuery, comparer, ref._normalized)) {
+function searchItems(
+  cleanQuery: string,
+  items: IndexEntry[],
+  type: ItemType,
+  comparer: Intl.Collator,
+  ownerKey: "authorId" | "ownerId" | undefined,
+  ownerId: string | undefined,
+  limit = 10
+): ItemSearchResult[] {
+  const results: ItemSearchResult[] = [];
+  for (const entry of items) {
+    if (!entry.name) continue;
+    if (ownerId && ownerKey && entry[ownerKey] !== ownerId) continue;
+    if (matchName(entry.name, cleanQuery, comparer, entry.normalized)) {
       results.push({
-        id: ref.id,
-        name: ref.name,
+        id: entry.id,
+        name: entry.name,
         type,
-        imageUrl: ref.imageUrl,
+        imageUrl: entry.imageUrl,
       });
     }
   }
   return sortAndLimit(results, cleanQuery, comparer, limit);
 }
 
-function handleSearch(payload) {
-  const { seq, query, currentUserId, language } = payload;
+function postSearchResult(payload: SearchWorkerResponse["payload"]) {
+  self.postMessage({ type: "searchResult", payload });
+}
 
-  if (!query || query.length < 1) {
-    self.postMessage({
-      type: "searchResult",
-      payload: {
-        seq,
-        friends: [],
-        ownAvatars: [],
-        favAvatars: [],
-        ownWorlds: [],
-        favWorlds: [],
-        ownGroups: [],
-        joinedGroups: [],
-      },
+function handleSearch({ seq, query, currentUserId, language }: SearchRequest) {
+  if (query.length < 1) {
+    postSearchResult({
+      seq,
+      friends: [],
+      ownAvatars: [],
+      favAvatars: [],
+      ownWorlds: [],
+      favWorlds: [],
+      ownGroups: [],
+      joinedGroups: [],
     });
     return;
   }
 
-  const comparer = new Intl.Collator((language || "en").replace("_", "-"), {
+  const locale = language === undefined || language === "" ? "en" : language;
+  const comparer = new Intl.Collator(locale.replace("_", "-"), {
     usage: "search",
     sensitivity: "base",
   });
@@ -225,45 +229,42 @@ function handleSearch(payload) {
 
   const friends = searchFriends(query, cleanQuery, comparer);
   const ownAvatars = searchItems(cleanQuery, indexedAvatars, "avatar", comparer, "authorId", currentUserId);
-  const favAvatars = searchItems(cleanQuery, indexedFavAvatars, "avatar", comparer, null, null);
+  const favAvatars = searchItems(cleanQuery, indexedFavAvatars, "avatar", comparer, undefined, undefined);
   const ownWorlds = searchItems(cleanQuery, indexedWorlds, "world", comparer, "authorId", currentUserId);
-  const favWorlds = searchItems(cleanQuery, indexedFavWorlds, "world", comparer, null, null);
+  const favWorlds = searchItems(cleanQuery, indexedFavWorlds, "world", comparer, undefined, undefined);
   const ownGroups = searchItems(cleanQuery, indexedGroups, "group", comparer, "ownerId", currentUserId);
-  const joinedGroups = searchItems(cleanQuery, indexedGroups, "group", comparer, null, null);
+  const joinedGroups = searchItems(cleanQuery, indexedGroups, "group", comparer, undefined, undefined);
 
-  const ownAvatarIds = new Set(ownAvatars.map((r) => r.id));
-  const dedupedFavAvatars = favAvatars.filter((r) => !ownAvatarIds.has(r.id));
-  const ownWorldIds = new Set(ownWorlds.map((r) => r.id));
-  const dedupedFavWorlds = favWorlds.filter((r) => !ownWorldIds.has(r.id));
-  const ownGroupIds = new Set(ownGroups.map((r) => r.id));
-  const dedupedJoinedGroups = joinedGroups.filter((r) => !ownGroupIds.has(r.id));
+  const ownAvatarIds = new Set(ownAvatars.map((result) => result.id));
+  const dedupedFavAvatars = favAvatars.filter((result) => !ownAvatarIds.has(result.id));
+  const ownWorldIds = new Set(ownWorlds.map((result) => result.id));
+  const dedupedFavWorlds = favWorlds.filter((result) => !ownWorldIds.has(result.id));
+  const ownGroupIds = new Set(ownGroups.map((result) => result.id));
+  const dedupedJoinedGroups = joinedGroups.filter((result) => !ownGroupIds.has(result.id));
 
-  self.postMessage({
-    type: "searchResult",
-    payload: {
-      seq,
-      friends,
-      ownAvatars,
-      favAvatars: dedupedFavAvatars,
-      ownWorlds,
-      favWorlds: dedupedFavWorlds,
-      ownGroups,
-      joinedGroups: dedupedJoinedGroups,
-    },
+  postSearchResult({
+    seq,
+    friends,
+    ownAvatars,
+    favAvatars: dedupedFavAvatars,
+    ownWorlds,
+    favWorlds: dedupedFavWorlds,
+    ownGroups,
+    joinedGroups: dedupedJoinedGroups,
   });
 }
 
 self.addEventListener("message", (event) => {
-  const { type, payload } = event.data;
-
-  switch (type) {
+  const request = parseWorkerRequest(event.data);
+  switch (request.type) {
     case "updateIndex":
-      updateIndex(payload);
+      updateIndex(request.payload);
       break;
     case "search":
-      handleSearch(payload);
+      handleSearch(request.payload);
       break;
-    default:
-      console.warn("[SearchWorker] Unknown message type:", type);
+    case "unknown":
+      console.warn("[SearchWorker] Unknown message type:", request.received);
+      break;
   }
 });

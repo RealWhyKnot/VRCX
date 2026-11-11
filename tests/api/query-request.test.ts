@@ -1,9 +1,24 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { SearchWorlds } from "vrchat";
 
-const mockFetchWithEntityPolicy = vi.fn();
-const mockGetUser = vi.fn();
-const mockGetWorlds = vi.fn();
-const mockGetGroupCalendar = vi.fn();
+type FetchPolicyOptions = {
+  queryKey: readonly unknown[];
+  policy: Record<string, unknown>;
+  queryFn: () => Promise<unknown>;
+  label: string;
+};
+
+type FetchPolicyResult = {
+  data: unknown;
+  cache: boolean;
+};
+
+type Params = Record<string, unknown>;
+
+const mockFetchWithEntityPolicy = vi.fn<(options: FetchPolicyOptions) => Promise<FetchPolicyResult>>();
+const mockGetUser = vi.fn<(params: { userId: string }) => Promise<unknown>>();
+const mockGetWorlds = vi.fn<(params: Params, option?: string) => Promise<unknown>>();
+const mockGetGroupCalendar = vi.fn<(groupId: string) => Promise<unknown>>();
 
 vi.mock("../../src/queries/client", () => ({
   queryClient: {
@@ -147,64 +162,64 @@ vi.mock("../../src/queries/policies", () => ({
   },
 }));
 vi.mock("../../src/queries/entity-cache", () => ({
-  fetchWithEntityPolicy: (...args) => mockFetchWithEntityPolicy(...args),
+  fetchWithEntityPolicy: (options: FetchPolicyOptions) => mockFetchWithEntityPolicy(options),
 }));
 vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
-    user: (userId) => ["user", userId],
-    avatars: (params) => ["avatar", "list", params],
-    worldsByUser: (params) => ["worlds", "user", params.userId, params],
-    groupCalendar: (groupId) => ["group", groupId, "calendar"],
-    groupCalendars: (params) => ["group", "calendar", params],
-    followingGroupCalendars: (params) => ["group", "calendar", "following", params],
-    featuredGroupCalendars: (params) => ["group", "calendar", "featured", params],
-    avatar: (avatarId) => ["avatar", avatarId],
-    world: (worldId) => ["world", worldId],
-    group: (groupId, includeRoles) => ["group", groupId, Boolean(includeRoles)],
-    groupPosts: (params) => ["group", params.groupId, "posts", params],
-    groupMember: (params) => ["group", params.groupId, "member", params.userId],
-    groupMembers: (params) => ["group", params.groupId, "members", params],
-    groupGallery: (params) => ["group", params.groupId, "gallery", params.galleryId, params],
-    groupCalendarEvent: (params) => ["group", params.groupId, "calendarEvent", params.eventId],
-    avatarGallery: (avatarId) => ["avatar", avatarId, "gallery"],
-    friends: (params) => ["friends", params],
+    user: (userId: string) => ["user", userId],
+    avatars: (params: Params) => ["avatar", "list", params],
+    worldsByUser: (params: Params) => ["worlds", "user", params["userId"], params],
+    groupCalendar: (groupId: string) => ["group", groupId, "calendar"],
+    groupCalendars: (params: Params) => ["group", "calendar", params],
+    followingGroupCalendars: (params: Params) => ["group", "calendar", "following", params],
+    featuredGroupCalendars: (params: Params) => ["group", "calendar", "featured", params],
+    avatar: (avatarId: string) => ["avatar", avatarId],
+    world: (worldId: string) => ["world", worldId],
+    group: (groupId: string, includeRoles: unknown) => ["group", groupId, Boolean(includeRoles)],
+    groupPosts: (params: Params) => ["group", params["groupId"], "posts", params],
+    groupMember: (params: Params) => ["group", params["groupId"], "member", params["userId"]],
+    groupMembers: (params: Params) => ["group", params["groupId"], "members", params],
+    groupGallery: (params: Params) => ["group", params["groupId"], "gallery", params["galleryId"], params],
+    groupCalendarEvent: (params: Params) => ["group", params["groupId"], "calendarEvent", params["eventId"]],
+    avatarGallery: (avatarId: string) => ["avatar", avatarId, "gallery"],
+    friends: (params: Params) => ["friends", params],
     favoriteLimits: () => ["favorite", "limits"],
-    favorites: (params) => ["favorite", "items", params],
-    favoriteGroups: (params) => ["favorite", "groups", params],
-    favoriteWorlds: (params) => ["favorite", "worlds", params],
-    favoriteAvatars: (params) => ["favorite", "avatars", params],
-    galleryFiles: (params) => ["gallery", "files", params],
-    prints: (params) => ["gallery", "prints", params],
-    print: (printId) => ["gallery", "print", printId],
-    inventoryItem: (inventoryId) => ["inventory", "item", inventoryId],
-    userInventoryItem: (params) => ["inventory", "item", params.userId, params.inventoryId],
-    inventoryItems: (params) => ["inventory", "items", params],
-    inventoryTemplate: (inventoryTemplateId) => ["inventory", "template", inventoryTemplateId],
-    fileAnalysis: (params) => ["analysis", params.fileId, Number(params.version), String(params.variant || "")],
-    worldPersistData: (worldId) => ["world", worldId, "persistData"],
-    mutualCounts: (userId) => ["user", userId, "mutualCounts"],
+    favorites: (params: Params) => ["favorite", "items", params],
+    favoriteGroups: (params: Params) => ["favorite", "groups", params],
+    favoriteWorlds: (params: Params) => ["favorite", "worlds", params],
+    favoriteAvatars: (params: Params) => ["favorite", "avatars", params],
+    galleryFiles: (params: Params) => ["gallery", "files", params],
+    prints: (params: Params) => ["gallery", "prints", params],
+    print: (printId: string) => ["gallery", "print", printId],
+    inventoryItem: (inventoryId: string) => ["inventory", "item", inventoryId],
+    userInventoryItem: (params: Params) => ["inventory", "item", params["userId"], params["inventoryId"]],
+    inventoryItems: (params: Params) => ["inventory", "items", params],
+    inventoryTemplate: (inventoryTemplateId: string) => ["inventory", "template", inventoryTemplateId],
+    fileAnalysis: (params: Params) => ["analysis", params["fileId"], Number(params["version"]), typeof params["variant"] === "string" ? params["variant"] : ""],
+    worldPersistData: (worldId: string) => ["world", worldId, "persistData"],
+    mutualCounts: (userId: string) => ["user", userId, "mutualCounts"],
     visits: () => ["visits"],
-    file: (fileId) => ["file", fileId],
+    file: (fileId: string) => ["file", fileId],
   },
 }));
 
 vi.mock("../../src/api/user", () => ({
   userRequest: {
-    getUser: (...args) => mockGetUser(...args),
+    getUser: (params: { userId: string }) => mockGetUser(params),
     getMutualCounts: vi.fn(),
   },
 }));
 
 vi.mock("../../src/api/world", () => ({
   worldRequest: {
-    getWorlds: (...args) => mockGetWorlds(...args),
+    getWorlds: (...args: [Params, string?]) => mockGetWorlds(...args),
     getWorld: vi.fn(),
   },
 }));
 
 vi.mock("../../src/api/group", () => ({
   groupRequest: {
-    getGroupCalendar: (...args) => mockGetGroupCalendar(...args),
+    getGroupCalendar: (groupId: string) => mockGetGroupCalendar(groupId),
     getGroup: vi.fn(),
     getGroupPosts: vi.fn(),
     getGroupMember: vi.fn(),
@@ -292,10 +307,10 @@ describe("queryRequest", () => {
     await queryRequest.fetch("user", { userId: "usr_1" });
     await queryRequest.fetch("user.dialog", { userId: "usr_1" });
 
-    const baseCall = mockFetchWithEntityPolicy.mock.calls[0][0];
-    const dialogCall = mockFetchWithEntityPolicy.mock.calls[1][0];
-    expect(baseCall.queryKey).toEqual(["user", "usr_1"]);
-    expect(dialogCall.queryKey).toEqual(baseCall.queryKey);
+    const baseCall = mockFetchWithEntityPolicy.mock.calls[0]?.[0];
+    const dialogCall = mockFetchWithEntityPolicy.mock.calls[1]?.[0];
+    expect(baseCall?.queryKey).toEqual(["user", "usr_1"]);
+    expect(dialogCall?.queryKey).toEqual(baseCall?.queryKey);
   });
 
   test("applies staleTime zero for user.force", async () => {
@@ -308,12 +323,10 @@ describe("queryRequest", () => {
 
     await queryRequest.fetch("user.force", { userId: "usr_2" });
 
-    expect(mockFetchWithEntityPolicy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        policy: expect.objectContaining({ staleTime: 0 }),
-        label: "user.force",
-      })
-    );
+    expect(mockFetchWithEntityPolicy.mock.calls[0]?.[0]).toMatchObject({
+      policy: { staleTime: 0 },
+      label: "user.force",
+    });
   });
 
   test("applies staleTime 60000 for user.dialog", async () => {
@@ -326,16 +339,14 @@ describe("queryRequest", () => {
 
     await queryRequest.fetch("user.dialog", { userId: "usr_3" });
 
-    expect(mockFetchWithEntityPolicy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        policy: expect.objectContaining({ staleTime: 60_000 }),
-        label: "user.dialog",
-      })
-    );
+    expect(mockFetchWithEntityPolicy.mock.calls[0]?.[0]).toMatchObject({
+      policy: { staleTime: 60_000 },
+      label: "user.dialog",
+    });
   });
 
   test("supports worldsByUser option routing", async () => {
-    const params = {
+    const params: SearchWorlds["query"] & { userId: string; option: string } = {
       userId: "usr_me",
       n: 50,
       offset: 0,
@@ -382,10 +393,12 @@ describe("queryRequest", () => {
   });
 
   test("throws on unknown resource", async () => {
-    await expect(queryRequest.fetch("missing_resource", {})).rejects.toThrow("Unknown query resource");
+    const pending: unknown = Reflect.apply(queryRequest.fetch.bind(queryRequest), undefined, ["missing_resource", {}]);
+    await expect(pending).rejects.toThrow("Unknown query resource");
   });
 
   test("throws on unknown caller variant", async () => {
-    await expect(queryRequest.fetch("user.unknown", { userId: "usr_1" })).rejects.toThrow("Unknown query resource: user.unknown");
+    const pending: unknown = Reflect.apply(queryRequest.fetch.bind(queryRequest), undefined, ["user.unknown", { userId: "usr_1" }]);
+    await expect(pending).rejects.toThrow("Unknown query resource: user.unknown");
   });
 });

@@ -80,7 +80,7 @@ import { useUserStore } from "../../../stores/user";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { moderationReportRequest } from "../../../api/moderation-report";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 

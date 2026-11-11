@@ -11,6 +11,19 @@ import { useUserStore } from "../stores/user";
 import { useWorldStore } from "../stores/world";
 import { failedGetRequests } from "../services/request";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function fieldOf(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+function stringFieldOf(value: unknown, key: string): string {
+  const field = fieldOf(value, key);
+  return typeof field === "string" ? field : "";
+}
+
 export function clearVRCXCache() {
   const userStore = useUserStore();
   const worldStore = useWorldStore();
@@ -24,42 +37,48 @@ export function clearVRCXCache() {
 
   console.log("Clearing VRCX cache...");
   failedGetRequests.clear();
-  userStore.cachedUsers.forEach((ref, id) => {
-    if (!friendStore.friends.has(id) && !locationStore.lastLocation.playerList.has(ref.id) && id !== userStore.currentUser.id) {
+  userStore.cachedUsers.forEach((ref: unknown, id: string) => {
+    if (!friendStore.friends.has(id) && !locationStore.lastLocation.playerList.has(stringFieldOf(ref, "id")) && id !== userStore.currentUser.id) {
       userStore.deleteCachedUser(id);
     }
   });
-  userStore.cachedProfiles.forEach((ref, id) => {
-    if (!friendStore.friends.has(id) && !locationStore.lastLocation.playerList.has(ref.id) && id !== userStore.currentUser.id) {
+  userStore.cachedProfiles.forEach((ref: unknown, id: string) => {
+    if (!friendStore.friends.has(id) && !locationStore.lastLocation.playerList.has(stringFieldOf(ref, "id")) && id !== userStore.currentUser.id) {
       userStore.deleteCachedProfile(id);
     }
   });
-  worldStore.cachedWorlds.forEach((ref, id) => {
-    if (!favoriteStore.getCachedFavoritesByObjectId(id) && ref.authorId !== userStore.currentUser.id && !favoriteStore.localWorldFavoritesList.includes(id)) {
+  worldStore.cachedWorlds.forEach((ref: unknown, id: string) => {
+    if (
+      !favoriteStore.getCachedFavoritesByObjectId(id) &&
+      fieldOf(ref, "authorId") !== userStore.currentUser.id &&
+      !favoriteStore.localWorldFavoritesList.includes(id)
+    ) {
       removeWorldFromCache(id);
     }
   });
-  avatarStore.cachedAvatars.forEach((ref, id) => {
+  avatarStore.cachedAvatars.forEach((ref: unknown, id: string) => {
+    const avatarHistory = avatarStore.avatarHistory;
     if (
       !favoriteStore.getCachedFavoritesByObjectId(id) &&
-      ref.authorId !== userStore.currentUser.id &&
+      fieldOf(ref, "authorId") !== userStore.currentUser.id &&
       !favoriteStore.localAvatarFavoritesList.includes(id) &&
-      !avatarStore.avatarHistory.includes(id)
+      !avatarHistory.some((entry) => entry.id === id)
     ) {
       removeAvatarFromCache(id);
     }
   });
-  groupStore.cachedGroups.forEach((ref, id) => {
+  groupStore.cachedGroups.forEach((_: unknown, id: string) => {
     if (!groupStore.currentUserGroups.has(id)) {
       groupStore.cachedGroups.delete(id);
     }
   });
-  instanceStore.cachedInstances.forEach((ref, id) => {
-    if ([...friendStore.friends.values()].some((f) => f.$location?.tag === id)) {
+  instanceStore.cachedInstances.forEach((ref: unknown, id: string) => {
+    if ([...friendStore.friends.values()].some((f: unknown) => fieldOf(fieldOf(f, "$location"), "tag") === id)) {
       return;
     }
 
-    if (Date.parse(ref.$fetchedAt) < Date.now() - 3600000) {
+    const fetchedAt = fieldOf(ref, "$fetchedAt");
+    if (typeof fetchedAt === "string" && Date.parse(fetchedAt) < Date.now() - 3600000) {
       instanceStore.cachedInstances.delete(id);
     }
   });

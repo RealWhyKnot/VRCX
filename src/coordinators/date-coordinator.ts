@@ -1,10 +1,10 @@
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 
-function padZero(num) {
+function padZero(num: number): string {
   return String(num).padStart(2, "0");
 }
 
-function toIsoLong(date) {
+function toIsoLong(date: Date): string {
   const y = date.getFullYear();
   const m = padZero(date.getMonth() + 1);
   const d = padZero(date.getDate());
@@ -14,21 +14,21 @@ function toIsoLong(date) {
   return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 }
 
-function toLocalShort(date, dateFormat, hour12) {
+function toLocalShort(date: Date, dateFormat: string, isHour12: boolean): string {
   return date
     .toLocaleDateString(dateFormat, {
       month: "2-digit",
       day: "2-digit",
       hour: "numeric",
       minute: "numeric",
-      hourCycle: hour12 ? "h12" : "h23",
+      hourCycle: isHour12 ? "h12" : "h23",
     })
     .replace(" AM", "am")
     .replace(" PM", "pm")
     .replace(",", "");
 }
 
-function toLocalLong(date, dateFormat, hour12) {
+function toLocalLong(date: Date, dateFormat: string, isHour12: boolean): string {
   return date.toLocaleDateString(dateFormat, {
     month: "2-digit",
     day: "2-digit",
@@ -36,19 +36,19 @@ function toLocalLong(date, dateFormat, hour12) {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-    hourCycle: hour12 ? "h12" : "h23",
+    hourCycle: isHour12 ? "h12" : "h23",
   });
 }
 
-function toLocalTime(date, dateFormat, hour12) {
+function toLocalTime(date: Date, dateFormat: string, isHour12: boolean): string {
   return date.toLocaleTimeString(dateFormat, {
     hour: "numeric",
     minute: "numeric",
-    hourCycle: hour12 ? "h12" : "h23",
+    hourCycle: isHour12 ? "h12" : "h23",
   });
 }
 
-function toLocalDate(date, dateFormat) {
+function toLocalDate(date: Date, dateFormat: string): string {
   return date.toLocaleDateString(dateFormat, {
     month: "2-digit",
     day: "2-digit",
@@ -56,9 +56,9 @@ function toLocalDate(date, dateFormat) {
   });
 }
 
-function formatDateFilter(dateStr, format) {
+function formatDateFilter(dateStr: string | null | undefined, format: string): string {
   const appearance = useAppearanceSettingsStore();
-  const { dtIsoFormat: isoFormat, dtHour12: hour12, currentCulture } = appearance;
+  const { dtIsoFormat: isIsoFormat, dtHour12: isHour12, currentCulture } = appearance;
 
   if (!dateStr) {
     return "-";
@@ -70,21 +70,21 @@ function formatDateFilter(dateStr, format) {
   }
 
   let dateFormat = "en-gb";
-  if (!isoFormat && currentCulture) {
+  if (!isIsoFormat && currentCulture) {
     dateFormat = currentCulture;
   }
   if (dateFormat.length > 4 && dateFormat[4] === "_") {
     dateFormat = dateFormat.slice(0, 4);
   }
 
-  if (isoFormat && format === "long") {
+  if (isIsoFormat && format === "long") {
     return toIsoLong(dt);
   } else if (format === "long") {
-    return toLocalLong(dt, dateFormat, hour12);
+    return toLocalLong(dt, dateFormat, isHour12);
   } else if (format === "short") {
-    return toLocalShort(dt, dateFormat, hour12);
+    return toLocalShort(dt, dateFormat, isHour12);
   } else if (format === "time") {
-    return toLocalTime(dt, dateFormat, hour12);
+    return toLocalTime(dt, dateFormat, isHour12);
   } else if (format === "date") {
     return toLocalDate(dt, dateFormat);
   } else {

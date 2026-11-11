@@ -210,14 +210,46 @@ partial class AppApi
         return true;
     }
 
-    public async Task<string?> SavePrintToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
+    public Task<string> SavePrintToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) =>
+        SaveUgcImageAsync(imageLink, ugcFolderPath, "Prints", monthFolder, fileName, cancellationToken);
+
+    public Task<string> SaveStickerToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) =>
+        SaveUgcImageAsync(imageLink, ugcFolderPath, "Stickers", monthFolder, fileName, cancellationToken);
+
+    public Task<string> SaveEmojiToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) =>
+        SaveUgcImageAsync(imageLink, ugcFolderPath, "Emoji", monthFolder, fileName, cancellationToken);
+
+    protected static string FileSaved(string path) => SerializeFileSaveResult("saved", path);
+
+    protected static string FileSkipped() => SerializeFileSaveResult("skipped", string.Empty);
+
+    protected static string FileAccessDenied() => SerializeFileSaveResult("accessDenied", string.Empty);
+
+    private static string FileFolderBlocked() => SerializeFileSaveResult("folderBlocked", string.Empty);
+
+    private static string SerializeFileSaveResult(string status, string path) => JsonSerializer.Serialize(new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Prints", MakeValidFileName(monthFolder));
-        Directory.CreateDirectory(folder);
+        ["status"] = status,
+        ["path"] = path,
+    });
+
+    private async Task<string> SaveUgcImageAsync(string imageLink, string ugcFolderPath, string kindFolder, string monthFolder, string fileName, CancellationToken cancellationToken)
+    {
+        string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), kindFolder, MakeValidFileName(monthFolder));
+        try
+        {
+            Directory.CreateDirectory(folder);
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to create image folder");
+            return FileFolderBlocked();
+        }
+
         string filePath = Path.Join(folder, MakeValidFileName(fileName));
         if (File.Exists(filePath))
         {
-            return null;
+            return FileSkipped();
         }
 
         try
@@ -226,57 +258,11 @@ partial class AppApi
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
-            return null;
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save image to file");
+            return FileSkipped();
         }
 
-        return filePath;
-    }
-
-    public async Task<string?> SaveStickerToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
-    {
-        string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Stickers", MakeValidFileName(monthFolder));
-        Directory.CreateDirectory(folder);
-        string filePath = Path.Join(folder, MakeValidFileName(fileName));
-        if (File.Exists(filePath))
-        {
-            return null;
-        }
-
-        try
-        {
-            await ImageCache.SaveImageToFileAsync(imageLink, filePath, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
-        {
-            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
-            return null;
-        }
-
-        return filePath;
-    }
-
-    public async Task<string?> SaveEmojiToFileAsync(string imageLink, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default)
-    {
-        string folder = Path.Join(GetUGCPhotoLocation(ugcFolderPath), "Emoji", MakeValidFileName(monthFolder));
-        Directory.CreateDirectory(folder);
-        string filePath = Path.Join(folder, MakeValidFileName(fileName));
-        if (File.Exists(filePath))
-        {
-            return null;
-        }
-
-        try
-        {
-            await ImageCache.SaveImageToFileAsync(imageLink, filePath, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
-        {
-            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
-            return null;
-        }
-
-        return filePath;
+        return FileSaved(filePath);
     }
 
     public virtual string MD5File(string blob)

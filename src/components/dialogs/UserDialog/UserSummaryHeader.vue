@@ -430,7 +430,7 @@ import NameplateEffect from "../../NameplateEffect.vue";
 import ProfileEffect from "../../ProfileEffect.vue";
 
 import UserActionDropdown from "./UserActionDropdown.vue";
-import { showGroupDialog } from "@/coordinators/group-coordinator";
+import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { getAvatarName } from "@/coordinators/avatar-coordinator";
 
 const props = defineProps({

@@ -1,22 +1,32 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-function setupWorkerHarness() {
-  const sent = [];
-  let handler = null;
+import type { SearchWorkerResponse } from "../../src/stores/quick-search-worker-protocol";
 
-  globalThis.self = {
-    addEventListener: vi.fn((event, cb) => {
-      if (event === "message") handler = cb;
+type MessageListener = (event: { data: unknown }) => void;
+
+function setupWorkerHarness() {
+  const sent: SearchWorkerResponse[] = [];
+  let handler: MessageListener | undefined;
+
+  vi.stubGlobal("self", {
+    addEventListener: vi.fn((event: string, callback: MessageListener) => {
+      if (event === "message") handler = callback;
     }),
-    postMessage: vi.fn((payload) => {
+    postMessage: vi.fn((payload: SearchWorkerResponse) => {
       sent.push(payload);
     }),
-  };
+  });
 
   return {
     sent,
-    dispatch: (data) => handler?.({ data }),
+    dispatch: (data: unknown) => handler?.({ data }),
   };
+}
+
+function lastSent(sent: SearchWorkerResponse[]): SearchWorkerResponse {
+  const last = sent.at(-1);
+  if (!last) throw new Error("the worker posted no search result");
+  return last;
 }
 
 describe("quickSearchWorker message protocol", () => {
@@ -101,7 +111,7 @@ describe("quickSearchWorker message protocol", () => {
       },
     });
 
-    const result = harness.sent.at(-1);
+    const result = lastSent(harness.sent);
     expect(result.type).toBe("searchResult");
     expect(result.payload.seq).toBe(8);
     expect(result.payload.ownAvatars).toHaveLength(1);

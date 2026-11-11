@@ -8,92 +8,133 @@ import { getCurrentUser } from "../coordinators/user-coordinator";
 import { AppDebug, isApiLogSuppressed, logWebRequest } from "./app-config.ts";
 import { i18n } from "../plugins/i18n";
 import { statusCodes } from "../shared/constants/api.ts";
+import type { RequestOptions } from "../types/vrcx";
 import { watchState } from "./watch-state";
 
 import { webApiService } from "./webapi.ts";
 
-const pendingGetRequests = new Map();
-export const failedGetRequests = new Map();
+type ApiRequestInit = RequestOptions & { url: string };
+
+type ApiResponse = { status: number; data?: string | null | undefined };
+
+type ParsedApiResponse = { status: number; data?: unknown; hasApiError?: boolean; parseError?: boolean };
+
+type PendingGetRequest = { req: Promise<unknown>; time: number };
+
+type BulkPage = { json?: unknown; results?: unknown; hasNext?: unknown };
+
+type BulkOptions<TParams, TPage extends BulkPage> = {
+  fn?: (params: TParams) => Promise<TPage>;
+  params: TParams;
+  N?: number;
+  limitParam?: string;
+  handle?: (result: TPage) => void;
+  done?: (succeeded: boolean) => void;
+};
+
+export type RequestError = Error & { status: number; endpoint: string | undefined };
+
+const pendingGetRequests = new Map<string, PendingGetRequest>();
+export const failedGetRequests = new Map<string, number>();
 
 const t = i18n.global.t;
 
-export function buildRequestInit(endpoint, options) {
-  const init = {
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
+}
+
+function readField(value: unknown, key: string): unknown {
+  return isObjectLike(value) ? value[key] : undefined;
+}
+
+function apiErrorField(data: unknown, key: string): unknown {
+  return readField(readField(data, "error"), key);
+}
+
+function logError(err: unknown): void {
+  console.error(err);
+}
+
+function codeField(value: unknown, fallback: number): number {
+  const code = readField(value, "status_code");
+  return typeof code === "number" && code !== 0 ? code : fallback;
+}
+
+export function buildRequestInit(endpoint: string, options: RequestOptions = {}): ApiRequestInit {
+  const init: ApiRequestInit = {
     url: `${AppDebug.endpointDomain}/${endpoint}`,
     method: "GET",
     ...options,
   };
   const { params } = init;
   if (init.method === "GET") {
-    if (params === Object(params)) {
+    if (isObjectLike(params)) {
       const url = new URL(init.url);
       const { searchParams } = url;
-      for (const key in params) {
-        searchParams.set(key, params[key]);
+      for (const key of Object.keys(params)) {
+        searchParams.set(key, String(params[key]));
       }
       init.url = url.toString();
     }
-  } else if (init.uploadImage || init.uploadFilePUT || init.uploadImageLegacy) {
-  } else {
+  } else if (!(init.uploadImage || init.uploadFilePUT || init.uploadImageLegacy)) {
     init.headers = {
       "Content-Type": "application/json;charset=utf-8",
       ...init.headers,
     };
-    init.body = params === Object(params) ? JSON.stringify(params) : "{}";
+    init.body = isObjectLike(params) ? JSON.stringify(params) : "{}";
   }
   return init;
 }
 
-export function parseResponse(response) {
+export function parseResponse(response: ApiResponse): ParsedApiResponse {
   if (!response.data) {
     return response;
   }
   try {
-    response.data = JSON.parse(response.data);
-    if (response.data?.error) {
-      return { ...response, hasApiError: true };
+    const data: unknown = JSON.parse(response.data);
+    if (readField(data, "error")) {
+      return { status: response.status, data, hasApiError: true };
     }
-    return response;
+    return { status: response.status, data };
   } catch {
-    return { ...response, parseError: true };
+    return { status: response.status, data: response.data, parseError: true };
   }
 }
 
-export function request(endpoint, options) {
+export function request(endpoint: string, options: RequestOptions): Promise<unknown> {
   const authStore = useAuthStore();
   const modalStore = useModalStore();
   const notificationStore = useNotificationStore();
   const updateLoopStore = useUpdateLoopStore();
   if (!watchState.isLoggedIn && endpoint.startsWith("/auth") && endpoint !== "config") {
-    throw `API request blocked while logged out: ${endpoint}`;
+    throw new Error(`API request blocked while logged out: ${endpoint}`);
   }
-  let req;
   const init = buildRequestInit(endpoint, options);
   if (init.method === "GET") {
-    if (failedGetRequests.has(endpoint)) {
-      const lastRun = failedGetRequests.get(endpoint);
+    const lastRun = failedGetRequests.get(endpoint);
+    if (lastRun !== undefined) {
       if (lastRun >= Date.now() - 900000) {
         $throw(-1, t("api.error.message.403_404_bailing_request"), endpoint);
       }
       failedGetRequests.delete(endpoint);
     }
 
-    req = pendingGetRequests.get(init.url);
-    if (typeof req !== "undefined") {
-      if (req.time >= Date.now() - 10000) {
-        return req.req;
+    const pending = pendingGetRequests.get(init.url);
+    if (pending !== undefined) {
+      if (pending.time >= Date.now() - 10000) {
+        return pending.req;
       }
       pendingGetRequests.delete(init.url);
     }
   }
-  req = webApiService
+  const req: Promise<unknown> = webApiService
     .execute(init)
-    .catch((err) => {
+    .catch((err: unknown) => {
       $throw(0, err, endpoint);
     })
     .then((response) => {
       if (!watchState.isLoggedIn && endpoint.startsWith("/auth") && endpoint !== "config") {
-        throw `API request blocked while logged out: ${endpoint}`;
+        throw new Error(`API request blocked while logged out: ${endpoint}`);
       }
       const parsed = parseResponse(response);
       if (!isApiLogSuppressed()) {
@@ -107,26 +148,28 @@ export function request(endpoint, options) {
         }
       }
       if (parsed.status === 403 && endpoint === "config") {
-        modalStore.alert({
-          description: t("api.error.message.vpn_in_use"),
-          title: `403 ${t("api.error.message.login_error")}`,
-        });
-        authStore.handleLogoutEvent();
-        $throw(403, parsed.data.error?.message || "", endpoint);
+        modalStore
+          .alert({
+            description: t("api.error.message.vpn_in_use"),
+            title: `403 ${t("api.error.message.login_error")}`,
+          })
+          .catch(logError);
+        authStore.handleLogoutEvent().catch(logError);
+        $throw(403, apiErrorField(parsed.data, "message") ?? "", endpoint);
       }
       if (parsed.hasApiError) {
         if (parsed.status === 401) {
-          if (parsed.data.error.message === '"Missing Credentials"') {
-            authStore.handleAutoLogin();
+          if (apiErrorField(parsed.data, "message") === '"Missing Credentials"') {
+            authStore.handleAutoLogin().catch(logError);
             $throw(401, t("api.error.message.missing_credentials"), endpoint);
-          } else if (parsed.data.error.message === '"Unauthorized"' && endpoint !== "auth/user") {
+          } else if (apiErrorField(parsed.data, "message") === '"Unauthorized"' && endpoint !== "auth/user") {
             if (!authStore.twoFactorAuthDialogVisible) {
-              getCurrentUser();
+              getCurrentUser().catch(logError);
             }
             $throw(401, t("api.status_code.401"), endpoint);
           }
         }
-        $throw(parsed.data.error.status_code || 0, parsed.data.error.message, endpoint);
+        $throw(codeField(readField(parsed.data, "error"), 0), apiErrorField(parsed.data, "message"), endpoint);
       }
       if (parsed.parseError) {
         if (parsed.data === "ok") {
@@ -141,7 +184,7 @@ export function request(endpoint, options) {
           $throw(429, t("api.status_code.429"), endpoint);
         }
         if (parsed.status === 504 || parsed.status === 502) {
-          $throw(parsed.status, parsed.data || "", endpoint);
+          $throw(parsed.status, parsed.data ?? "", endpoint);
         }
       }
       return parsed;
@@ -151,19 +194,28 @@ export function request(endpoint, options) {
         if (!data) {
           return data;
         }
+        const success = readField(data, "success");
+        const okText = readField(data, "OK");
         let text = "";
-        if (data.success === Object(data.success)) {
-          text = data.success.message;
-        } else if (data.OK === String(data.OK)) {
-          text = data.OK;
+        if (isObjectLike(success)) {
+          const message = readField(success, "message");
+          if (typeof message === "string") {
+            text = message;
+          }
+        } else if (typeof okText === "string") {
+          text = okText;
         }
         if (text) {
-          toast.success(options.customMsg ? options.customMsg : text);
+          let toastText = text;
+          if (options.customMsg) {
+            toastText = options.customMsg;
+          }
+          toast.success(toastText);
         }
         return data;
       }
-      if (init.method === "GET" && status === 404 && endpoint?.startsWith("avatars/")) {
-        $throw(404, data.error?.message || "", endpoint);
+      if (init.method === "GET" && status === 404 && endpoint.startsWith("avatars/")) {
+        $throw(404, apiErrorField(data, "message") ?? "", endpoint);
       }
       if (status === 404 && endpoint.endsWith("/persist/exists")) {
         return false;
@@ -175,22 +227,24 @@ export function request(endpoint, options) {
         failedGetRequests.set(endpoint, Date.now());
       }
       if (init.method === "GET" && status === 404 && endpoint.startsWith("users/") && endpoint.split("/").length - 1 === 1) {
-        $throw(404, data.error?.message || "", endpoint);
+        $throw(404, apiErrorField(data, "message") ?? "", endpoint);
       }
       if (status === 404 && endpoint.startsWith("invite/") && init.inviteId) {
         notificationStore.expireNotification(init.inviteId);
       }
-      if (data && data.error === Object(data.error)) {
-        $throw(data.error.status_code || status, data.error.message, endpoint);
-      } else if (data && typeof data.error === "string") {
-        $throw(data.status_code || status, data.error, endpoint);
+      const apiError = readField(data, "error");
+      if (isObjectLike(apiError)) {
+        $throw(codeField(apiError, status), readField(apiError, "message"), endpoint);
+      } else if (typeof apiError === "string") {
+        $throw(codeField(data, status), apiError, endpoint);
       }
       $throw(status, data, endpoint);
     });
   if (init.method === "GET") {
-    req.finally(() => {
+    const clearPendingGetRequest = (): void => {
       pendingGetRequests.delete(init.url);
-    });
+    };
+    req.then(clearPendingGetRequest, clearPendingGetRequest);
     pendingGetRequests.set(init.url, {
       req,
       time: Date.now(),
@@ -199,7 +253,7 @@ export function request(endpoint, options) {
   return req;
 }
 
-export function shouldIgnoreError(code, endpoint) {
+export function shouldIgnoreError(code: number, endpoint: string | undefined): boolean {
   if (
     (code === 404 || code === -1) &&
     typeof endpoint === "string" &&
@@ -227,11 +281,10 @@ export function shouldIgnoreError(code, endpoint) {
   return false;
 }
 
-export function $throw(code, error, endpoint) {
-  const message = [];
+export function $throw(code: number, error: unknown, endpoint: string | undefined): never {
+  const message: string[] = [];
   if (code > 0) {
-    const status = statusCodes[code];
-    if (typeof status === "undefined") {
+    if (!Object.hasOwn(statusCodes, code)) {
       message.push(`${code}`);
     } else {
       const codeText = t(`api.status_code.${code}`);
@@ -242,45 +295,41 @@ export function $throw(code, error, endpoint) {
     message.push(`${t("api.error.message.error_message")}: ${typeof error === "string" ? error : JSON.stringify(error)}`);
   }
   if (typeof endpoint !== "undefined") {
-    message.push(`${t("api.error.message.endpoint")}: "${typeof endpoint === "string" ? endpoint : JSON.stringify(endpoint)}"`);
+    message.push(`${t("api.error.message.endpoint")}: "${endpoint}"`);
   }
-  const ignoreError = shouldIgnoreError(code, endpoint);
+  const isErrorIgnored = shouldIgnoreError(code, endpoint);
   if ((code === 403 || code === 404 || code === -1) && endpoint?.includes("/mutuals/friends")) {
     message[1] = `${t("api.error.message.error_message")}: "${t("api.error.message.unavailable")}"`;
   }
   const text = message.join("\n");
 
-  if (text.length && !ignoreError) {
-    toast.error(message[0], {
+  if (text.length && !isErrorIgnored) {
+    toast.error(message[0] ?? "", {
       description: message.slice(1).join("\n"),
       position: "bottom-left",
     });
   }
 
-  const e = new Error(text);
-  e.status = code;
-  e.endpoint = endpoint;
+  const e: RequestError = Object.assign(new Error(text), { status: code, endpoint });
   throw e;
 }
 
-export async function processBulk(options) {
-  const { fn, params: rawParams = {}, N = -1, limitParam = "n", handle, done } = options;
+export async function processBulk<TParams extends object, TPage extends BulkPage>(options: BulkOptions<TParams, TPage>): Promise<void> {
+  const { fn, params: rawParams, N = -1, limitParam = "n", handle, done } = options;
 
   if (typeof fn !== "function") {
     return;
   }
 
-  const params = { ...rawParams };
-  if (typeof params.offset !== "number") {
-    params.offset = 0;
-  }
-  const pageSize = params[limitParam];
+  const rawOffset = readField(rawParams, "offset");
+  let offset = typeof rawOffset === "number" ? rawOffset : 0;
+  const pageSize = Number(readField(rawParams, limitParam));
 
   let totalFetched = 0;
 
   try {
-    while (true) {
-      const result = await fn(params);
+    for (;;) {
+      const result = await fn({ ...rawParams, offset });
       let batchSize = 0;
       if (Array.isArray(result.json)) {
         batchSize = result.json.length;
@@ -313,7 +362,7 @@ export async function processBulk(options) {
       } else {
         totalFetched += batchSize;
       }
-      params.offset += batchSize;
+      offset += batchSize;
     }
 
     if (typeof done === "function") {

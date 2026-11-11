@@ -3,6 +3,7 @@ import type { Json } from "../types/vrcx";
 import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
+import { requestJson } from "./request-json";
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;
@@ -14,7 +15,7 @@ function refetchActiveGalleryQueries() {
       queryKey: ["gallery"],
       refetchType: "active",
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Failed to refresh gallery queries:", err);
     });
 }
@@ -23,7 +24,7 @@ const vrcPlusImageRequest = {
     const params = {
       tag: "gallery",
     };
-    return request("file/image", {
+    return requestJson<Json<File>>("file/image", {
       uploadImage: true,
       matchingDimensions: false,
       postData: JSON.stringify(params),
@@ -42,7 +43,7 @@ const vrcPlusImageRequest = {
     imageData: string,
     params: Omit<NonNullable<UploadImage["body"]>, "file">
   ): Promise<{ json: Json<File>; params: Omit<NonNullable<UploadImage["body"]>, "file"> }> {
-    return request("file/image", {
+    return requestJson<Json<File>>("file/image", {
       uploadImage: true,
       matchingDimensions: true,
       postData: JSON.stringify(params),
@@ -58,7 +59,7 @@ const vrcPlusImageRequest = {
   },
 
   getPrints(params: { n?: number }): Promise<{ json: Json<Print[]>; params: { n?: number } }> {
-    return request(`prints/user/${getCurrentUserId()}`, {
+    return requestJson<Json<Print[]>>(`prints/user/${getCurrentUserId()}`, {
       method: "GET",
       params,
     }).then((json) => {
@@ -85,12 +86,12 @@ const vrcPlusImageRequest = {
 
   uploadPrint(
     imageData: string,
-    cropWhiteBorder: boolean,
+    isCropWhiteBorder: boolean,
     params: Json<Omit<NonNullable<UploadPrint["body"]>, "image">>
   ): Promise<{ json: Json<Print>; params: Json<Omit<NonNullable<UploadPrint["body"]>, "image">> }> {
-    return request("prints", {
+    return requestJson<Json<Print>>("prints", {
       uploadImagePrint: true,
-      cropWhiteBorder,
+      cropWhiteBorder: isCropWhiteBorder,
       postData: JSON.stringify(params),
       imageData,
     }).then((json) => {
@@ -104,7 +105,7 @@ const vrcPlusImageRequest = {
   },
 
   getPrint(params: { printId: string }): Promise<{ json: Json<Print>; params: { printId: string } }> {
-    return request(`prints/${params.printId}`, {
+    return requestJson<Json<Print>>(`prints/${params.printId}`, {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -119,7 +120,7 @@ const vrcPlusImageRequest = {
     imageData: string,
     params: Omit<NonNullable<UploadImage["body"]>, "file">
   ): Promise<{ json: Json<File>; params: Omit<NonNullable<UploadImage["body"]>, "file"> }> {
-    return request("file/image", {
+    return requestJson<Json<File>>("file/image", {
       uploadImage: true,
       matchingDimensions: true,
       postData: JSON.stringify(params),

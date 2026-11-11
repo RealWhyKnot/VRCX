@@ -72,7 +72,7 @@ import { useUserDisplay } from "../../composables/use-user-display";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { queryRequest } from "../../api/query-request";
 import { useGroupStore } from "../../stores/group";
-import { showGroupMemberModerationDialog } from "../../coordinators/group-coordinator";
+import { showGroupMemberModerationDialog } from "../../coordinators/group-dialog-coordinator";
 
 const { userImage } = useUserDisplay();
 const { currentUserGroups, moderateGroupDialog } = storeToRefs(useGroupStore());

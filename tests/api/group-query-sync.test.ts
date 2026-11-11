@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockRequest = vi.fn();
-const mockInvalidateQueries = vi.fn().mockResolvedValue();
-const mockApplyGroup = vi.fn((json) => json);
+const mockRequest = vi.fn<(...args: unknown[]) => unknown>();
+const mockInvalidateQueries = vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const mockApplyGroup = vi.fn<(...args: unknown[]) => unknown>((json) => json);
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mockRequest(...args),
+  request: (...args: unknown[]) => mockRequest(...args),
 }));
 
 vi.mock("../../src/stores/group", () => ({
   useGroupStore: () => ({
-    applyGroup: (...args) => mockApplyGroup(...args),
+    applyGroup: (...args: unknown[]) => mockApplyGroup(...args),
   }),
 }));
 vi.mock("../../src/stores/user", () => ({
@@ -21,7 +21,7 @@ vi.mock("../../src/stores/user", () => ({
 
 vi.mock("../../src/queries/client", () => ({
   queryClient: {
-    invalidateQueries: (...args) => mockInvalidateQueries(...args),
+    invalidateQueries: (...args: unknown[]) => mockInvalidateQueries(...args),
   },
 }));
 vi.mock("../../src/queries/policies", () => ({

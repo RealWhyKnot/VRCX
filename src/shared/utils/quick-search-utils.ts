@@ -3,6 +3,16 @@ import { removeConfusables, removeWhitespace } from "../../services/confusables"
 
 type Comparer = { compare(a: string, b: string): number };
 
+function stripWhitespace(value: string): string {
+  const cleaned: unknown = removeWhitespace(value);
+  return typeof cleaned === "string" ? cleaned : "";
+}
+
+function stripConfusables(value: string): string {
+  const cleaned: unknown = removeConfusables(value);
+  return typeof cleaned === "string" ? cleaned : value;
+}
+
 type FriendRefLike = {
   $memo?: string | null;
   note?: string | null;
@@ -52,11 +62,11 @@ export function matchName(name: string | null | undefined, query: string | null 
   if (!name || !query) {
     return false;
   }
-  const cleanQuery = removeWhitespace(query);
+  const cleanQuery = stripWhitespace(query);
   if (!cleanQuery) {
     return false;
   }
-  const cleanName = removeConfusables(name);
+  const cleanName = stripConfusables(name);
   if (localeIncludes(cleanName, cleanQuery, comparer)) {
     return true;
   }
@@ -68,7 +78,7 @@ export function isPrefixMatch(name: string | null | undefined, query: string | n
   if (!name || !query) {
     return false;
   }
-  const cleanQuery = removeWhitespace(query);
+  const cleanQuery = stripWhitespace(query);
   if (!cleanQuery) {
     return false;
   }

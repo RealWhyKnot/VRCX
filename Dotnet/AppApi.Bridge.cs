@@ -19,13 +19,13 @@ public abstract partial class AppApi
 
     public Func<string, Task<bool>> CropPrintImage => path => CropPrintImageAsync(path);
 
-    public Func<string, string, string, string, Task<string?>> SavePrintToFile =>
+    public Func<string, string, string, string, Task<string>> SavePrintToFile =>
         (url, folder, month, fileName) => SavePrintToFileAsync(url, folder, month, fileName);
 
-    public Func<string, string, string, string, Task<string?>> SaveStickerToFile =>
+    public Func<string, string, string, string, Task<string>> SaveStickerToFile =>
         (url, folder, month, fileName) => SaveStickerToFileAsync(url, folder, month, fileName);
 
-    public Func<string, string, string, string, Task<string?>> SaveEmojiToFile =>
+    public Func<string, string, string, string, Task<string>> SaveEmojiToFile =>
         (url, folder, month, fileName) => SaveEmojiToFileAsync(url, folder, month, fileName);
 
     public Func<string, string, int, Task> DownloadUpdate =>

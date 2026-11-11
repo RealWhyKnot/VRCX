@@ -45,10 +45,10 @@ async function getGroupName(data: string | null | undefined) {
     return "";
   }
   try {
-    const args = await queryRequest.fetch<{ ref: { name: string } }>("group.dialog", {
+    const args = await queryRequest.fetch("group.dialog", {
       groupId,
     });
-    groupName = args.ref.name;
+    groupName = args.ref.name ?? "";
   } catch (err) {
     console.error(err);
   }

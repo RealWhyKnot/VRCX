@@ -152,7 +152,8 @@ import { useAppearanceSettingsStore } from "../../../stores/settings/appearance"
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 import { useUserStore } from "../../../stores/user";
-import { applyGroupMember, handleGroupMember, handleGroupMemberProps } from "../../../coordinators/group-coordinator";
+import { applyGroupMember, handleGroupMember } from "../../../coordinators/group-coordinator";
+import { handleGroupMemberProps } from "../../../coordinators/group-membership-coordinator";
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants/group";

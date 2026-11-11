@@ -1,12 +1,14 @@
-let echarts = null;
+import type * as Echarts from "echarts";
 
-function loadEcharts() {
+let echarts: typeof Echarts | null = null;
+
+function loadEcharts(): Promise<typeof Echarts> {
   if (echarts) {
     return Promise.resolve(echarts);
   }
   return import("echarts").then((module) => {
     echarts = module;
-    return echarts;
+    return module;
   });
 }
 export { loadEcharts };

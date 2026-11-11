@@ -704,7 +704,7 @@ const fetchCalendarEvent = async () => {
   const eventId = props.instance?.calendarEntryId;
   if (!groupId || !eventId || !isInGroup.value || calendarEvent.value?.id === eventId) return;
   try {
-    const args = await queryRequest.fetch<{ json: any }>("groupCalendarEvent", { groupId, eventId });
+    const args = await queryRequest.fetch("groupCalendarEvent", { groupId, eventId });
     if (props.instance?.calendarEntryId === eventId) {
       calendarEvent.value = groupStore.applyGroupEvent(args.json);
     }

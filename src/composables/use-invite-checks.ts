@@ -10,7 +10,7 @@ export function useInviteChecks() {
   const instanceStore = useInstanceStore();
   const friendStore = useFriendStore();
 
-  function checkCanInvite(location) {
+  function checkCanInvite(location: string | null | undefined) {
     return checkCanInvitePure(location, {
       currentUserId: userStore.currentUser.id,
       lastLocationStr: locationStore.lastLocation.location,
@@ -18,7 +18,7 @@ export function useInviteChecks() {
     });
   }
 
-  function checkCanInviteSelf(location) {
+  function checkCanInviteSelf(location: string | null | undefined) {
     return checkCanInviteSelfPure(location, {
       currentUserId: userStore.currentUser.id,
       cachedInstances: instanceStore.cachedInstances,

@@ -5,6 +5,7 @@ import { parseBioLinks } from "./user-profile.ts";
 import { sqliteService, type DatabaseRow } from "../sqlite.ts";
 
 type FeedGpsEntry = {
+  type: "GPS";
   created_at: string;
   userId: string;
   displayName: string;
@@ -16,6 +17,7 @@ type FeedGpsEntry = {
 };
 
 type FeedStatusEntry = {
+  type: "Status";
   created_at: string;
   userId: string;
   displayName: string;
@@ -26,6 +28,7 @@ type FeedStatusEntry = {
 };
 
 type FeedBioEntry = {
+  type: "Bio";
   created_at: string;
   userId: string;
   displayName: string;
@@ -36,6 +39,7 @@ type FeedBioEntry = {
 };
 
 type FeedAvatarEntry = {
+  type: "Avatar";
   created_at: string;
   userId: string;
   displayName: string;
@@ -226,7 +230,7 @@ async function addStatusToDatabase(entry: FeedStatusEntry) {
   );
 }
 
-async function addBioToDatabase(entry: FeedBioEntry) {
+async function addBioToDatabase<T extends FeedBioEntry>(entry: T) {
   return persistFeedEntry(
     DatabaseApi.AddFeedBio(
       entry.created_at,

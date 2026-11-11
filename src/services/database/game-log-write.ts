@@ -1,7 +1,8 @@
 import { sqliteService } from "../sqlite.ts";
 
 type GameLogLocationEntry = {
-  created_at: string | null;
+  type: string;
+  created_at: string;
   location: string | null;
   worldId: string | null;
   worldName: string | null;
@@ -10,8 +11,8 @@ type GameLogLocationEntry = {
 };
 
 type GameLogJoinLeaveEntry = {
-  created_at: string | null;
-  type: string | null;
+  type: string;
+  created_at: string;
   displayName: string | null;
   location: string | null;
   userId: string | null;
@@ -19,7 +20,8 @@ type GameLogJoinLeaveEntry = {
 };
 
 type GameLogPortalSpawnEntry = {
-  created_at: string | null;
+  type: string;
+  created_at: string;
   displayName: string | null;
   location: string | null;
   userId: string | null;
@@ -28,7 +30,7 @@ type GameLogPortalSpawnEntry = {
 };
 
 type GameLogVideoPlayEntry = {
-  created_at: string | null;
+  created_at: string;
   videoUrl: string | null;
   videoName: string | null;
   videoId: string | null;
@@ -38,19 +40,21 @@ type GameLogVideoPlayEntry = {
 };
 
 type GameLogResourceLoadEntry = {
-  created_at: string | null;
+  type: string;
+  created_at: string;
   resourceUrl: string | null;
-  type: string | null;
   location: string | null;
 };
 
 type GameLogEventEntry = {
-  created_at: string | null;
+  type: string;
+  created_at: string;
   data: string | null;
 };
 
 type GameLogExternalEntry = {
-  created_at: string | null;
+  type: string;
+  created_at: string;
   message: string | null;
   displayName: string | null;
   userId: string | null;

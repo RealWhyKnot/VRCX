@@ -6,7 +6,63 @@ import { openExternalLink } from "../shared/utils/app-actions";
 
 import { webApiService } from "../services/webapi";
 
+import { logError } from "./notification/errors";
+
 import * as workerTimers from "worker-timers";
+
+type StatusPage = {
+  updatedAt: string;
+  description: string;
+  indicator: string;
+};
+
+type StatusComponent = {
+  name: string;
+  status: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function fieldOf(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+function textOf(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function parseStatusPage(text: string): StatusPage {
+  const data: unknown = JSON.parse(text);
+  const status = fieldOf(data, "status");
+  const updatedAt = textOf(fieldOf(fieldOf(data, "page"), "updated_at"));
+  const description = textOf(fieldOf(status, "description"));
+  if (updatedAt === undefined || description === undefined) {
+    throw new Error("Malformed VRChat status response");
+  }
+  return {
+    updatedAt,
+    description,
+    indicator: textOf(fieldOf(status, "indicator")) ?? "",
+  };
+}
+
+function parseStatusComponents(text: string): StatusComponent[] {
+  const components: unknown = fieldOf(JSON.parse(text), "components");
+  if (!Array.isArray(components)) {
+    throw new Error("Malformed VRChat status summary");
+  }
+  const items: unknown[] = components;
+  return items.map((item) => {
+    const name = textOf(fieldOf(item, "name"));
+    const status = textOf(fieldOf(item, "status"));
+    if (name === undefined || status === undefined) {
+      throw new Error("Malformed VRChat status component");
+    }
+    return { name, status };
+  });
+}
 
 export const useVrcStatusStore = defineStore("VrcStatus", () => {
   const vrcxStore = useVrcxStore();
@@ -17,7 +73,7 @@ export const useVrcStatusStore = defineStore("VrcStatus", () => {
 
   const lastStatus = ref("");
   const lastStatusIndicator = ref("");
-  const lastStatusTime = ref(null);
+  const lastStatusTime = ref<Date | null>(null);
   const lastStatusSummary = ref("");
   const lastTimeFetched = ref(0);
   const pollingInterval = ref(0);
@@ -37,7 +93,7 @@ export const useVrcStatusStore = defineStore("VrcStatus", () => {
     openExternalLink("https://status.vrchat.com");
   }
 
-  async function getVrcStatus() {
+  async function getVrcStatus(): Promise<void> {
     const response = await webApiService.execute({
       url: `${vrcStatusApiUrl}/status.json`,
       method: "GET",
@@ -52,21 +108,21 @@ export const useVrcStatusStore = defineStore("VrcStatus", () => {
       pollingInterval.value = fastPollingInterval.value;
       return;
     }
-    const data = JSON.parse(response.data);
-    lastStatusTime.value = new Date(data.page.updated_at);
-    if (data.status.description === "All Systems Operational") {
+    const data = parseStatusPage(response.data);
+    lastStatusTime.value = new Date(data.updatedAt);
+    if (data.description === "All Systems Operational") {
       lastStatus.value = "";
       lastStatusIndicator.value = "";
       pollingInterval.value = slowPollingInterval.value;
       return;
     }
-    lastStatus.value = data.status.description;
-    lastStatusIndicator.value = data.status.indicator || "";
+    lastStatus.value = data.description;
+    lastStatusIndicator.value = data.indicator;
     pollingInterval.value = fastPollingInterval.value;
-    getVrcStatusSummary();
+    getVrcStatusSummary().catch(logError);
   }
 
-  async function getVrcStatusSummary() {
+  async function getVrcStatusSummary(): Promise<void> {
     const response = await webApiService.execute({
       url: `${vrcStatusApiUrl}/summary.json`,
       method: "GET",
@@ -78,9 +134,8 @@ export const useVrcStatusStore = defineStore("VrcStatus", () => {
       console.error("Failed to fetch VRChat status summary", response);
       return;
     }
-    const data = JSON.parse(response.data);
     let summary = "";
-    for (const component of data.components) {
+    for (const component of parseStatusComponents(response.data)) {
       if (component.status !== "operational") {
         summary += `${component.name}, `;
       }
@@ -93,21 +148,21 @@ export const useVrcStatusStore = defineStore("VrcStatus", () => {
 
   watch(
     () => vrcxStore.isBrowserFocused,
-    (newValue) => {
-      if (newValue) {
+    (isFocused) => {
+      if (isFocused) {
         if (Date.now() - lastTimeFetched.value > 60 * 1000) {
-          getVrcStatus();
+          getVrcStatus().catch(logError);
         }
       }
     }
   );
 
   function init() {
-    getVrcStatus();
+    getVrcStatus().catch(logError);
     workerTimers.setInterval(() => {
       const interval = vrcxStore.isBrowserFocused ? pollingInterval.value : slowPollingInterval.value;
       if (Date.now() - lastTimeFetched.value > interval) {
-        getVrcStatus();
+        getVrcStatus().catch(logError);
       }
     }, fastPollingInterval.value);
   }

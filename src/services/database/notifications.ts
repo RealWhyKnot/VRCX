@@ -56,32 +56,32 @@ type NotificationDetailsInput = {
 };
 
 type NotificationInput = {
-  id?: string;
-  created_at?: string;
-  type?: string;
-  senderUserId?: string;
-  senderUsername?: string;
-  receiverUserId?: string;
-  message?: string;
-  imageUrl?: string;
-  details?: NotificationDetailsInput;
-  $isExpired?: boolean;
+  id?: string | undefined;
+  created_at?: string | undefined;
+  type?: string | undefined;
+  senderUserId?: string | undefined;
+  senderUsername?: string | undefined;
+  receiverUserId?: string | undefined;
+  message?: string | undefined;
+  imageUrl?: string | undefined;
+  details?: NotificationDetailsInput | undefined;
+  $isExpired?: boolean | undefined;
 };
 
 type NotificationV2Input = {
   id: string;
-  createdAt?: string;
-  updatedAt?: string;
-  expiresAt?: string;
-  type?: string;
-  link?: string;
-  linkText?: string;
-  message?: string;
-  title?: string;
-  imageUrl?: string;
-  seen?: boolean;
-  senderUserId?: string;
-  senderUsername?: string;
+  createdAt?: string | undefined;
+  updatedAt?: string | undefined;
+  expiresAt?: string | undefined;
+  type?: string | undefined;
+  link?: string | undefined;
+  linkText?: string | undefined;
+  message?: string | undefined;
+  title?: string | undefined;
+  imageUrl?: string | undefined;
+  seen?: boolean | undefined;
+  senderUserId?: string | undefined;
+  senderUsername?: string | undefined;
   data?: unknown;
   responses?: unknown;
   details?: unknown;
@@ -188,7 +188,7 @@ const notifications = {
     void sqliteService.run(DatabaseApi.DeleteNotification(rowId)).catch(logDatabaseError);
   },
 
-  updateNotificationExpired(entry: { id: string; $isExpired?: boolean }): void {
+  updateNotificationExpired(entry: { id: string; $isExpired?: boolean | undefined }): void {
     void sqliteService.run(DatabaseApi.UpdateNotificationExpired(entry.id, entry.$isExpired === true)).catch(logDatabaseError);
   },
 

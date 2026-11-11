@@ -1,10 +1,10 @@
 import type { AvatarModeration, AvatarModerationCreated, CreateAvatarModerationRequest, DeleteGlobalAvatarModeration, OkStatus2 } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { request } from "../services/request";
+import { requestJson } from "./request-json";
 
 const avatarModerationRequest = {
   getAvatarModerations(): Promise<{ json: Json<AvatarModeration[]> }> {
-    return request("auth/user/avatarmoderations", {
+    return requestJson<Json<AvatarModeration[]>>("auth/user/avatarmoderations", {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -15,7 +15,7 @@ const avatarModerationRequest = {
   },
 
   sendAvatarModeration(params: CreateAvatarModerationRequest): Promise<{ json: Json<AvatarModerationCreated>; params: CreateAvatarModerationRequest }> {
-    return request("auth/user/avatarmoderations", {
+    return requestJson<Json<AvatarModerationCreated>>("auth/user/avatarmoderations", {
       method: "POST",
       params,
     }).then((json) => {
@@ -28,7 +28,7 @@ const avatarModerationRequest = {
   },
 
   deleteAvatarModeration(params: DeleteGlobalAvatarModeration["query"]): Promise<{ json: Json<OkStatus2>; params: DeleteGlobalAvatarModeration["query"] }> {
-    return request(
+    return requestJson<Json<OkStatus2>>(
       `auth/user/avatarmoderations?targetAvatarId=${encodeURIComponent(
         params.targetAvatarId
       )}&avatarModerationType=${encodeURIComponent(params.avatarModerationType)}`,

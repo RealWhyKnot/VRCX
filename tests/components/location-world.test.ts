@@ -43,7 +43,7 @@ vi.mock("../../src/stores/group", () => ({
   useGroupStore: () => ({}),
 }));
 
-vi.mock("../../src/coordinators/group-coordinator", () => ({
+vi.mock("../../src/coordinators/group-dialog-coordinator", () => ({
   showGroupDialog: (...args) => mocks.showGroupDialog(...args),
 }));
 

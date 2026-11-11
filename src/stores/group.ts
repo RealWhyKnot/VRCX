@@ -1,15 +1,29 @@
 import { reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
+import type { CalendarEvent } from "vrchat";
 
 import { replaceBioSymbols } from "../shared/utils/base/string";
 import { groupRequest } from "../api/group";
-import { initUserGroups } from "../coordinators/group-coordinator";
+import { initUserGroups } from "../coordinators/group-membership-coordinator";
+import type { Json, VrcxGroup } from "../types/vrcx";
+import type {
+  GroupDialogState,
+  GroupEditDialogState,
+  GroupEventEditDialogState,
+  GroupInstanceEntry,
+  GroupEditSource,
+  GroupInviteDialogState,
+  GroupMemberModerationState,
+  GroupModerateDialogState,
+  GroupPostEntry,
+  GroupRolesDialogState,
+} from "./group-types";
 import { watchState } from "../services/watch-state";
 
 export const useGroupStore = defineStore("Group", () => {
-  const cachedGroups = new Map();
+  const cachedGroups = new Map<string, VrcxGroup>();
 
-  const groupDialog = ref({
+  const groupDialog = ref<GroupDialogState>({
     visible: false,
     loading: false,
     activeTab: "Info",
@@ -43,7 +57,7 @@ export const useGroupStore = defineStore("Group", () => {
     listings: [],
   });
 
-  const groupEditDialog = ref({
+  const groupEditDialog = ref<GroupEditDialogState>({
     visible: false,
     loading: false,
     roleTemplatesLoading: false,
@@ -66,7 +80,7 @@ export const useGroupStore = defineStore("Group", () => {
     allowGroupJoinPrompt: false,
   });
 
-  const groupEventEditDialog = ref({
+  const groupEventEditDialog = ref<GroupEventEditDialogState>({
     visible: false,
     loading: false,
     mode: "create",
@@ -95,9 +109,9 @@ export const useGroupStore = defineStore("Group", () => {
   });
   const groupEventRevision = ref(0);
 
-  const currentUserGroups = reactive(new Map());
+  const currentUserGroups = reactive(new Map<string, VrcxGroup>());
 
-  const inviteGroupDialog = ref({
+  const inviteGroupDialog = ref<GroupInviteDialogState>({
     visible: false,
     loading: false,
     groupId: "",
@@ -111,7 +125,7 @@ export const useGroupStore = defineStore("Group", () => {
     },
   });
 
-  const moderateGroupDialog = ref({
+  const moderateGroupDialog = ref<GroupModerateDialogState>({
     visible: false,
     groupId: "",
     groupName: "",
@@ -119,7 +133,7 @@ export const useGroupStore = defineStore("Group", () => {
     userObject: {},
   });
 
-  const groupMemberModeration = ref({
+  const groupMemberModeration = ref<GroupMemberModerationState>({
     visible: false,
     loading: false,
     id: "",
@@ -166,7 +180,7 @@ export const useGroupStore = defineStore("Group", () => {
     },
   });
 
-  const groupRolesDialog = ref({
+  const groupRolesDialog = ref<GroupRolesDialogState>({
     visible: false,
     loading: false,
     id: "",
@@ -176,9 +190,9 @@ export const useGroupStore = defineStore("Group", () => {
     selectedRoleId: "",
   });
 
-  const inGameGroupOrder = ref([]);
+  const inGameGroupOrder = ref<string[]>([]);
 
-  const groupInstances = ref([]);
+  const groupInstances = ref<GroupInstanceEntry[]>([]);
 
   const currentUserGroupsInit = ref(false);
 
@@ -202,11 +216,11 @@ export const useGroupStore = defineStore("Group", () => {
     { flush: "sync" }
   );
 
-  async function getAllGroupPosts(params) {
+  async function getAllGroupPosts(params: { groupId: string }) {
     const n = 100;
-    const posts = [];
+    const posts: GroupPostEntry[] = [];
     let offset = 0;
-    let total = Infinity;
+    let total: number;
     let pages = 0;
     do {
       const args = await groupRequest.getGroupPosts({
@@ -214,8 +228,8 @@ export const useGroupStore = defineStore("Group", () => {
         n,
         offset,
       });
-      const pagePosts = args.json?.posts ?? [];
-      total = Number(args.json?.total ?? pagePosts.length);
+      const pagePosts = args.json.posts ?? [];
+      total = args.json.total ?? pagePosts.length;
       posts.push(...pagePosts);
       offset += n;
       pages += 1;
@@ -241,7 +255,7 @@ export const useGroupStore = defineStore("Group", () => {
     return returnArgs;
   }
 
-  function applyGroupEvent(event) {
+  function applyGroupEvent(event: Json<CalendarEvent>) {
     return {
       userInterest: {
         createdAt: null,
@@ -254,9 +268,9 @@ export const useGroupStore = defineStore("Group", () => {
     };
   }
 
-  function sortGroupInstancesByInGame(a, b) {
-    const aIndex = inGameGroupOrder.value.indexOf(a?.group?.id);
-    const bIndex = inGameGroupOrder.value.indexOf(b?.group?.id);
+  function sortGroupInstancesByInGame(a: GroupInstanceEntry, b: GroupInstanceEntry) {
+    const aIndex = inGameGroupOrder.value.indexOf(a.group.id ?? "");
+    const bIndex = inGameGroupOrder.value.indexOf(b.group.id ?? "");
     if (aIndex === -1 && bIndex === -1) {
       return 0;
     }
@@ -276,17 +290,17 @@ export const useGroupStore = defineStore("Group", () => {
       if (search === "") {
         return true;
       }
-      if (post.title.toLowerCase().includes(search)) {
+      if ((post.title ?? "").toLowerCase().includes(search)) {
         return true;
       }
-      if (post.text.toLowerCase().includes(search)) {
+      if ((post.text ?? "").toLowerCase().includes(search)) {
         return true;
       }
       return false;
     });
   }
 
-  function handleGroupPost(args) {
+  function handleGroupPost(args: { params: { groupId: string }; json: GroupPostEntry }) {
     const D = groupDialog.value;
     if (D.id !== args.params.groupId) {
       return;
@@ -319,35 +333,35 @@ export const useGroupStore = defineStore("Group", () => {
     groupInstances.value = [];
   }
 
-  function setGroupDialogVisible(value) {
-    groupDialog.value.visible = value;
+  function setGroupDialogVisible(isVisible: boolean) {
+    groupDialog.value.visible = isVisible;
   }
 
-  function showModerateGroupDialog(userId) {
+  function showModerateGroupDialog(userId: string) {
     const D = moderateGroupDialog.value;
     D.userId = userId;
     D.userObject = {};
     D.visible = true;
   }
 
-  function setGroupMemberModerationVisible(value) {
-    groupMemberModeration.value.visible = value;
+  function setGroupMemberModerationVisible(isVisible: boolean) {
+    groupMemberModeration.value.visible = isVisible;
   }
 
-  function setGroupRolesDialogVisible(value) {
-    groupRolesDialog.value.visible = value;
+  function setGroupRolesDialogVisible(isVisible: boolean) {
+    groupRolesDialog.value.visible = isVisible;
   }
 
-  function setCurrentUserGroupsInit(value) {
-    currentUserGroupsInit.value = value;
+  function setCurrentUserGroupsInit(isInitialized: boolean) {
+    currentUserGroupsInit.value = isInitialized;
   }
 
-  function setInGameGroupOrder(value) {
-    inGameGroupOrder.value = value;
+  function setInGameGroupOrder(order: string[]) {
+    inGameGroupOrder.value = order;
   }
 
-  function setGroupInstances(value) {
-    groupInstances.value = value;
+  function setGroupInstances(instances: GroupInstanceEntry[]) {
+    groupInstances.value = instances;
   }
 
   function resetGroupEditDialog() {
@@ -384,23 +398,23 @@ export const useGroupStore = defineStore("Group", () => {
       const args = await groupRequest.getRoleTemplates();
       D.roleTemplates = Array.isArray(args.json)
         ? args.json
-        : Object.entries(args.json ?? {}).map(([value, template]) => ({
+        : Object.entries(args.json).map(([value, template]) => ({
             value,
-            ...(typeof template === "object" && template !== null ? template : {}),
+            ...template,
           }));
     } finally {
       D.roleTemplatesLoading = false;
     }
   }
 
-  function showEditGroupDialog(group) {
+  function showEditGroupDialog(group: GroupEditSource) {
     resetGroupEditDialog();
     groupEditDialog.value = {
       visible: true,
       loading: false,
       roleTemplatesLoading: false,
       mode: "edit",
-      groupId: group.id,
+      groupId: group.id ?? "",
       name: group.name,
       shortCode: group.shortCode,
       description: group.description,
@@ -454,31 +468,31 @@ export const useGroupStore = defineStore("Group", () => {
     };
   }
 
-  function showCreateGroupEventDialog(group) {
+  function showCreateGroupEventDialog(group: VrcxGroup) {
     resetGroupEventEditDialog();
     groupEventEditDialog.value = {
       ...groupEventEditDialog.value,
       visible: true,
-      groupId: group.id,
+      groupId: group.id ?? "",
       groupRef: group,
     };
   }
 
-  function showEditGroupEventDialog(event, group) {
+  function showEditGroupEventDialog(event: Json<CalendarEvent>, group: VrcxGroup) {
     resetGroupEventEditDialog();
     groupEventEditDialog.value = {
       visible: true,
       loading: false,
       mode: "edit",
-      groupId: event.ownerId,
+      groupId: event.ownerId ?? "",
       eventId: event.id,
       groupRef: group,
       startsAt: event.startsAt,
       endsAt: event.endsAt,
-      title: event.title ?? "",
-      accessType: event.accessType ?? "group",
-      description: event.description ?? "",
-      category: event.category ?? "other",
+      title: event.title,
+      accessType: event.accessType,
+      description: event.description,
+      category: event.category,
       tags: Array.isArray(event.tags) ? [...event.tags] : [],
       imageId: event.imageId ?? "",
       imageUrl: event.imageUrl ?? "",

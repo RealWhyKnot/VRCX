@@ -1,95 +1,15 @@
-import type { Moderations, ParsedLocation } from "../../types/vrcx";
+import type { VrcxUser } from "../../types/vrcx";
 import { removeEmojis, replaceBioSymbols } from "./base/string";
 
 type Row = Record<string, unknown>;
 
-export type UserJson = {
-  statusDescription?: string;
-  note?: string | null;
-  currentAvatarImageUrl?: string;
-  currentAvatarThumbnailImageUrl?: string;
-};
+type UserInput = { [K in keyof VrcxUser]?: VrcxUser[K] | undefined };
 
-export type UserRef = {
-  acceptedPrivacyVersion: number;
-  acceptedTOSVersion: number;
-  accountDeletionDate: string | null;
-  accountDeletionLog: unknown[] | null;
-  ageVerificationStatus: string;
-  ageVerified: boolean;
-  allowAvatarCopying: boolean;
-  appleDetails: Record<string, unknown>;
-  badges: unknown[];
-  bannerColor: string;
-  bannerType: string;
-  bannerUrl: string;
-  bio: string;
-  bioLinks: string[];
-  currentAvatarImageUrl: string;
-  currentAvatarTags: string[];
-  currentAvatarThumbnailImageUrl: string;
-  date_joined: string;
-  developerType: string;
-  discordId: string;
-  displayName: string;
-  friendKey: string;
-  friendRequestStatus: string;
-  iconFrame: string;
-  iconUrl: string;
-  id: string;
-  instanceId: string;
-  isEconomyCreator: boolean;
-  isFriend: boolean;
-  last_activity: string;
-  last_login: string;
-  last_mobile: string | null;
-  last_platform: string;
-  location: string;
-  nameplateEffect: string;
-  platform: string;
-  note: string | null;
-  profileEffect: string;
-  profilePicOverride: string;
-  profilePicOverrideThumbnail: string;
-  pronouns: string;
-  state: string;
-  status: string;
-  statusDescription: string;
-  tags: string[];
-  travelingToInstance: string;
-  travelingToLocation: string;
-  travelingToWorld: string;
-  userIcon: string;
-  worldId: string;
-  fallbackAvatar: string;
-  $location: Partial<ParsedLocation>;
-  $location_at: number;
-  $online_for: number;
-  $travelingToTime: number;
-  $offline_for: number | null;
-  $active_for: number;
-  $isVRCPlus: boolean;
-  $isModerator: boolean;
-  $isTroll: boolean;
-  $isProbableTroll: boolean;
-  $trustLevel: string;
-  $trustClass: string;
-  $userColour: string;
-  $trustSortNum: number;
-  $languages: string[];
-  $joinCount: number;
-  $timeSpent: number;
-  $lastSeen: string;
-  $mutualCount: number;
-  $mutualOptedOut: boolean;
-  $nickName: string;
-  $memo: string;
-  $previousLocation: string;
-  $customTag: string;
-  $customTagColour: string;
-  $friendNumber: number;
-  $platform: string;
-  $moderations: Partial<Moderations>;
+export type UserJson = {
+  statusDescription?: string | undefined;
+  note?: string | null | undefined;
+  currentAvatarImageUrl?: string | undefined;
+  currentAvatarThumbnailImageUrl?: string | undefined;
 };
 
 function isUnknownArray(value: unknown): value is unknown[] {
@@ -219,8 +139,17 @@ export function diffObjectProps(ref: Row, json: Row, arraysMatchFn: (a: unknown[
   return { hasPropChanged, changedProps: Object.fromEntries(changedEntries) };
 }
 
-export function createDefaultUserRef(json: Partial<UserRef>): UserRef {
-  return {
+export function assignDefinedProps(target: object, source: object) {
+  const entries: [string, unknown][] = Object.entries(source);
+  for (const [key, value] of entries) {
+    if (typeof value !== "undefined") {
+      Object.assign(target, { [key]: value });
+    }
+  }
+}
+
+export function createDefaultUserRef(json: UserInput): VrcxUser {
+  const ref: VrcxUser = {
     acceptedPrivacyVersion: 0,
     acceptedTOSVersion: 0,
     accountDeletionDate: null,
@@ -229,7 +158,6 @@ export function createDefaultUserRef(json: Partial<UserRef>): UserRef {
     ageVerified: false,
     allowAvatarCopying: false,
     appleDetails: {},
-    badges: [],
     bannerColor: "",
     bannerType: "",
     bannerUrl: "",
@@ -271,7 +199,6 @@ export function createDefaultUserRef(json: Partial<UserRef>): UserRef {
     travelingToWorld: "",
     userIcon: "",
     worldId: "",
-
     fallbackAvatar: "",
 
     $location: {},
@@ -301,8 +228,13 @@ export function createDefaultUserRef(json: Partial<UserRef>): UserRef {
     $customTagColour: "",
     $friendNumber: 0,
     $platform: "",
-    $moderations: {},
-
-    ...json,
+    $moderations: {
+      isBlocked: false,
+      isMuted: false,
+      isAvatarInteractionDisabled: false,
+      isChatBoxMuted: false,
+    },
   };
+  assignDefinedProps(ref, json);
+  return ref;
 }

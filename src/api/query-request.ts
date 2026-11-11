@@ -1,3 +1,5 @@
+import type { QueryKey } from "@tanstack/vue-query";
+
 import { entityQueryPolicies } from "../queries/policies";
 import { fetchWithEntityPolicy } from "../queries/entity-cache";
 import { queryKeys } from "../queries/keys";
@@ -14,7 +16,82 @@ import { userRequest } from "./user";
 
 import { worldRequest } from "./world";
 
-const registry = Object.freeze({
+type EntityQueryPolicy = Parameters<typeof fetchWithEntityPolicy<unknown>>[0]["policy"];
+
+type RequestFn = (...args: never[]) => Promise<unknown>;
+
+type Definition<F extends RequestFn> = {
+  params: Parameters<F>[0];
+  response: Awaited<ReturnType<F>>;
+};
+
+type NoArgDefinition<F extends RequestFn> = {
+  params: undefined;
+  response: Awaited<ReturnType<F>>;
+};
+
+type QueryDefinitions = {
+  user: Definition<typeof userRequest.getUser>;
+  "user.dialog": Definition<typeof userRequest.getUser>;
+  "user.force": Definition<typeof userRequest.getUser>;
+  publicProfile: Definition<typeof userRequest.getPublicProfile>;
+  avatar: Definition<typeof avatarRequest.getAvatar>;
+  "avatar.dialog": Definition<typeof avatarRequest.getAvatar>;
+  world: Definition<typeof worldRequest.getWorld>;
+  "world.dialog": Definition<typeof worldRequest.getWorld>;
+  "world.location": Definition<typeof worldRequest.getWorld>;
+  "world.force": Definition<typeof worldRequest.getWorld>;
+  worldsByUser: {
+    params: NonNullable<Parameters<typeof worldRequest.getWorlds>[0]> & { userId: string; option?: string | null };
+    response: Awaited<ReturnType<typeof worldRequest.getWorlds>>;
+  };
+  group: Definition<typeof groupRequest.getGroup>;
+  "group.dialog": Definition<typeof groupRequest.getGroup>;
+  "group.force": Definition<typeof groupRequest.getGroup>;
+  groupMember: Definition<typeof groupRequest.getGroupMember>;
+  groupMembers: Definition<typeof groupRequest.getGroupMembers>;
+  groupGallery: Definition<typeof groupRequest.getGroupGallery>;
+  groupCalendar: {
+    params: { groupId: string };
+    response: Awaited<ReturnType<typeof groupRequest.getGroupCalendar>>;
+  };
+  groupCalendarEvent: Definition<typeof groupRequest.getGroupCalendarEvent>;
+  avatarGallery: {
+    params: { avatarId: string };
+    response: Awaited<ReturnType<typeof avatarRequest.getAvatarGallery>>;
+  };
+  "avatarGallery.force": {
+    params: { avatarId: string };
+    response: Awaited<ReturnType<typeof avatarRequest.getAvatarGallery>>;
+  };
+  favoriteLimits: NoArgDefinition<typeof favoriteRequest.getFavoriteLimits>;
+  userInventoryItem: Definition<typeof inventoryRequest.getUserInventoryItem>;
+  fileAnalysis: Definition<typeof miscRequest.getFileAnalysis>;
+  worldPersistData: Definition<typeof miscRequest.hasWorldPersistData>;
+  mutualCounts: Definition<typeof userRequest.getMutualCounts>;
+  visits: NoArgDefinition<typeof miscRequest.getVisits>;
+  instanceCount: NoArgDefinition<typeof instanceRequest.getInstanceCount>;
+  file: Definition<typeof miscRequest.getFile>;
+  avatarStyles: NoArgDefinition<typeof avatarRequest.getAvailableAvatarStyles>;
+  representedGroup: Definition<typeof groupRequest.getRepresentedGroup>;
+  vrchatCredits: NoArgDefinition<typeof marketplaceRequest.getVRChatCredits>;
+};
+
+type QueryResource = keyof QueryDefinitions;
+
+type FetchArgs<K extends QueryResource> = QueryDefinitions[K]["params"] extends undefined ? [params?: undefined] : [params: QueryDefinitions[K]["params"]];
+
+type QueryEntry<P, R> = {
+  key: (params: P) => QueryKey;
+  policy: EntityQueryPolicy;
+  queryFn: (params: P) => Promise<R>;
+};
+
+type QueryRegistry = {
+  [K in QueryResource]: QueryEntry<QueryDefinitions[K]["params"], QueryDefinitions[K]["response"]>;
+};
+
+const registry: QueryRegistry = Object.freeze({
   user: {
     key: (params) => queryKeys.user(params.userId),
     policy: entityQueryPolicies.user,
@@ -86,7 +163,10 @@ const registry = Object.freeze({
   worldsByUser: {
     key: (params) => queryKeys.worldsByUser(params),
     policy: entityQueryPolicies.worldCollection,
-    queryFn: (params) => worldRequest.getWorlds(params, params.option || undefined),
+    queryFn: (params) => {
+      const option = params.option ?? "";
+      return worldRequest.getWorlds(params, option === "" ? undefined : option);
+    },
   },
   group: {
     key: (params) => queryKeys.group(params.groupId, params.includeRoles),
@@ -205,11 +285,12 @@ const registry = Object.freeze({
 });
 
 const queryRequest = {
-  async fetch<T>(resource: keyof typeof registry, params: any = {}): Promise<T & { cache: boolean }> {
-    const entry = registry[resource];
-    if (!entry) {
-      throw new Error(`Unknown query resource: ${String(resource)}`);
+  async fetch<K extends QueryResource>(resource: K, ...args: FetchArgs<K>): Promise<QueryDefinitions[K]["response"] & { cache: boolean }> {
+    if (!Object.hasOwn(registry, resource)) {
+      throw new Error(`Unknown query resource: ${resource}`);
     }
+    const entry = registry[resource];
+    const params: QueryDefinitions[K]["params"] = args[0];
 
     const { data, cache } = await fetchWithEntityPolicy({
       queryKey: entry.key(params),

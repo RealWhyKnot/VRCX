@@ -7,20 +7,32 @@ function getCurrentUserId() {
   return useUserStore().currentUser.id;
 }
 
+function isInviteMessageList(value: unknown): value is Json<InviteMessage[]> {
+  return Array.isArray(value);
+}
+
+function expectInviteMessageList(value: unknown, endpoint: string): Json<InviteMessage[]> {
+  if (!isInviteMessageList(value)) {
+    throw new Error(`Invite message response is not a list: ${endpoint}`);
+  }
+  return value;
+}
+
 const inviteMessagesRequest = {
-  refreshInviteMessageTableData(messageType: InviteMessageType): Promise<{ json: Json<InviteMessage[]>; messageType: InviteMessageType }> {
-    return request(`message/${getCurrentUserId()}/${messageType}`, {
+  async refreshInviteMessageTableData(messageType: InviteMessageType): Promise<{ json: Json<InviteMessage[]>; messageType: InviteMessageType }> {
+    const endpoint = `message/${getCurrentUserId()}/${messageType}`;
+    const response: unknown = await request(endpoint, {
       method: "GET",
-    }).then((json) => {
-      const args = {
-        json,
-        messageType,
-      };
-      return args;
     });
+    const json = expectInviteMessageList(response, endpoint);
+    const args = {
+      json,
+      messageType,
+    };
+    return args;
   },
 
-  editInviteMessage(
+  async editInviteMessage(
     params: UpdateInviteMessageRequest,
     messageType: InviteMessageType,
     slot: number
@@ -30,18 +42,19 @@ const inviteMessagesRequest = {
     messageType: InviteMessageType;
     slot: number;
   }> {
-    return request(`message/${getCurrentUserId()}/${messageType}/${slot}`, {
+    const endpoint = `message/${getCurrentUserId()}/${messageType}/${slot}`;
+    const response: unknown = await request(endpoint, {
       method: "PUT",
       params,
-    }).then((json) => {
-      const args = {
-        json,
-        params,
-        messageType,
-        slot,
-      };
-      return args;
     });
+    const json = expectInviteMessageList(response, endpoint);
+    const args = {
+      json,
+      params,
+      messageType,
+      slot,
+    };
+    return args;
   },
 };
 

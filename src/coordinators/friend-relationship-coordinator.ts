@@ -7,21 +7,31 @@ import { getNameColour } from "../shared/utils/user";
 import { handleFavoriteDelete } from "./favorite-coordinator";
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 import { useFriendStore } from "../stores/friend";
+import type { FriendStatusSource } from "../stores/friend-types";
 import { useModalStore } from "../stores/modal";
 import { useNotificationStore } from "../stores/notification";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
+import type { VrcxUser } from "../types/vrcx";
 import { removeFriendSearchIndex, syncFriendSearchIndex } from "./search-index-coordinator";
 import { watchState } from "../services/watch-state";
 
 import { configRepository } from "../services/config";
 import { storeToRefs } from "pinia";
 
-export function handleFriendStatus(args) {
+type FriendStatusResponse = Awaited<ReturnType<typeof friendRequest.getFriendStatus>>;
+
+function logFriendRelationshipError(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
+
+export function handleFriendStatus(args: FriendStatusResponse) {
   const userStore = useUserStore();
   const D = userStore.userDialog;
-  if (D.visible === false || D.id !== args.params.userId) {
+  if (!D.visible || D.id !== args.params.userId) {
     return;
   }
   const { json } = args;
@@ -30,11 +40,11 @@ export function handleFriendStatus(args) {
   D.outgoingRequest = json.outgoingRequest;
 }
 
-export function handleFriendDelete(args) {
+export function handleFriendDelete(args: { params: { userId: string } }) {
   const userStore = useUserStore();
   const friendStore = useFriendStore();
   const D = userStore.userDialog;
-  if (D.visible === false || D.id !== args.params.userId) {
+  if (!D.visible || D.id !== args.params.userId) {
     return;
   }
   D.isFriend = false;
@@ -43,7 +53,7 @@ export function handleFriendDelete(args) {
   removeFriendSearchIndex(args.params.userId);
 }
 
-export function handleFriendAdd(args) {
+export function handleFriendAdd(args: { params: { userId: string } }) {
   const friendStore = useFriendStore();
   addFriendship(args.params.userId);
   friendStore.addFriend(args.params.userId);
@@ -53,29 +63,31 @@ export function handleFriendAdd(args) {
   }
 }
 
-export function getFriendRequest(userId) {
+export function getFriendRequest(userId: string) {
   const notificationStore = useNotificationStore();
   const array = notificationStore.notificationTable.data;
   for (let i = array.length - 1; i >= 0; i--) {
-    if (array[i].type === "friendRequest" && array[i].senderUserId === userId) {
-      return array[i].id;
+    const entry = array[i];
+    if (entry?.type === "friendRequest" && entry.senderUserId === userId) {
+      return entry.id;
     }
   }
   return "";
 }
 
-function deleteFriendRequest(userId) {
+function deleteFriendRequest(userId: string) {
   const notificationStore = useNotificationStore();
   const array = notificationStore.notificationTable.data;
   for (let i = array.length - 1; i >= 0; i--) {
-    if (array[i].type === "friendRequest" && array[i].senderUserId === userId) {
+    const entry = array[i];
+    if (entry?.type === "friendRequest" && entry.senderUserId === userId) {
       array.splice(i, 1);
       return;
     }
   }
 }
 
-export function addFriendship(id) {
+export function addFriendship(id: string) {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
   const notificationStore = useNotificationStore();
@@ -107,13 +119,16 @@ export function addFriendship(id) {
           state.friendNumber = friendStore.friends.size;
         }
         ref.$friendNumber = ++state.friendNumber;
-        configRepository.setInt(`VRCX_friendNumber_${userStore.currentUser.id}`, state.friendNumber);
+        void configRepository
+          .setInt(`VRCX_friendNumber_${userStore.currentUser.id}`, state.friendNumber)
+          .catch(logFriendRelationshipError("Error saving friend number:"));
         friendStore.addFriend(id, ref.state);
         const friendCtx = friendStore.friends.get(id);
         if (friendCtx) {
           syncFriendSearchIndex(friendCtx);
         }
         const friendLogHistory = {
+          rowId: null,
           created_at: new Date().toJSON(),
           type: "Friend",
           userId: id,
@@ -123,7 +138,7 @@ export function addFriendship(id) {
         friendLogTable.value.data.push(friendLogHistory);
         database.addFriendLogHistory(friendLogHistory);
         notificationStore.queueFriendLogNoty(friendLogHistory);
-        sharedFeedStore.addEntry(friendLogHistory);
+        void sharedFeedStore.addEntry(friendLogHistory).catch(logFriendRelationshipError("Error adding shared feed entry:"));
         const friendLogCurrent = {
           userId: id,
           displayName: ref.displayName,
@@ -142,12 +157,14 @@ export function addFriendship(id) {
             if (userStore.userDialog.visible && id === userStore.userDialog.id) {
               userStore.applyUserDialogLocation(true);
             }
-          });
+          })
+          .catch(logFriendRelationshipError("Error loading user for friend add:"));
       }
-    });
+    })
+    .catch(logFriendRelationshipError("Error loading friend status:"));
 }
 
-export function updateFriendship(ref) {
+export function updateFriendship(ref: VrcxUser) {
   const friendStore = useFriendStore();
   const notificationStore = useNotificationStore();
   const sharedFeedStore = useSharedFeedStore();
@@ -169,6 +186,7 @@ export function updateFriendship(ref) {
   if (ctx.displayName !== ref.displayName) {
     if (ctx.displayName) {
       const friendLogHistoryDisplayName = {
+        rowId: null,
         created_at: new Date().toJSON(),
         type: "DisplayName",
         userId: ref.id,
@@ -177,10 +195,10 @@ export function updateFriendship(ref) {
         friendNumber: ref.$friendNumber,
       };
 
-      friendLogTable.value?.data.push(friendLogHistoryDisplayName);
+      friendLogTable.value.data.push(friendLogHistoryDisplayName);
       database.addFriendLogHistory(friendLogHistoryDisplayName);
       notificationStore.queueFriendLogNoty(friendLogHistoryDisplayName);
-      sharedFeedStore.addEntry(friendLogHistoryDisplayName);
+      void sharedFeedStore.addEntry(friendLogHistoryDisplayName).catch(logFriendRelationshipError("Error adding shared feed entry:"));
       const friendLogCurrent = {
         userId: ref.id,
         displayName: ref.displayName,
@@ -209,6 +227,7 @@ export function updateFriendship(ref) {
       return;
     }
     const friendLogHistoryTrustLevel = {
+      rowId: null,
       created_at: new Date().toJSON(),
       type: "TrustLevel",
       userId: ref.id,
@@ -220,7 +239,7 @@ export function updateFriendship(ref) {
     friendLogTable.value.data.push(friendLogHistoryTrustLevel);
     database.addFriendLogHistory(friendLogHistoryTrustLevel);
     notificationStore.queueFriendLogNoty(friendLogHistoryTrustLevel);
-    sharedFeedStore.addEntry(friendLogHistoryTrustLevel);
+    void sharedFeedStore.addEntry(friendLogHistoryTrustLevel).catch(logFriendRelationshipError("Error adding shared feed entry:"));
     const friendLogCurrent2 = {
       userId: ref.id,
       displayName: ref.displayName,
@@ -234,7 +253,7 @@ export function updateFriendship(ref) {
   ctx.trustLevel = ref.$trustLevel;
 }
 
-export function confirmDeleteFriend(id) {
+export function confirmDeleteFriend(id: string) {
   const t = i18n.global.t;
   const modalStore = useModalStore();
   modalStore
@@ -249,10 +268,10 @@ export function confirmDeleteFriend(id) {
       });
       handleFriendDelete(args);
     })
-    .catch(() => {});
+    .catch(logFriendRelationshipError("Error deleting friend:"));
 }
 
-export function userOnFriend(ref) {
+export function userOnFriend(ref: VrcxUser) {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
 
@@ -262,7 +281,7 @@ export function userOnFriend(ref) {
   }
 }
 
-export function updateUserCurrentStatus(ref) {
+export function updateUserCurrentStatus(ref: FriendStatusSource) {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
   const appearanceSettingsStore = useAppearanceSettingsStore();
@@ -282,13 +301,15 @@ export function updateUserCurrentStatus(ref) {
   friendStore.updateOnlineFriendCounter();
 
   if (appearanceSettingsStore.randomUserColours) {
-    getNameColour(userStore.currentUser.id, appearanceSettingsStore.isDarkMode).then((colour) => {
-      userStore.setCurrentUserColour(colour);
-    });
+    getNameColour(userStore.currentUser.id, appearanceSettingsStore.isDarkMode)
+      .then((colour) => {
+        userStore.setCurrentUserColour(colour);
+      })
+      .catch(logFriendRelationshipError("Error loading name colour:"));
   }
 }
 
-export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON() } = {}) {
+export function runDeleteFriendshipFlow(id: string, { nowIso = () => new Date().toJSON() } = {}) {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
   const notificationStore = useNotificationStore();
@@ -315,15 +336,17 @@ export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON()
       handleFriendStatus(args);
       if (!args.json.isFriend && friendLog.has(id)) {
         const friendLogHistory = {
+          rowId: null,
+          friendNumber: null,
           created_at: nowIso(),
           type: "Unfriend",
           userId: id,
-          displayName: ctx.displayName || id,
+          displayName: ctx.displayName === null || ctx.displayName === "" ? id : ctx.displayName,
         };
         friendLogTable.value.data.push(friendLogHistory);
         database.addFriendLogHistory(friendLogHistory);
         notificationStore.queueFriendLogNoty(friendLogHistory);
-        sharedFeedStore.addEntry(friendLogHistory);
+        void sharedFeedStore.addEntry(friendLogHistory).catch(logFriendRelationshipError("Error adding shared feed entry:"));
         friendLog.delete(id);
         database.deleteFriendLogCurrent(id);
         handleFavoriteDelete(id);
@@ -333,21 +356,21 @@ export function runDeleteFriendshipFlow(id, { nowIso = () => new Date().toJSON()
         friendStore.deleteFriend(id);
         removeFriendSearchIndex(id);
       }
-    });
+    })
+    .catch(logFriendRelationshipError("Error loading friend status:"));
 }
 
-export function runUpdateFriendshipsFlow(ref, { nowIso = () => new Date().toJSON() } = {}) {
+export function runUpdateFriendshipsFlow(ref: Pick<FriendStatusSource, "friends">, { nowIso = () => new Date().toJSON() } = {}) {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
   const { friendLog } = friendStore;
 
-  let id;
-  const set = new Set();
-  for (id of ref.friends) {
+  const set = new Set<string>();
+  for (const id of ref.friends) {
     set.add(id);
     addFriendship(id);
   }
-  for (id of friendLog.keys()) {
+  for (const id of friendLog.keys()) {
     if (id === userStore.currentUser.id) {
       friendLog.delete(id);
       database.deleteFriendLogCurrent(id);

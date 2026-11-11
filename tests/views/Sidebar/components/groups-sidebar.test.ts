@@ -82,7 +82,7 @@ vi.mock("../../../../src/shared/utils/location-parser", () => ({
   }),
 }));
 
-vi.mock("../../../../src/coordinators/group-coordinator", () => ({
+vi.mock("../../../../src/coordinators/group-dialog-coordinator", () => ({
   showGroupDialog: (...a) => mocks.showGroupDialog(...a),
 }));
 

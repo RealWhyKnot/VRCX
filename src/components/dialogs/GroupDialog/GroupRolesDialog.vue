@@ -244,7 +244,7 @@ import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { groupRequest } from "../../../api/group";
 import { hasGroupPermission } from "../../../shared/utils/group";
-import { loadGroupRolesDialogRoles } from "../../../coordinators/group-coordinator";
+import { loadGroupRolesDialogRoles } from "../../../coordinators/group-dialog-coordinator";
 
 import SortableGroupRoleItem from "./SortableGroupRoleItem.vue";
 

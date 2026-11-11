@@ -1,17 +1,24 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockRequest = vi.fn();
-const mockPatchAndRefetchActiveQuery = vi.fn(() => Promise.resolve());
+const mockRequest = vi.fn<(endpoint: string, options: unknown) => Promise<unknown>>();
+const mockPatchAndRefetchActiveQuery = vi.fn<(options: { queryKey: unknown[] }) => Promise<void>>(() => Promise.resolve());
 
-const mockApplyCurrentUser = vi.fn((json) => ({
-  id: json.id || "usr_me",
+function fallbackUserId(id: string | undefined) {
+  if (id) {
+    return id;
+  }
+  return "usr_me";
+}
+
+const mockApplyCurrentUser = vi.fn<(json: { id?: string }) => Record<string, unknown>>((json) => ({
+  id: fallbackUserId(json.id),
   ...json,
 }));
-const mockApplyUser = vi.fn((json) => ({ ...json }));
-const mockApplyWorld = vi.fn((json) => ({ ...json }));
+const mockApplyUser = vi.fn<(json: Record<string, unknown>) => Record<string, unknown>>((json) => ({ ...json }));
+const mockApplyWorld = vi.fn<(json: Record<string, unknown>) => Record<string, unknown>>((json) => ({ ...json }));
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mockRequest(...args),
+  request: (endpoint: string, options: unknown) => mockRequest(endpoint, options),
 }));
 
 vi.mock("../../src/stores/user", () => ({
@@ -28,22 +35,22 @@ vi.mock("../../src/stores/world", () => ({
 }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  applyCurrentUser: (...args) => mockApplyCurrentUser(...args),
-  applyUser: (...args) => mockApplyUser(...args),
+  applyCurrentUser: (json: { id?: string }) => mockApplyCurrentUser(json),
+  applyUser: (json: Record<string, unknown>) => mockApplyUser(json),
 }));
 
 vi.mock("../../src/coordinators/world-coordinator", () => ({
-  applyWorld: (...args) => mockApplyWorld(...args),
+  applyWorld: (json: Record<string, unknown>) => mockApplyWorld(json),
 }));
 
 vi.mock("../../src/queries/entity-cache", () => ({
-  patchAndRefetchActiveQuery: (...args) => mockPatchAndRefetchActiveQuery(...args),
+  patchAndRefetchActiveQuery: (options: { queryKey: unknown[] }) => mockPatchAndRefetchActiveQuery(options),
 }));
 vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
-    user: (userId) => ["user", userId],
-    avatar: (avatarId) => ["avatar", avatarId],
-    world: (worldId) => ["world", worldId],
+    user: (userId: string) => ["user", userId],
+    avatar: (avatarId: string) => ["avatar", avatarId],
+    world: (worldId: string) => ["world", worldId],
   },
 }));
 vi.mock("../../src/queries/policies", () => ({

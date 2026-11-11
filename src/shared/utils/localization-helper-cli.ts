@@ -74,7 +74,7 @@ function insertKeyInObj(obj: LocaleTree, key: string, value: string, aboveKey: s
   }
 
   keys.unshift("dummy");
-  obj.dummy = {};
+  obj["dummy"] = {};
   const ret = keys.reduce<LocaleTree>((newObj, currKey, i) => {
     if (currKey !== key) {
       const current = obj[currKey];
@@ -89,7 +89,7 @@ function insertKeyInObj(obj: LocaleTree, key: string, value: string, aboveKey: s
 
     return newObj;
   }, {});
-  delete ret.dummy;
+  delete ret["dummy"];
 
   for (const existingKey of keys) {
     Reflect.deleteProperty(obj, existingKey);

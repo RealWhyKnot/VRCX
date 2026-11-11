@@ -343,7 +343,7 @@ import { convertFileUrlToImageUrl } from "../../shared/utils/common";
 import { languageClass } from "../../shared/utils/user";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { showAvatarDialog } from "../../coordinators/avatar-coordinator";
-import { showGroupDialog } from "../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../coordinators/user-coordinator";
 import { showWorldDialog } from "../../coordinators/world-coordinator";
 import { useSearchAvatar } from "./composables/use-search-avatar";

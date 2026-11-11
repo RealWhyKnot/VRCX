@@ -10,7 +10,12 @@ import { updateLocalizedStrings } from "../plugins/i18n";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useAvatarStore } from "./avatar";
 import { useGroupStore } from "./group";
-import { clearGroupMemberModerationDialog, showGroupDialog, showGroupMemberModerationDialog, showGroupRolesDialog } from "../coordinators/group-coordinator";
+import {
+  clearGroupMemberModerationDialog,
+  showGroupDialog,
+  showGroupMemberModerationDialog,
+  showGroupRolesDialog,
+} from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { showAvatarDialog } from "../coordinators/avatar-coordinator";
 import { showUserDialog } from "../coordinators/user-coordinator";
@@ -19,6 +24,8 @@ import { useNotificationStore } from "./notification";
 import { useSearchStore } from "./search";
 import { useUserStore } from "./user";
 import { useWorldStore } from "./world";
+import type { DialogCrumb } from "./ui-types";
+import { logFailure } from "./log-failure";
 
 export const useUiStore = defineStore("Ui", () => {
   const notificationStore = useNotificationStore();
@@ -28,82 +35,82 @@ export const useUiStore = defineStore("Ui", () => {
   const { directAccessPaste } = useSearchStore();
   const appearanceSettings = useAppearanceSettingsStore();
 
-  const ctrlR = keys["Ctrl+R"];
-  const ctrlD = keys["Ctrl+D"];
-  const metaD = keys["Meta+D"];
-  const shift = keys["Shift"];
-  const ctrlShiftI = keys["Ctrl+Shift+I"];
-  const altShiftR = keys["Alt+Shift+R"];
-
-  const notifiedMenus = ref([]);
   const shiftHeld = ref(false);
+  const notifiedMenus = ref<string[]>([]);
   const trayIconNotify = ref(false);
-  const dialogCrumbs = ref([]);
+  const dialogCrumbs = ref<DialogCrumb[]>([]);
 
-  watch(ctrlR, (isPressed) => {
+  function watchKey(name: string, onChange: (isActive: boolean) => void) {
+    const key = keys[name];
+    if (key) {
+      watch(key, onChange);
+    }
+  }
+
+  watchKey("Ctrl+R", (isPressed) => {
     if (isPressed) {
       location.reload();
     }
   });
 
-  watch(ctrlD, (isPressed) => {
+  watchKey("Ctrl+D", (isPressed) => {
     if (isPressed) {
-      directAccessPaste();
+      void directAccessPaste().catch(logFailure("Direct access paste failed:"));
     }
   });
 
-  watch(metaD, (isPressed) => {
+  watchKey("Meta+D", (isPressed) => {
     if (isPressed) {
-      directAccessPaste();
+      void directAccessPaste().catch(logFailure("Direct access paste failed:"));
     }
   });
 
-  watch(shift, (isHeld) => {
+  watchKey("Shift", (isHeld) => {
     shiftHeld.value = isHeld;
   });
 
-  watch(ctrlShiftI, (isPressed) => {
+  watchKey("Ctrl+Shift+I", (isPressed) => {
     if (isPressed) {
       showConsole();
     }
   });
 
-  watch(altShiftR, (isPressed) => {
+  watchKey("Alt+Shift+R", (isPressed) => {
     if (isPressed) {
-      refreshCustomCss();
-      updateLocalizedStrings();
+      void refreshCustomCss().catch(logFailure("Refreshing custom CSS failed:"));
+      void updateLocalizedStrings().catch(logFailure("Refreshing localization strings failed:"));
       toast.success("Custom CSS and localization strings refreshed");
     }
   });
 
-  function pushDialogCrumb(data) {
+  function pushDialogCrumb(data: DialogCrumb) {
     const { type, id, label } = data;
     if (!type || !id) {
       return;
     }
     const items = dialogCrumbs.value;
     const last = items[items.length - 1];
-    if (last && last.type === type && last.id === id) {
+    if (last?.type === type && last.id === id) {
       if (label && last.label !== label) {
         last.label = label;
       }
       return;
     }
-    const existingIndex = items.findIndex((item) => item.type === type && item.id === id);
-    if (existingIndex !== -1) {
-      items.splice(existingIndex + 1);
+    const existing = items.find((item) => item.type === type && item.id === id);
+    if (existing) {
+      items.splice(items.indexOf(existing) + 1);
       if (label) {
-        items[existingIndex].label = label;
+        existing.label = label;
       }
       return;
     }
-    if (!data.label) {
+    if (data.label === undefined || data.label === "") {
       data.label = data.id;
     }
     items.push(data);
   }
 
-  function setDialogCrumbLabel(type, id, label) {
+  function setDialogCrumbLabel(type: string, id: string, label: string) {
     if (!type || !id || !label) {
       return;
     }
@@ -113,7 +120,7 @@ export const useUiStore = defineStore("Ui", () => {
     }
   }
 
-  function jumpDialogCrumb(index) {
+  function jumpDialogCrumb(index: number) {
     if (index < 0 || index >= dialogCrumbs.value.length) {
       return;
     }
@@ -131,7 +138,7 @@ export const useUiStore = defineStore("Ui", () => {
     handleBreadcrumbClick(dialogCrumbs.value.length - 1);
   }
 
-  function handleBreadcrumbClick(index) {
+  function handleBreadcrumbClick(index: number) {
     const item = dialogCrumbs.value[index];
     if (!item) {
       return;
@@ -142,7 +149,7 @@ export const useUiStore = defineStore("Ui", () => {
       return;
     }
     if (item.type === "world") {
-      showWorldDialog(item.tag, item.shortName);
+      showWorldDialog(item.tag ?? "", item.shortName ?? null);
       return;
     }
     if (item.type === "avatar") {
@@ -154,15 +161,15 @@ export const useUiStore = defineStore("Ui", () => {
       return;
     }
     if (item.type === "previous-instances-user") {
-      instanceStore.showPreviousInstancesListDialog("user", item.id);
+      void instanceStore.showPreviousInstancesListDialog("user", item.id).catch(logFailure("Showing previous instances failed:"));
       return;
     }
     if (item.type === "previous-instances-world") {
-      instanceStore.showPreviousInstancesListDialog("world", item.id);
+      void instanceStore.showPreviousInstancesListDialog("world", item.id).catch(logFailure("Showing previous instances failed:"));
       return;
     }
     if (item.type === "previous-instances-group") {
-      instanceStore.showPreviousInstancesListDialog("group", item.id);
+      void instanceStore.showPreviousInstancesListDialog("group", item.id).catch(logFailure("Showing previous instances failed:"));
       return;
     }
     if (item.type === "previous-instances-info") {
@@ -190,7 +197,6 @@ export const useUiStore = defineStore("Ui", () => {
     const worldStore = useWorldStore();
     const avatarStore = useAvatarStore();
     const groupStore = useGroupStore();
-    const instanceStore = useInstanceStore();
 
     userStore.setUserDialogVisible(false);
     worldStore.setWorldDialogVisible(false);
@@ -203,16 +209,15 @@ export const useUiStore = defineStore("Ui", () => {
     clearDialogCrumbs();
   }
 
-  function openDialog(data) {
+  function openDialog(data: DialogCrumb): boolean {
     const { type } = data;
     const userStore = useUserStore();
     const worldStore = useWorldStore();
     const avatarStore = useAvatarStore();
     const groupStore = useGroupStore();
-    const instanceStore = useInstanceStore();
     const isPrevInfo = type === "previous-instances-info";
-    const isPrevList = type && type.startsWith("previous-instances-") && type !== "previous-instances-info";
-    const hadActiveDialog =
+    const isPrevList = type.startsWith("previous-instances-") && type !== "previous-instances-info";
+    const isAnyDialogOpen =
       dialogCrumbs.value.length > 0 ||
       userStore.userDialog.visible ||
       worldStore.worldDialog.visible ||
@@ -247,19 +252,19 @@ export const useUiStore = defineStore("Ui", () => {
     if (!isPrevList) {
       instanceStore.setPreviousInstancesListDialogVisible(false);
     }
-    if (!hadActiveDialog) {
+    if (!isAnyDialogOpen) {
       clearDialogCrumbs();
     }
     pushDialogCrumb(data);
-    return hadActiveDialog;
+    return isAnyDialogOpen;
   }
 
-  document.body.addEventListener("drop", function (e) {
-    e.preventDefault();
+  document.body.addEventListener("drop", (event) => {
+    event.preventDefault();
   });
 
   function showConsole() {
-    AppApi.ShowDevTools();
+    void AppApi.ShowDevTools().catch(logFailure("Showing dev tools failed:"));
     if (AppDebug.debug || AppDebug.debugWebRequests || AppDebug.debugWebSocket || AppDebug.debugUserDiff) {
       return;
     }
@@ -280,15 +285,15 @@ export const useUiStore = defineStore("Ui", () => {
     }
   );
 
-  function notifyMenu(index) {
-    const currentRouteName = router.currentRoute.value?.name;
+  function notifyMenu(index: string) {
+    const currentRouteName = router.currentRoute.value.name;
     if (index !== currentRouteName && !notifiedMenus.value.includes(index)) {
       notifiedMenus.value.push(index);
       updateTrayIconNotify();
     }
   }
 
-  function removeNotify(index) {
+  function removeNotify(index: string) {
     notifiedMenus.value = notifiedMenus.value.filter((i) => i !== index);
     updateTrayIconNotify();
   }
@@ -298,16 +303,17 @@ export const useUiStore = defineStore("Ui", () => {
     updateTrayIconNotify();
   }
 
-  function updateTrayIconNotify(force = false) {
-    const newState = appearanceSettings.notificationIconDot && (notifiedMenus.value.includes("notification") || notifiedMenus.value.includes("friend-log"));
+  function updateTrayIconNotify(isForced = false) {
+    const isNotifyActive =
+      appearanceSettings.notificationIconDot && (notifiedMenus.value.includes("notification") || notifiedMenus.value.includes("friend-log"));
 
-    if (trayIconNotify.value !== newState || force) {
-      trayIconNotify.value = newState;
+    if (trayIconNotify.value !== isNotifyActive || isForced) {
+      trayIconNotify.value = isNotifyActive;
       if (isHostLinux) {
-        window.electron.setTrayIconNotification(trayIconNotify.value);
+        void window.electron.setTrayIconNotification(trayIconNotify.value).catch(logFailure("Setting tray icon notification failed:"));
         return;
       }
-      AppApi.SetTrayIconNotification(trayIconNotify.value);
+      void AppApi.SetTrayIconNotification(trayIconNotify.value).catch(logFailure("Setting tray icon notification failed:"));
     }
   }
   updateTrayIconNotify(true);

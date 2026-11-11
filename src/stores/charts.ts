@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import type { MutualFriend } from "vrchat";
 
 import { createRateLimiter } from "../shared/utils/throttle";
 import { executeWithBackoff } from "../shared/utils/retry";
@@ -10,6 +11,20 @@ import { database } from "../services/database";
 import { useFriendStore } from "./friend";
 import { useUserStore } from "./user";
 import { userRequest } from "../api/user";
+import type { Json } from "../types/vrcx";
+import type { FriendContext } from "./friend-types";
+
+type MutualFriendEntry = Json<MutualFriend>;
+
+type MutualFetchOptions = {
+  rateLimiter?: ReturnType<typeof createRateLimiter>;
+  isCancelled?: () => boolean;
+};
+
+type MutualFriendFetchResult = {
+  friend: FriendContext;
+  mutuals: MutualFriendEntry[];
+};
 
 function createDefaultFetchState() {
   return {
@@ -19,15 +34,30 @@ function createDefaultFetchState() {
 
 const EMPTY_USER_ID = "usr_00000000-0000-0000-0000-000000000000";
 
-function normalizeIdentifier(value) {
+function normalizeIdentifier(value: unknown): string {
   if (typeof value === "string") return value;
-  if (value === undefined || value === null) return "";
-  return String(value);
+  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") return String(value);
+  return "";
 }
 
-function isValidMutualIdentifier(value) {
+function isValidMutualIdentifier(value: unknown): boolean {
   const identifier = normalizeIdentifier(value);
   return Boolean(identifier && identifier !== EMPTY_USER_ID);
+}
+
+function errorStatus(err: unknown): number | undefined {
+  if (typeof err === "object" && err !== null && "status" in err && typeof err.status === "number") {
+    return err.status;
+  }
+  return undefined;
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err && typeof err.message === "string") {
+    return err.message;
+  }
+  return "";
 }
 
 export const useChartsStore = defineStore("Charts", () => {
@@ -50,10 +80,10 @@ export const useChartsStore = defineStore("Charts", () => {
 
   const friendCount = computed(() => friendStore.friends.size || 0);
   const currentUser = computed(() => userStore.currentUser);
-  const isOptOut = computed(() => Boolean(currentUser.value?.hasSharedConnectionsOptOut));
+  const isOptOut = computed(() => currentUser.value.hasSharedConnectionsOptOut);
 
-  function showInfoMessage(message, type) {
-    const toastFn = toast[type] ?? toast;
+  function showInfoMessage(message: string, type: "info" | "warning"): void {
+    const toastFn = toast[type];
     toastFn(message, { duration: 4000 });
   }
 
@@ -75,7 +105,11 @@ export const useChartsStore = defineStore("Charts", () => {
         description: t("view.charts.mutual_friend.notifications.mutual_friend_graph_ready_message"),
         action: {
           label: t("common.actions.open"),
-          onClick: () => router.push({ name: "charts-mutual" }),
+          onClick: () => {
+            router.push({ name: "charts-mutual" }).catch((err: unknown) => {
+              console.error("[MutualNetworkGraph] Failed to open charts page", err);
+            });
+          },
         },
       });
     }
@@ -101,21 +135,21 @@ export const useChartsStore = defineStore("Charts", () => {
     mutualGraphStatus.cancelRequested = false;
   }
 
-  function markMutualGraphLoaded({ notify = true } = {}) {
+  function markMutualGraphLoaded({ notify = true }: { notify?: boolean } = {}): void {
     mutualGraphStatus.completionNotified = notify ? false : true;
     mutualGraphStatus.hasFetched = true;
   }
 
-  function requestMutualGraphCancel() {
+  function requestMutualGraphCancel(): void {
     if (mutualGraphStatus.isFetching) mutualGraphStatus.cancelRequested = true;
   }
 
-  async function fetchMutualFriendsForUser(userId, options = {}) {
+  async function fetchMutualFriendsForUser(userId: string, options: MutualFetchOptions = {}): Promise<MutualFriendEntry[]> {
     const { rateLimiter, isCancelled = () => false } = options;
-    const collected = [];
+    const collected: MutualFriendEntry[] = [];
     let offset = 0;
 
-    while (true) {
+    for (;;) {
       if (isCancelled()) break;
       if (rateLimiter) await rateLimiter.wait();
       if (isCancelled()) break;
@@ -132,16 +166,16 @@ export const useChartsStore = defineStore("Charts", () => {
         {
           maxRetries: 4,
           baseDelay: 500,
-          shouldRetry: (err) => err?.status === 429 || (err?.message || "").includes("429"),
+          shouldRetry: (err) => errorStatus(err) === 429 || errorMessage(err).includes("429"),
         }
-      ).catch((err) => {
-        if ((err?.message || "") === "cancelled") return null;
+      ).catch((err: unknown) => {
+        if (errorMessage(err) === "cancelled") return null;
         throw err;
       });
 
       if (!args || isCancelled()) break;
 
-      collected.push(...args.json.filter((entry) => isValidMutualIdentifier(entry?.id)));
+      collected.push(...args.json.filter((entry) => isValidMutualIdentifier(entry.id)));
 
       if (args.json.length < 100) break;
       offset += args.json.length;
@@ -150,7 +184,7 @@ export const useChartsStore = defineStore("Charts", () => {
     return collected;
   }
 
-  async function fetchSingleFriendMutuals(friendId) {
+  async function fetchSingleFriendMutuals(friendId: string) {
     if (!friendId || isOptOut.value) {
       return { success: false, mutuals: [], optedOut: false };
     }
@@ -158,15 +192,15 @@ export const useChartsStore = defineStore("Charts", () => {
     try {
       const mutuals = await fetchMutualFriendsForUser(friendId);
 
-      const mutualIds = mutuals.map((entry) => normalizeIdentifier(entry?.id)).filter(isValidMutualIdentifier);
+      const mutualIds = mutuals.map((entry) => normalizeIdentifier(entry.id)).filter(isValidMutualIdentifier);
       await database.updateMutualsForFriend(friendId, mutualIds);
       await database.upsertMutualGraphMeta(friendId, {
         optedOut: false,
       });
 
       return { success: true, mutuals, optedOut: false };
-    } catch (err) {
-      const status = err?.status;
+    } catch (err: unknown) {
+      const status = errorStatus(err);
       if (status === 403 || status === 404) {
         await database.upsertMutualGraphMeta(friendId, {
           optedOut: true,
@@ -178,7 +212,7 @@ export const useChartsStore = defineStore("Charts", () => {
     }
   }
 
-  async function fetchMutualGraph() {
+  async function fetchMutualGraph(): Promise<Map<string, MutualFriendFetchResult> | null> {
     if (mutualGraphStatus.isFetching || isOptOut.value) return null;
 
     if (!friendCount.value) {
@@ -191,7 +225,7 @@ export const useChartsStore = defineStore("Charts", () => {
       intervalMs: 1000,
     });
 
-    const isCancelled = () => mutualGraphStatus.cancelRequested === true;
+    const isCancelled = () => mutualGraphStatus.cancelRequested;
 
     mutualGraphStatus.isFetching = true;
     mutualGraphStatus.completionNotified = false;
@@ -201,10 +235,10 @@ export const useChartsStore = defineStore("Charts", () => {
     Object.assign(mutualGraphFetchState, { processedFriends: 0 });
 
     const friendSnapshot = Array.from(friendStore.friends.values());
-    const mutualMap = new Map();
-    const metaEntries = new Map();
+    const mutualMap = new Map<string, MutualFriendFetchResult>();
+    const metaEntries = new Map<string, { optedOut: boolean }>();
 
-    let cancelled = false;
+    let wasCancelled = false;
 
     try {
       for (let index = 0; index < friendSnapshot.length; index += 1) {
@@ -212,7 +246,7 @@ export const useChartsStore = defineStore("Charts", () => {
         if (!friend?.id) continue;
 
         if (isCancelled()) {
-          cancelled = true;
+          wasCancelled = true;
           break;
         }
 
@@ -222,17 +256,17 @@ export const useChartsStore = defineStore("Charts", () => {
             isCancelled,
           });
           if (isCancelled()) {
-            cancelled = true;
+            wasCancelled = true;
             break;
           }
           mutualMap.set(friend.id, { friend, mutuals });
           metaEntries.set(friend.id, { optedOut: false });
-        } catch (err) {
-          if ((err?.message || "") === "cancelled" || isCancelled()) {
-            cancelled = true;
+        } catch (err: unknown) {
+          if (errorMessage(err) === "cancelled" || isCancelled()) {
+            wasCancelled = true;
             break;
           }
-          const status = err?.status;
+          const status = errorStatus(err);
           if (status === 403 || status === 404) {
             metaEntries.set(friend.id, { optedOut: true });
           }
@@ -241,13 +275,13 @@ export const useChartsStore = defineStore("Charts", () => {
         }
 
         mutualGraphFetchState.processedFriends = index + 1;
-        if (mutualGraphStatus.cancelRequested) {
-          cancelled = true;
+        if (isCancelled()) {
+          wasCancelled = true;
           break;
         }
       }
 
-      if (cancelled) {
+      if (wasCancelled) {
         mutualGraphStatus.hasFetched = false;
         showInfoMessage(t("view.charts.mutual_friend.messages.fetch_cancelled_graph_not_updated"), "warning");
         return null;
@@ -261,28 +295,26 @@ export const useChartsStore = defineStore("Charts", () => {
       }
 
       try {
-        const entries = new Map();
+        const entries = new Map<string, string[]>();
         mutualMap.forEach((value, friendId) => {
           if (!friendId) return;
-          const normalizedFriendId = String(friendId);
-          const collection = Array.isArray(value?.mutuals) ? value.mutuals : [];
-          const ids = [];
+          const ids: string[] = [];
 
-          for (const entry of collection) {
-            const identifier = normalizeIdentifier(entry?.id);
+          for (const entry of value.mutuals) {
+            const identifier = normalizeIdentifier(entry.id);
             if (isValidMutualIdentifier(identifier)) ids.push(identifier);
           }
 
-          entries.set(normalizedFriendId, ids);
+          entries.set(friendId, ids);
         });
         await database.saveMutualGraphSnapshot(entries);
-      } catch (persistErr) {
+      } catch (persistErr: unknown) {
         console.error("[MutualNetworkGraph] Failed to cache data", persistErr);
       }
 
       markMutualGraphLoaded({ notify: true });
       return mutualMap;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[MutualNetworkGraph] fetch aborted", err);
       return null;
     } finally {

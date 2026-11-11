@@ -1,8 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { Mock } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { nextTick, reactive } from "vue";
 
 import { links } from "../../src/shared/constants/link";
+import { createCurrentUserState } from "../../src/stores/user-state";
+
+type AnyFn = (...args: unknown[]) => unknown;
+
+type WarningOptions = {
+  description: string;
+  duration: number;
+  action: { label: string; onClick: () => void };
+};
+
+type AuthError = Error & { status: number; endpoint: string };
+
+type LoginParamsOverrides = Partial<{ username: string; password: string; endpoint: string; websocket: string }>;
 
 const mockWatchState = reactive({
   isLoggedIn: false,
@@ -12,68 +26,68 @@ const mockWatchState = reactive({
 
 const mocks = vi.hoisted(() => ({
   toast: {
-    dismiss: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    success: vi.fn(),
-    warning: vi.fn(),
+    dismiss: vi.fn<AnyFn>(),
+    error: vi.fn<AnyFn>(),
+    info: vi.fn<AnyFn>(),
+    success: vi.fn<AnyFn>(),
+    warning: vi.fn<(message: string, options: WarningOptions) => string>(),
   },
-  request: vi.fn(),
+  request: vi.fn<AnyFn>(),
   authRequest: {
-    getConfig: vi.fn(),
+    getConfig: vi.fn<AnyFn>(),
   },
-  runLoginSuccessFlow: vi.fn(),
-  runLogoutFlow: vi.fn(),
-  runHandleAutoLoginFlow: vi.fn(),
-  getCurrentUser: vi.fn(),
-  initWebsocket: vi.fn(),
+  runLoginSuccessFlow: vi.fn<AnyFn>(),
+  runLogoutFlow: vi.fn<AnyFn>(),
+  runHandleAutoLoginFlow: vi.fn<AnyFn>(),
+  getCurrentUser: vi.fn<AnyFn>(),
+  initWebsocket: vi.fn<AnyFn>(),
   advancedSettingsStore: {
     enablePrimaryPassword: false,
-    setEnablePrimaryPassword: vi.fn(),
-    setEnablePrimaryPasswordConfigRepository: vi.fn(),
-    runAvatarAutoCleanup: vi.fn(),
+    setEnablePrimaryPassword: vi.fn<AnyFn>(),
+    setEnablePrimaryPasswordConfigRepository: vi.fn<AnyFn>(),
+    runAvatarAutoCleanup: vi.fn<AnyFn>(),
   },
   generalSettingsStore: {
     autoLoginDelayEnabled: false,
     autoLoginDelaySeconds: 0,
   },
   modalStore: {
-    prompt: vi.fn(),
-    otpPrompt: vi.fn(),
-    confirm: vi.fn(),
-    alert: vi.fn(),
+    prompt: vi.fn<AnyFn>(),
+    otpPrompt: vi.fn<AnyFn>(),
+    confirm: vi.fn<AnyFn>(),
+    alert: vi.fn<AnyFn>(),
   },
   updateLoopStore: {
-    setNextCurrentUserRefresh: vi.fn(),
-    setIpcTimeout: vi.fn(),
+    setNextCurrentUserRefresh: vi.fn<AnyFn>(),
+    setIpcTimeout: vi.fn<AnyFn>(),
   },
   userStore: {
     currentUser: {
       id: "usr_me",
       displayName: "Tester",
     },
-    setUserDialogVisible: vi.fn(),
+    setUserDialogVisible: vi.fn<AnyFn>(),
   },
   vrcxStore: {
-    waitForDatabaseInit: vi.fn().mockResolvedValue(true),
+    waitForDatabaseInit: vi.fn<AnyFn>().mockResolvedValue(true),
   },
   configRepository: {
-    getString: vi.fn(),
-    getBool: vi.fn(),
-    setString: vi.fn(),
-    setBool: vi.fn(),
-    remove: vi.fn(),
+    getString: vi.fn<AnyFn>(),
+    getBool: vi.fn<AnyFn>(),
+    setString: vi.fn<AnyFn>(),
+    setBool: vi.fn<AnyFn>(),
+    remove: vi.fn<AnyFn>(),
   },
   webApiService: {
-    clearCookies: vi.fn().mockResolvedValue(undefined),
-    getCookies: vi.fn().mockResolvedValue([]),
-    setCookies: vi.fn().mockResolvedValue(undefined),
+    clearCookies: vi.fn<AnyFn>().mockResolvedValue(undefined),
+    getCookies: vi.fn<AnyFn>().mockResolvedValue([]),
+    setCookies: vi.fn<AnyFn>().mockResolvedValue(undefined),
   },
   security: {
-    encrypt: vi.fn(),
-    decrypt: vi.fn(),
+    encrypt: vi.fn<AnyFn>(),
+    decrypt: vi.fn<AnyFn>(),
   },
-  notyShow: vi.fn(),
+  notyShow: vi.fn<AnyFn>(),
   appDebug: {
     endpointDomain: "",
     websocketDomain: "",
@@ -88,19 +102,21 @@ vi.mock("vue-sonner", () => ({
 }));
 
 vi.mock("noty", () => ({
-  default: vi.fn().mockImplementation(function NotyMock() {
-    this.show = (...args) => mocks.notyShow(...args);
-  }),
+  default: class NotyMock {
+    show(...args: unknown[]) {
+      mocks.notyShow(...args);
+    }
+  },
 }));
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mocks.request(...args),
+  request: (...args: unknown[]) => mocks.request(...args),
 }));
 
 vi.mock("../../src/api/auth", () => ({
@@ -108,35 +124,35 @@ vi.mock("../../src/api/auth", () => ({
 }));
 
 vi.mock("../../src/coordinators/auth-coordinator", () => ({
-  runLoginSuccessFlow: (...args) => mocks.runLoginSuccessFlow(...args),
-  runLogoutFlow: (...args) => mocks.runLogoutFlow(...args),
+  runLoginSuccessFlow: (...args: unknown[]) => mocks.runLoginSuccessFlow(...args),
+  runLogoutFlow: (...args: unknown[]) => mocks.runLogoutFlow(...args),
 }));
 
 vi.mock("../../src/coordinators/auth-auto-login-coordinator", () => ({
-  runHandleAutoLoginFlow: (...args) => mocks.runHandleAutoLoginFlow(...args),
+  runHandleAutoLoginFlow: (...args: unknown[]) => mocks.runHandleAutoLoginFlow(...args),
 }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  getCurrentUser: (...args) => mocks.getCurrentUser(...args),
+  getCurrentUser: (...args: unknown[]) => mocks.getCurrentUser(...args),
 }));
 
 vi.mock("../../src/services/app-config", () => ({
   AppDebug: mocks.appDebug,
-  isApiLogSuppressed: vi.fn(() => true),
-  logWebRequest: vi.fn(),
+  isApiLogSuppressed: vi.fn<AnyFn>(() => true),
+  logWebRequest: vi.fn<AnyFn>(),
 }));
 
 vi.mock("../../src/shared/utils/base/string", () => ({
-  escapeTag: (value) => value,
+  escapeTag: (value: string) => value,
 }));
 
 vi.mock("../../src/services/database", () => ({
   database: new Proxy(
     {},
     {
-      get: (_target, prop) => {
+      get: (_target, prop: string | symbol) => {
         if (prop === "__esModule") return false;
-        return vi.fn().mockResolvedValue(undefined);
+        return vi.fn<AnyFn>().mockResolvedValue(undefined);
       },
     }
   ),
@@ -159,8 +175,8 @@ vi.mock("../../src/services/config", () => ({
 }));
 
 vi.mock("../../src/services/websocket", () => ({
-  initWebsocket: (...args) => mocks.initWebsocket(...args),
-  closeWebSocket: vi.fn(),
+  initWebsocket: (...args: unknown[]) => mocks.initWebsocket(...args),
+  closeWebSocket: vi.fn<AnyFn>(),
 }));
 
 vi.mock("../../src/stores/settings/advanced", () => ({
@@ -188,18 +204,15 @@ vi.mock("../../src/stores/vrcx", () => ({
 }));
 
 vi.mock("worker-timers", () => ({
-  setTimeout: vi.fn(),
+  setTimeout: vi.fn<AnyFn>(),
 }));
 
-function flushPromises() {
+function flushPromises(): Promise<void> {
   return Promise.resolve().then(() => Promise.resolve());
 }
 
-function makeAuthError(message, status = 401) {
-  const err = new Error(message);
-  err.status = status;
-  err.endpoint = "auth/user";
-  return err;
+function makeAuthError(message: string, status = 401): AuthError {
+  return Object.assign(new Error(message), { status, endpoint: "auth/user" });
 }
 
 async function createAuthStore() {
@@ -210,16 +223,27 @@ async function createAuthStore() {
   return store;
 }
 
-async function failManualLogin(store, error) {
+type AuthStore = Awaited<ReturnType<typeof createAuthStore>>;
+
+async function settle(promise: Promise<unknown>): Promise<void> {
+  await promise.then(
+    () => undefined,
+    (err: unknown) => {
+      expect(err).toBeInstanceOf(Error);
+    }
+  );
+}
+
+async function failManualLogin(store: AuthStore, error: AuthError) {
   mocks.authRequest.getConfig.mockResolvedValueOnce({ json: {} });
   mocks.request.mockRejectedValueOnce(error);
-  await store.login().catch(() => {});
+  await settle(store.login());
   await flushPromises();
 }
 
-async function failSavedAccountLogin(store, error, overrides = {}) {
+async function failSavedAccountLogin(store: AuthStore, error: AuthError, overrides: LoginParamsOverrides = {}) {
   const savedUser = {
-    user: { id: "usr_saved", displayName: "Saved User" },
+    user: { ...createCurrentUserState(), id: "usr_saved", displayName: "Saved User" },
     loginParams: {
       username: "saved@example.com",
       password: "password",
@@ -230,30 +254,32 @@ async function failSavedAccountLogin(store, error, overrides = {}) {
   };
   mocks.authRequest.getConfig.mockResolvedValueOnce({ json: {} });
   mocks.request.mockRejectedValueOnce(error);
-  await store.relogin(savedUser).catch(() => {});
+  await settle(store.relogin(savedUser));
   await flushPromises();
 }
 
-async function succeedManualLogin(store) {
+async function succeedManualLogin(store: AuthStore) {
   mocks.authRequest.getConfig.mockResolvedValueOnce({ json: {} });
   mocks.request.mockResolvedValueOnce({
     id: "usr_me",
     displayName: "Tester",
   });
-  await store.login().catch(() => {});
+  await settle(store.login());
   mockWatchState.isLoggedIn = true;
   await nextTick();
   await flushPromises();
 }
 
 describe("useAuthStore login failure toast policy", () => {
+  let appApi: { CheckGameRunning: Mock<AnyFn>; FlashWindow: Mock<AnyFn>; IPCAnnounceStart: Mock<AnyFn>; OpenLink: Mock<AnyFn> };
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-23T00:00:00.000Z"));
     vi.clearAllMocks();
 
-    mocks.configRepository.getString.mockImplementation((_key, defaultValue = "") => Promise.resolve(defaultValue));
-    mocks.configRepository.getBool.mockImplementation((_key, defaultValue = false) => Promise.resolve(defaultValue));
+    mocks.configRepository.getString.mockImplementation((_key: unknown, defaultValue: unknown = "") => Promise.resolve(defaultValue));
+    mocks.configRepository.getBool.mockImplementation((_key: unknown, defaultValue: unknown = false) => Promise.resolve(defaultValue));
     mocks.configRepository.setString.mockResolvedValue(undefined);
     mocks.configRepository.setBool.mockResolvedValue(undefined);
     mocks.configRepository.remove.mockResolvedValue(undefined);
@@ -283,15 +309,17 @@ describe("useAuthStore login failure toast policy", () => {
     };
     mocks.vrcxStore.waitForDatabaseInit.mockResolvedValue(true);
 
-    globalThis.AppApi = {
-      CheckGameRunning: vi.fn(),
-      FlashWindow: vi.fn(),
-      IPCAnnounceStart: vi.fn(),
-      OpenLink: vi.fn(),
+    appApi = {
+      CheckGameRunning: vi.fn<AnyFn>(),
+      FlashWindow: vi.fn<AnyFn>(),
+      IPCAnnounceStart: vi.fn<AnyFn>(),
+      OpenLink: vi.fn<AnyFn>(),
     };
+    vi.stubGlobal("AppApi", appApi);
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -315,14 +343,13 @@ describe("useAuthStore login failure toast policy", () => {
       expect.objectContaining({
         description: "message.auth.login_network_issue_hint_description",
         duration: Infinity,
-        action: expect.objectContaining({
-          label: "common.actions.open",
-          onClick: expect.any(Function),
-        }),
       })
     );
-    mocks.toast.warning.mock.calls[0][1].action.onClick();
-    expect(globalThis.AppApi.OpenLink).toHaveBeenCalledWith(links.troubleshootingAuthUserConnectionIssues);
+    const warningCall = mocks.toast.warning.mock.calls[0];
+    expect(warningCall).toBeDefined();
+    expect(warningCall?.[1].action.label).toBe("common.actions.open");
+    warningCall?.[1].action.onClick();
+    expect(appApi.OpenLink).toHaveBeenCalledWith(links.troubleshootingAuthUserConnectionIssues);
   });
 
   test("does not count explicit password errors toward the warning threshold", async () => {
@@ -344,7 +371,7 @@ describe("useAuthStore login failure toast policy", () => {
     store.setAttemptingAutoLogin(true);
 
     const savedUser = {
-      user: { id: "usr_me", displayName: "Tester" },
+      user: { ...createCurrentUserState(), id: "usr_me", displayName: "Tester" },
       loginParams: {
         username: "tester@example.com",
         password: "password",
@@ -355,7 +382,7 @@ describe("useAuthStore login failure toast policy", () => {
 
     mocks.authRequest.getConfig.mockResolvedValue({ json: {} });
     mocks.request.mockRejectedValueOnce(makeAuthError("Unauthorized", 401));
-    await store.relogin(savedUser).catch(() => {});
+    await settle(store.relogin(savedUser));
     await flushPromises();
 
     expect(mocks.toast.warning).not.toHaveBeenCalled();

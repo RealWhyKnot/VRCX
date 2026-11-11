@@ -3,31 +3,27 @@ import { playerModerationRequest } from "../api/player-moderation";
 import { useAvatarStore } from "../stores/avatar";
 import { useModerationStore } from "../stores/moderation";
 
-export async function runRefreshPlayerModerationsFlow() {
+export function runRefreshPlayerModerationsFlow(): Promise<void> {
   const moderationStore = useModerationStore();
   const avatarStore = useAvatarStore();
 
   if (moderationStore.playerModerationTable.loading) {
-    return;
+    return Promise.resolve();
   }
   moderationStore.playerModerationTable.loading = true;
   moderationStore.expirePlayerModerations();
-  Promise.all([playerModerationRequest.getPlayerModerations(), avatarModerationRequest.getAvatarModerations()])
+  return Promise.all([playerModerationRequest.getPlayerModerations(), avatarModerationRequest.getAvatarModerations()])
     .then((res) => {
       avatarStore.resetCachedAvatarModerations();
-      if (res[1]?.json) {
-        for (const json of res[1].json) {
-          avatarStore.applyAvatarModeration(json);
-        }
+      for (const json of res[1].json) {
+        avatarStore.applyAvatarModeration(json);
       }
-      if (res[0]?.json) {
-        for (const json of res[0].json) {
-          moderationStore.applyPlayerModeration(json);
-        }
+      for (const json of res[0].json) {
+        moderationStore.applyPlayerModeration(json);
       }
       moderationStore.deleteExpiredPlayerModerations();
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error("Failed to load player/avatar moderations:", error);
     })
     .finally(() => {

@@ -1,7 +1,18 @@
-import type { VrcxGroup } from "../../types/vrcx";
+import type { GroupMember } from "vrchat";
+import type { Json, VrcxGroup } from "../../types/vrcx";
 
-export function createDefaultGroupRef(json: Partial<VrcxGroup>): VrcxGroup {
-  return {
+type InputFields<T> = { [K in keyof T]?: T[K] | null | undefined };
+
+export type GroupMyMemberInput = InputFields<NonNullable<VrcxGroup["myMember"]>>;
+
+export type GroupMemberInput = InputFields<Json<GroupMember>>;
+
+export type GroupRefInput = Omit<InputFields<VrcxGroup>, "myMember"> & {
+  myMember?: GroupMyMemberInput | null | undefined;
+};
+
+export function createDefaultGroupRef(json: GroupRefInput): VrcxGroup {
+  const ref: VrcxGroup = {
     id: "",
     name: "",
     shortCode: "",
@@ -14,15 +25,12 @@ export function createDefaultGroupRef(json: Partial<VrcxGroup>): VrcxGroup {
     iconId: "",
     iconUrl: "",
     isVerified: false,
-    joinState: "",
     languages: [],
     links: [],
     memberCount: 0,
     memberCountSyncedAt: "",
-    membershipStatus: "",
     onlineMemberCount: 0,
     ownerId: "",
-    privacy: "",
     rules: null,
     tags: [],
     ageVerificationBetaCode: "",
@@ -47,14 +55,10 @@ export function createDefaultGroupRef(json: Partial<VrcxGroup>): VrcxGroup {
       isSubscribedToEventAnnouncements: false,
       joinedAt: "",
       managerNotes: "",
-      membershipStatus: "",
       permissions: [],
       roleIds: [],
       userId: "",
       visibility: "",
-      _created_at: "",
-      _id: "",
-      _updated_at: "",
     },
     updatedAt: "",
 
@@ -67,6 +71,7 @@ export function createDefaultGroupRef(json: Partial<VrcxGroup>): VrcxGroup {
     mutualGroup: false,
 
     $languages: [],
-    ...json,
   };
+  Object.assign(ref, json);
+  return ref;
 }

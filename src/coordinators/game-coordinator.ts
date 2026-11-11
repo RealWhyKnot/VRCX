@@ -14,6 +14,7 @@ import { useLocationStore } from "../stores/location";
 import { runLastLocationResetFlow } from "./location-coordinator";
 import { useModalStore } from "../stores/modal";
 import { useNotificationStore } from "../stores/notification";
+import { logError } from "../stores/notification/errors";
 import { useUpdateLoopStore } from "../stores/update-loop";
 import { useUserStore } from "../stores/user";
 import { useVrStore } from "../stores/vr";
@@ -23,7 +24,9 @@ import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 
-export async function runGameRunningChangedFlow(isGameRunning) {
+type CacheTarget = Parameters<typeof _deleteVRChatCache>[0];
+
+export async function runGameRunningChangedFlow(isGameRunning: boolean): Promise<void> {
   const userStore = useUserStore();
   const instanceStore = useInstanceStore();
   const updateLoopStore = useUpdateLoopStore();
@@ -34,7 +37,7 @@ export async function runGameRunningChangedFlow(isGameRunning) {
   if (isGameRunning) {
     userStore.markCurrentUserGameStarted();
   } else {
-    await configRepository.setBool("isGameNoVR", gameStore.isGameNoVR);
+    await configRepository.setBool("isGameNoVR", gameStore.isGameNoVR === true);
 
     const sessionStart = userStore.currentUser.$online_for;
     const offlineAt = Date.now();
@@ -59,11 +62,13 @@ export async function runGameRunningChangedFlow(isGameRunning) {
   gameLogStore.clearNowPlaying();
   gameLogStore.resetNowPlayingProducers();
   vrStore.updateVRLastLocation();
-  workerTimers.setTimeout(() => runCheckVRChatDebugLoggingFlow(), 60000);
+  workerTimers.setTimeout(() => {
+    runCheckVRChatDebugLoggingFlow().catch(logError);
+  }, 60000);
   updateLoopStore.setNextDiscordUpdate(0);
 }
 
-export async function runUpdateIsGameRunningFlow(isGameRunningArg, isSteamVRRunningArg) {
+export async function runUpdateIsGameRunningFlow(isGameRunningArg: boolean, isSteamVRRunningArg: boolean): Promise<void> {
   const gameStore = useGameStore();
   const advancedSettingsStore = useAdvancedSettingsStore();
   const vrStore = useVrStore();
@@ -84,7 +89,7 @@ export async function runUpdateIsGameRunningFlow(isGameRunningArg, isSteamVRRunn
   vrStore.updateOpenVR();
 }
 
-export function runUpdateIsHmdAfkFlow(isHmdAfkArg) {
+export function runUpdateIsHmdAfkFlow(isHmdAfkArg: boolean): void {
   const gameStore = useGameStore();
 
   if (isHmdAfkArg !== gameStore.isHmdAfk) {
@@ -93,15 +98,15 @@ export function runUpdateIsHmdAfkFlow(isHmdAfkArg) {
   }
 }
 
-function runAutoVRChatCacheManagementFlow() {
+function runAutoVRChatCacheManagementFlow(): void {
   const advancedSettingsStore = useAdvancedSettingsStore();
 
   if (advancedSettingsStore.autoSweepVRChatCache) {
-    runSweepVRChatCacheFlow();
+    runSweepVRChatCacheFlow().catch(logError);
   }
 }
 
-export async function runSweepVRChatCacheFlow() {
+export async function runSweepVRChatCacheFlow(): Promise<void> {
   const gameStore = useGameStore();
   const advancedSettingsStore = useAdvancedSettingsStore();
 
@@ -112,22 +117,22 @@ export async function runSweepVRChatCacheFlow() {
     console.error("SweepCache failed", e);
   }
   if (advancedSettingsStore.isVRChatConfigDialogVisible) {
-    gameStore.getVRChatCacheSize();
+    gameStore.getVRChatCacheSize().catch(logError);
   }
 }
 
-export async function runDeleteVRChatCacheFlow(ref) {
+export async function runDeleteVRChatCacheFlow(ref: CacheTarget): Promise<void> {
   const gameStore = useGameStore();
   const worldStore = useWorldStore();
   const avatarStore = useAvatarStore();
 
   await _deleteVRChatCache(ref);
-  gameStore.getVRChatCacheSize();
+  gameStore.getVRChatCacheSize().catch(logError);
   worldStore.updateVRChatWorldCache();
-  avatarStore.updateVRChatAvatarCache();
+  avatarStore.updateVRChatAvatarCache().catch(logError);
 }
 
-export function runCheckIfGameCrashedFlow() {
+export function runCheckIfGameCrashedFlow(): void {
   const advancedSettingsStore = useAdvancedSettingsStore();
   const locationStore = useLocationStore();
   const gameStore = useGameStore();
@@ -136,26 +141,30 @@ export function runCheckIfGameCrashedFlow() {
     return;
   }
   const { location } = locationStore.lastLocation;
-  AppApi.VrcClosedGracefully().then((result) => {
-    if (result || !isRealInstance(location)) {
-      return;
-    }
+  AppApi.VrcClosedGracefully()
+    .then((isClosedGracefully) => {
+      if (isClosedGracefully || !isRealInstance(location)) {
+        return;
+      }
 
-    if (gameStore.state.lastCrashedTime && new Date().getTime() - gameStore.state.lastCrashedTime.getTime() < 120_000) {
-      console.log("VRChat was recently crashed, not relaunching");
-      return;
-    }
-    gameStore.setLastCrashedTime(new Date());
+      if (gameStore.state.lastCrashedTime && new Date().getTime() - gameStore.state.lastCrashedTime.getTime() < 120_000) {
+        console.log("VRChat was recently crashed, not relaunching");
+        return;
+      }
+      gameStore.setLastCrashedTime(new Date());
 
-    let restartDelay = 8000;
-    if (gameStore.isGameNoVR) {
-      restartDelay = 2000;
-    }
-    workerTimers.setTimeout(() => runRestartCrashedGameFlow(location), restartDelay);
-  });
+      let restartDelay = 8000;
+      if (gameStore.isGameNoVR) {
+        restartDelay = 2000;
+      }
+      workerTimers.setTimeout(() => {
+        runRestartCrashedGameFlow(location).catch(logError);
+      }, restartDelay);
+    })
+    .catch(logError);
 }
 
-async function runRestartCrashedGameFlow(location) {
+async function runRestartCrashedGameFlow(location: string): Promise<void> {
   const gameStore = useGameStore();
   const notificationStore = useNotificationStore();
   const gameLogStore = useGameLogStore();
@@ -165,7 +174,7 @@ async function runRestartCrashedGameFlow(location) {
     console.log("SteamVR isn't running, not relaunching VRChat");
     return;
   }
-  AppApi.FocusWindow();
+  AppApi.FocusWindow().catch(logError);
   const message = "VRChat crashed, attempting to rejoin last instance";
   toast(message);
   const entry = {
@@ -178,10 +187,10 @@ async function runRestartCrashedGameFlow(location) {
   if (persistedEntry) {
     gameLogStore.addGameLog(persistedEntry);
   }
-  launchStore.launchGame(location, "", gameStore.isGameNoVR);
+  launchStore.launchGame(location, "", gameStore.isGameNoVR === true).catch(logError);
 }
 
-export async function runCheckVRChatDebugLoggingFlow() {
+export async function runCheckVRChatDebugLoggingFlow(): Promise<void> {
   const gameStore = useGameStore();
   const advancedSettingsStore = useAdvancedSettingsStore();
   const modalStore = useModalStore();
@@ -190,28 +199,32 @@ export async function runCheckVRChatDebugLoggingFlow() {
     return;
   }
   try {
-    const loggingEnabled = await gameStore.getVRChatRegistryKey("LOGGING_ENABLED");
+    const loggingEnabled: unknown = await gameStore.getVRChatRegistryKey("LOGGING_ENABLED");
     if (loggingEnabled === null || typeof loggingEnabled === "undefined") {
       return;
     }
-    if (parseInt(String(loggingEnabled), 10) === 1) {
+    if ((typeof loggingEnabled === "string" || typeof loggingEnabled === "number") && Number(loggingEnabled) === 1) {
       return;
     }
-    const result = await AppApi.SetVRChatRegistryKey("LOGGING_ENABLED", "1", 4);
-    if (!result) {
-      modalStore.alert({
+    const isRegistryKeySet = await AppApi.SetVRChatRegistryKey("LOGGING_ENABLED", "1", 4);
+    if (!isRegistryKeySet) {
+      modalStore
+        .alert({
+          description:
+            "VRCX has noticed VRChat debug logging is disabled. VRCX requires debug logging in order to function correctly. Please enable debug logging in VRChat quick menu settings > debug > enable debug logging, then rejoin the instance or restart VRChat.",
+          title: "Enable debug logging",
+        })
+        .catch(logError);
+      console.error("Failed to enable debug logging", isRegistryKeySet);
+      return;
+    }
+    modalStore
+      .alert({
         description:
-          "VRCX has noticed VRChat debug logging is disabled. VRCX requires debug logging in order to function correctly. Please enable debug logging in VRChat quick menu settings > debug > enable debug logging, then rejoin the instance or restart VRChat.",
-        title: "Enable debug logging",
-      });
-      console.error("Failed to enable debug logging", result);
-      return;
-    }
-    modalStore.alert({
-      description:
-        "VRCX has noticed VRChat debug logging is disabled and automatically re-enabled it. VRCX requires debug logging in order to function correctly.",
-      title: "Enabled debug logging",
-    });
+          "VRCX has noticed VRChat debug logging is disabled and automatically re-enabled it. VRCX requires debug logging in order to function correctly.",
+        title: "Enabled debug logging",
+      })
+      .catch(logError);
     console.log("Enabled debug logging");
   } catch (e) {
     console.error(e);

@@ -35,7 +35,7 @@ import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 
 const { t } = useI18n();
 

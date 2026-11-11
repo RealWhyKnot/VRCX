@@ -1,7 +1,24 @@
-import type { VrcxWorld } from "../../types/vrcx";
+import type { UnityPackage } from "vrchat";
+import type { Json, VrcxWorld } from "../../types/vrcx";
+import { assignDefinedProps } from "./user-transforms";
 
-export function createDefaultWorldRef(json: Partial<VrcxWorld> = {}) {
-  return {
+export type WorldUnityPackage = Partial<Json<UnityPackage>> & Pick<Json<UnityPackage>, "platform" | "unityVersion">;
+
+export type WorldRef = Omit<VrcxWorld, "releaseStatus" | "unityPackages"> & {
+  releaseStatus: string;
+  unityPackages: WorldUnityPackage[];
+  assetUrl: string;
+  assetUrlObject: Record<string, unknown>;
+  pluginUrl: string;
+  pluginUrlObject: Record<string, unknown>;
+  unityPackageUrl: string;
+  unityPackageUrlObject: Record<string, unknown>;
+};
+
+export type WorldPatch = { [K in keyof WorldRef]?: WorldRef[K] | undefined };
+
+export function createDefaultWorldRef(json: WorldPatch = {}): WorldRef {
+  const ref: WorldRef = {
     id: "",
     name: "",
     description: "",
@@ -46,7 +63,7 @@ export function createDefaultWorldRef(json: Partial<VrcxWorld> = {}) {
     urlList: [],
 
     $isLabs: false,
-
-    ...json,
   };
+  assignDefinedProps(ref, json);
+  return ref;
 }

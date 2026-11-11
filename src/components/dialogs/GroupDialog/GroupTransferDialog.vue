@@ -83,7 +83,7 @@ import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { groupRequest } from "@/api/group";
-import { showGroupDialog } from "@/coordinators/group-coordinator";
+import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { useUserDisplay } from "@/composables/use-user-display";
 import { useModalStore } from "@/stores/modal";
 import { debounce } from "@/shared/utils/common";

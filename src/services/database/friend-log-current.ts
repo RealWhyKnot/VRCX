@@ -58,7 +58,7 @@ const friendLogCurrent = {
           inputData.map((line) => cellText(line.userId) ?? ""),
           inputData.map((line) => cellText(line.displayName) ?? ""),
           inputData.map((line) => cellText(line.trustLevel) ?? ""),
-          inputData.map((line) => String(line.friendNumber))
+          inputData.map((line) => (Number.isFinite(line.friendNumber) ? String(line.friendNumber) : "0"))
         )
       )
       .catch(logDatabaseError);

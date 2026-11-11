@@ -5,14 +5,68 @@ import { AppDebug } from "../services/app-config.ts";
 import { extractFileId } from "../shared/utils/file-utils";
 import { imageRequest } from "../api/image";
 
-function resolveMessage(message) {
+type UploadMessage = string | (() => string);
+
+type ImageInputSelector = string | HTMLInputElement | (() => HTMLInputElement | null) | null | undefined;
+
+type ImageUploadOptions = {
+  inputSelector?: ImageInputSelector;
+  maxSize?: number;
+  acceptPattern?: RegExp | string | null;
+  tooLargeMessage?: UploadMessage;
+  invalidTypeMessage?: UploadMessage;
+  onClear?: () => void;
+};
+
+type ImageUploadResult = {
+  file: File | null;
+  clearInput: () => void;
+};
+
+type UploadEntityType = "avatar" | "world";
+
+type UploadEntity = {
+  entityId: string;
+  imageUrl: string;
+  base64File: string;
+  blob: Blob;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function fieldOf(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+function isUploadFile(value: unknown): value is File {
+  return typeof fieldOf(value, "size") === "number" && typeof fieldOf(value, "type") === "string";
+}
+
+function expectResponse<T>(response: T | undefined, step: string): T {
+  if (response === undefined) {
+    throw new Error(`${step} returned no response`);
+  }
+  return response;
+}
+
+function filesOf(source: unknown): ArrayLike<unknown> | undefined {
+  const files = fieldOf(source, "files");
+  if (Array.isArray(files) || files instanceof FileList) {
+    return files;
+  }
+  return undefined;
+}
+
+function resolveMessage(message: UploadMessage): string {
   if (typeof message === "function") {
     return message();
   }
   return message;
 }
 
-function getInputElement(selector) {
+function getInputElement(selector: ImageInputSelector): HTMLInputElement | null {
   if (!selector) {
     return null;
   }
@@ -20,12 +74,12 @@ function getInputElement(selector) {
     return selector();
   }
   if (typeof selector === "string") {
-    return document.querySelector(selector);
+    return document.querySelector<HTMLInputElement>(selector);
   }
   return selector;
 }
 
-export function handleImageUploadInput(event, options = {}) {
+export function handleImageUploadInput(event: unknown, options: ImageUploadOptions = {}): ImageUploadResult {
   const {
     inputSelector,
 
@@ -44,13 +98,16 @@ export function handleImageUploadInput(event, options = {}) {
     }
   };
 
-  const files = event?.target?.files || event?.dataTransfer?.files;
+  const files = filesOf(fieldOf(event, "target")) ?? filesOf(fieldOf(event, "dataTransfer"));
   if (!files || files.length === 0) {
     clearInput();
     return { file: null, clearInput };
   }
 
-  const file = files[0];
+  const file: unknown = files[0];
+  if (!isUploadFile(file)) {
+    throw new TypeError("Image upload input holds no file");
+  }
   if (file.size >= maxSize) {
     if (tooLargeMessage) {
       toast.error(resolveMessage(tooLargeMessage));
@@ -59,7 +116,7 @@ export function handleImageUploadInput(event, options = {}) {
     return { file: null, clearInput };
   }
 
-  let acceptRegex = null;
+  let acceptRegex: RegExp | null = null;
   if (acceptPattern) {
     acceptRegex = acceptPattern instanceof RegExp ? acceptPattern : new RegExp(acceptPattern);
   }
@@ -75,27 +132,27 @@ export function handleImageUploadInput(event, options = {}) {
   return { file, clearInput };
 }
 
-export async function resizeImageToFitLimits(base64Data) {
+export async function resizeImageToFitLimits(base64Data: string): Promise<string> {
   return AppApi.ResizeImageToFitLimits(base64Data);
 }
 
-export async function uploadImageLegacy(type, { entityId, imageUrl, base64File, blob }) {
+export async function uploadImageLegacy(type: UploadEntityType, { entityId, imageUrl, base64File, blob }: UploadEntity): Promise<void> {
   const apiMap = {
     avatar: {
-      uploadImage: imageRequest.uploadAvatarImage,
-      fileStart: imageRequest.uploadAvatarImageFileStart,
-      fileFinish: imageRequest.uploadAvatarImageFileFinish,
-      sigStart: imageRequest.uploadAvatarImageSigStart,
-      sigFinish: imageRequest.uploadAvatarImageSigFinish,
-      setImage: imageRequest.setAvatarImage,
+      uploadImage: imageRequest.uploadAvatarImage.bind(imageRequest),
+      fileStart: imageRequest.uploadAvatarImageFileStart.bind(imageRequest),
+      fileFinish: imageRequest.uploadAvatarImageFileFinish.bind(imageRequest),
+      sigStart: imageRequest.uploadAvatarImageSigStart.bind(imageRequest),
+      sigFinish: imageRequest.uploadAvatarImageSigFinish.bind(imageRequest),
+      setImage: imageRequest.setAvatarImage.bind(imageRequest),
     },
     world: {
-      uploadImage: imageRequest.uploadWorldImage,
-      fileStart: imageRequest.uploadWorldImageFileStart,
-      fileFinish: imageRequest.uploadWorldImageFileFinish,
-      sigStart: imageRequest.uploadWorldImageSigStart,
-      sigFinish: imageRequest.uploadWorldImageSigFinish,
-      setImage: imageRequest.setWorldImage,
+      uploadImage: imageRequest.uploadWorldImage.bind(imageRequest),
+      fileStart: imageRequest.uploadWorldImageFileStart.bind(imageRequest),
+      fileFinish: imageRequest.uploadWorldImageFileFinish.bind(imageRequest),
+      sigStart: imageRequest.uploadWorldImageSigStart.bind(imageRequest),
+      sigFinish: imageRequest.uploadWorldImageSigFinish.bind(imageRequest),
+      setImage: imageRequest.setWorldImage.bind(imageRequest),
     },
   };
   const api = apiMap[type];
@@ -104,17 +161,24 @@ export async function uploadImageLegacy(type, { entityId, imageUrl, base64File, 
   const fileSizeInBytes = blob.size;
   const base64SignatureFile = await AppApi.SignFile(base64File);
   const signatureMd5 = await AppApi.MD5File(base64SignatureFile);
-  const signatureSizeInBytes = parseInt(await AppApi.FileLength(base64SignatureFile), 10);
+  const signatureSizeInBytes = Number(await AppApi.FileLength(base64SignatureFile));
   const fileId = extractFileId(imageUrl);
 
-  const uploadRes = await api.uploadImage({ fileMd5, fileSizeInBytes, signatureMd5, signatureSizeInBytes }, fileId);
+  const uploadRes = expectResponse(await api.uploadImage({ fileMd5, fileSizeInBytes, signatureMd5, signatureSizeInBytes }, fileId), `${type} image upload`);
   const uploadedFileId = uploadRes.json.id;
-  const fileVersion = uploadRes.json.versions[uploadRes.json.versions.length - 1].version;
+  const latestVersion = uploadRes.json.versions.at(-1);
+  if (!latestVersion) {
+    throw new Error(`${type} image upload returned no file versions`);
+  }
+  const fileVersion = latestVersion.version;
 
-  const fileStartRes = await api.fileStart({
-    fileId: uploadedFileId,
-    fileVersion,
-  });
+  const fileStartRes = expectResponse(
+    await api.fileStart({
+      fileId: uploadedFileId,
+      fileVersion,
+    }),
+    `${type} image file start`
+  );
 
   const fileAwsRes = await webApiService.execute({
     url: fileStartRes.json.url,
@@ -129,10 +193,13 @@ export async function uploadImageLegacy(type, { entityId, imageUrl, base64File, 
 
   await api.fileFinish({ fileId: uploadedFileId, fileVersion });
 
-  const sigStartRes = await api.sigStart({
-    fileId: uploadedFileId,
-    fileVersion,
-  });
+  const sigStartRes = expectResponse(
+    await api.sigStart({
+      fileId: uploadedFileId,
+      fileVersion,
+    }),
+    `${type} image signature start`
+  );
 
   const sigAwsRes = await webApiService.execute({
     url: sigStartRes.json.url,

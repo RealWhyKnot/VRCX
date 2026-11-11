@@ -6,9 +6,17 @@ vi.mock("../../src/plugins/router.ts", () => ({
 
 import { buildRequestInit, parseResponse, processBulk, shouldIgnoreError } from "../../src/services/request.ts";
 
+function pageAt<T>(pages: T[], index: number): T {
+  const page = pages[index];
+  if (page === undefined) {
+    throw new Error(`no page at index ${String(index)}`);
+  }
+  return page;
+}
+
 describe("buildRequestInit", () => {
   test("builds GET request with default method", () => {
-    const init = buildRequestInit("users/usr_123");
+    const init = buildRequestInit("users/usr_123", {});
     expect(init.method).toBe("GET");
     expect(init.url).toContain("users/usr_123");
   });
@@ -33,7 +41,7 @@ describe("buildRequestInit", () => {
       method: "POST",
       params: { username: "test" },
     });
-    expect(init.headers["Content-Type"]).toBe("application/json;charset=utf-8");
+    expect(init.headers?.["Content-Type"]).toBe("application/json;charset=utf-8");
     expect(init.body).toBe(JSON.stringify({ username: "test" }));
   });
 
@@ -48,8 +56,8 @@ describe("buildRequestInit", () => {
       headers: { "X-Custom": "value" },
       params: { a: 1 },
     });
-    expect(init.headers["Content-Type"]).toBe("application/json;charset=utf-8");
-    expect(init.headers["X-Custom"]).toBe("value");
+    expect(init.headers?.["Content-Type"]).toBe("application/json;charset=utf-8");
+    expect(init.headers?.["X-Custom"]).toBe("value");
   });
 
   test("skips body/headers for upload requests", () => {
@@ -114,7 +122,7 @@ describe("parseResponse", () => {
     };
     const result = parseResponse(response);
     expect(result.hasApiError).toBe(true);
-    expect(result.data.error.message).toBe("Not found");
+    expect(result.data).toMatchObject({ error: { message: "Not found" } });
   });
 
   test("flags parse error for invalid JSON", () => {
@@ -189,7 +197,7 @@ describe("processBulk", () => {
   test("fetches all pages until empty batch", async () => {
     const pages = [{ json: [1, 2, 3] }, { json: [4, 5] }, { json: [] }];
     let call = 0;
-    const fn = vi.fn(() => Promise.resolve(pages[call++]));
+    const fn = vi.fn(() => Promise.resolve(pageAt(pages, call++)));
     const handle = vi.fn();
     const done = vi.fn();
 
@@ -213,7 +221,7 @@ describe("processBulk", () => {
   test("stops when N = 0 and batch < pageSize", async () => {
     const pages = [{ json: [1, 2, 3] }, { json: [4] }];
     let call = 0;
-    const fn = vi.fn(() => Promise.resolve(pages[call++]));
+    const fn = vi.fn(() => Promise.resolve(pageAt(pages, call++)));
     const done = vi.fn();
 
     await processBulk({ fn, params: { n: 3 }, N: 0, done });
@@ -235,7 +243,7 @@ describe("processBulk", () => {
   test("supports result.results array format", async () => {
     const pages = [{ results: [1, 2] }, { results: [] }];
     let call = 0;
-    const fn = vi.fn(() => Promise.resolve(pages[call++]));
+    const fn = vi.fn(() => Promise.resolve(pageAt(pages, call++)));
     const done = vi.fn();
 
     await processBulk({ fn, params: { n: 5 }, done });
@@ -256,11 +264,10 @@ describe("processBulk", () => {
   test("increments offset correctly", async () => {
     const pages = [{ json: [1, 2, 3] }, { json: [4, 5] }, { json: [] }];
     let call = 0;
-    const offsets = [];
-    const fn = vi.fn((params) => {
-      offsets.push(params.offset);
-      const result = pages[call++];
-      return Promise.resolve(result);
+    const offsets: number[] = [];
+    const fn = vi.fn((params: { n: number; offset?: number | undefined }) => {
+      offsets.push(params.offset ?? -1);
+      return Promise.resolve(pageAt(pages, call++));
     });
 
     await processBulk({ fn, params: { n: 3 } });
@@ -270,14 +277,14 @@ describe("processBulk", () => {
 
   test("returns early if fn is not a function", async () => {
     const done = vi.fn();
-    await processBulk({ fn: null, done });
+    await processBulk({ params: {}, done });
     expect(done).not.toHaveBeenCalled();
   });
 
   test("uses custom limitParam", async () => {
     const pages = [{ json: [1, 2] }, { json: [1] }];
     let call = 0;
-    const fn = vi.fn(() => Promise.resolve(pages[call++]));
+    const fn = vi.fn(() => Promise.resolve(pageAt(pages, call++)));
     const done = vi.fn();
 
     await processBulk({

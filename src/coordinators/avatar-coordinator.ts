@@ -1,12 +1,13 @@
 import { nextTick } from "vue";
 import { toast } from "vue-sonner";
+import type { SearchAvatars } from "vrchat";
 import { i18n } from "../plugins/i18n";
 
-import { createDefaultAvatarRef } from "../shared/utils/avatar-transforms";
+import { createDefaultAvatarRef, type AvatarPatch } from "../shared/utils/avatar-transforms";
 import { extractFileId } from "../shared/utils/file-utils";
 import { getAvailablePlatforms } from "../shared/utils/platform-utils";
 import { getBundleDateSize } from "./cache-coordinator";
-import { getPlatformInfo, storeAvatarImage } from "../shared/utils/avatar";
+import { getPlatformInfo, storeAvatarImage, type CachedAvatarName } from "../shared/utils/avatar";
 import { replaceBioSymbols } from "../shared/utils/base/string";
 import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
 import { avatarRequest } from "../api/avatar";
@@ -23,6 +24,8 @@ import { useAvatarProviderStore } from "../stores/avatar-provider";
 import { useAvatarStore } from "../stores/avatar";
 import { useFavoriteStore } from "../stores/favorite";
 import { useModalStore } from "../stores/modal";
+import { logFailure } from "../stores/log-failure";
+import { toConfirmOk } from "../stores/auth-types";
 import { syncAvatarSearchIndex, removeAvatarSearchIndex } from "./search-index-coordinator";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
@@ -30,7 +33,69 @@ import { useVRCXUpdaterStore } from "../stores/vrcx-updater";
 
 import { webApiService } from "../services/webapi";
 
-export function applyAvatar(json) {
+type AvatarInput = AvatarPatch & {
+  id: string;
+};
+
+type RemoteAvatar = {
+  authorId: string;
+  authorName: string;
+  name: string;
+  description: string;
+  id: string;
+  imageUrl: string;
+  thumbnailImageUrl: string;
+  created_at: string;
+  updated_at: string;
+  releaseStatus: string;
+};
+
+type AvatarDialogTarget = ReturnType<typeof useAvatarStore>["avatarDialog"];
+
+type AvatarHistoryRow = Awaited<ReturnType<typeof database.getAvatarHistory>>[number];
+
+function avatarCrumbLabel(avatarDialog: AvatarDialogTarget) {
+  const name = avatarDialog.ref.name;
+  if (name) {
+    return name;
+  }
+  return avatarDialog.id;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function createRemoteAvatar(source: Record<string, unknown>): RemoteAvatar {
+  return {
+    authorId: "",
+    authorName: "",
+    name: "",
+    description: "",
+    id: "",
+    imageUrl: "",
+    thumbnailImageUrl: "",
+    created_at: "0001-01-01T00:00:00.0000000Z",
+    updated_at: "0001-01-01T00:00:00.0000000Z",
+    releaseStatus: "public",
+    ...source,
+  };
+}
+
+function clearDialogLoadingNextTick(avatarDialog: AvatarDialogTarget) {
+  nextTick(() => {
+    avatarDialog.loading = false;
+  }).catch(logFailure("Clearing the avatar dialog loading state failed:"));
+}
+
+function remoteProviderHeaders(vrcxId: string) {
+  return {
+    Referer: "https://vrcx.app",
+    "VRCX-ID": vrcxId,
+  };
+}
+
+export function applyAvatar(json: AvatarInput) {
   const avatarStore = useAvatarStore();
   const favoriteStore = useFavoriteStore();
 
@@ -42,7 +107,8 @@ export function applyAvatar(json) {
   } else {
     const { unityPackages } = ref;
     Object.assign(ref, json);
-    if (json.unityPackages?.length > 0 && unityPackages.length > 0 && !json.unityPackages[0].assetUrl) {
+    const incomingUnityPackages = json.unityPackages ?? [];
+    if (incomingUnityPackages.length > 0 && unityPackages.length > 0 && !incomingUnityPackages[0]?.assetUrl) {
       ref.unityPackages = unityPackages;
     }
   }
@@ -50,7 +116,7 @@ export function applyAvatar(json) {
     listing.displayName = replaceBioSymbols(listing.displayName);
     listing.description = replaceBioSymbols(listing.description);
   }
-  applyFavorite("avatar", ref.id);
+  applyFavorite("avatar", ref.id).catch(logFailure("Applying the avatar favorite failed:"));
   if (favoriteStore.localAvatarFavoritesList.includes(ref.id)) {
     const avatarRef = ref;
     favoriteStore.syncLocalAvatarFavoriteRef(avatarRef);
@@ -62,90 +128,89 @@ export function applyAvatar(json) {
   return ref;
 }
 
-export function showAvatarDialog(avatarId, options = {}) {
+export function showAvatarDialog(avatarId: string, options: { forceRefresh?: boolean } = {}) {
   const avatarStore = useAvatarStore();
   const uiStore = useUiStore();
   const favoriteStore = useFavoriteStore();
   const userStore = useUserStore();
   const t = i18n.global.t;
 
-  const D = avatarStore.avatarDialog;
-  const forceRefresh = Boolean(options?.forceRefresh);
+  const avatarDialog = avatarStore.avatarDialog;
+  const isForceRefresh = Boolean(options.forceRefresh);
   const isMainDialogOpen = uiStore.openDialog({
     type: "avatar",
     id: avatarId,
   });
-  D.visible = true;
-  if (isMainDialogOpen && D.id === avatarId && !forceRefresh) {
-    uiStore.setDialogCrumbLabel("avatar", D.id, D.ref?.name || D.id);
-    nextTick(() => (D.loading = false));
+  avatarDialog.visible = true;
+  if (isMainDialogOpen && avatarDialog.id === avatarId && !isForceRefresh) {
+    uiStore.setDialogCrumbLabel("avatar", avatarDialog.id, avatarCrumbLabel(avatarDialog));
+    clearDialogLoadingNextTick(avatarDialog);
     return;
   }
-  D.loading = true;
-  D.id = avatarId;
-  D.inCache = false;
-  D.cacheSize = "";
-  D.cacheLocked = false;
-  D.cachePath = "";
-  D.fileAnalysis = {};
-  D.isQuestFallback = false;
-  D.isPC = false;
-  D.isQuest = false;
-  D.isIos = false;
-  D.hasImposter = false;
-  D.imposterVersion = "";
-  D.platformInfo = {};
-  D.galleryImages = [];
-  D.galleryLoading = true;
-  D.isFavorite =
-    favoriteStore.getCachedFavoritesByObjectId(avatarId) ||
-    (userStore.isLocalUserVrcPlusSupporter && favoriteStore.localAvatarFavoritesList.includes(avatarId));
-  D.isBlocked = avatarStore.cachedAvatarModerations.has(avatarId);
+  avatarDialog.loading = true;
+  avatarDialog.id = avatarId;
+  avatarDialog.inCache = false;
+  avatarDialog.cacheSize = "";
+  avatarDialog.cacheLocked = false;
+  avatarDialog.cachePath = "";
+  avatarDialog.fileAnalysis = {};
+  avatarDialog.isQuestFallback = false;
+  avatarDialog.isPC = false;
+  avatarDialog.isQuest = false;
+  avatarDialog.isIos = false;
+  avatarDialog.hasImposter = false;
+  avatarDialog.imposterVersion = "";
+  avatarDialog.platformInfo = {};
+  avatarDialog.galleryImages = [];
+  avatarDialog.galleryLoading = true;
+  const isCachedFavorite = Boolean(favoriteStore.getCachedFavoritesByObjectId(avatarId));
+  avatarDialog.isFavorite = isCachedFavorite || (userStore.isLocalUserVrcPlusSupporter && favoriteStore.localAvatarFavoritesList.includes(avatarId));
+  avatarDialog.isBlocked = avatarStore.cachedAvatarModerations.has(avatarId);
   const ref2 = avatarStore.cachedAvatars.get(avatarId);
   if (typeof ref2 !== "undefined") {
-    D.ref = ref2;
-    uiStore.setDialogCrumbLabel("avatar", D.id, D.ref?.name || D.id);
-    nextTick(() => (D.loading = false));
+    avatarDialog.ref = ref2;
+    uiStore.setDialogCrumbLabel("avatar", avatarDialog.id, avatarCrumbLabel(avatarDialog));
+    clearDialogLoadingNextTick(avatarDialog);
   }
-  const loadAvatarRequest = forceRefresh ? avatarRequest.getAvatar({ avatarId }) : queryRequest.fetch("avatar.dialog", { avatarId });
+  const loadAvatarRequest = isForceRefresh ? avatarRequest.getAvatar({ avatarId }) : queryRequest.fetch("avatar.dialog", { avatarId });
   loadAvatarRequest
     .then((args) => {
       const ref = applyAvatar(args.json);
-      D.ref = ref;
-      uiStore.setDialogCrumbLabel("avatar", D.id, D.ref?.name || D.id);
-      avatarStore.getAvatarGallery(avatarId);
-      avatarStore.updateVRChatAvatarCache();
-      if (/quest/.test(ref.tags)) {
-        D.isQuestFallback = true;
+      avatarDialog.ref = ref;
+      uiStore.setDialogCrumbLabel("avatar", avatarDialog.id, avatarCrumbLabel(avatarDialog));
+      avatarStore.getAvatarGallery(avatarId).catch(logFailure("Loading the avatar gallery failed:"));
+      avatarStore.updateVRChatAvatarCache().catch(logFailure("Updating the avatar cache failed:"));
+      if (ref.tags.some((tag) => tag.includes("quest"))) {
+        avatarDialog.isQuestFallback = true;
       }
       const { isPC, isQuest, isIos } = getAvailablePlatforms(ref.unityPackages);
-      D.isPC = isPC;
-      D.isQuest = isQuest;
-      D.isIos = isIos;
-      D.platformInfo = getPlatformInfo(ref.unityPackages);
-      for (let i = ref.unityPackages.length - 1; i > -1; i--) {
-        const unityPackage = ref.unityPackages[i];
+      avatarDialog.isPC = isPC;
+      avatarDialog.isQuest = isQuest;
+      avatarDialog.isIos = isIos;
+      avatarDialog.platformInfo = getPlatformInfo(ref.unityPackages);
+      for (const unityPackage of ref.unityPackages.slice().reverse()) {
         if (unityPackage.variant === "impostor") {
-          D.hasImposter = true;
-          D.imposterVersion = unityPackage.impostorizerVersion;
+          avatarDialog.hasImposter = true;
+          avatarDialog.imposterVersion = unityPackage.impostorizerVersion ?? "";
           break;
         }
       }
-      if (Object.keys(D.fileAnalysis).length === 0) {
-        getBundleDateSize(ref);
+      if (Object.keys(avatarDialog.fileAnalysis).length === 0) {
+        getBundleDateSize(ref).catch(logFailure("Loading the avatar bundle size failed:"));
       }
     })
-    .catch((err) => {
-      D.loading = false;
-      D.id = null;
-      D.visible = false;
+    .catch((err: unknown) => {
+      avatarDialog.loading = false;
+      avatarDialog.id = "";
+      avatarDialog.visible = false;
       uiStore.jumpBackDialogCrumb();
       toast.error(t("message.api_handler.avatar_private_or_deleted"));
-      throw err;
+      logFailure("Loading the avatar dialog failed:")(err);
     })
     .finally(() => {
-      nextTick(() => (D.loading = false));
-    });
+      clearDialogLoadingNextTick(avatarDialog);
+    })
+    .catch(logFailure("Finishing the avatar dialog load failed:"));
 }
 
 export async function getAvatarHistory() {
@@ -153,17 +218,32 @@ export async function getAvatarHistory() {
   const userStore = useUserStore();
 
   const historyArray = await database.getAvatarHistory(userStore.currentUser.id);
-  for (let i = 0; i < historyArray.length; i++) {
-    const avatar = historyArray[i];
-    if (avatar.authorId === userStore.currentUser.id) {
+  for (const avatar of historyArray) {
+    if (avatar.authorId === userStore.currentUser.id || !avatar.id) {
       continue;
     }
-    applyAvatar(avatar);
+    applyAvatar(toAvatarInput(avatar, avatar.id));
   }
   avatarStore.setAvatarHistory(historyArray);
 }
 
-export function addAvatarToHistory(avatarId) {
+export function toAvatarInput(row: AvatarHistoryRow, id: string): AvatarInput {
+  return {
+    id,
+    authorId: row.authorId ?? undefined,
+    authorName: row.authorName ?? undefined,
+    created_at: row.created_at ?? undefined,
+    description: row.description ?? undefined,
+    imageUrl: row.imageUrl ?? undefined,
+    name: row.name ?? undefined,
+    releaseStatus: row.releaseStatus ?? undefined,
+    thumbnailImageUrl: row.thumbnailImageUrl ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+    version: row.version ?? undefined,
+  };
+}
+
+export function addAvatarToHistory(avatarId: string) {
   if (!avatarId) {
     return;
   }
@@ -184,14 +264,14 @@ export function addAvatarToHistory(avatarId) {
 
       const historyArray = avatarStore.avatarHistory;
       for (let i = 0; i < historyArray.length; ++i) {
-        if (historyArray[i].id === ref.id) {
+        if (historyArray[i]?.id === ref.id) {
           historyArray.splice(i, 1);
         }
       }
 
       avatarStore.avatarHistory.unshift(ref);
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Failed to add avatar to history:", err);
     });
 }
@@ -207,14 +287,14 @@ export function promptClearAvatarHistory() {
       title: t("confirm.title"),
       destructive: true,
     })
-    .then(({ ok }) => {
-      if (!ok) return;
+    .then((result: unknown) => {
+      if (!toConfirmOk(result)) return;
       avatarStore.clearAvatarHistory();
     })
-    .catch(() => {});
+    .catch(logFailure("Clearing the avatar history failed:"));
 }
 
-export async function getAvatarName(imageUrl) {
+export async function getAvatarName(imageUrl: string): Promise<CachedAvatarName> {
   const avatarStore = useAvatarStore();
 
   const fileId = extractFileId(imageUrl);
@@ -222,71 +302,61 @@ export async function getAvatarName(imageUrl) {
     return {
       ownerId: "",
       avatarName: "-",
+      fileCreatedAt: "",
     };
   }
-  if (avatarStore.cachedAvatarNames.has(fileId)) {
-    return avatarStore.cachedAvatarNames.get(fileId);
+  const cachedName = avatarStore.cachedAvatarNames.get(fileId);
+  if (cachedName) {
+    return cachedName;
   }
   try {
     const args = await miscRequest.getFile({ fileId });
-    if (args.json?.tags?.includes("icon")) {
+    if (args.json.tags.includes("icon")) {
       return {
         ownerId: "",
         avatarName: "-",
+        fileCreatedAt: "",
       };
     }
     return storeAvatarImage(args, avatarStore.cachedAvatarNames);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to get avatar images:", error);
     return {
       ownerId: "",
       avatarName: "-",
+      fileCreatedAt: "",
     };
   }
 }
 
-export async function lookupAvatars(type, search) {
+export async function lookupAvatars(type: string, search: string) {
   const avatarProviderStore = useAvatarProviderStore();
   const vrcxUpdaterStore = useVRCXUpdaterStore();
 
-  const avatars = new Map();
+  const avatars = new Map<string, RemoteAvatar>();
   if (type === "search") {
     try {
       const url = `${avatarProviderStore.avatarRemoteDatabaseProvider}?${type}=${encodeURIComponent(search)}&n=5000`;
       const response = await webApiService.execute({
         url,
         method: "GET",
-        headers: {
-          Referer: "https://vrcx.app",
-          "VRCX-ID": vrcxUpdaterStore.vrcxId,
-        },
+        headers: remoteProviderHeaders(vrcxUpdaterStore.vrcxId),
       });
-      const json = JSON.parse(response.data);
+      const json: unknown = JSON.parse(response.data);
       logWebRequest("[EXTERNAL GET]", url, `(${response.status})`, json);
-      if (response.status === 200 && typeof json === "object") {
-        json.forEach((avatar) => {
-          if (!avatars.has(avatar.Id)) {
-            const ref = {
-              authorId: "",
-              authorName: "",
-              name: "",
-              description: "",
-              id: "",
-              imageUrl: "",
-              thumbnailImageUrl: "",
-              created_at: "0001-01-01T00:00:00.0000000Z",
-              updated_at: "0001-01-01T00:00:00.0000000Z",
-              releaseStatus: "public",
-              ...avatar,
-            };
+      if (response.status === 200 && Array.isArray(json)) {
+        json.forEach((avatar: unknown) => {
+          if (!isRecord(avatar)) return;
+          const ref = createRemoteAvatar(avatar);
+          if (!avatars.has(String(avatar["Id"]))) {
             avatars.set(ref.id, ref);
           }
         });
       } else {
         throw new Error(`Error: ${response.data}`);
       }
-    } catch (err) {
-      const msg = `Avatar search failed for ${search} with ${avatarProviderStore.avatarRemoteDatabaseProvider}\n${err}`;
+    } catch (err: unknown) {
+      const msg = `Avatar search failed for ${search} with ${avatarProviderStore.avatarRemoteDatabaseProvider}\n${String(err)}`;
       console.error(msg);
       toast.error(msg);
     }
@@ -294,6 +364,9 @@ export async function lookupAvatars(type, search) {
     const length = avatarProviderStore.avatarRemoteDatabaseProviderList.length;
     for (let i = 0; i < length; ++i) {
       const url = avatarProviderStore.avatarRemoteDatabaseProviderList[i];
+      if (url === undefined) {
+        continue;
+      }
       const avatarArray = await lookupAvatarsByAuthor(url, search);
       avatarArray.forEach((avatar) => {
         if (!avatars.has(avatar.id)) {
@@ -305,7 +378,7 @@ export async function lookupAvatars(type, search) {
   return avatars;
 }
 
-export async function lookupAvatarByImageFileId(authorId, fileId) {
+export async function lookupAvatarByImageFileId(authorId: string, fileId: string): Promise<string | null> {
   const avatarProviderStore = useAvatarProviderStore();
 
   for (const providerUrl of avatarProviderStore.avatarRemoteDatabaseProviderList) {
@@ -326,7 +399,7 @@ export async function lookupAvatarByImageFileId(authorId, fileId) {
   return null;
 }
 
-async function lookupAvatarByFileId(providerUrl, fileId) {
+async function lookupAvatarByFileId(providerUrl: string, fileId: string): Promise<RemoteAvatar | null> {
   const vrcxUpdaterStore = useVRCXUpdaterStore();
 
   try {
@@ -334,40 +407,23 @@ async function lookupAvatarByFileId(providerUrl, fileId) {
     const response = await webApiService.execute({
       url,
       method: "GET",
-      headers: {
-        Referer: "https://vrcx.app",
-        "VRCX-ID": vrcxUpdaterStore.vrcxId,
-      },
+      headers: remoteProviderHeaders(vrcxUpdaterStore.vrcxId),
     });
-    const json = JSON.parse(response.data);
+    const json: unknown = JSON.parse(response.data);
     logWebRequest("[EXTERNAL GET]", url, `(${response.status})`, json);
-    if (response.status === 200 && typeof json === "object") {
-      const ref = {
-        authorId: "",
-        authorName: "",
-        name: "",
-        description: "",
-        id: "",
-        imageUrl: "",
-        thumbnailImageUrl: "",
-        created_at: "0001-01-01T00:00:00.0000000Z",
-        updated_at: "0001-01-01T00:00:00.0000000Z",
-        releaseStatus: "public",
-        ...json,
-      };
-      return ref;
-    } else {
-      return null;
+    if (response.status === 200 && isRecord(json)) {
+      return createRemoteAvatar(json);
     }
+    return null;
   } catch {
     return null;
   }
 }
 
-async function lookupAvatarsByAuthor(providerUrl, authorId) {
+async function lookupAvatarsByAuthor(providerUrl: string, authorId: string): Promise<RemoteAvatar[]> {
   const vrcxUpdaterStore = useVRCXUpdaterStore();
 
-  const avatars = [];
+  const avatars: RemoteAvatar[] = [];
   if (!providerUrl || !authorId) {
     return avatars;
   }
@@ -376,42 +432,27 @@ async function lookupAvatarsByAuthor(providerUrl, authorId) {
     const response = await webApiService.execute({
       url,
       method: "GET",
-      headers: {
-        Referer: "https://vrcx.app",
-        "VRCX-ID": vrcxUpdaterStore.vrcxId,
-      },
+      headers: remoteProviderHeaders(vrcxUpdaterStore.vrcxId),
     });
-    const json = JSON.parse(response.data);
+    const json: unknown = JSON.parse(response.data);
     logWebRequest("[EXTERNAL GET]", url, `(${response.status})`, json);
-    if (response.status === 200 && typeof json === "object") {
-      json.forEach((avatar) => {
-        const ref = {
-          authorId: "",
-          authorName: "",
-          name: "",
-          description: "",
-          id: "",
-          imageUrl: "",
-          thumbnailImageUrl: "",
-          created_at: "0001-01-01T00:00:00.0000000Z",
-          updated_at: "0001-01-01T00:00:00.0000000Z",
-          releaseStatus: "public",
-          ...avatar,
-        };
-        avatars.push(ref);
+    if (response.status === 200 && Array.isArray(json)) {
+      json.forEach((avatar: unknown) => {
+        if (!isRecord(avatar)) return;
+        avatars.push(createRemoteAvatar(avatar));
       });
     } else {
       throw new Error(`Error: ${response.data}`);
     }
-  } catch (err) {
-    const msg = `Avatar lookup failed for ${authorId} with ${url}\n${err}`;
+  } catch (err: unknown) {
+    const msg = `Avatar lookup failed for ${authorId} with ${url}\n${String(err)}`;
     console.error(msg);
     toast.error(msg);
   }
   return avatars;
 }
 
-export function selectAvatarWithConfirmation(id) {
+export function selectAvatarWithConfirmation(id: string) {
   const modalStore = useModalStore();
   const t = i18n.global.t;
 
@@ -420,14 +461,14 @@ export function selectAvatarWithConfirmation(id) {
       description: t("confirm.select_avatar"),
       title: t("confirm.title"),
     })
-    .then(({ ok }) => {
-      if (!ok) return;
-      selectAvatarWithoutConfirmation(id);
+    .then((result: unknown) => {
+      if (!toConfirmOk(result)) return;
+      selectAvatarWithoutConfirmation(id).catch(logFailure("Selecting the avatar failed:"));
     })
-    .catch(() => {});
+    .catch(logFailure("Confirming the avatar selection failed:"));
 }
 
-export async function selectAvatarWithoutConfirmation(id) {
+export async function selectAvatarWithoutConfirmation(id: string) {
   const userStore = useUserStore();
   const t = i18n.global.t;
 
@@ -444,7 +485,7 @@ export async function selectAvatarWithoutConfirmation(id) {
     });
 }
 
-export function checkAvatarCache(fileId) {
+export function checkAvatarCache(fileId: string) {
   const avatarStore = useAvatarStore();
 
   let avatarId = "";
@@ -456,27 +497,27 @@ export function checkAvatarCache(fileId) {
   return avatarId;
 }
 
-export async function checkAvatarCacheRemote(fileId, ownerUserId) {
+export async function checkAvatarCacheRemote(fileId: string, ownerUserId: string): Promise<string | null> {
   const advancedSettingsStore = useAdvancedSettingsStore();
   const avatarStore = useAvatarStore();
   const t = i18n.global.t;
 
   if (advancedSettingsStore.avatarRemoteDatabase) {
     try {
-      toast.dismiss(avatarStore.loadingToastId);
+      toast.dismiss(avatarStore.loadingToastId ?? undefined);
       avatarStore.setLoadingToastId(toast.loading(t("message.avatar_lookup.loading")));
       const avatarId = await lookupAvatarByImageFileId(ownerUserId, fileId);
       return avatarId;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to lookup avatar by image file id:", err);
     } finally {
-      toast.dismiss(avatarStore.loadingToastId);
+      toast.dismiss(avatarStore.loadingToastId ?? undefined);
     }
   }
   return null;
 }
 
-export async function showAvatarAuthorDialog(refUserId, ownerUserId, currentAvatarImageUrl) {
+export async function showAvatarAuthorDialog(refUserId: string, ownerUserId: string, currentAvatarImageUrl: string) {
   const userStore = useUserStore();
   const t = i18n.global.t;
 
@@ -486,10 +527,11 @@ export async function showAvatarAuthorDialog(refUserId, ownerUserId, currentAvat
   } else if (refUserId === userStore.currentUser.id) {
     showAvatarDialog(userStore.currentUser.currentAvatar);
   } else {
-    let avatarId = checkAvatarCache(fileId);
-    let avatarInfo;
+    let avatarId: string | null = checkAvatarCache(fileId);
+    let ownerId = "";
     if (!avatarId) {
-      avatarInfo = await getAvatarName(currentAvatarImageUrl);
+      const avatarInfo = await getAvatarName(currentAvatarImageUrl);
+      ownerId = avatarInfo.ownerId;
       if (avatarInfo.ownerId === userStore.currentUser.id) {
         await refreshUserDialogAvatars(fileId);
         return;
@@ -503,7 +545,7 @@ export async function showAvatarAuthorDialog(refUserId, ownerUserId, currentAvat
         toast.warning(t("message.avatar_lookup.private_or_not_found"));
       } else {
         toast.warning(t("message.avatar_lookup.not_found"));
-        showUserDialog(avatarInfo.ownerId);
+        showUserDialog(ownerId);
       }
     }
     if (avatarId) {
@@ -512,7 +554,7 @@ export async function showAvatarAuthorDialog(refUserId, ownerUserId, currentAvat
   }
 }
 
-export function addAvatarWearTime(avatarId) {
+export function addAvatarWearTime(avatarId: string) {
   const userStore = useUserStore();
 
   if (!userStore.currentUser.$previousAvatarSwapTime || !avatarId) {
@@ -523,7 +565,7 @@ export function addAvatarWearTime(avatarId) {
 }
 
 export async function preloadOwnAvatars() {
-  const params = {
+  const params: SearchAvatars["query"] = {
     n: 50,
     offset: 0,
     sort: "updated",
@@ -532,7 +574,7 @@ export async function preloadOwnAvatars() {
     user: "me",
   };
   await processBulk({
-    fn: avatarRequest.getAvatars,
+    fn: (params) => avatarRequest.getAvatars(params),
     N: -1,
     params,
     handle: (args) => {
@@ -543,7 +585,7 @@ export async function preloadOwnAvatars() {
   });
 }
 
-export function removeAvatarFromCache(id) {
+export function removeAvatarFromCache(id: string) {
   const avatarStore = useAvatarStore();
   avatarStore.cachedAvatars.delete(id);
   removeAvatarSearchIndex(id);

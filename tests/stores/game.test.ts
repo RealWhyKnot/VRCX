@@ -1,26 +1,26 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
+const { getBool, getString } = vi.hoisted(() => ({
+  getBool: vi.fn<(key: string, isEnabledByDefault?: boolean | null) => Promise<boolean | null>>(),
+  getString: vi.fn<(key: string, defaultValue?: string | null) => Promise<string | null>>(),
+}));
+
 vi.mock("../../src/services/config.ts", () => ({
   configRepository: {
-    getBool: vi.fn(),
-    getString: vi.fn(),
+    getBool,
+    getString,
   },
 }));
 
-import { configRepository } from "../../src/services/config.ts";
 import { useGameStore } from "../../src/stores/game";
-
-function flushPromises() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
 
 describe("useGameStore", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
-    configRepository.getBool.mockResolvedValue(true);
-    configRepository.getString.mockImplementation((key, defaultValue) => {
+    getBool.mockResolvedValue(true);
+    getString.mockImplementation((key, defaultValue) => {
       if (key === "VRCX_lastGameSessionMs") {
         return Promise.resolve("7200000");
       }
@@ -33,11 +33,12 @@ describe("useGameStore", () => {
 
   test("loads persisted last session data during init", async () => {
     const store = useGameStore();
-    await flushPromises();
 
-    expect(store.isGameNoVR).toBe(true);
-    expect(store.lastSessionDurationMs).toBe(7200000);
-    expect(store.lastOfflineAt).toBe(1700000000000);
+    await vi.waitFor(() => {
+      expect(store.isGameNoVR).toBe(true);
+      expect(store.lastSessionDurationMs).toBe(7200000);
+      expect(store.lastOfflineAt).toBe(1700000000000);
+    });
   });
 
   test("setLastSession updates session values", () => {

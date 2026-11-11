@@ -1,3 +1,4 @@
+import type { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 
 import { AppDebug } from "../services/app-config";
@@ -24,7 +25,9 @@ export async function runRefreshFriendsListFlow() {
   reconnectWebSocket();
 }
 
-export async function runInitFriendsListFlow(t) {
+type Translate = ReturnType<typeof useI18n>["t"];
+
+export async function runInitFriendsListFlow(t: Translate) {
   const userStore = useUserStore();
   const friendStore = useFriendStore();
   const authStore = useAuthStore();
@@ -44,7 +47,9 @@ export async function runInitFriendsListFlow(t) {
   } catch (err) {
     if (!AppDebug.dontLogMeOut) {
       toast.error(t("message.friend.load_failed"));
-      authStore.handleLogoutEvent();
+      void authStore.handleLogoutEvent().catch((logoutErr: unknown) => {
+        console.error(logoutErr);
+      });
       throw err;
     }
   }
@@ -53,12 +58,22 @@ export async function runInitFriendsListFlow(t) {
     syncFriendSearchIndex(ctx);
   }
 
-  friendStore.tryApplyFriendOrder();
-  friendStore.getAllUserStats();
+  void friendStore.tryApplyFriendOrder().catch((err: unknown) => {
+    console.error(err);
+  });
+  void friendStore.getAllUserStats().catch((err: unknown) => {
+    console.error(err);
+  });
 
   if (await VRCXStorage.Get(`${userId}_friendLogUpdatedAt`)) {
-    VRCXStorage.Remove(`${userId}_feedTable`);
-    migrateMemos();
-    friendStore.migrateFriendLog(userId);
+    void VRCXStorage.Remove(`${userId}_feedTable`).catch((err: unknown) => {
+      console.error(err);
+    });
+    void migrateMemos().catch((err: unknown) => {
+      console.error(err);
+    });
+    void friendStore.migrateFriendLog(userId).catch((err: unknown) => {
+      console.error(err);
+    });
   }
 }

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockRequest = vi.fn();
-const mockInvalidateQueries = vi.fn().mockResolvedValue();
-const mockHandleFavoriteAdd = vi.fn();
-const mockHandleFavoriteDelete = vi.fn();
-const mockHandleFavoriteGroupClear = vi.fn();
+const mockRequest = vi.fn<(...args: unknown[]) => unknown>();
+const mockInvalidateQueries = vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const mockHandleFavoriteAdd = vi.fn<(...args: unknown[]) => unknown>();
+const mockHandleFavoriteDelete = vi.fn<(...args: unknown[]) => unknown>();
+const mockHandleFavoriteGroupClear = vi.fn<(...args: unknown[]) => unknown>();
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mockRequest(...args),
+  request: (...args: unknown[]) => mockRequest(...args),
 }));
 
 vi.mock("../../src/stores/user", () => ({
@@ -17,14 +17,14 @@ vi.mock("../../src/stores/user", () => ({
 }));
 
 vi.mock("../../src/coordinators/favorite-coordinator", () => ({
-  handleFavoriteAdd: (...args) => mockHandleFavoriteAdd(...args),
-  handleFavoriteDelete: (...args) => mockHandleFavoriteDelete(...args),
-  handleFavoriteGroupClear: (...args) => mockHandleFavoriteGroupClear(...args),
+  handleFavoriteAdd: (...args: unknown[]) => mockHandleFavoriteAdd(...args),
+  handleFavoriteDelete: (...args: unknown[]) => mockHandleFavoriteDelete(...args),
+  handleFavoriteGroupClear: (...args: unknown[]) => mockHandleFavoriteGroupClear(...args),
 }));
 
 vi.mock("../../src/queries/client", () => ({
   queryClient: {
-    invalidateQueries: (...args) => mockInvalidateQueries(...args),
+    invalidateQueries: (...args: unknown[]) => mockInvalidateQueries(...args),
   },
 }));
 
@@ -41,6 +41,7 @@ describe("favorite query sync", () => {
     await favoriteRequest.addFavorite({
       type: "world",
       favoriteId: "wrld_1",
+      tags: "worlds1",
     });
     await favoriteRequest.deleteFavorite({ objectId: "fav_1" });
     await favoriteRequest.saveFavoriteGroup({

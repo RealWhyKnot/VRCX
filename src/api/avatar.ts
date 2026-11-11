@@ -14,11 +14,12 @@ import type { Json } from "../types/vrcx";
 import { patchAndRefetchActiveQuery } from "../queries/entity-cache";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
+import { requestJson } from "./request-json";
 import { applyCurrentUser } from "../coordinators/user-coordinator";
 
 const avatarRequest = {
   getAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params: { avatarId: string } }> {
-    return request(`avatars/${params.avatarId}`, {
+    return requestJson<Json<Avatar>>(`avatars/${params.avatarId}`, {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -30,7 +31,7 @@ const avatarRequest = {
   },
 
   getAvatars(params: SearchAvatars["query"]): Promise<{ json: Json<Avatar[]>; params: SearchAvatars["query"] }> {
-    return request("avatars", {
+    return requestJson<Json<Avatar[]>>("avatars", {
       method: "GET",
       params,
     }).then((json) => {
@@ -44,7 +45,7 @@ const avatarRequest = {
   },
 
   saveAvatar(params: UpdateAvatarRequest): Promise<{ json: Json<Avatar>; params: UpdateAvatarRequest }> {
-    return request(`avatars/${params.id}`, {
+    return requestJson<Json<Avatar>>(`avatars/${params.id}`, {
       method: "PUT",
       params,
     }).then((json) => {
@@ -53,17 +54,17 @@ const avatarRequest = {
         params,
       };
       patchAndRefetchActiveQuery({
-        queryKey: queryKeys.avatar(params.id),
+        queryKey: queryKeys.avatar(params.id ?? ""),
         nextData: args,
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error("Failed to refresh avatar query after mutation:", err);
       });
       return args;
     });
   },
 
-  selectAvatar(params: { avatarId: string }): Promise<{ json: Json<CurrentUser>; params }> {
-    return request(`avatars/${params.avatarId}/select`, {
+  selectAvatar(params: { avatarId: string }): Promise<{ json: Json<CurrentUser>; params: { avatarId: string } }> {
+    return requestJson<Json<CurrentUser>>(`avatars/${params.avatarId}/select`, {
       method: "PUT",
       params,
     }).then((json) => {
@@ -79,15 +80,15 @@ const avatarRequest = {
           params: { userId: ref.id },
           ref,
         },
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error("Failed to refresh current user query after avatar select:", err);
       });
       return args;
     });
   },
 
-  selectFallbackAvatar(params: { avatarId: string }): Promise<{ json: Json<CurrentUser>; params }> {
-    return request(`avatars/${params.avatarId}/selectfallback`, {
+  selectFallbackAvatar(params: { avatarId: string }): Promise<{ json: Json<CurrentUser>; params: { avatarId: string } }> {
+    return requestJson<Json<CurrentUser>>(`avatars/${params.avatarId}/selectfallback`, {
       method: "PUT",
       params,
     }).then((json) => {
@@ -103,15 +104,15 @@ const avatarRequest = {
           params: { userId: ref.id },
           ref,
         },
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         console.error("Failed to refresh current user query after fallback avatar select:", err);
       });
       return args;
     });
   },
 
-  deleteAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params }> {
-    return request(`avatars/${params.avatarId}`, {
+  deleteAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params: { avatarId: string } }> {
+    return requestJson<Json<Avatar>>(`avatars/${params.avatarId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -122,8 +123,8 @@ const avatarRequest = {
     });
   },
 
-  createImposter(params: { avatarId: string }): Promise<{ json: Json<ServiceStatus>; params }> {
-    return request(`avatars/${params.avatarId}/impostor/enqueue`, {
+  createImposter(params: { avatarId: string }): Promise<{ json: Json<ServiceStatus>; params: { avatarId: string } }> {
+    return requestJson<Json<ServiceStatus>>(`avatars/${params.avatarId}/impostor/enqueue`, {
       method: "POST",
     }).then((json) => {
       const args = {
@@ -134,7 +135,7 @@ const avatarRequest = {
     });
   },
 
-  deleteImposter(params: { avatarId: string }): Promise<{ json: unknown; params }> {
+  deleteImposter(params: { avatarId: string }): Promise<{ json: unknown; params: { avatarId: string } }> {
     return request(`avatars/${params.avatarId}/impostor`, {
       method: "DELETE",
     }).then((json) => {
@@ -147,7 +148,7 @@ const avatarRequest = {
   },
 
   getAvailableAvatarStyles(): Promise<{ json: Json<AvatarStyle[]> }> {
-    return request("avatarStyles", {
+    return requestJson<Json<AvatarStyle[]>>("avatarStyles", {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -164,7 +165,7 @@ const avatarRequest = {
       n: 100,
       offset: 0,
     };
-    return request(`files`, {
+    return requestJson<Json<File[]>>(`files`, {
       params,
       method: "GET",
     }).then((json) => {
@@ -180,7 +181,7 @@ const avatarRequest = {
     const params = {
       tag: "avatarimage",
     };
-    return request("file/image", {
+    return requestJson<Json<File>>("file/image", {
       uploadImage: true,
       matchingDimensions: false,
       postData: JSON.stringify(params),
@@ -194,12 +195,12 @@ const avatarRequest = {
     });
   },
 
-  uploadAvatarGalleryImage(imageData: string, avatarId: string): Promise<{ json: Json<File>; params: any }> {
+  uploadAvatarGalleryImage(imageData: string, avatarId: string): Promise<{ json: Json<File>; params: { tag: string; galleryId: string } }> {
     const params = {
       tag: "avatargallery",
       galleryId: avatarId,
     };
-    return request("file/image", {
+    return requestJson<Json<File>>("file/image", {
       uploadImage: true,
       matchingDimensions: false,
       postData: JSON.stringify(params),
@@ -218,7 +219,7 @@ const avatarRequest = {
       ids: order,
       galleryId,
     };
-    return request("files/order", {
+    return requestJson<Json<GroupGalleryFileOrder>>("files/order", {
       method: "PUT",
       params,
     }).then((json) => {
@@ -231,7 +232,7 @@ const avatarRequest = {
   },
 
   getLicensedAvatars(params: GetLicensedAvatars["query"]): Promise<{ json: Json<Avatar[]>; params: GetLicensedAvatars["query"] }> {
-    return request("avatars/licensed", {
+    return requestJson<Json<Avatar[]>>("avatars/licensed", {
       method: "GET",
       params,
     }).then((json) => {

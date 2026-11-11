@@ -5,10 +5,10 @@ import { useWorldStore } from "../../../stores/world";
 import { compareUnityVersion } from "../avatar";
 
 type UnityPackageRef = {
-  variant?: string | null;
-  platform?: string | null;
-  unitySortNumber?: bigint | number | string;
-  assetUrl?: string | null;
+  variant?: string | null | undefined;
+  platform?: string | null | undefined;
+  unitySortNumber?: bigint | number | string | undefined;
+  assetUrl?: string | null | undefined;
 };
 
 type DialogRef = {

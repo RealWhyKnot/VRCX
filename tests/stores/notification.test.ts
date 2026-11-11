@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
+import type { NotificationEntry } from "../../src/stores/notification/types";
+
+const { hideNotificationMock } = vi.hoisted(() => ({
+  hideNotificationMock: vi.fn(() => Promise.resolve({})),
+}));
 
 vi.mock("../../src/services/database", () => ({
   database: {
@@ -24,7 +29,7 @@ vi.mock("../../src/api/instance", () => ({
 }));
 vi.mock("../../src/api/notification", () => ({
   notificationRequest: {
-    hideNotification: vi.fn(() => Promise.resolve({})),
+    hideNotification: hideNotificationMock,
     getNotifications: vi.fn(() => Promise.resolve({ json: [] })),
     getNotificationsV2: vi.fn(() => Promise.resolve({ json: [] })),
     getHiddenFriendRequests: vi.fn(() => Promise.resolve({ json: [] })),
@@ -38,14 +43,14 @@ vi.mock("../../src/api/query-request", () => ({
 vi.mock("@/plugins/i18n", () => ({
   i18n: {
     global: {
-      t: vi.fn((key) => key),
+      t: vi.fn((key: string) => key),
     },
   },
   loadLocalizedStrings: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: vi.fn((key) => key),
+    t: vi.fn((key: string) => key),
     locale: ref("en"),
   }),
 }));
@@ -61,10 +66,10 @@ vi.mock("../../src/services/config", () => ({
     getFloat: vi.fn((_key, defaultValue) => Promise.resolve(defaultValue)),
     getString: vi.fn((_key, defaultValue) => Promise.resolve(defaultValue)),
 
-    setBool: vi.fn(),
-    setInt: vi.fn(),
-    setFloat: vi.fn(),
-    setString: vi.fn(),
+    setBool: vi.fn(() => Promise.resolve()),
+    setInt: vi.fn(() => Promise.resolve()),
+    setFloat: vi.fn(() => Promise.resolve()),
+    setString: vi.fn(() => Promise.resolve()),
 
     remove: vi.fn(() => Promise.resolve()),
   },
@@ -80,6 +85,7 @@ vi.mock("vue-router", () => ({
   useRouter: () => ({
     currentRoute: ref({
       name: "test",
+      params: {},
     }),
   }),
 }));
@@ -87,20 +93,20 @@ vi.mock("../../src/plugins/router", () => ({
   router: {
     currentRoute: ref({
       name: "test",
+      params: {},
     }),
     push: vi.fn(),
     replace: vi.fn(),
   },
 }));
 const { database } = await import("../../src/services/database");
-const { notificationRequest } = await import("../../src/api/notification");
 
 const { useNotificationStore } = await import("../../src/stores/notification");
 const { useGeneralSettingsStore } = await import("../../src/stores/settings/general");
 
 describe("notification store - auto decline friend requests", () => {
-  let notificationStore;
-  let generalSettingsStore;
+  let notificationStore: ReturnType<typeof useNotificationStore>;
+  let generalSettingsStore: ReturnType<typeof useGeneralSettingsStore>;
 
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -114,25 +120,23 @@ describe("notification store - auto decline friend requests", () => {
 
   it("declines a friend request when join count is 0", async () => {
     vi.mocked(database.getJoinCount).mockResolvedValue({
-      joinCount: "0",
+      joinCount: 0,
       userId: "usr_test",
     });
 
-    const ref = {
+    const ref: NotificationEntry = {
       id: "not_test",
       type: "friendRequest",
       senderUserId: "usr_test",
       senderUsername: "TestUser",
+      message: "",
+      details: {},
+      created_at: "",
     };
 
     notificationStore.notificationTable.data.push(ref);
 
-    notificationStore.handlePipelineNotification({
-      json: ref,
-      params: {
-        notificationId: ref.id,
-      },
-    });
+    notificationStore.handlePipelineNotification({ json: ref });
 
     await vi.waitFor(() => {
       expect(database.getJoinCount).toHaveBeenCalledWith({
@@ -142,7 +146,7 @@ describe("notification store - auto decline friend requests", () => {
     });
 
     await vi.waitFor(() => {
-      expect(notificationRequest.hideNotification).toHaveBeenCalledWith({
+      expect(hideNotificationMock).toHaveBeenCalledWith({
         notificationId: "not_test",
       });
     });
@@ -154,75 +158,69 @@ describe("notification store - auto decline friend requests", () => {
 
   it("does not decline when join count is greater than 0", async () => {
     vi.mocked(database.getJoinCount).mockResolvedValue({
-      joinCount: "2",
+      joinCount: 2,
       userId: "usr_test",
     });
 
-    const ref = {
+    const ref: NotificationEntry = {
       id: "not_test",
       type: "friendRequest",
       senderUserId: "usr_test",
       senderUsername: "TestUser",
+      message: "",
+      details: {},
+      created_at: "",
     };
 
     notificationStore.notificationTable.data.push(ref);
 
-    notificationStore.handlePipelineNotification({
-      json: ref,
-      params: {
-        notificationId: ref.id,
-      },
-    });
+    notificationStore.handlePipelineNotification({ json: ref });
 
     await vi.waitFor(() => {
       expect(database.getJoinCount).toHaveBeenCalled();
     });
 
-    expect(notificationRequest.hideNotification).not.toHaveBeenCalled();
+    expect(hideNotificationMock).not.toHaveBeenCalled();
     expect(notificationStore.notificationTable.data.some((n) => n.id === "not_test")).toBe(true);
   });
 
   it("does nothing when auto decline is disabled", async () => {
     generalSettingsStore.autoDeclineFriendRequests = false;
 
-    const ref = {
+    const ref: NotificationEntry = {
       id: "not_test",
       type: "friendRequest",
       senderUserId: "usr_test",
       senderUsername: "TestUser",
+      message: "",
+      details: {},
+      created_at: "",
     };
 
-    notificationStore.handlePipelineNotification({
-      json: ref,
-      params: {
-        notificationId: ref.id,
-      },
-    });
+    notificationStore.handlePipelineNotification({ json: ref });
 
     await Promise.resolve();
 
     expect(database.getJoinCount).not.toHaveBeenCalled();
-    expect(notificationRequest.hideNotification).not.toHaveBeenCalled();
+    expect(hideNotificationMock).not.toHaveBeenCalled();
   });
 
   it("does not run auto decline logic for other notification types", async () => {
-    const ref = {
+    const ref: NotificationEntry = {
       id: "not_test",
       type: "invite",
       senderUserId: "usr_test",
       senderUsername: "TestUser",
+      message: "",
+      details: {},
+      created_at: "",
     };
 
-    notificationStore.handlePipelineNotification({
-      json: ref,
-      params: {
-        notificationId: ref.id,
-      },
-    });
+    notificationStore.handlePipelineNotification({ json: ref });
 
     await Promise.resolve();
 
     expect(database.getJoinCount).not.toHaveBeenCalled();
-    expect(notificationRequest.hideNotification).not.toHaveBeenCalled();
+    expect(hideNotificationMock).not.toHaveBeenCalled();
   });
 });

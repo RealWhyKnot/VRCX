@@ -87,7 +87,7 @@ import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useGroupStore } from "../../../stores/group";
 import { useLaunchStore } from "../../../stores/launch";
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { instanceRequest } from "../../../api/instance";
 
 import BackToTop from "../../../components/BackToTop.vue";

@@ -1,106 +1,147 @@
-export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNowPlaying, startNowPlayingTicker, updateNowPlayingVideoName, addGameLogVideo }) {
-  const producers = new Map();
+import type { NowPlayingGameLog, NowPlayingSpecDeps, NowPlayingSpecEvent } from "./now-playing-spec-types";
+
+type NowPlayingProducer = {
+  id: string;
+  hasMedia: boolean;
+  url: string;
+  publishedUrl: string;
+  name: string;
+  image: string;
+  ownerName: string;
+  mediaId: string;
+  length: number;
+  speed: number;
+  hideUrl: boolean;
+  highPriority: boolean;
+  anchorPos: number;
+  anchorWall: number;
+  paused: boolean;
+  stopped: boolean;
+  loading: boolean;
+  lastChange: number;
+};
+
+function isNowPlayingSpecEvent(value: unknown): value is NowPlayingSpecEvent {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return "id" in value && typeof value.id === "string" && value.id !== "" && "type" in value && typeof value.type === "string";
+}
+
+function parseEvent(data: string): NowPlayingSpecEvent | null {
+  try {
+    const event: unknown = JSON.parse(data);
+    if (isNowPlayingSpecEvent(event)) {
+      return event;
+    }
+  } catch {
+    console.warn("Failed to parse nowplaying event:", data);
+  }
+  return null;
+}
+
+function parseMediaId(value: unknown): string {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return "";
+}
+
+function decodeUrl(url: string): string {
+  try {
+    return decodeURI(url);
+  } catch {
+    return url;
+  }
+}
+
+function getYouTubeVideoId(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "";
+  }
+  const host = parsed.hostname.replace(/^(www|m|music)\./, "");
+  let id: string | null | undefined = "";
+  if (host === "youtu.be") {
+    id = parsed.pathname.split("/")[1];
+  } else if (host === "youtube.com") {
+    const [, section, pathId] = parsed.pathname.split("/");
+    if (section === "watch") {
+      id = parsed.searchParams.get("v");
+    } else if (["shorts", "live", "embed"].includes(section ?? "")) {
+      id = pathId;
+    }
+  }
+  return typeof id === "string" && /^[\w-]{11}$/.test(id) ? id : "";
+}
+
+function getMediaImage(image: unknown, url: string): string {
+  if (typeof image === "string" && image) {
+    return image;
+  }
+  const youtubeId = getYouTubeVideoId(url);
+  return youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : "";
+}
+
+function createProducer(id: string): NowPlayingProducer {
+  return {
+    id,
+    hasMedia: false,
+    url: "",
+    publishedUrl: "",
+    name: "",
+    image: "",
+    ownerName: "",
+    mediaId: "",
+    length: 0,
+    speed: 1,
+    hideUrl: false,
+    highPriority: false,
+    anchorPos: 0,
+    anchorWall: 0,
+    paused: false,
+    stopped: false,
+    loading: false,
+    lastChange: 0,
+  };
+}
+
+function getPosition(producer: NowPlayingProducer, now: number): number {
+  if (producer.paused || producer.stopped) {
+    return producer.anchorPos;
+  }
+  const pos = producer.anchorPos + (now - producer.anchorWall) * producer.speed;
+  return producer.length > 0 ? Math.min(pos, producer.length) : pos;
+}
+
+function setAnchor(producer: NowPlayingProducer, now: number, mediaTime?: unknown): void {
+  producer.anchorPos = typeof mediaTime === "number" ? Math.max(0, mediaTime) : getPosition(producer, now);
+  producer.anchorWall = now;
+}
+
+function getDisplayUrl(producer: NowPlayingProducer): string {
+  return producer.hideUrl ? producer.name : producer.url;
+}
+
+export function createNowPlayingSpecHandler({
+  nowPlaying,
+  setNowPlaying,
+  clearNowPlaying,
+  startNowPlayingTicker,
+  updateNowPlayingVideoName,
+  addGameLogVideo,
+}: NowPlayingSpecDeps) {
+  const producers = new Map<string, NowPlayingProducer>();
   let followedId = "";
   let changeSequence = 0;
 
-  function parseEvent(data) {
-    try {
-      const event = JSON.parse(data);
-      if (event && typeof event.id === "string" && event.id && typeof event.type === "string") {
-        return event;
-      }
-    } catch {
-      console.warn("Failed to parse nowplaying event:", data);
-    }
-    return null;
-  }
-
-  function parseMediaId(value) {
-    if (typeof value === "string") {
-      return value.trim();
-    }
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return String(value);
-    }
-    return "";
-  }
-
-  function decodeUrl(url) {
-    try {
-      return decodeURI(url);
-    } catch {
-      return url;
-    }
-  }
-
-  function getYouTubeVideoId(url) {
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return "";
-    }
-    const host = parsed.hostname.replace(/^(www|m|music)\./, "");
-    let id = "";
-    if (host === "youtu.be") {
-      id = parsed.pathname.split("/")[1];
-    } else if (host === "youtube.com") {
-      const [, section, pathId] = parsed.pathname.split("/");
-      if (section === "watch") {
-        id = parsed.searchParams.get("v");
-      } else if (["shorts", "live", "embed"].includes(section)) {
-        id = pathId;
-      }
-    }
-    return /^[\w-]{11}$/.test(id ?? "") ? id : "";
-  }
-
-  function getMediaImage(image, url) {
-    if (typeof image === "string" && image) {
-      return image;
-    }
-    const youtubeId = getYouTubeVideoId(url);
-    return youtubeId ? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg` : "";
-  }
-
-  function createProducer(id) {
-    return {
-      id,
-      hasMedia: false,
-      url: "",
-      publishedUrl: "",
-      name: "",
-      image: "",
-      ownerName: "",
-      mediaId: "",
-      length: 0,
-      speed: 1,
-      hideUrl: false,
-      highPriority: false,
-      anchorPos: 0,
-      anchorWall: 0,
-      paused: false,
-      stopped: false,
-      loading: false,
-      lastChange: 0,
-    };
-  }
-
-  function getPosition(producer, now) {
-    if (producer.paused || producer.stopped) {
-      return producer.anchorPos;
-    }
-    const pos = producer.anchorPos + (now - producer.anchorWall) * producer.speed;
-    return producer.length > 0 ? Math.min(pos, producer.length) : pos;
-  }
-
-  function setAnchor(producer, now, mediaTime) {
-    producer.anchorPos = typeof mediaTime === "number" ? Math.max(0, mediaTime) : getPosition(producer, now);
-    producer.anchorWall = now;
-  }
-
-  function pickFollowed() {
-    let best = null;
+  function pickFollowed(): NowPlayingProducer | null {
+    let best: NowPlayingProducer | null = null;
     for (const producer of producers.values()) {
       if (!producer.hasMedia || producer.stopped) {
         continue;
@@ -112,11 +153,7 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
     return best;
   }
 
-  function getDisplayUrl(producer) {
-    return producer.hideUrl ? producer.name : producer.url;
-  }
-
-  async function publishMedia(producer, location, dt) {
+  async function publishMedia(producer: NowPlayingProducer, location: string, dt: string): Promise<void> {
     const videoUrl = getDisplayUrl(producer);
     producer.publishedUrl = videoUrl;
     if (!videoUrl) {
@@ -143,7 +180,7 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
       created_at: dt,
       type: "VideoPlay",
       videoUrl,
-      videoId: producer.mediaId || producer.id.split("-")[0],
+      videoId: producer.mediaId || (producer.id.split("-")[0] ?? ""),
       videoName: producer.name,
       videoLength: producer.length,
       location,
@@ -155,7 +192,7 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
     });
   }
 
-  function applyTiming(producer, now) {
+  function applyTiming(producer: NowPlayingProducer, now: number): void {
     const np = nowPlaying.value;
     if (!np.url || np.url !== producer.publishedUrl) {
       return;
@@ -174,7 +211,7 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
     startNowPlayingTicker();
   }
 
-  async function sync(changed, isMediaChange, location, dt, now) {
+  async function sync(changed: NowPlayingProducer, isMediaChange: boolean, location: string, dt: string, now: number): Promise<void> {
     const followed = pickFollowed();
     if (!followed) {
       if (followedId && nowPlaying.value.spec) {
@@ -183,17 +220,17 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
       followedId = "";
       return;
     }
-    const switched = followed.id !== followedId;
-    if (switched || (isMediaChange && followed === changed)) {
+    const isSwitched = followed.id !== followedId;
+    if (isSwitched || (isMediaChange && followed === changed)) {
       followedId = followed.id;
       await publishMedia(followed, location, dt);
     }
-    if (switched || followed === changed || isMediaChange) {
+    if (isSwitched || followed === changed || isMediaChange) {
       applyTiming(followed, now);
     }
   }
 
-  async function handleNowPlayingEvent(gameLog, location) {
+  async function handleNowPlayingEvent(gameLog: NowPlayingGameLog, location: string): Promise<void> {
     const event = parseEvent(gameLog.data);
     if (!event) {
       return;
@@ -293,12 +330,12 @@ export function createNowPlayingSpecHandler({ nowPlaying, setNowPlaying, clearNo
     await sync(producer, false, location, gameLog.dt, now);
   }
 
-  function resetNowPlayingProducers() {
+  function resetNowPlayingProducers(): void {
     producers.clear();
     followedId = "";
   }
 
-  function hasNowPlayingProducer() {
+  function hasNowPlayingProducer(): boolean {
     return producers.size > 0;
   }
 

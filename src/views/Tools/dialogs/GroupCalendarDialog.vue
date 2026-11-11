@@ -99,7 +99,7 @@ import { groupRequest } from "../../../api/group";
 import { queryRequest } from "../../../api/query-request";
 import { processBulk } from "../../../services/request";
 import { useGroupStore } from "../../../stores/group";
-import { showGroupDialog } from "@/coordinators/group-coordinator";
+import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";

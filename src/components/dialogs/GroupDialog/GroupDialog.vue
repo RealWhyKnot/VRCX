@@ -599,14 +599,18 @@ import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import {
   getGroupDialogGroup,
-  isSoleGroupOwner,
   showGroupDialog,
+  getGroupDialogCalendar,
+  showGroupMemberModerationDialog,
+  showGroupRolesDialog,
+} from "../../../coordinators/group-dialog-coordinator";
+import {
+  isSoleGroupOwner,
   leaveGroupPrompt,
   setGroupVisibility,
   setGroupSubscription,
   setGroupEventAnnouncements,
-  getGroupDialogCalendar,
-} from "../../../coordinators/group-coordinator";
+} from "../../../coordinators/group-membership-coordinator";
 import { groupRequest } from "../../../api/group";
 import { queryRequest } from "../../../api/query-request";
 import { queryKeys } from "../../../queries/keys";
@@ -624,7 +628,6 @@ import GroupDialogStoreTab from "./GroupDialogStoreTab.vue";
 import GroupPostEditDialog from "./GroupPostEditDialog.vue";
 import GroupTransferDialog from "./GroupTransferDialog.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
-import { showGroupMemberModerationDialog, showGroupRolesDialog } from "../../../coordinators/group-coordinator";
 
 const { t } = useI18n();
 const groupDialogTabs = computed(() => [

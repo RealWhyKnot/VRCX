@@ -1,34 +1,42 @@
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
+import type { InviteMessage, InviteMessageType } from "vrchat";
 
+import type { Json } from "../types/vrcx";
 import { inviteMessagesRequest } from "../api/invite-messages";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useGameStore } from "./game";
 import { watchState } from "../services/watch-state";
 
+type InviteMessageTable = {
+  data: Json<InviteMessage[]>;
+  layout: string;
+  visible: boolean;
+};
+
 export const useInviteStore = defineStore("Invite", () => {
   const gameStore = useGameStore();
   const advancedSettingsStore = useAdvancedSettingsStore();
 
-  const inviteMessageTable = ref({
+  const inviteMessageTable = ref<InviteMessageTable>({
     data: [],
     layout: "table",
     visible: false,
   });
 
-  const inviteResponseMessageTable = ref({
+  const inviteResponseMessageTable = ref<InviteMessageTable>({
     data: [],
     layout: "table",
     visible: false,
   });
 
-  const inviteRequestMessageTable = ref({
+  const inviteRequestMessageTable = ref<InviteMessageTable>({
     data: [],
     layout: "table",
     visible: false,
   });
 
-  const inviteRequestResponseMessageTable = ref({
+  const inviteRequestResponseMessageTable = ref<InviteMessageTable>({
     data: [],
     layout: "table",
     visible: false,
@@ -53,7 +61,7 @@ export const useInviteStore = defineStore("Invite", () => {
     return gameStore.isGameRunning && !advancedSettingsStore.selfInviteOverride;
   });
 
-  function refreshInviteMessageTableData(mode) {
+  function refreshInviteMessageTableData(mode: InviteMessageType) {
     inviteMessagesRequest
       .refreshInviteMessageTableData(mode)
       .then(({ json }) => {
@@ -72,7 +80,7 @@ export const useInviteStore = defineStore("Invite", () => {
             break;
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("refreshInviteMessageTableData Failed：", err);
       });
   }

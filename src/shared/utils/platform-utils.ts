@@ -1,4 +1,4 @@
-type UnityPackageFields = { variant?: string; platform?: string };
+type UnityPackageFields = { variant?: string | undefined; platform?: string | undefined };
 
 function getAvailablePlatforms(unityPackages: readonly UnityPackageFields[] | null | undefined) {
   let isPC = false;

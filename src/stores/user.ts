@@ -2,17 +2,12 @@ import { computed, reactive, ref, shallowReactive, watch } from "vue";
 import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import { compareByCreatedAt, compareByDisplayName, compareByLocationAt, compareByName, compareByUpdatedAt } from "../shared/utils/compare";
-import { isRealInstance } from "../shared/utils/instance";
-import { parseLocation } from "../shared/utils/location-parser";
-import { replaceBioSymbols } from "../shared/utils/base/string";
+import { compareByCreatedAt, compareByName, compareByUpdatedAt } from "../shared/utils/compare";
 import { getAllUserMemos } from "../coordinators/memo-coordinator";
-import { instanceRequest } from "../api/instance";
 import { userRequest } from "../api/user";
 import { cosmeticsRequest } from "../api/cosmetics";
 import { marketplaceRequest } from "../api/marketplace";
 import { AppDebug } from "../services/app-config";
-import { database } from "../services/database";
 import { processBulk } from "../services/request";
 import { runUpdateCurrentUserLocationFlow } from "../coordinators/location-coordinator";
 import { useAppearanceSettingsStore } from "./settings/appearance";
@@ -20,11 +15,44 @@ import { useFriendStore } from "./friend";
 import { useInstanceStore } from "./instance";
 import { useLocationStore } from "./location";
 import { useModalStore } from "./modal";
-import { syncFriendSearchIndex } from "../coordinators/search-index-coordinator";
 import { useUiStore } from "./ui";
 import { watchState } from "../services/watch-state";
+import { isRealInstance } from "../shared/utils/instance";
+import type { Json, VrcxUser } from "../types/vrcx";
+import type { ContentFilter, OrderOptionShort, PublicProfile, SortOptionProductPurchase } from "vrchat";
 
-import * as workerTimers from "worker-timers";
+import { applyUserDialogLocation } from "./user-dialog-location";
+import { checkNote as checkNoteWithDeps, initUserNotes as initUserNotesWithDeps } from "./user-notes";
+import type { UserNotesDeps } from "./user-notes";
+import {
+  createCurrentUserState,
+  createEditProfileDialogState,
+  createUserDialogState,
+  type CachedCosmetic,
+  type CachedProductPurchase,
+  type ClientConfigState,
+  type CurrentUserPresence,
+  type LanguageEntry,
+  type CurrentUserState,
+  type CustomUserTag,
+  type EditProfileDialogState,
+  type UserDialogState,
+  type UserStoreNotesState,
+} from "./user-state";
+
+function isConfirmResult(value: unknown): value is { ok: boolean } {
+  return typeof value === "object" && value !== null && "ok" in value && typeof value.ok === "boolean";
+}
+
+function valueOrFallback(value: string | undefined, fallback: string) {
+  return value === undefined || value === "" ? fallback : value;
+}
+
+function logUserStoreError(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
 
 export const useUserStore = defineStore("User", () => {
   const appearanceSettingsStore = useAppearanceSettingsStore();
@@ -35,323 +63,57 @@ export const useUserStore = defineStore("User", () => {
   const uiStore = useUiStore();
   const { t } = useI18n();
 
-  const currentUser = ref({
-    acceptedPrivacyVersion: 0,
-    acceptedTOSVersion: 0,
-    accountDeletionDate: null,
-    accountDeletionLog: null,
-    accountStanding: "",
-    activeFriends: [],
-    ageVerificationStatus: "",
-    ageVerified: false,
-    allowAvatarCopying: false,
-    appleDetails: {},
-    appleId: "",
-    badges: [],
-    bannerColor: "",
-    bannerType: "color",
-    bannerUrl: "",
-    bio: "",
-    bioLinks: [],
-    completedTutorials: [],
-    currentAvatar: "",
-    currentAvatarImageUrl: "",
-    currentAvatarTags: [],
-    currentAvatarThumbnailImageUrl: "",
-    date_joined: "",
-    developerType: "",
-    discordDetails: {
-      global_name: "",
-      id: "",
-    },
-    discordId: "",
-    displayName: "",
-    emailVerified: false,
-    fallbackAvatar: "",
-    friendGroupNames: [],
-    friendKey: "",
-    friends: [],
-    googleDetails: {},
-    googleId: "",
-    hasAcceptedDiscordSocialSDKPerms: false,
-    hasBirthday: false,
-    hasDiscordFriendsOptOut: false,
-    hasEmail: false,
-    hasLoggedInFromClient: false,
-    hasPendingEmail: false,
-    hasSharedConnectionsOptOut: false,
-    hideContentFilterSettings: false,
-    homeLocation: "",
-    id: "",
-    isAdult: true,
-    isBoopingEnabled: false,
-    isEconomyCreator: false,
-    isFriend: false,
-    isTemporary: false,
-    iconFrame: "",
-    iconUrl: "",
-    last_activity: "",
-    last_login: "",
-    last_mobile: null,
-    last_platform: "",
-    nameplateEffect: "",
-    obfuscatedEmail: "",
-    obfuscatedPendingEmail: "",
-    oculusId: "",
-    offlineFriends: [],
-    onlineFriends: [],
-    pastDisplayNames: [],
-    picoId: "",
-    platform_history: [],
-    presence: {
-      avatarThumbnail: "",
-      currentAvatarTags: "",
-      debugflag: "",
-      displayName: "",
-      groups: [],
-      id: "",
-      instance: "",
-      instanceType: "",
-      platform: "",
-      profilePicOverride: "",
-      status: "",
-      travelingToInstance: "",
-      travelingToWorld: "",
-      userIcon: "",
-      world: "",
-    },
-    profileEffect: "",
-    profilePicOverride: "",
-    profilePicOverrideThumbnail: "",
-    pronouns: "",
-    pronounsHistory: [],
-    queuedInstance: "",
-    receiveMobileInvitations: false,
-    state: "",
-    status: "",
-    statusDescription: "",
-    statusFirstTime: false,
-    statusHistory: [],
-    steamDetails: {},
-    steamId: "",
-    tags: [],
-    temporaryExpiryDate: null,
-    twitchDetails: {
-      display_name: "",
-      id: "",
-      login: "",
-      profile_image_url: "",
-    },
-    twitchId: "",
-    twoFactorAuthEnabled: false,
-    twoFactorAuthEnabledDate: null,
-    unsubscribe: false,
-    updated_at: "",
-    userIcon: "",
-    userLanguage: "",
-    userLanguageCode: "",
-    username: "",
-    usesGeneratedPassword: false,
-    viveId: "",
+  const currentUser = ref<CurrentUserState>(createCurrentUserState());
 
-    $online_for: Date.now(),
-    $offline_for: null,
-    $location_at: Date.now(),
-    $travelingToTime: Date.now(),
-    $previousAvatarSwapTime: null,
-    $homeLocation: {},
-    $isVRCPlus: false,
-    $isModerator: false,
-    $isTroll: false,
-    $isProbableTroll: false,
-    $trustLevel: "Visitor",
-    $trustClass: "x-tag-untrusted",
-    $userColour: "",
-    $trustSortNum: 1,
-    $languages: [],
-    $locationTag: "",
-    $travelingToLocation: "",
-  });
+  const currentUserCredits = ref<number | null>(null);
 
-  const currentUserCredits = ref(null);
+  const userDialog = ref<UserDialogState>(createUserDialogState());
 
-  const userDialog = ref({
-    visible: false,
-    loading: false,
-    activeTab: "Info",
-    lastActiveTab: "Info",
-    id: "",
-    ref: {},
-    publicProfileRef: {},
-    theme: {
-      iconColor: "",
-      buttonColor: "",
-      subtextColor: "",
-    },
-    friend: {},
-    isFriend: false,
-    note: "",
-    incomingRequest: false,
-    outgoingRequest: false,
-    isBlock: false,
-    isMute: false,
-    isHideAvatar: false,
-    isShowAvatar: false,
-    isInteractOff: false,
-    isMuteChat: false,
-    isFavorite: false,
-    $location: {},
-    $homeLocationName: "",
-    users: [],
-    instance: {
-      id: "",
-      tag: "",
-      $location: {},
-      friendCount: 0,
-      users: [],
-      shortName: "",
-      ref: {},
-    },
-    worlds: [],
-    avatars: [],
-    licensedAvatars: [],
-    isWorldsLoading: false,
-    isFavoriteWorldsLoading: false,
-    isAvatarsLoading: false,
-    isGroupsLoading: false,
-    userFavoriteWorlds: [],
-    userGroups: {
-      groups: [],
-      ownGroups: [],
-      mutualGroups: [],
-      remainingGroups: [],
-    },
+  const editProfileDialog = ref<EditProfileDialogState>(createEditProfileDialogState());
 
-    worldSorting: {
-      name: "dialog.user.worlds.sorting.updated",
-      value: "updated",
-    },
-    worldOrder: {
-      name: "dialog.user.worlds.order.descending",
-      value: "descending",
-    },
-    groupSorting: {
-      name: "dialog.user.groups.sorting.alphabetical",
-      value: "alphabetical",
-    },
-    mutualFriendSorting: {
-      name: "dialog.user.mutual_friends.sorting.alphabetical",
-      value: "alphabetical",
-    },
-    avatarSorting: "update",
-    avatarReleaseStatus: "all",
-    activityPeriodDays: "30",
-    memo: "",
-    $avatarInfo: {
-      ownerId: "",
-      avatarName: "",
-      fileCreatedAt: "",
-    },
-    representedGroup: {
-      bannerId: "",
-      bannerUrl: "",
-      description: "",
-      discriminator: "",
-      groupId: "",
-      iconUrl: "",
-      id: "",
-      isRepresenting: false,
-      memberCount: 0,
-      memberVisibility: "",
-      name: "",
-      ownerId: "",
-      privacy: "",
-      shortCode: "",
-      $thumbnailUrl: "",
-      $memberId: "",
-    },
-    isRepresentedGroupLoading: false,
-    joinCount: 0,
-    timeSpent: 0,
-    lastSeen: "",
-    avatarModeration: 0,
-    previousDisplayNames: [],
-    dateFriended: "",
-    unFriended: false,
-    dateFriendedInfo: [],
-    mutualFriendCount: 0,
-    mutualGroupCount: 0,
-    mutualFriends: [],
-    isMutualFriendsLoading: false,
-  });
-
-  const editProfileDialog = ref({
-    visible: false,
-    loading: false,
-    selfProfileRef: {},
-    status: "",
-    statusDescription: "",
-    pronouns: "",
-    bio: "",
-    bioLinks: [],
-    socialStatusHistoryTable: [],
-    bannerColor: "",
-    bannerUrl: "",
-    bannerType: "",
-    userIcon: "",
-    iconUrl: "",
-    themes: [],
-    themeId: "",
-    themeName: "",
-    themeButtonColor: "",
-    themeIconColor: "",
-    themeSubtextColor: "",
-    backgroundType: "default",
-    backgroundTextureId: "",
-    backgroundGradientBottom: "",
-    backgroundGradientTop: "",
-    nameplateEffect: "",
-    profileEffect: "",
-    iconFrame: "",
-  });
-
-  const currentTravelers = reactive(new Map());
-  const subsetOfLanguages = ref([]);
+  const currentTravelers = reactive(new Map<string, VrcxUser>());
+  const subsetOfLanguages = ref<Record<string, string>>({});
   const sendBoopDialog = ref({
     visible: false,
     userId: "",
   });
-  const showUserDialogHistory = reactive(new Set());
-  const customUserTags = reactive(new Map());
+  const showUserDialogHistory = reactive(new Set<string>());
+  const customUserTags = reactive(new Map<string, CustomUserTag>());
 
-  const state = reactive({
-    instancePlayerCount: new Map(),
+  const state = reactive<UserStoreNotesState>({
+    instancePlayerCount: new Map<string, number>(),
     lastNoteCheck: null,
     lastDbNoteDate: null,
-    notes: new Map(),
+    notes: new Map<string, string>(),
   });
 
-  const cachedUsers = shallowReactive(new Map());
-  const cachedProfiles = ref(new Map());
-  const cachedUserIdsByDisplayName = shallowReactive(new Map());
+  const cachedUsers = shallowReactive(new Map<string, VrcxUser>());
+  const cachedProfiles = ref(new Map<string, Json<PublicProfile>>());
+  const cachedUserIdsByDisplayName = shallowReactive(new Map<string, Set<string>>());
 
-  const cachedProfileEffects = shallowReactive(new Map());
-  const cachedIconFrames = shallowReactive(new Map());
-  const cachedNameplateEffects = shallowReactive(new Map());
+  const cachedProfileEffects = shallowReactive(new Map<string, CachedCosmetic>());
+  const cachedIconFrames = shallowReactive(new Map<string, CachedCosmetic>());
+  const cachedNameplateEffects = shallowReactive(new Map<string, CachedCosmetic>());
 
-  const cachedPurchases = ref(new Map());
+  const cachedPurchases = ref(new Map<string, CachedProductPurchase>());
   const activePurchases = computed(() =>
     Array.from(cachedPurchases.value.values()).filter((purchase) => purchase.purchaseActive && purchase.buyerId === currentUser.value.id)
   );
   const ownedListingIds = computed(() => new Set(activePurchases.value.map((purchase) => purchase.listingId)));
-  const ownedProductIds = computed(() => new Set(activePurchases.value.flatMap((purchase) => (purchase.products ?? []).map((product) => product.id))));
+  const ownedProductIds = computed(() => new Set(activePurchases.value.flatMap((purchase) => purchase.products.map((product) => product.id))));
 
-  const currentUserClientConfig = ref({
+  const currentUserClientConfig = ref<ClientConfigState>({
     accessReduceDecorAnim: false,
     configString: "",
   });
 
-  function addCachedUserDisplayNameEntry(displayName, userId) {
+  const notesDeps: UserNotesDeps = {
+    state,
+    cachedUsers,
+    friends: friendStore.friends,
+  };
+
+  function addCachedUserDisplayNameEntry(displayName: string, userId: string) {
     if (!displayName || !userId) {
       return;
     }
@@ -363,7 +125,7 @@ export const useUserStore = defineStore("User", () => {
     userIds.add(userId);
   }
 
-  function removeCachedUserDisplayNameEntry(displayName, userId) {
+  function removeCachedUserDisplayNameEntry(displayName: string, userId: string) {
     if (!displayName || !userId) {
       return;
     }
@@ -377,38 +139,37 @@ export const useUserStore = defineStore("User", () => {
     }
   }
 
-  function syncCachedUserDisplayName(ref, previousDisplayName = "") {
-    if (!ref?.id) {
+  function syncCachedUserDisplayName(user: VrcxUser, previousDisplayName = "") {
+    if (!user.id) {
       return;
     }
-    if (previousDisplayName && previousDisplayName !== ref.displayName) {
-      removeCachedUserDisplayNameEntry(previousDisplayName, ref.id);
+    if (previousDisplayName && previousDisplayName !== user.displayName) {
+      removeCachedUserDisplayNameEntry(previousDisplayName, user.id);
     }
-    addCachedUserDisplayNameEntry(ref.displayName, ref.id);
+    addCachedUserDisplayNameEntry(user.displayName, user.id);
   }
 
-  function setCachedUser(ref, previousDisplayName = "", { skipIndex = false } = {}) {
-    if (!ref?.id) {
+  function setCachedUser(user: VrcxUser, previousDisplayName = "", { skipIndex = false } = {}) {
+    if (!user.id) {
       return;
     }
-    cachedUsers.set(ref.id, ref);
+    cachedUsers.set(user.id, user);
     if (!skipIndex) {
-      syncCachedUserDisplayName(ref, previousDisplayName);
+      syncCachedUserDisplayName(user, previousDisplayName);
     }
   }
 
-  function deleteCachedUser(userId) {
-    const ref = cachedUsers.get(userId);
-    if (!ref) {
+  function deleteCachedUser(userId: string) {
+    const user = cachedUsers.get(userId);
+    if (!user) {
       return false;
     }
-    removeCachedUserDisplayNameEntry(ref.displayName, userId);
+    removeCachedUserDisplayNameEntry(user.displayName, userId);
     return cachedUsers.delete(userId);
   }
 
-  function deleteCachedProfile(userId) {
-    const ref = cachedProfiles.value.get(userId);
-    if (!ref) {
+  function deleteCachedProfile(userId: string) {
+    if (!cachedProfiles.value.has(userId)) {
       return false;
     }
     return cachedProfiles.value.delete(userId);
@@ -421,20 +182,22 @@ export const useUserStore = defineStore("User", () => {
     cachedPurchases.value.clear();
   }
 
-  function setCachedPurchases(purchases) {
+  function setCachedPurchases(purchases: CachedProductPurchase[]) {
     for (const purchase of purchases) {
       cachedPurchases.value.set(purchase.purchaseId, purchase);
     }
   }
 
   async function getAllProductPurchases() {
+    const order: OrderOptionShort = "desc";
+    const sort: SortOptionProductPurchase = "purchaseDate";
     await processBulk({
-      fn: marketplaceRequest.getProductPurchases,
+      fn: (params) => marketplaceRequest.getProductPurchases(params),
       N: 0,
       params: {
         buyerId: currentUser.value.id,
-        order: "desc",
-        sort: "purchaseDate",
+        order,
+        sort,
         n: 50,
         offset: 0,
       },
@@ -443,8 +206,8 @@ export const useUserStore = defineStore("User", () => {
 
   function rebuildCachedUserDisplayNameIndex() {
     cachedUserIdsByDisplayName.clear();
-    for (const ref of cachedUsers.values()) {
-      addCachedUserDisplayNameEntry(ref.displayName, ref.id);
+    for (const user of cachedUsers.values()) {
+      addCachedUserDisplayNameEntry(user.displayName, user.id);
     }
   }
 
@@ -459,7 +222,7 @@ export const useUserStore = defineStore("User", () => {
         state.instancePlayerCount.clear();
         customUserTags.clear();
         state.notes.clear();
-        subsetOfLanguages.value = [];
+        subsetOfLanguages.value = {};
         uiStore.clearDialogCrumbs();
       }
     },
@@ -470,158 +233,61 @@ export const useUserStore = defineStore("User", () => {
     () => watchState.isFriendsLoaded,
     (isFriendsLoaded) => {
       if (isFriendsLoaded) {
-        getAllUserMemos();
-        initUserNotes();
+        void getAllUserMemos().catch(logUserStoreError("Error loading user memos:"));
+        void initUserNotes().catch(logUserStoreError("Error initializing user notes:"));
       }
     },
     { flush: "sync" }
   );
 
-  function applyUserLanguage(ref) {
-    if (!ref || !ref.tags || !subsetOfLanguages.value) {
-      return;
-    }
-
-    ref.$languages = [];
+  function applyUserLanguage(user: { tags: string[]; $languages: LanguageEntry[] }) {
+    user.$languages = [];
     const languagePrefix = "language_";
     const prefixLength = languagePrefix.length;
 
-    for (const tag of ref.tags) {
+    for (const tag of user.tags) {
       if (tag.startsWith(languagePrefix)) {
         const key = tag.substring(prefixLength);
         const value = subsetOfLanguages.value[key];
 
         if (value !== undefined) {
-          ref.$languages.push({ key, value });
+          user.$languages.push({ key, value });
         }
       }
     }
   }
 
-  function applyPresenceLocation(ref) {
-    const presence = ref.presence;
+  function applyPresenceLocation(user: { presence?: CurrentUserPresence | undefined; $locationTag?: string; $travelingToLocation?: string }) {
+    const presence = user.presence;
+    if (!presence) {
+      return;
+    }
     if (isRealInstance(presence.world)) {
-      ref.$locationTag = `${presence.world}:${presence.instance}`;
+      user.$locationTag = `${presence.world}:${presence.instance ?? ""}`;
     } else {
-      ref.$locationTag = presence.world;
+      user.$locationTag = presence.world ?? "";
     }
     if (isRealInstance(presence.travelingToWorld)) {
-      ref.$travelingToLocation = `${presence.travelingToWorld}:${presence.travelingToInstance}`;
+      user.$travelingToLocation = `${presence.travelingToWorld}:${presence.travelingToInstance ?? ""}`;
     } else {
-      ref.$travelingToLocation = presence.travelingToWorld;
+      user.$travelingToLocation = presence.travelingToWorld ?? "";
     }
     runUpdateCurrentUserLocationFlow();
   }
 
-  function applyUserDialogLocation(updateInstanceOccupants = false) {
-    let addUser;
-    let friend;
-    let ref;
-    const D = userDialog.value;
-    if (!D.visible) {
-      return;
-    }
-    const L = parseLocation(D.ref.$location?.tag);
-    if (updateInstanceOccupants && L.isRealInstance) {
-      instanceRequest.getInstance({
-        worldId: L.worldId,
-        instanceId: L.instanceId,
-      });
-    }
-    D.$location = L;
-    L.user = {};
-    const cachedOwnerId = instanceStore.cachedInstances.get(L.tag)?.ownerId;
-    if (!L.userId && cachedOwnerId && !cachedOwnerId.startsWith("grp_")) {
-      L.userId = cachedOwnerId;
-    }
-    if (L.userId) {
-      ref = cachedUsers.get(L.userId);
-      if (typeof ref === "undefined") {
-        userRequest
-          .getUser({
-            userId: L.userId,
-          })
-          .then((args) => {
-            if (args.ref.id === L.userId) {
-              Object.assign(L.user, args.ref);
-              D.$location = L;
-              applyUserDialogLocation();
-            }
-          });
-      } else {
-        L.user = ref;
-      }
-    }
-    const users = [];
-    let friendCount = 0;
-    const playersInInstance = locationStore.lastLocation.playerList;
-    const cachedCurrentUser = cachedUsers.get(currentUser.value.id);
-    const currentLocation = cachedCurrentUser?.$location?.tag;
-    if (!L.isOffline && currentLocation === L.tag) {
-      ref = cachedUsers.get(currentUser.value.id);
-      if (typeof ref !== "undefined") {
-        users.push(ref);
-      }
-    }
-
-    if (locationStore.lastLocation.location === L.tag && playersInInstance.size > 0) {
-      const friendsInInstance = locationStore.lastLocation.friendList;
-      for (friend of friendsInInstance.values()) {
-        addUser = !users.some(function (user) {
-          return friend.userId === user.id;
-        });
-        if (addUser) {
-          ref = cachedUsers.get(friend.userId);
-          if (typeof ref !== "undefined") {
-            users.push(ref);
-          }
-        }
-      }
-      friendCount = users.length - 1;
-    }
-    if (!L.isOffline) {
-      for (friend of friendStore.friends.values()) {
-        if (typeof friend.ref === "undefined") {
-          continue;
-        }
-        if (friend.ref.location === locationStore.lastLocation.location) {
-          continue;
-        }
-        if (friend.ref.$location.tag === L.tag) {
-          if (friend.state !== "online" && friend.ref.location === "private") {
-            continue;
-          }
-
-          addUser = !users.some(function (user) {
-            return friend.name === user.displayName;
-          });
-          if (addUser) {
-            users.push(friend.ref);
-          }
-        }
-      }
-      friendCount = users.length;
-    }
-    if (appearanceSettingsStore.instanceUsersSortAlphabetical) {
-      users.sort(compareByDisplayName);
-    } else {
-      users.sort(compareByLocationAt);
-    }
-    D.users = users;
-    if ((L.worldId && currentLocation === L.tag && playersInInstance.size > 0) || !L.isRealInstance) {
-      D.instance = {
-        id: L.instanceId,
-        tag: L.tag,
-        $location: L,
-        friendCount: 0,
-        users: [],
-        shortName: "",
-        ref: {},
-      };
-    }
-    const instanceRef = instanceStore.cachedInstances.get(L.tag) || {};
-    Object.assign(D.instance.ref, instanceRef);
-    D.instance.friendCount = friendCount;
+  function applyUserDialogLocationForStore(shouldUpdateInstanceOccupants = false) {
+    applyUserDialogLocation(
+      {
+        userDialog,
+        currentUser,
+        cachedUsers,
+        friends: friendStore.friends,
+        appearanceSettingsStore,
+        instanceStore,
+        locationStore,
+      },
+      shouldUpdateInstanceOccupants
+    );
   }
 
   function getUserDialogAvatarComparator() {
@@ -635,165 +301,74 @@ export const useUserStore = defineStore("User", () => {
     return compareByName;
   }
 
-  function sortUserDialogAvatars(array) {
+  function sortUserDialogAvatars(array: UserDialogState["avatars"]) {
     userDialog.value.avatars = array.sort(getUserDialogAvatarComparator());
   }
 
-  function sortUserDialogLicensedAvatars(array) {
+  function sortUserDialogLicensedAvatars(array: UserDialogState["licensedAvatars"]) {
     userDialog.value.licensedAvatars = array.sort(getUserDialogAvatarComparator());
   }
 
-  async function initUserNotes() {
-    state.lastNoteCheck = new Date();
-    state.lastDbNoteDate = null;
-    state.notes.clear();
-    try {
-      const users = cachedUsers;
-      const dbNotes = await database.getAllUserNotes();
-      for (const note of dbNotes) {
-        state.notes.set(note.userId, note.note);
-        const user = users.get(note.userId);
-        if (user) {
-          user.note = note.note;
-          const friendCtx = friendStore.friends.get(note.userId);
-          if (friendCtx) {
-            syncFriendSearchIndex(friendCtx);
-          }
-        }
-        if (!state.lastDbNoteDate || state.lastDbNoteDate < note.createdAt) {
-          state.lastDbNoteDate = note.createdAt;
-        }
-      }
-      await getLatestUserNotes();
-    } catch (error) {
-      console.error("Error initializing user notes:", error);
-    }
+  function initUserNotes() {
+    return initUserNotesWithDeps(notesDeps);
   }
 
-  async function getLatestUserNotes() {
-    state.lastNoteCheck = new Date();
-    const params = {
-      offset: 0,
-      n: 10,
-    };
-    const newNotes = new Map();
-    let done = false;
-    try {
-      for (let i = 0; i < 100; i++) {
-        params.offset = i * params.n;
-        const args = await userRequest.getUserNotes(params);
-        for (const note of args.json) {
-          if (state.lastDbNoteDate && state.lastDbNoteDate > note.createdAt) {
-            done = true;
-          }
-          if (!state.lastDbNoteDate || state.lastDbNoteDate < note.createdAt) {
-            state.lastDbNoteDate = note.createdAt;
-          }
-          note.note = replaceBioSymbols(note.note);
-          newNotes.set(note.targetUserId, note);
-        }
-        if (done || args.json.length === 0) {
-          break;
-        }
-        params.n = 100;
-        await new Promise((resolve) => {
-          workerTimers.setTimeout(resolve, 1000);
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching user notes:", error);
-    }
-    const users = cachedUsers;
-
-    for (const note of newNotes.values()) {
-      const newNote = {
-        userId: note.targetUserId,
-        displayName: note.targetUser?.displayName || note.targetUserId,
-        note: note.note,
-        createdAt: note.createdAt,
-      };
-      await database.addUserNote(newNote);
-      state.notes.set(note.targetUserId, note.note);
-      const user = users.get(note.targetUserId);
-      if (user) {
-        user.note = note.note;
-        const friendCtx = friendStore.friends.get(note.targetUserId);
-        if (friendCtx) {
-          syncFriendSearchIndex(friendCtx);
-        }
-      }
-    }
+  function checkNote(userId: string, newNote: string | undefined) {
+    return checkNoteWithDeps(notesDeps, userId, newNote);
   }
 
-  async function checkNote(userId, newNote) {
-    if (!state.lastNoteCheck || state.lastNoteCheck.getTime() + 5 * 60 * 1000 > Date.now()) {
-      return;
-    }
-    const existingNote = state.notes.get(userId);
-    if (typeof existingNote !== "undefined" && !newNote) {
-      console.log("deleting note", userId);
-      state.notes.delete(userId);
-      await database.deleteUserNote(userId);
-      return;
-    }
-    if (typeof existingNote === "undefined" || existingNote !== newNote) {
-      console.log("detected note change", userId, newNote);
-      await getLatestUserNotes();
-    }
-  }
-
-  function showSendBoopDialog(userId) {
+  function showSendBoopDialog(userId: string) {
     sendBoopDialog.value.userId = userId;
     sendBoopDialog.value.visible = true;
   }
 
-  function setUserDialogMemo(value) {
+  function setUserDialogMemo(value: string) {
     userDialog.value.memo = value;
   }
 
-  function setUserDialogVisible(value) {
-    userDialog.value.visible = value;
+  function setUserDialogVisible(isVisible: boolean) {
+    userDialog.value.visible = isVisible;
   }
 
-  function setUserDialogIsFavorite(value) {
-    userDialog.value.isFavorite = value;
+  function setUserDialogIsFavorite(isFavorite: boolean) {
+    userDialog.value.isFavorite = isFavorite;
   }
 
-  function setCurrentUserColour(value) {
+  function setCurrentUserColour(value: string) {
     currentUser.value.$userColour = value;
   }
 
-  function setCurrentUserLocationState(location, travelingToLocation, timestamp = Date.now()) {
+  function setCurrentUserLocationState(location: string, travelingToLocation: string, timestamp = Date.now()) {
     currentUser.value.$location_at = timestamp;
     currentUser.value.$travelingToTime = timestamp;
     currentUser.value.$locationTag = location;
     currentUser.value.$travelingToLocation = travelingToLocation;
   }
 
-  function setCurrentUserTravelingToTime(value) {
+  function setCurrentUserTravelingToTime(value: number) {
     currentUser.value.$travelingToTime = value;
   }
 
-  function setCurrentUser(value) {
+  function setCurrentUser(value: CurrentUserState) {
     currentUser.value = value;
   }
 
-  function setCurrentUserCredits(value) {
+  function setCurrentUserCredits(value: number | null) {
     currentUserCredits.value = value;
   }
 
-  function setSubsetOfLanguages(value) {
+  function setSubsetOfLanguages(value: Record<string, string>) {
     subsetOfLanguages.value = value;
   }
 
   function showEditProfileDialog() {
     const D = editProfileDialog.value;
-    const statusHistory = currentUser.value?.statusHistory || [];
+    const statusHistory = currentUser.value.statusHistory;
     const statusHistoryArray = [];
     for (let i = 0; i < statusHistory.length; ++i) {
       statusHistoryArray.push({
         no: i + 1,
-        status: statusHistory[i],
+        status: statusHistory[i] ?? "",
       });
     }
     D.socialStatusHistoryTable = statusHistoryArray;
@@ -813,35 +388,39 @@ export const useUserStore = defineStore("User", () => {
     D.themeIconColor = "";
     D.themeSubtextColor = "";
 
-    userRequest.getSelfProfile().then((args) => {
-      const ref = args.json;
-      D.selfProfileRef = ref;
+    void userRequest
+      .getSelfProfile()
+      .then((args) => {
+        const profile = args.json;
+        D.selfProfileRef = profile;
 
-      D.status = ref.status;
-      D.statusDescription = ref.statusDescription;
-      D.pronouns = ref.pronouns;
-      D.bio = ref.bio;
-      D.bioLinks = ref.bioLinks.slice();
-      D.bannerColor = ref.bannerColor;
-      D.bannerUrl = ref.bannerUrl;
-      D.bannerType = ref.bannerType || "color";
-      D.userIcon = ref.userIcon;
+        const themes = profile.themes ?? [];
+        D.status = profile.status ?? "";
+        D.statusDescription = profile.statusDescription ?? "";
+        D.pronouns = profile.pronouns ?? "";
+        D.bio = profile.bio ?? "";
+        D.bioLinks = (profile.bioLinks ?? []).slice();
+        D.bannerColor = profile.bannerColor ?? "";
+        D.bannerUrl = profile.bannerUrl ?? "";
+        D.bannerType = valueOrFallback(profile.bannerType, "color");
+        D.userIcon = profile.userIcon ?? "";
 
-      D.themes = ref.themes;
-      D.themeId = ref.themeId;
-      const selectedTheme = ref.themes.find((theme) => theme.id === ref.themeId);
-      D.themeName = selectedTheme?.name ?? "";
-      D.themeButtonColor = ref.themeButtonColor;
-      D.themeIconColor = ref.themeIconColor;
-      D.themeSubtextColor = ref.themeSubtextColor;
-      D.backgroundType = ref.backgroundType || "default";
-      D.backgroundTextureId = ref.backgroundTextureId;
-      D.backgroundGradientBottom = ref.backgroundGradientBottom;
-      D.backgroundGradientTop = ref.backgroundGradientTop;
-      D.nameplateEffect = ref.nameplateEffect;
-      D.profileEffect = ref.profileEffect;
-      D.iconFrame = ref.iconFrame;
-    });
+        D.themes = themes;
+        D.themeId = profile.themeId ?? "";
+        const selectedTheme = themes.find((theme) => theme.id === profile.themeId);
+        D.themeName = selectedTheme?.name ?? "";
+        D.themeButtonColor = profile.themeButtonColor ?? "";
+        D.themeIconColor = profile.themeIconColor ?? "";
+        D.themeSubtextColor = profile.themeSubtextColor ?? "";
+        D.backgroundType = valueOrFallback(profile.backgroundType, "default");
+        D.backgroundTextureId = profile.backgroundTextureId ?? "";
+        D.backgroundGradientBottom = profile.backgroundGradientBottom ?? "";
+        D.backgroundGradientTop = profile.backgroundGradientTop ?? "";
+        D.nameplateEffect = profile.nameplateEffect ?? "";
+        D.profileEffect = profile.profileEffect ?? "";
+        D.iconFrame = profile.iconFrame ?? "";
+      })
+      .catch(logUserStoreError("Error loading self profile:"));
 
     D.visible = true;
   }
@@ -858,23 +437,26 @@ export const useUserStore = defineStore("User", () => {
     currentUser.value.$previousAvatarSwapTime = null;
   }
 
-  async function confirmCurrentUserToggle(command, isEnableAction) {
+  async function confirmCurrentUserToggle(command: string, isEnableAction: boolean) {
     const action = isEnableAction ? t("confirm.enable_action") : t("confirm.disable_action");
-    const { ok } = await modalStore.confirm({
+    const result = await modalStore.confirm({
       title: t("confirm.title"),
       description: t("confirm.command_question_toggle", {
         action,
         command,
       }),
     });
-    return ok;
+    if (!isConfirmResult(result)) {
+      return false;
+    }
+    return result.ok;
   }
 
   async function toggleAvatarCopying() {
     if (!(await confirmCurrentUserToggle(t("dialog.user.info.avatar_cloning"), !currentUser.value.allowAvatarCopying))) {
       return;
     }
-    userRequest.saveCurrentUser({
+    await userRequest.saveCurrentUser({
       allowAvatarCopying: !currentUser.value.allowAvatarCopying,
     });
   }
@@ -883,7 +465,7 @@ export const useUserStore = defineStore("User", () => {
     if (!(await confirmCurrentUserToggle(t("dialog.user.info.booping"), !currentUser.value.isBoopingEnabled))) {
       return;
     }
-    userRequest.saveCurrentUser({
+    await userRequest.saveCurrentUser({
       isBoopingEnabled: !currentUser.value.isBoopingEnabled,
     });
   }
@@ -892,7 +474,7 @@ export const useUserStore = defineStore("User", () => {
     if (!(await confirmCurrentUserToggle(t("dialog.user.info.show_mutual_friends"), currentUser.value.hasSharedConnectionsOptOut))) {
       return;
     }
-    userRequest.saveCurrentUser({
+    await userRequest.saveCurrentUser({
       hasSharedConnectionsOptOut: !currentUser.value.hasSharedConnectionsOptOut,
     });
   }
@@ -901,34 +483,37 @@ export const useUserStore = defineStore("User", () => {
     if (!(await confirmCurrentUserToggle(t("dialog.user.info.show_discord_connections"), currentUser.value.hasDiscordFriendsOptOut))) {
       return;
     }
-    userRequest.saveCurrentUser({
+    await userRequest.saveCurrentUser({
       hasDiscordFriendsOptOut: !currentUser.value.hasDiscordFriendsOptOut,
     });
   }
 
   async function toggleReducedProfileAnimations() {
-    const accessReduceDecorAnim = !currentUserClientConfig.value.accessReduceDecorAnim;
-    if (!(await confirmCurrentUserToggle(t("dialog.user.info.reduced_profile_animations"), accessReduceDecorAnim))) {
+    const isAccessReduceDecorAnim = !currentUserClientConfig.value.accessReduceDecorAnim;
+    if (!(await confirmCurrentUserToggle(t("dialog.user.info.reduced_profile_animations"), isAccessReduceDecorAnim))) {
       return;
     }
-    const { json } = await userRequest.saveClientConfig({ accessReduceDecorAnim });
+    const { json } = await userRequest.saveClientConfig({ accessReduceDecorAnim: isAccessReduceDecorAnim });
     currentUserClientConfig.value = json;
   }
 
   function getClientConfig() {
-    userRequest.getClientConfig().then(({ json }) => {
-      currentUserClientConfig.value = json;
-    });
+    void userRequest
+      .getClientConfig()
+      .then(({ json }) => {
+        currentUserClientConfig.value = json;
+      })
+      .catch(logUserStoreError("Error loading client config:"));
   }
 
-  function changePassword(currentPassword, password) {
+  function changePassword(currentPassword: string, password: string) {
     return userRequest.saveCurrentUser({
       currentPassword,
       password,
     });
   }
 
-  function changeContentFilterSettings(contentFilters) {
+  function changeContentFilterSettings(contentFilters: ContentFilter[]) {
     return userRequest.saveCurrentUser({
       contentFilters,
     });
@@ -940,28 +525,37 @@ export const useUserStore = defineStore("User", () => {
       if (isLoggedIn) {
         getCosmetics();
         getClientConfig();
-        getAllProductPurchases();
+        void getAllProductPurchases().catch(logUserStoreError("Error loading product purchases:"));
       }
     },
     { flush: "sync" }
   );
 
   function getCosmetics() {
-    cosmeticsRequest.getProfileEffects().then(({ json }) => {
-      json.forEach((effect) => {
-        cachedProfileEffects.set(effect.id, effect);
-      });
-    });
-    cosmeticsRequest.getIconFrames().then(({ json }) => {
-      json.forEach((frame) => {
-        cachedIconFrames.set(frame.id, frame);
-      });
-    });
-    cosmeticsRequest.getNameplateEffects().then(({ json }) => {
-      json.forEach((effect) => {
-        cachedNameplateEffects.set(effect.id, effect);
-      });
-    });
+    void cosmeticsRequest
+      .getProfileEffects()
+      .then(({ json }) => {
+        json.forEach((effect) => {
+          cachedProfileEffects.set(effect.id, effect);
+        });
+      })
+      .catch(logUserStoreError("Error loading profile effects:"));
+    void cosmeticsRequest
+      .getIconFrames()
+      .then(({ json }) => {
+        json.forEach((frame) => {
+          cachedIconFrames.set(frame.id, frame);
+        });
+      })
+      .catch(logUserStoreError("Error loading icon frames:"));
+    void cosmeticsRequest
+      .getNameplateEffects()
+      .then(({ json }) => {
+        json.forEach((effect) => {
+          cachedNameplateEffects.set(effect.id, effect);
+        });
+      })
+      .catch(logUserStoreError("Error loading nameplate effects:"));
   }
 
   return {
@@ -989,7 +583,7 @@ export const useUserStore = defineStore("User", () => {
     currentUserClientConfig,
     applyUserLanguage,
     applyPresenceLocation,
-    applyUserDialogLocation,
+    applyUserDialogLocation: applyUserDialogLocationForStore,
     setCachedUser,
     setCachedPurchases,
     getAllProductPurchases,

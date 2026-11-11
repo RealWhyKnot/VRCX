@@ -7,7 +7,7 @@ import { useGroupStore } from "../../../stores/group";
 import { useInstanceStore } from "../../../stores/instance";
 import { useUserStore } from "../../../stores/user";
 import { groupRequest } from "../../../api/group";
-import { handleGroupPermissions } from "../../../coordinators/group-coordinator";
+import { handleGroupPermissions } from "../../../coordinators/group-membership-coordinator";
 
 import { configRepository } from "../../../services/config";
 

@@ -268,7 +268,8 @@ import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 
 import { groupRequest } from "../../../api/group";
-import { applyGroup, showGroupDialog } from "../../../coordinators/group-coordinator";
+import { applyGroup } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { getFaviconUrl } from "../../../shared/utils/url-utils";
 import { useGroupStore } from "../../../stores/group";
 import { useUserStore } from "../../../stores/user";

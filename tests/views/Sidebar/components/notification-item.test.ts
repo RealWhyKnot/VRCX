@@ -75,7 +75,7 @@ vi.mock("../../../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args) => mocks.showUserDialog(...args),
 }));
 
-vi.mock("../../../../src/coordinators/group-coordinator", () => ({
+vi.mock("../../../../src/coordinators/group-dialog-coordinator", () => ({
   showGroupDialog: (...args) => mocks.showGroupDialog(...args),
 }));
 

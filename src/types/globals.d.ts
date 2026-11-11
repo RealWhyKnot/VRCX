@@ -96,9 +96,9 @@ type HostAppApi = {
   ResizeImageToFitLimits(base64data: string): Promise<string>;
   CropAllPrints(ugcFolderPath: string): Promise<void>;
   CropPrintImage(path: string): Promise<boolean>;
-  SavePrintToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string | null>;
-  SaveStickerToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string | null>;
-  SaveEmojiToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string | null>;
+  SavePrintToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string>;
+  SaveStickerToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string>;
+  SaveEmojiToFile(url: string, ugcFolderPath: string, monthFolder: string, fileName: string): Promise<string>;
 
   AddScreenshotMetadata(path: string, metadataString: string, worldId: string, changeFilename?: boolean): Promise<string>;
   GetExtraScreenshotData(path: string, carouselCache: boolean): Promise<string>;

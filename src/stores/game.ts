@@ -4,7 +4,7 @@ import { defineStore } from "pinia";
 import { configRepository } from "../services/config.ts";
 
 export const useGameStore = defineStore("Game", () => {
-  const state = reactive({
+  const state = reactive<{ lastCrashedTime: Date | null }>({
     lastCrashedTime: null,
   });
 
@@ -16,7 +16,7 @@ export const useGameStore = defineStore("Game", () => {
 
   const isGameRunning = ref(false);
 
-  const isGameNoVR = ref(true);
+  const isGameNoVR = ref<boolean | null>(true);
 
   const isSteamVRRunning = ref(false);
 
@@ -26,7 +26,7 @@ export const useGameStore = defineStore("Game", () => {
 
   const lastOfflineAt = ref(0);
 
-  async function init() {
+  async function init(): Promise<void> {
     isGameNoVR.value = await configRepository.getBool("isGameNoVR");
     const [savedMs, savedAt] = await Promise.all([
       configRepository.getString("VRCX_lastGameSessionMs", null),
@@ -36,34 +36,36 @@ export const useGameStore = defineStore("Game", () => {
     if (savedAt) lastOfflineAt.value = Number(savedAt) || 0;
   }
 
-  init();
+  init().catch((err: unknown) => {
+    console.error("Failed to load game store settings:", err);
+  });
 
-  function setIsGameRunning(value) {
-    isGameRunning.value = value;
+  function setIsGameRunning(isRunning: boolean): void {
+    isGameRunning.value = isRunning;
   }
 
-  function setIsGameNoVR(value) {
-    isGameNoVR.value = value;
+  function setIsGameNoVR(isNoVR: boolean): void {
+    isGameNoVR.value = isNoVR;
   }
 
-  function setIsSteamVRRunning(value) {
-    isSteamVRRunning.value = value;
+  function setIsSteamVRRunning(isRunning: boolean): void {
+    isSteamVRRunning.value = isRunning;
   }
 
-  function setIsHmdAfk(value) {
-    isHmdAfk.value = value;
+  function setIsHmdAfk(isAfk: boolean): void {
+    isHmdAfk.value = isAfk;
   }
 
-  function setLastSession(durationMs, offlineTimestamp) {
+  function setLastSession(durationMs: number, offlineTimestamp: number): void {
     lastSessionDurationMs.value = durationMs;
     lastOfflineAt.value = offlineTimestamp;
   }
 
-  function setLastCrashedTime(value) {
+  function setLastCrashedTime(value: Date | null): void {
     state.lastCrashedTime = value;
   }
 
-  async function getVRChatCacheSize() {
+  async function getVRChatCacheSize(): Promise<void> {
     VRChatCacheSizeLoading.value = true;
     const totalCacheSize = 30;
     VRChatTotalCacheSize.value = totalCacheSize;
@@ -72,7 +74,7 @@ export const useGameStore = defineStore("Game", () => {
     VRChatCacheSizeLoading.value = false;
   }
 
-  async function getVRChatRegistryKey(key) {
+  async function getVRChatRegistryKey(key: string): Promise<unknown> {
     if (isHostLinux) {
       return AppApi.GetVRChatRegistryKeyString(key);
     }

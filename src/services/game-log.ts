@@ -1,11 +1,33 @@
+type RawLogValue = string | null | undefined;
+
+export type GameLogEntry = {
+  dt: RawLogValue;
+  type: RawLogValue;
+  location?: RawLogValue;
+  worldName?: RawLogValue;
+  displayName?: RawLogValue;
+  userId?: RawLogValue;
+  json?: RawLogValue;
+  event?: RawLogValue;
+  videoUrl?: RawLogValue;
+  resourceUrl?: RawLogValue;
+  timestamp?: RawLogValue;
+  data?: RawLogValue;
+  url?: RawLogValue;
+  avatarName?: RawLogValue;
+  photonId?: RawLogValue;
+  screenshotPath?: RawLogValue;
+  inventoryId?: RawLogValue;
+};
+
 class GameLogService {
-  parseRawGameLog(dt, type, args) {
-    const gameLog = {
+  parseRawGameLog(dt: RawLogValue, type: RawLogValue, args: RawLogValue[]): GameLogEntry {
+    const gameLog: GameLogEntry = {
       dt,
       type,
     };
 
-    switch (type) {
+    switch (type ?? null) {
       case "location":
         gameLog.location = args[0];
         gameLog.worldName = args[1];
@@ -92,6 +114,7 @@ class GameLogService {
         gameLog.inventoryId = args[2];
         break;
 
+      case null:
       default:
         break;
     }
@@ -99,28 +122,28 @@ class GameLogService {
     return gameLog;
   }
 
-  async getAll() {
-    const gameLogs = [];
-    let done = false;
-    while (!done) {
+  async getAll(): Promise<GameLogEntry[]> {
+    const gameLogs: GameLogEntry[] = [];
+    let isDone = false;
+    while (!isDone) {
       const rawGameLogs = await LogWatcher.Get();
 
-      for (const [fileName, dt, type, ...args] of rawGameLogs) {
+      for (const [, dt, type, ...args] of rawGameLogs) {
         const gameLog = this.parseRawGameLog(dt, type, args);
         gameLogs.push(gameLog);
       }
       if (rawGameLogs.length === 0) {
-        done = true;
+        isDone = true;
       }
     }
     return gameLogs;
   }
 
-  async setDateTill(dateTill) {
+  async setDateTill(dateTill: string): Promise<void> {
     await LogWatcher.SetDateTill(dateTill);
   }
 
-  async reset() {
+  async reset(): Promise<void> {
     await LogWatcher.Reset();
   }
 }

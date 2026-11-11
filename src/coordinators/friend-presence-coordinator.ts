@@ -5,23 +5,53 @@ import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
 import { useFeedStore } from "../stores/feed";
 import { useFriendStore } from "../stores/friend";
+import type { FriendContext, FriendState } from "../stores/friend-types";
 import { useNotificationStore } from "../stores/notification";
+import { logError } from "../stores/notification/errors";
 import { syncFriendSearchIndex } from "./search-index-coordinator";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUserStore } from "../stores/user";
 import { userRequest } from "../api/user";
 import { watchState } from "../services/watch-state";
 
-export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $location_at, { now = Date.now, nowIso = () => new Date().toJSON() } = {}) {
-  const friendStore = useFriendStore();
+type PresenceFeedEntry = {
+  created_at: string;
+  type: "Online" | "Offline";
+  userId: string;
+  displayName: string;
+  location: string;
+  worldName: string;
+  groupName: string;
+  time: number | null;
+};
+
+type PresenceClock = {
+  now?: () => number;
+  nowIso?: () => string;
+};
+
+async function publishPresenceFeed(feed: PresenceFeedEntry): Promise<void> {
   const feedStore = useFeedStore();
   const notificationStore = useNotificationStore();
   const sharedFeedStore = useSharedFeedStore();
+  notificationStore.queueFeedNoty(feed);
+  sharedFeedStore.addEntry(feed).catch(logError);
+  const persistedFeed = await database.addOnlineOfflineToDatabase(feed);
+  if (persistedFeed) {
+    feedStore.addFeedEntry(persistedFeed);
+  }
+}
+
+export async function runUpdateFriendDelayedCheckFlow(
+  ctx: FriendContext,
+  newState: FriendState | "",
+  location: string,
+  locationAt: number,
+  { now = Date.now, nowIso = () => new Date().toJSON() }: PresenceClock = {}
+): Promise<void> {
+  const friendStore = useFriendStore();
   const { friends, localFavoriteFriends } = friendStore;
 
-  let feed;
-  let groupName;
-  let worldName;
   const id = ctx.id;
   if (AppDebug.debugFriendState) {
     console.log(`${ctx.name} updateFriendState ${ctx.state} -> ${newState}`);
@@ -35,19 +65,19 @@ export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $
   }
   const isVIP = localFavoriteFriends.has(id);
   const ref = ctx.ref;
-  if (ctx.state !== newState && typeof ctx.ref !== "undefined") {
+  if (ctx.state !== newState && ref !== undefined) {
     if ((newState === "offline" || newState === "active") && ctx.state === "online") {
-      ctx.ref.$online_for = "";
-      ctx.ref.$offline_for = now();
-      ctx.ref.$active_for = "";
+      ref.$online_for = 0;
+      ref.$offline_for = now();
+      ref.$active_for = 0;
       if (newState === "active") {
-        ctx.ref.$active_for = now();
+        ref.$active_for = now();
       }
       const ts = now();
-      const time = ts - $location_at;
-      worldName = await getWorldName(location);
-      groupName = await getGroupName(location);
-      feed = {
+      const time = ts - locationAt;
+      const worldName = await getWorldName(location);
+      const groupName = await getGroupName(location);
+      await publishPresenceFeed({
         created_at: nowIso(),
         type: "Offline",
         userId: ref.id,
@@ -56,23 +86,17 @@ export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $
         worldName,
         groupName,
         time,
-      };
-      notificationStore.queueFeedNoty(feed);
-      sharedFeedStore.addEntry(feed);
-      const persistedFeed = await database.addOnlineOfflineToDatabase(feed);
-      if (persistedFeed) {
-        feedStore.addFeedEntry(persistedFeed);
-      }
+      });
     } else if (newState === "online" && (ctx.state === "offline" || ctx.state === "active")) {
-      ctx.ref.$previousLocation = "";
-      ctx.ref.$travelingToTime = now();
-      ctx.ref.$location_at = now();
-      ctx.ref.$online_for = now();
-      ctx.ref.$offline_for = "";
-      ctx.ref.$active_for = "";
-      worldName = await getWorldName(location);
-      groupName = await getGroupName(location);
-      feed = {
+      ref.$previousLocation = "";
+      ref.$travelingToTime = now();
+      ref.$location_at = now();
+      ref.$online_for = now();
+      ref.$offline_for = 0;
+      ref.$active_for = 0;
+      const worldName = await getWorldName(location);
+      const groupName = await getGroupName(location);
+      await publishPresenceFeed({
         created_at: nowIso(),
         type: "Online",
         userId: id,
@@ -80,17 +104,11 @@ export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $
         location,
         worldName,
         groupName,
-        time: "",
-      };
-      notificationStore.queueFeedNoty(feed);
-      sharedFeedStore.addEntry(feed);
-      const persistedFeed = await database.addOnlineOfflineToDatabase(feed);
-      if (persistedFeed) {
-        feedStore.addFeedEntry(persistedFeed);
-      }
+        time: null,
+      });
     }
     if (newState === "active") {
-      ctx.ref.$active_for = now();
+      ref.$active_for = now();
     }
   }
   if (ctx.state !== newState) {
@@ -105,7 +123,11 @@ export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $
   friendStore.reindexSortedFriend(ctx);
 }
 
-export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Date.now, nowIso = () => new Date().toJSON() } = {}) {
+export async function runUpdateFriendFlow(
+  id: string,
+  stateInput?: FriendState,
+  { now = Date.now, nowIso = () => new Date().toJSON() }: PresenceClock = {}
+): Promise<void> {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
   const { friends, localFavoriteFriends, pendingOfflineMap } = friendStore;
@@ -127,21 +149,21 @@ export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Da
   }
   const isVIP = localFavoriteFriends.has(id);
   let location = "";
-  let $location_at = undefined;
+  let locationAt = Number.NaN;
   if (typeof ref !== "undefined") {
     location = ref.location;
-    $location_at = ref.$location_at;
+    locationAt = ref.$location_at;
 
-    const currentState = stateInput || ctx.state;
+    const currentState = stateInput ?? ctx.state;
 
-    if (currentState !== "online" && isRealInstance(ref.location) && ref.$lastFetch < now() - 10000) {
+    if (currentState !== "online" && isRealInstance(ref.location) && ref.$lastFetch !== undefined && ref.$lastFetch < now() - 10000) {
       console.log(`Fetching offline friend in an instance ${ctx.name}`);
-      userRequest.getUser({ userId: id });
+      userRequest.getUser({ userId: id }).catch(logError);
     }
 
-    if (currentState === "online" && ref.location === "offline" && ref.$lastFetch < now() - 10000) {
+    if (currentState === "online" && ref.location === "offline" && ref.$lastFetch !== undefined && ref.$lastFetch < now() - 10000) {
       console.log(`Fetching online friend in an offline location ${ctx.name}`);
-      userRequest.getUser({ userId: id });
+      userRequest.getUser({ userId: id }).catch(logError);
     }
   }
   if (typeof stateInput === "undefined" || ctx.state === stateInput) {
@@ -150,7 +172,7 @@ export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Da
 
       if (ctx.state === "online") {
         if (watchState.isFriendsLoaded) {
-          userRequest.getUser({ userId: id });
+          userRequest.getUser({ userId: id }).catch(logError);
         }
       }
     }
@@ -172,7 +194,7 @@ export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Da
       syncFriendSearchIndex(ctx);
     }
     if (!watchState.isFriendsLoaded) {
-      await runUpdateFriendDelayedCheckFlow(ctx, stateInput, location, $location_at, { now, nowIso });
+      await runUpdateFriendDelayedCheckFlow(ctx, stateInput, location, locationAt, { now, nowIso });
       return;
     }
 
@@ -189,7 +211,7 @@ export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Da
       startTime: now(),
       newState: stateInput,
       previousLocation: location,
-      previousLocationAt: $location_at,
+      previousLocationAt: locationAt,
     });
     ctx.pendingOffline = true;
     friendStore.reindexSortedFriend(ctx);
@@ -200,13 +222,13 @@ export async function runUpdateFriendFlow(id, stateInput = undefined, { now = Da
   if (typeof ref !== "undefined") {
     ctx.name = ref.displayName;
     syncFriendSearchIndex(ctx);
-    await runUpdateFriendDelayedCheckFlow(ctx, ctx.ref.state, location, $location_at, { now, nowIso });
+    await runUpdateFriendDelayedCheckFlow(ctx, ref.state, location, locationAt, { now, nowIso });
   } else {
     friendStore.reindexSortedFriend(ctx);
   }
 }
 
-export async function runPendingOfflineTickFlow({ now = Date.now, nowIso = () => new Date().toJSON() } = {}) {
+export async function runPendingOfflineTickFlow({ now = Date.now, nowIso = () => new Date().toJSON() }: PresenceClock = {}): Promise<void> {
   const friendStore = useFriendStore();
   const { friends, pendingOfflineMap, pendingOfflineDelay } = friendStore;
 
@@ -219,6 +241,10 @@ export async function runPendingOfflineTickFlow({ now = Date.now, nowIso = () =>
         continue;
       }
       ctx.pendingOffline = false;
+      if (pending.newState === undefined) {
+        pendingOfflineMap.delete(id);
+        continue;
+      }
       if (pending.newState === ctx.state) {
         console.error(ctx.name, "pendingOfflineCancelledStateMatched, this should never happen");
         pendingOfflineMap.delete(id);

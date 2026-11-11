@@ -1,6 +1,6 @@
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
-
+import type { FileAnalysis } from "vrchat";
 import { useAuthStore } from "../stores/auth";
 import { useAvatarStore } from "../stores/avatar";
 import { useInstanceStore } from "../stores/instance";
@@ -9,19 +9,57 @@ import { extractFileId, extractFileVersion, extractVariantVersion } from "../sha
 import { compareUnityVersion } from "../shared/utils/avatar";
 import { formatFileSize } from "../shared/utils/base/format";
 import { queryRequest } from "../api/query-request";
+import type { Json } from "../types/vrcx";
 
-async function deleteVRChatCache(ref) {
+type CacheSubject = {
+  id: string;
+  unityPackages: readonly CacheUnityPackage[];
+};
+
+type CacheUnityPackage = {
+  variant?: string | undefined;
+  platform?: string | undefined;
+  assetUrl?: string | null | undefined;
+  unitySortNumber?: number | undefined;
+};
+
+type OptionalCacheSubject = {
+  unityPackages?: CacheUnityPackage[] | undefined;
+  assetUrl?: string | undefined;
+};
+
+type CacheInfo = {
+  Item1: number;
+  Item2: boolean;
+  Item3: string;
+};
+
+type FileAnalysisJson = Omit<Json<FileAnalysis>, "avatarStats"> & {
+  avatarStats?: Json<FileAnalysis>["avatarStats"];
+  _fileSize?: string;
+  _uncompressedSize?: string;
+  _totalTextureUsage?: string;
+};
+
+function emptyCacheInfo(): CacheInfo {
+  return { Item1: -1, Item2: false, Item3: "" };
+}
+
+function toVersionNumber(value: string): number {
+  return value === "" ? Number.NaN : Number(value);
+}
+
+async function deleteVRChatCache(ref: Pick<CacheSubject, "unityPackages">) {
   const authStore = useAuthStore();
   const sdkUnityVersion = authStore.cachedConfig.sdkUnityVersion;
   let assetUrl = "";
   let variant = "";
-  for (let i = ref.unityPackages.length - 1; i > -1; i--) {
-    const unityPackage = ref.unityPackages[i];
+  for (const unityPackage of ref.unityPackages.slice().reverse()) {
     if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
       continue;
     }
     if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
-      assetUrl = unityPackage.assetUrl;
+      assetUrl = unityPackage.assetUrl ?? "";
       if (!unityPackage.variant || unityPackage.variant === "standard") {
         variant = "security";
       } else {
@@ -31,26 +69,25 @@ async function deleteVRChatCache(ref) {
     }
   }
   const id = extractFileId(assetUrl);
-  const version = parseInt(extractFileVersion(assetUrl), 10);
-  const variantVersion = parseInt(extractVariantVersion(assetUrl), 10);
+  const version = toVersionNumber(extractFileVersion(assetUrl));
+  const variantVersion = toVersionNumber(extractVariantVersion(assetUrl));
   await AssetBundleManager.DeleteCache(id, version, variant, variantVersion);
 }
 
-async function checkVRChatCache(ref) {
+async function checkVRChatCache(ref: OptionalCacheSubject): Promise<CacheInfo> {
   if (!ref.unityPackages) {
-    return { Item1: -1, Item2: false, Item3: "" };
+    return emptyCacheInfo();
   }
   const authStore = useAuthStore();
   const sdkUnityVersion = authStore.cachedConfig.sdkUnityVersion;
   let assetUrl = "";
   let variant = "";
-  for (let i = ref.unityPackages.length - 1; i > -1; i--) {
-    const unityPackage = ref.unityPackages[i];
+  for (const unityPackage of ref.unityPackages.slice().reverse()) {
     if (unityPackage.variant && unityPackage.variant !== "security") {
       continue;
     }
     if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
-      assetUrl = unityPackage.assetUrl;
+      assetUrl = unityPackage.assetUrl ?? "";
       if (!unityPackage.variant || unityPackage.variant === "standard") {
         variant = "security";
       } else {
@@ -60,25 +97,27 @@ async function checkVRChatCache(ref) {
     }
   }
   if (!assetUrl) {
-    assetUrl = ref.assetUrl;
+    assetUrl = ref.assetUrl ?? "";
   }
   const id = extractFileId(assetUrl);
-  const version = parseInt(extractFileVersion(assetUrl), 10);
-  const variantVersion = parseInt(extractVariantVersion(assetUrl), 10);
+  const version = toVersionNumber(extractFileVersion(assetUrl));
+  const variantVersion = toVersionNumber(extractVariantVersion(assetUrl));
   if (!id || !version) {
-    return { Item1: -1, Item2: false, Item3: "" };
+    return emptyCacheInfo();
   }
 
+  let pending: Promise<CacheInfo>;
   try {
-    return AssetBundleManager.CheckVRChatCache(id, version, variant, variantVersion);
-  } catch (err) {
+    pending = AssetBundleManager.CheckVRChatCache(id, version, variant, variantVersion);
+  } catch (err: unknown) {
     console.error("Failed reading VRChat cache size:", err);
-    toast.error(`Failed reading VRChat cache size: ${err}`);
-    return { Item1: -1, Item2: false, Item3: "" };
+    toast.error(`Failed reading VRChat cache size: ${String(err)}`);
+    return emptyCacheInfo();
   }
+  return pending;
 }
 
-async function getBundleDateSize(ref) {
+async function getBundleDateSize(ref: CacheSubject): Promise<Map<string, FileAnalysisJson>> {
   const authStore = useAuthStore();
   const sdkUnityVersion = authStore.cachedConfig.sdkUnityVersion;
   const avatarStore = useAvatarStore();
@@ -87,12 +126,8 @@ async function getBundleDateSize(ref) {
   const { worldDialog } = storeToRefs(worldStore);
   const instanceStore = useInstanceStore();
   const { currentInstanceWorld, currentInstanceLocation } = storeToRefs(instanceStore);
-  const bundleJson = {};
-  for (let i = ref.unityPackages.length - 1; i > -1; i--) {
-    const unityPackage = ref.unityPackages[i];
-    if (!unityPackage) {
-      continue;
-    }
+  const bundleJson = new Map<string, FileAnalysisJson>();
+  for (const unityPackage of ref.unityPackages.slice().reverse()) {
     if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
       continue;
     }
@@ -101,18 +136,13 @@ async function getBundleDateSize(ref) {
     }
 
     const platform = unityPackage.platform;
-    if (bundleJson[platform]) {
+    if (typeof platform === "undefined" || bundleJson.has(platform)) {
       continue;
     }
-    const assetUrl = unityPackage.assetUrl;
+    const assetUrl = unityPackage.assetUrl ?? "";
     const fileId = extractFileId(assetUrl);
-    const version = parseInt(extractFileVersion(assetUrl), 10);
-    let variant = "";
-    if (!unityPackage.variant || unityPackage.variant === "standard") {
-      variant = "security";
-    } else {
-      variant = unityPackage.variant;
-    }
+    const version = toVersionNumber(extractFileVersion(assetUrl));
+    const variant = !unityPackage.variant || unityPackage.variant === "standard" ? "security" : unityPackage.variant;
     if (!fileId || !version) {
       continue;
     }
@@ -121,11 +151,11 @@ async function getBundleDateSize(ref) {
       version,
       variant,
     });
-    if (!args?.json?.success) {
+    if (!args.json.success) {
       continue;
     }
 
-    const json = args.json;
+    const json: FileAnalysisJson = args.json;
     if (typeof json.fileSize !== "undefined") {
       json._fileSize = formatFileSize(json.fileSize);
     }
@@ -135,7 +165,7 @@ async function getBundleDateSize(ref) {
     if (typeof json.avatarStats?.totalTextureUsage !== "undefined") {
       json._totalTextureUsage = formatFileSize(json.avatarStats.totalTextureUsage);
     }
-    bundleJson[platform] = json;
+    bundleJson.set(platform, json);
 
     if (avatarDialog.value.id === ref.id) {
       avatarDialog.value.fileAnalysis[platform] = json;

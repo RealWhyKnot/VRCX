@@ -1,4 +1,4 @@
-function getVRChatResolution(res) {
+function getVRChatResolution(res: string) {
   switch (res) {
     case "1280x720":
       return "1280x720 (720p)";

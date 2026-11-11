@@ -1,7 +1,10 @@
+import type { CurrentUser } from "vrchat";
+
 import { i18n } from "../plugins/i18n";
 
 import Noty from "noty";
 
+import type { Json } from "../types/vrcx";
 import { closeWebSocket, initWebsocket } from "../services/websocket";
 import { escapeTag } from "../shared/utils/base/string";
 import { queryClient } from "../queries/client";
@@ -37,7 +40,7 @@ export async function runLogoutFlow() {
   watchState.isFavoritesLoaded = false;
   notificationStore.setNotificationInitStatus(false);
   await authStore.updateStoredUser(userStore.currentUser);
-  webApiService.clearCookies();
+  void webApiService.clearCookies().catch((err: unknown) => console.error(err));
   authStore.loginForm.lastUserLoggedIn = "";
   await configRepository.remove("lastUserLoggedIn");
   authStore.setAttemptingAutoLogin(false);
@@ -46,14 +49,14 @@ export async function runLogoutFlow() {
   queryClient.clear();
 }
 
-export function runLoginSuccessFlow(json) {
+export function runLoginSuccessFlow(json: Json<CurrentUser>) {
   const updateLoopStore = useUpdateLoopStore();
   const authStore = useAuthStore();
   const instanceStore = useInstanceStore();
 
   updateLoopStore.setNextCurrentUserRefresh(420);
   applyCurrentUser(json);
-  initWebsocket();
-  void authStore.getPermissions();
-  void instanceStore.loadInstanceCategoriesAndVibes();
+  void initWebsocket()?.catch((err: unknown) => console.error(err));
+  void authStore.getPermissions().catch((err: unknown) => console.error(err));
+  void instanceStore.loadInstanceCategoriesAndVibes().catch((err: unknown) => console.error(err));
 }

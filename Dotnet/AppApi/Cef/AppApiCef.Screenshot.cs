@@ -16,7 +16,7 @@ internal partial class AppApiCef
         string fileName = Path.GetFileNameWithoutExtension(path);
         if (!File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal) || !fileName.StartsWith("VRChat_", StringComparison.Ordinal))
         {
-            return string.Empty;
+            return FileSkipped();
         }
 
 
@@ -38,19 +38,27 @@ internal partial class AppApiCef
         }
         if (!success)
         {
-            return string.Empty;
+            return FileSkipped();
         }
 
-        if (changeFilename)
+        try
         {
-            string newFileName = $"{fileName}_{worldId}";
-            string newPath = Path.Join(Path.GetDirectoryName(path), newFileName + Path.GetExtension(path));
-            File.Move(path, newPath);
-            path = newPath;
+            if (changeFilename)
+            {
+                string newFileName = $"{fileName}_{worldId}";
+                string newPath = Path.Join(Path.GetDirectoryName(path), newFileName + Path.GetExtension(path));
+                File.Move(path, newPath);
+                path = newPath;
+            }
+
+            ScreenshotHelper.WriteVRCXMetadata(metadataString, path);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Access denied while adding screenshot metadata");
+            return FileAccessDenied();
         }
 
-        ScreenshotHelper.WriteVRCXMetadata(metadataString, path);
-
-        return path;
+        return FileSaved(path);
     }
 }

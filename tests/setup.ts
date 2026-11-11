@@ -8,7 +8,7 @@ const noopAsync = () => Promise.resolve("");
 const noopBridge = () => new Proxy({}, { get: () => noopAsync });
 
 Object.assign(globalThis, {
-  AppApi: noopBridge(),
+  AppApi: new Proxy({ CustomCss: noopAsync, CustomScript: noopAsync }, { get: () => noopAsync }),
   WebApi: noopBridge(),
   VRCXStorage: noopBridge(),
   SQLite: noopBridge(),

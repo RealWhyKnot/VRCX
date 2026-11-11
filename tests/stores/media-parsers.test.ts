@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { shallowRef } from "vue";
 
 vi.mock("../../src/shared/utils/base/format", () => ({
-  convertYoutubeTime: vi.fn((dur) => {
+  convertYoutubeTime: vi.fn((dur: string) => {
     const m = /(\d+)M/.exec(dur);
     const s = /(\d+)S/.exec(dur);
     return (m ? Number(m[1]) * 60 : 0) + (s ? Number(s[1]) : 0);
@@ -14,37 +15,64 @@ vi.mock("../../src/shared/utils/world", () => ({
   isRpcWorld: vi.fn(() => false),
 }));
 vi.mock("../../src/shared/utils/base/string", () => ({
-  replaceBioSymbols: vi.fn((s) => s),
+  replaceBioSymbols: vi.fn((s: string) => s),
 }));
 
 import { isRpcWorld } from "../../src/shared/utils/world";
 import { findUserByDisplayName } from "../../src/shared/utils/user";
 import { createMediaParsers } from "../../src/stores/gameLog/media-parsers";
 import { createNowPlayingSpecHandler } from "../../src/stores/gameLog/now-playing-spec";
+import type { NowPlaying } from "../../src/stores/gameLog/types";
 
-function makeDeps(overrides = {}) {
+function createNowPlayingState(): NowPlaying {
   return {
-    nowPlaying: { value: { url: "" } },
+    url: "",
+    name: "",
+    videoName: "",
+    length: 0,
+    startTime: 0,
+    offset: 0,
+    elapsed: 0,
+    percentage: 0,
+    remainingText: "",
+    playing: false,
+    thumbnailUrl: "",
+    speed: 1,
+    paused: false,
+    spec: false,
+    urlHidden: false,
+  };
+}
+
+function createDeps() {
+  return {
+    nowPlaying: shallowRef<NowPlaying>(createNowPlayingState()),
     setNowPlaying: vi.fn(),
     clearNowPlaying: vi.fn(),
     startNowPlayingTicker: vi.fn(),
     updateNowPlayingVideoName: vi.fn(),
     addGameLogVideo: vi.fn(),
-    userStore: { cachedUsers: new Map() },
+    userStore: { cachedUsers: new Map(), cachedUserIdsByDisplayName: new Map() },
     advancedSettingsStore: {
       youTubeApi: false,
       lookupYouTubeVideo: vi.fn(),
     },
-    ...overrides,
   };
 }
 
+type TestDeps = ReturnType<typeof createDeps>;
+
+function makeDeps(overrides: Partial<TestDeps> = {}): TestDeps {
+  return { ...createDeps(), ...overrides };
+}
+
 describe("addGameLogVideo", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createMediaParsers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isRpcWorld.mockReturnValue(false);
+    vi.mocked(isRpcWorld).mockReturnValue(false);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
   });
@@ -69,7 +97,7 @@ describe("addGameLogVideo", () => {
   });
 
   test("skips video in RPC world (non-YouTube)", async () => {
-    isRpcWorld.mockReturnValue(true);
+    vi.mocked(isRpcWorld).mockReturnValue(true);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
 
@@ -83,7 +111,7 @@ describe("addGameLogVideo", () => {
   });
 
   test("processes YouTube video in RPC world when videoId is YouTube", async () => {
-    isRpcWorld.mockReturnValue(true);
+    vi.mocked(isRpcWorld).mockReturnValue(true);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
 
@@ -174,12 +202,13 @@ describe("addGameLogVideo", () => {
 });
 
 describe("PyPyDance nowplaying events", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createNowPlayingSpecHandler>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isRpcWorld.mockReturnValue(true);
-    findUserByDisplayName.mockReturnValue(null);
+    vi.mocked(isRpcWorld).mockReturnValue(true);
+    vi.mocked(findUserByDisplayName).mockReturnValue(undefined);
     deps = makeDeps();
     parsers = createNowPlayingSpecHandler(deps);
   });
@@ -261,22 +290,23 @@ describe("PyPyDance nowplaying events", () => {
 });
 
 describe("addGameLogVRDancing", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createMediaParsers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isRpcWorld.mockReturnValue(true);
-    findUserByDisplayName.mockReturnValue(null);
+    vi.mocked(isRpcWorld).mockReturnValue(true);
+    vi.mocked(findUserByDisplayName).mockReturnValue(undefined);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
   });
 
-  test("parses VRDancing data and creates entry", () => {
+  test("parses VRDancing data and creates entry", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: 'VideoPlay(VRDancing) "https://example.com/v.mp4",10,300,42,"Alice","Cool Song"',
     };
-    parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
+    await parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -288,51 +318,52 @@ describe("addGameLogVRDancing", () => {
     );
   });
 
-  test("converts videoId -1 to YouTube", () => {
+  test("converts videoId -1 to YouTube", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: 'VideoPlay(VRDancing) "https://youtu.be/dQw4w9WgXcQ",0,300,-1,"Alice","Song"',
     };
 
-    parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
+    await parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
 
     expect(deps.setNowPlaying).toHaveBeenCalled();
   });
 
-  test("strips HTML from videoName", () => {
+  test("strips HTML from videoName", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: 'VideoPlay(VRDancing) "https://example.com/v.mp4",0,200,5,"Bob","[Tag]</b> Actual Title"',
     };
-    parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
+    await parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(expect.objectContaining({ videoName: "Actual Title" }));
   });
 
-  test("resets videoPos when it equals videoLength", () => {
+  test("resets videoPos when it equals videoLength", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: 'VideoPlay(VRDancing) "https://example.com/v.mp4",300,300,5,"Bob","Title"',
     };
-    parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
+    await parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(expect.objectContaining({ videoPos: 0 }));
   });
 
-  test("returns early for unparsable data", () => {
+  test("returns early for unparsable data", async () => {
     const gameLog = { dt: "2024-01-01", data: "bad data" };
-    parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
+    await parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 });
 
 describe("ZuwaZuwaDance nowplaying events", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createNowPlayingSpecHandler>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isRpcWorld.mockReturnValue(true);
-    findUserByDisplayName.mockReturnValue(null);
+    vi.mocked(isRpcWorld).mockReturnValue(true);
+    vi.mocked(findUserByDisplayName).mockReturnValue(undefined);
     deps = makeDeps();
     parsers = createNowPlayingSpecHandler(deps);
   });
@@ -407,21 +438,22 @@ describe("ZuwaZuwaDance nowplaying events", () => {
 });
 
 describe("addGameLogLSMedia", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createMediaParsers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    findUserByDisplayName.mockReturnValue(null);
+    vi.mocked(findUserByDisplayName).mockReturnValue(undefined);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
   });
 
-  test("parses LSMedia log correctly", () => {
+  test("parses LSMedia log correctly", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: "LSMedia 0,6298.292,Natsumi-sama,The Outfit (2022),",
     };
-    parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
+    await parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -433,46 +465,47 @@ describe("addGameLogLSMedia", () => {
     );
   });
 
-  test("returns early for empty video name (regex does not match)", () => {
+  test("returns early for empty video name (regex does not match)", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: "LSMedia 0,4268.981,Natsumi-sama,,",
     };
-    parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
+    await parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("returns early for unparsable data", () => {
+  test("returns early for unparsable data", async () => {
     const gameLog = { dt: "2024-01-01", data: "bad data" };
-    parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
+    await parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("looks up userId when displayName given", () => {
-    findUserByDisplayName.mockReturnValue({ id: "usr_found" });
+  test("looks up userId when displayName given", async () => {
+    vi.mocked(findUserByDisplayName<{ id: string; displayName: string }>).mockReturnValue({ id: "usr_found", displayName: "Alice" });
 
     const gameLog = {
       dt: "2024-01-01",
       data: "LSMedia 0,100,Alice,Movie,",
     };
-    parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
+    await parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(expect.objectContaining({ userId: "usr_found" }));
   });
 });
 
 describe("addGameLogPopcornPalace", () => {
-  let deps, parsers;
+  let deps: TestDeps;
+  let parsers: ReturnType<typeof createMediaParsers>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    findUserByDisplayName.mockReturnValue(null);
+    vi.mocked(findUserByDisplayName).mockReturnValue(undefined);
     deps = makeDeps();
     parsers = createMediaParsers(deps);
   });
 
-  test("parses PopcornPalace JSON data", () => {
+  test("parses PopcornPalace JSON data", async () => {
     const json = JSON.stringify({
       videoName: "How to Train Your Dragon",
       videoPos: 37.28,
@@ -487,7 +520,7 @@ describe("addGameLogPopcornPalace", () => {
       dt: "2024-01-01",
       data: `VideoPlay(PopcornPalace) ${json}`,
     };
-    parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
+    await parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -500,7 +533,7 @@ describe("addGameLogPopcornPalace", () => {
     );
   });
 
-  test("calls clearNowPlaying when videoName is empty", () => {
+  test("calls clearNowPlaying when videoName is empty", async () => {
     const json = JSON.stringify({
       videoName: "",
       videoPos: 0,
@@ -511,31 +544,31 @@ describe("addGameLogPopcornPalace", () => {
       dt: "2024-01-01",
       data: `VideoPlay(PopcornPalace) ${json}`,
     };
-    parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
+    await parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
 
     expect(deps.clearNowPlaying).toHaveBeenCalled();
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("returns early for null data", () => {
-    const gameLog = { dt: "2024-01-01", data: null };
-    parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
+  test("returns early for empty data", async () => {
+    const gameLog = { dt: "2024-01-01", data: "" };
+    await parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
     expect(deps.clearNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("returns early for invalid JSON", () => {
+  test("returns early for invalid JSON", async () => {
     const gameLog = {
       dt: "2024-01-01",
       data: "VideoPlay(PopcornPalace) {bad json",
     };
-    parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
+    await parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("updates existing nowPlaying when URL matches", () => {
+  test("updates existing nowPlaying when URL matches", async () => {
     deps.nowPlaying.value.url = "Movie Title";
     parsers = createMediaParsers(deps);
 
@@ -550,7 +583,7 @@ describe("addGameLogPopcornPalace", () => {
       dt: "2024-01-01",
       data: `VideoPlay(PopcornPalace) ${json}`,
     };
-    parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
+    await parsers.addGameLogPopcornPalace(gameLog, "wrld_123:456");
 
     expect(deps.setNowPlaying).toHaveBeenCalledWith(
       expect.objectContaining({

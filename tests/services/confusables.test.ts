@@ -23,9 +23,7 @@ describe("removeConfusables", () => {
   });
 
   test("strips combining marks", () => {
-    const input = "e\u0301";
-    const result = removeConfusables(input);
-    expect(result).toBe("e");
+    expect(removeConfusables("e\u0301")).toBe("e");
   });
 
   test("returns empty string for empty input", () => {

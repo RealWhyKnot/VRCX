@@ -15,31 +15,36 @@ export async function runHandleAutoLoginFlow({ isOnline = () => navigator.onLine
     return;
   }
   authStore.setAttemptingAutoLogin(true);
-  const user = await authStore.getSavedCredentials(authStore.loginForm.lastUserLoggedIn);
-  if (!user) {
+  const savedUser = await authStore.getSavedCredentials(authStore.loginForm.lastUserLoggedIn);
+  if (!savedUser) {
     console.log("No saved credentials found for auto login.");
     authStore.setAttemptingAutoLogin(false);
     return;
   }
-  if (advancedSettingsStore.enablePrimaryPassword && user.loginParams.password) {
+  if (!savedUser.loginParams) {
+    throw new Error("Saved credentials have no login params");
+  }
+  if (advancedSettingsStore.enablePrimaryPassword && savedUser.loginParams.password) {
     console.error("Primary password is enabled, this disables auto login.");
     authStore.setAttemptingAutoLogin(false);
     await authStore.handleLogoutEvent();
     return;
   }
   const currentTimestamp = Date.now();
-  const attemptsInLastHour = Array.from(authStore.autoLoginAttempts).filter((timestamp) => timestamp > currentTimestamp - 3600000).length;
+  const attemptsInLastHour = Array.from(authStore.autoLoginAttempts).filter(
+    (timestamp) => typeof timestamp === "number" && timestamp > currentTimestamp - 3600000
+  ).length;
   if (attemptsInLastHour >= 3) {
     console.error("More than 3 auto login attempts within the past hour, logging out instead of attempting auto login.");
     authStore.setAttemptingAutoLogin(false);
     await authStore.handleLogoutEvent();
-    AppApi.FlashWindow();
+    await AppApi.FlashWindow();
     return;
   }
   authStore.autoLoginAttempts.add(currentTimestamp);
   console.log("Attempting automatic login...");
   try {
-    await authStore.relogin(user);
+    await authStore.relogin(savedUser);
     if (AppDebug.errorNoty) {
       toast.dismiss(AppDebug.errorNoty);
     }

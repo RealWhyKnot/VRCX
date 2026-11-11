@@ -5,7 +5,7 @@ import { sqliteService, type DatabaseRow } from "../sqlite.ts";
 
 type GameLogUserRef = {
   id: string;
-  displayName?: string | null;
+  displayName?: string | null | undefined;
 };
 
 type InstanceGroup = {

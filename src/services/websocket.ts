@@ -5,11 +5,13 @@ import { useFriendStore } from "../stores/friend";
 import { useGalleryStore } from "../stores/gallery";
 import { useInstanceStore } from "../stores/instance";
 import { useNotificationStore } from "../stores/notification";
+import type { NotificationEntry } from "../stores/notification/types";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
 import { applyUser, applyCurrentUser } from "../coordinators/user-coordinator";
-import { onGroupLeft, applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
+import { onGroupLeft } from "../coordinators/group-membership-coordinator";
+import { applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
 import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-relationship-coordinator";
 import { parseLocation } from "../shared/utils/location-parser";
 import { debounce } from "../shared/utils/common";
@@ -22,17 +24,80 @@ import { watchState } from "./watch-state";
 
 import * as workerTimers from "worker-timers";
 
-let webSocket = null;
-let lastWebSocketMessage = "";
-let webSocketClosedGracefully = true;
+type UserUpdate = Parameters<typeof applyUser>[0];
+type CurrentUserUpdate = Parameters<typeof applyCurrentUser>[0];
+type GroupMemberUpdate = Parameters<typeof handleGroupMember>[0]["json"];
 
-const refreshOwnedItems = debounce(() => useUserStore().getAllProductPurchases(), 5000);
+type PipelineRecord = Record<string, unknown>;
+
+type PipelineMessage = { type: unknown; content: unknown; err: unknown };
+
+let webSocket: WebSocket | null = null;
+let lastWebSocketMessage = "";
+let isWebSocketClosedGracefully = true;
+
+const ignoredContentRefreshTypes = new Set(["sticker", "prints", "avatar", "world", "created", "avatargallery", "invitePhoto"]);
+
+const refreshOwnedItems = debounce(() => {
+  useUserStore().getAllProductPurchases().catch(logError);
+}, 5000);
 
 export const wsState = reactive({
   connected: false,
   messageCount: 0,
   bytesReceived: 0,
 });
+
+function isRecord(value: unknown): value is PipelineRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+function isPipelineMessage(value: unknown): value is PipelineMessage {
+  return isRecord(value);
+}
+
+function isUserUpdate(value: unknown): value is UserUpdate {
+  return isRecord(value);
+}
+
+function isCurrentUserUpdate(value: unknown): value is CurrentUserUpdate {
+  return isRecord(value);
+}
+
+function isGroupMemberUpdate(value: unknown): value is GroupMemberUpdate {
+  return isRecord(value);
+}
+
+function isNotificationEntry(value: PipelineRecord): value is NotificationEntry {
+  return stringField(value, "id") !== undefined && stringField(value, "type") !== undefined;
+}
+
+function field(record: PipelineRecord, key: string): unknown {
+  return record[key];
+}
+
+function stringField(record: PipelineRecord, key: string): string | undefined {
+  const value = field(record, key);
+  return typeof value === "string" ? value : undefined;
+}
+
+function numberField(record: PipelineRecord, key: string): number | undefined {
+  const value = field(record, key);
+  return typeof value === "number" ? value : undefined;
+}
+
+function userWithId(record: PipelineRecord): UserUpdate | undefined {
+  const user = field(record, "user");
+  return isUserUpdate(user) && Boolean(user.id) ? user : undefined;
+}
+
+function logError(err: unknown): void {
+  console.error(err);
+}
 
 export function initWebsocket() {
   if (!watchState.isFriendsLoaded || webSocket !== null) {
@@ -42,19 +107,38 @@ export function initWebsocket() {
     method: "GET",
   })
     .then((json) => {
-      const args = {
-        json,
-      };
-      if (args.json.ok) {
-        connectWebSocket(args.json.token);
+      if (!isRecord(json)) {
+        throw new Error("WebSocket auth response is not an object");
+      }
+      const token = field(json, "token");
+      if (field(json, "ok") && typeof token === "string") {
+        connectWebSocket(token);
       }
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("WebSocket init error:", err);
     });
 }
 
-function connectWebSocket(token) {
+function parsePipelineMessage(data: string): PipelineMessage {
+  const json: unknown = JSON.parse(data);
+  if (!isPipelineMessage(json)) {
+    throw new Error("WebSocket message is not an object");
+  }
+  if (typeof json.content === "string") {
+    try {
+      const content: unknown = JSON.parse(json.content);
+      json.content = content;
+    } catch (err) {
+      if (AppDebug.debugWebSocket) {
+        console.log("WebSocket content is not JSON", err);
+      }
+    }
+  }
+  return json;
+}
+
+function connectWebSocket(token: string) {
   const userStore = useUserStore();
   const notificationStore = useNotificationStore();
   const friendStore = useFriendStore();
@@ -64,11 +148,11 @@ function connectWebSocket(token) {
   const socket = new WebSocket(`${AppDebug.websocketDomain}/?auth=${token}`);
   socket.onopen = () => {
     wsState.connected = true;
-    if (!webSocketClosedGracefully && watchState.isLoggedIn && watchState.isFriendsLoaded) {
+    if (!isWebSocketClosedGracefully && watchState.isLoggedIn && watchState.isFriendsLoaded) {
       console.warn("WebSocket reconnected after unexpected closure");
-      webSocketClosedGracefully = true;
-      notificationStore.refreshNotifications();
-      friendStore.refreshFriends();
+      isWebSocketClosedGracefully = true;
+      notificationStore.refreshNotifications().catch(logError);
+      friendStore.refreshFriends().catch(logError);
     }
     if (AppDebug.debugWebSocket) {
       console.log("WebSocket connected");
@@ -85,13 +169,13 @@ function connectWebSocket(token) {
     } catch (err) {
       console.error("Error closing WebSocket:", err);
     }
-    webSocketClosedGracefully = code === 1000 || code === 1001;
-    if (!webSocketClosedGracefully || AppDebug.debugWebSocket) {
+    isWebSocketClosedGracefully = code === 1000 || code === 1001;
+    if (!isWebSocketClosedGracefully || AppDebug.debugWebSocket) {
       console.log("WebSocket closed", { code, reason });
     }
     workerTimers.setTimeout(() => {
       if (watchState.isLoggedIn && watchState.isFriendsLoaded && webSocket === null) {
-        initWebsocket();
+        void initWebsocket()?.catch(logError);
       }
     }, 5000);
   };
@@ -100,14 +184,14 @@ function connectWebSocket(token) {
       toast.dismiss(AppDebug.errorNoty);
     }
     AppDebug.errorNoty = toast.error("WebSocket Error");
-    socket.onclose(
+    socket.onclose?.(
       new CloseEvent("close", {
         code: 1006,
         reason: "WebSocket Error",
       })
     );
   };
-  socket.onmessage = ({ data }) => {
+  socket.onmessage = ({ data }: MessageEvent<string>) => {
     try {
       wsState.messageCount++;
       wsState.bytesReceived += data.length;
@@ -115,17 +199,14 @@ function connectWebSocket(token) {
         return;
       }
       lastWebSocketMessage = data;
-      let json;
-      try {
-        json = JSON.parse(data);
-        json.content = JSON.parse(json.content);
-      } catch {}
+      const json = parsePipelineMessage(data);
       handlePipeline({
         json,
       });
       if (AppDebug.debugWebSocket && json.content) {
         let displayName = "";
-        const user = userStore.cachedUsers.get(json.content.userId);
+        const userId = isRecord(json.content) ? field(json.content, "userId") : undefined;
+        const user = typeof userId === "string" ? userStore.cachedUsers.get(userId) : undefined;
         if (user) {
           displayName = user.displayName;
         }
@@ -158,10 +239,10 @@ export function reconnectWebSocket() {
     return;
   }
   closeWebSocket();
-  initWebsocket();
+  void initWebsocket()?.catch(logError);
 }
 
-function handlePipeline(args) {
+function handlePipeline(args: { json: PipelineMessage }) {
   const userStore = useUserStore();
 
   const galleryStore = useGalleryStore();
@@ -176,122 +257,160 @@ function handlePipeline(args) {
     if (AppDebug.errorNoty) {
       toast.dismiss(AppDebug.errorNoty);
     }
-    AppDebug.errorNoty = toast.error(`WebSocket Error: ${err}`);
+    AppDebug.errorNoty = toast.error(`WebSocket Error: ${JSON.stringify(err)}`);
     return;
   }
   if (typeof content === "undefined") {
     console.error("PIPELINE: missing content", args);
     return;
   }
-  if (typeof content.user !== "undefined") {
-    delete content.user.state;
+  const record: PipelineRecord = isRecord(content) ? content : {};
+  const recordUser = field(record, "user");
+  if (isRecord(recordUser)) {
+    delete recordUser["state"];
   }
   switch (type) {
-    case "notification":
+    case "notification": {
+      const notificationId = stringField(record, "id");
       notificationStore.handleNotification({
-        json: content,
+        json: record,
         params: {
-          notificationId: content.id,
+          notificationId,
         },
       });
-      notificationStore.handlePipelineNotification({
-        json: content,
-        params: {
-          notificationId: content.id,
-        },
-      });
-      break;
-
-    case "notification-v2":
-      console.log("notification-v2", content);
-      notificationStore.handleNotificationV2({
-        json: content,
-        params: {
-          notificationId: content.id,
-        },
-      });
-      break;
-
-    case "notification-v2-delete":
-      console.log("notification-v2-delete", content);
-      for (const id of content.ids) {
-        notificationStore.handleNotificationV2Hide(id);
-        notificationStore.handleNotificationSee(id);
-      }
-      break;
-
-    case "notification-v2-update":
-      console.log("notification-v2-update", content);
-      notificationStore.handleNotificationV2Update({
-        json: content.updates,
-        params: {
-          notificationId: content.id,
-        },
-      });
-      break;
-
-    case "see-notification":
-      notificationStore.handleNotificationSee(content);
-      break;
-
-    case "hide-notification":
-      notificationStore.handleNotificationHide(content);
-      notificationStore.handleNotificationSee(content);
-      break;
-
-    case "response-notification":
-      notificationStore.handleNotificationHide(content.notificationId);
-      notificationStore.handleNotificationSee(content.notificationId);
-      break;
-
-    case "friend-add":
-      applyUser(content.user);
-      handleFriendAdd({
-        params: {
-          userId: content.userId,
-        },
-      });
-      break;
-
-    case "friend-delete":
-      handleFriendDelete({
-        params: {
-          userId: content.userId,
-        },
-      });
-      break;
-
-    case "friend-online": {
-      const $location = parseLocation(content.location);
-      const $travelingToLocation = parseLocation(content.travelingToLocation);
-      if (content?.user?.id) {
-        const onlineJson = {
-          id: content.userId,
-          platform: content.platform,
-          state: "online",
-
-          location: content.location,
-          worldId: content.worldId,
-          instanceId: $location.instanceId,
-          travelingToLocation: content.travelingToLocation,
-          travelingToWorld: $travelingToLocation.worldId,
-          travelingToInstance: $travelingToLocation.instanceId,
-
-          ...content.user,
-        };
-        applyUser(onlineJson);
-      } else {
-        console.error("friend-online missing user id", content);
-        runUpdateFriendFlow(content.userId, "online");
+      if (isNotificationEntry(record)) {
+        notificationStore.handlePipelineNotification({
+          json: record,
+        });
       }
       break;
     }
 
-    case "friend-active":
-      if (content?.user?.id) {
-        const activeJson = {
-          id: content.userId,
-          platform: content.platform,
+    case "notification-v2": {
+      console.log("notification-v2", content);
+      notificationStore.handleNotificationV2({
+        json: record,
+        params: {
+          notificationId: stringField(record, "id"),
+        },
+      });
+      break;
+    }
+
+    case "notification-v2-delete": {
+      console.log("notification-v2-delete", content);
+      const ids = field(record, "ids");
+      if (isUnknownArray(ids)) {
+        for (const id of ids) {
+          if (typeof id !== "string") continue;
+          notificationStore.handleNotificationV2Hide(id);
+          notificationStore.handleNotificationSee(id);
+        }
+      }
+      break;
+    }
+
+    case "notification-v2-update": {
+      console.log("notification-v2-update", content);
+      const updates = field(record, "updates");
+      const notificationId = stringField(record, "id");
+      if (isRecord(updates) && notificationId !== undefined) {
+        notificationStore.handleNotificationV2Update({
+          json: updates,
+          params: {
+            notificationId,
+          },
+        });
+      }
+      break;
+    }
+
+    case "see-notification":
+      if (typeof content === "string") {
+        notificationStore.handleNotificationSee(content);
+      }
+      break;
+
+    case "hide-notification":
+      if (typeof content === "string") {
+        notificationStore.handleNotificationHide(content);
+        notificationStore.handleNotificationSee(content);
+      }
+      break;
+
+    case "response-notification": {
+      const notificationId = stringField(record, "notificationId");
+      if (notificationId !== undefined) {
+        notificationStore.handleNotificationHide(notificationId);
+        notificationStore.handleNotificationSee(notificationId);
+      }
+      break;
+    }
+
+    case "friend-add": {
+      const userId = stringField(record, "userId");
+      const addedUser = field(record, "user");
+      if (isUserUpdate(addedUser)) {
+        applyUser(addedUser);
+      }
+      if (userId !== undefined) {
+        handleFriendAdd({
+          params: {
+            userId,
+          },
+        });
+      }
+      break;
+    }
+
+    case "friend-delete": {
+      const userId = stringField(record, "userId");
+      if (userId !== undefined) {
+        handleFriendDelete({
+          params: {
+            userId,
+          },
+        });
+      }
+      break;
+    }
+
+    case "friend-online": {
+      const location = stringField(record, "location");
+      const travelingToLocation = stringField(record, "travelingToLocation");
+      const parsedLocation = parseLocation(location);
+      const parsedTravelingToLocation = parseLocation(travelingToLocation);
+      const user = userWithId(record);
+      if (user) {
+        const onlineJson: UserUpdate = {
+          platform: stringField(record, "platform"),
+          state: "online",
+
+          location,
+          worldId: stringField(record, "worldId"),
+          instanceId: parsedLocation.instanceId,
+          travelingToLocation,
+          travelingToWorld: parsedTravelingToLocation.worldId,
+          travelingToInstance: parsedTravelingToLocation.instanceId,
+
+          ...user,
+        };
+        applyUser(onlineJson);
+      } else {
+        console.error("friend-online missing user id", content);
+        const userId = stringField(record, "userId");
+        if (userId !== undefined) {
+          runUpdateFriendFlow(userId, "online").catch(logError);
+        }
+      }
+      break;
+    }
+
+    case "friend-active": {
+      const user = userWithId(record);
+      if (user) {
+        const activeJson: UserUpdate = {
+          platform: stringField(record, "platform"),
           state: "active",
 
           location: "offline",
@@ -301,63 +420,80 @@ function handlePipeline(args) {
           travelingToWorld: "offline",
           travelingToInstance: "offline",
 
-          ...content.user,
+          ...user,
         };
         applyUser(activeJson);
       } else {
         console.error("friend-active missing user id", content);
-        runUpdateFriendFlow(content.userId, "active");
+        const userId = stringField(record, "userId");
+        if (userId !== undefined) {
+          runUpdateFriendFlow(userId, "active").catch(logError);
+        }
       }
-      break;
-
-    case "friend-offline": {
-      const offlineJson = {
-        id: content.userId,
-        platform: content.platform,
-        state: "offline",
-
-        location: "offline",
-        worldId: "offline",
-        instanceId: "offline",
-        travelingToLocation: "offline",
-        travelingToWorld: "offline",
-        travelingToInstance: "offline",
-      };
-
-      applyUser(offlineJson);
       break;
     }
 
-    case "friend-update":
-      applyUser(content.user);
-      break;
+    case "friend-offline": {
+      const userId = stringField(record, "userId");
+      if (userId !== undefined) {
+        const offlineJson: UserUpdate = {
+          id: userId,
+          platform: stringField(record, "platform"),
+          state: "offline",
 
-    case "friend-location": {
-      const $location1 = parseLocation(content.location);
-      const $travelingToLocation1 = parseLocation(content.travelingToLocation);
-      if (!content?.user?.id) {
-        console.error("friend-location missing user id", content);
-        const jankLocationJson = {
-          id: content.userId,
-          location: content.location,
-          worldId: content.worldId,
-          instanceId: $location1.instanceId,
-          travelingToLocation: content.travelingToLocation,
-          travelingToWorld: $travelingToLocation1.worldId,
-          travelingToInstance: $travelingToLocation1.instanceId,
+          location: "offline",
+          worldId: "offline",
+          instanceId: "offline",
+          travelingToLocation: "offline",
+          travelingToWorld: "offline",
+          travelingToInstance: "offline",
         };
 
-        applyUser(jankLocationJson);
+        applyUser(offlineJson);
+      }
+      break;
+    }
+
+    case "friend-update": {
+      const updatedUser = field(record, "user");
+      if (isUserUpdate(updatedUser)) {
+        applyUser(updatedUser);
+      }
+      break;
+    }
+
+    case "friend-location": {
+      const location = stringField(record, "location");
+      const travelingToLocation = stringField(record, "travelingToLocation");
+      const parsedLocation = parseLocation(location);
+      const parsedTravelingToLocation = parseLocation(travelingToLocation);
+      const user = userWithId(record);
+      if (!user) {
+        console.error("friend-location missing user id", content);
+        const userId = stringField(record, "userId");
+        if (userId !== undefined) {
+          const jankLocationJson: UserUpdate = {
+            id: userId,
+            location,
+            worldId: stringField(record, "worldId"),
+            instanceId: parsedLocation.instanceId,
+            travelingToLocation,
+            travelingToWorld: parsedTravelingToLocation.worldId,
+            travelingToInstance: parsedTravelingToLocation.instanceId,
+          };
+
+          applyUser(jankLocationJson);
+        }
         break;
       }
-      const locationJson = {
-        location: content.location,
-        worldId: content.worldId,
-        instanceId: $location1.instanceId,
-        travelingToLocation: content.travelingToLocation,
-        travelingToWorld: $travelingToLocation1.worldId,
-        travelingToInstance: $travelingToLocation1.instanceId,
-        ...content.user,
+      const locationJson: UserUpdate = {
+        location,
+        worldId: stringField(record, "worldId"),
+        instanceId: parsedLocation.instanceId,
+        travelingToLocation,
+        travelingToWorld: parsedTravelingToLocation.worldId,
+        travelingToInstance: parsedTravelingToLocation.instanceId,
+        ...user,
         state: "online",
       };
       applyUser(locationJson);
@@ -365,68 +501,99 @@ function handlePipeline(args) {
       break;
     }
 
-    case "user-update":
-      applyCurrentUser(content.user);
+    case "user-update": {
+      const currentUser = field(record, "user");
+      if (isCurrentUserUpdate(currentUser)) {
+        applyCurrentUser(currentUser);
+      }
       break;
+    }
 
-    case "user-location":
-      if (content.userId !== userStore.currentUser.id) {
+    case "user-location": {
+      const location = stringField(record, "location");
+      const travelingToLocation = stringField(record, "travelingToLocation");
+      if (field(record, "userId") !== userStore.currentUser.id) {
         console.error("user-location wrong userId", content);
         break;
       }
+      if (location === undefined || travelingToLocation === undefined) {
+        break;
+      }
 
-      runSetCurrentUserLocationFlow(content.location, content.travelingToLocation);
+      runSetCurrentUserLocationFlow(location, travelingToLocation).catch(logError);
       break;
+    }
 
     case "group-joined":
       break;
 
-    case "group-left":
-      onGroupLeft(content.groupId);
+    case "group-left": {
+      const groupId = stringField(record, "groupId");
+      if (groupId !== undefined) {
+        onGroupLeft(groupId).catch(logError);
+      }
       break;
+    }
 
     case "group-role-updated": {
-      const groupId = content.role.groupId;
-      groupRequest.getGroup({ groupId, includeRoles: true }).then((args) => applyGroup(args.json));
+      const role = field(record, "role");
+      const groupId = isRecord(role) ? stringField(role, "groupId") : undefined;
+      if (groupId !== undefined) {
+        groupRequest
+          .getGroup({ groupId, includeRoles: true })
+          .then((args) => applyGroup(args.json))
+          .catch(logError);
+      }
       console.log("group-role-updated", content);
 
       break;
     }
 
-    case "group-member-updated":
-      var member = content.member;
+    case "group-member-updated": {
+      const member = field(record, "member");
       if (!member) {
         console.error("group-member-updated missing member", content);
         break;
       }
-      handleGroupMember({
-        json: member,
-        params: {
-          groupId: member.groupId,
-        },
-      });
+      if (isGroupMemberUpdate(member)) {
+        handleGroupMember({
+          json: member,
+        });
+      }
       console.log("group-member-updated", member);
       break;
+    }
 
     case "instance-queue-joined":
-    case "instance-queue-position":
-      var instanceId = content.instanceLocation;
-      var position = content.position ?? 0;
-      var queueSize = content.queueSize ?? 0;
-      instanceStore.instanceQueueUpdate(instanceId, position, queueSize);
+    case "instance-queue-position": {
+      const instanceId = stringField(record, "instanceLocation");
+      const position = numberField(record, "position") ?? 0;
+      const queueSize = numberField(record, "queueSize") ?? 0;
+      if (instanceId !== undefined) {
+        instanceStore.instanceQueueUpdate(instanceId, position, queueSize).catch(logError);
+      }
       break;
+    }
 
-    case "instance-queue-ready":
-      instanceStore.instanceQueueReady(content.instanceLocation);
+    case "instance-queue-ready": {
+      const instanceId = stringField(record, "instanceLocation");
+      if (instanceId !== undefined) {
+        instanceStore.instanceQueueReady(instanceId);
+      }
       break;
+    }
 
-    case "instance-queue-left":
-      instanceStore.removeQueuedInstance(content.instanceLocation);
+    case "instance-queue-left": {
+      const instanceId = stringField(record, "instanceLocation");
+      if (instanceId !== undefined) {
+        instanceStore.removeQueuedInstance(instanceId);
+      }
 
       break;
+    }
 
-    case "content-refresh":
-      var contentType = content.contentType;
+    case "content-refresh": {
+      const contentType = stringField(record, "contentType");
       console.log("content-refresh", content);
       if (contentType === "icon") {
         if (galleryStore.galleryDialogVisible && !galleryStore.galleryDialogIconsLoading) {
@@ -440,35 +607,29 @@ function handlePipeline(args) {
         if (galleryStore.galleryDialogVisible && !galleryStore.galleryDialogEmojisLoading) {
           galleryStore.refreshEmojiTable();
         }
-      } else if (contentType === "sticker") {
       } else if (contentType === "print") {
-        if (content.actionType === "created") {
-          galleryStore.tryDeleteOldPrints();
+        if (stringField(record, "actionType") === "created") {
+          galleryStore.tryDeleteOldPrints().catch(logError);
         } else if (galleryStore.galleryDialogVisible && !galleryStore.galleryDialogPrintsLoading) {
-          galleryStore.refreshPrintTable();
+          galleryStore.refreshPrintTable().catch(logError);
         }
-      } else if (contentType === "prints") {
-      } else if (contentType === "avatar") {
-      } else if (contentType === "world") {
-      } else if (contentType === "created") {
-      } else if (contentType === "avatargallery") {
-      } else if (contentType === "invitePhoto") {
       } else if (contentType === "inventory") {
         if (galleryStore.galleryDialogVisible && !galleryStore.galleryDialogInventoryLoading) {
-          galleryStore.getInventory();
+          galleryStore.getInventory().catch(logError);
         }
         refreshOwnedItems();
       } else if (!contentType) {
         console.log("content-refresh without contentType", content);
-      } else {
-        console.log("Unknown content-refresh type", content.contentType);
+      } else if (!ignoredContentRefreshTypes.has(contentType)) {
+        console.log("Unknown content-refresh type", contentType);
       }
       break;
+    }
 
     case "instance-closed": {
       const noty = {
         type: "instance.closed",
-        location: content.instanceLocation,
+        location: stringField(record, "instanceLocation"),
         message: "Instance Closed",
         created_at: new Date().toJSON(),
       };
@@ -477,13 +638,15 @@ function handlePipeline(args) {
       }
       notificationStore.queueNotificationNoty(noty);
       notificationStore.appendNotificationTableEntry(noty);
-      sharedFeedStore.addEntry(noty);
+      sharedFeedStore.addEntry(noty).catch(logError);
       break;
     }
 
-    case "economy-update":
-      userStore.setCurrentUserCredits(content?.walletBalance);
+    case "economy-update": {
+      const walletBalance = numberField(record, "walletBalance");
+      userStore.setCurrentUserCredits(walletBalance ?? null);
       break;
+    }
 
     default:
       console.log("Unknown pipeline type", args.json);

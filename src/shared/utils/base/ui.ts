@@ -92,7 +92,7 @@ async function applyThemeColor(themeKey: string, { persist = true }: { persist?:
 
 async function initThemeColor() {
   const storedKey = await configRepository.getString(THEME_COLOR_STORAGE_KEY);
-  const resolved = resolveThemeColor(storedKey ? storedKey : DEFAULT_THEME_COLOR_KEY);
+  const resolved = resolveThemeColor(storedKey !== null && storedKey !== "" ? storedKey : DEFAULT_THEME_COLOR_KEY);
   applyThemeColorStyle(resolved);
   currentThemeColor.value = resolved.key;
 }

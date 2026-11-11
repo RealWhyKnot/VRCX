@@ -19,7 +19,7 @@ vi.mock("../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -34,7 +34,7 @@ vi.mock("../../src/services/database", () => ({
   database: new Proxy(
     {},
     {
-      get: (_target, prop) => {
+      get: (_target: object, prop: string | symbol) => {
         if (prop === "__esModule") return false;
         return vi.fn().mockResolvedValue(null);
       },
@@ -46,11 +46,11 @@ vi.mock("../../src/services/config", () => ({
     init: vi.fn(),
     getString: vi.fn().mockResolvedValue("{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_key: string, fallback?: unknown) => fallback ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_key: string, fallback?: unknown) => fallback ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_key: string, fallback?: unknown) => fallback ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -64,7 +64,7 @@ vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
 vi.mock("vue-i18n", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-i18n")>();
   const i18n = actual.createI18n({
     locale: "en",
     fallbackLocale: "en",
@@ -79,12 +79,14 @@ vi.mock("vue-i18n", async (importOriginal) => {
   };
 });
 
-const mockShowUserDialog = vi.fn();
-const mockShowAvatarDialog = vi.fn();
-const mockShowGroupDialog = vi.fn();
-const mockShowWorldDialog = vi.fn();
-const mockGetInstanceFromShortName = vi.fn();
-const mockGroupStrictsearch = vi.fn();
+type MockFn = (...args: unknown[]) => unknown;
+
+const mockShowUserDialog = vi.fn<MockFn>();
+const mockShowAvatarDialog = vi.fn<MockFn>();
+const mockShowGroupDialog = vi.fn<MockFn>();
+const mockShowWorldDialog = vi.fn<MockFn>();
+const mockGetInstanceFromShortName = vi.fn<MockFn>();
+const mockGroupStrictsearch = vi.fn<MockFn>();
 
 vi.mock("../../src/stores/user", () => ({
   useUserStore: () => ({
@@ -122,13 +124,13 @@ vi.mock("../../src/stores/settings/appearance", () => ({
 function makeApiMock() {
   return {
     instanceRequest: {
-      getInstanceFromShortName: (...args) => mockGetInstanceFromShortName(...args),
+      getInstanceFromShortName: (...args: unknown[]) => mockGetInstanceFromShortName(...args),
     },
     userRequest: {
       getUsers: vi.fn().mockResolvedValue({ json: [] }),
     },
     groupRequest: {
-      groupStrictsearch: (...args) => mockGroupStrictsearch(...args),
+      groupStrictsearch: (...args: unknown[]) => mockGroupStrictsearch(...args),
     },
     queryRequest: {},
     miscRequest: {},
@@ -139,19 +141,19 @@ vi.mock("../../src/api/user", () => ({ userRequest: makeApiMock().userRequest })
 vi.mock("../../src/api/group", () => ({ groupRequest: makeApiMock().groupRequest }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mockShowUserDialog(...args),
+  showUserDialog: (...args: unknown[]) => mockShowUserDialog(...args),
   lookupUser: vi.fn(),
   applyUser: vi.fn(),
 }));
 vi.mock("../../src/coordinators/avatar-coordinator", () => ({
-  showAvatarDialog: (...args) => mockShowAvatarDialog(...args),
+  showAvatarDialog: (...args: unknown[]) => mockShowAvatarDialog(...args),
   getAvatarName: vi.fn(),
 }));
-vi.mock("../../src/coordinators/group-coordinator", () => ({
-  showGroupDialog: (...args) => mockShowGroupDialog(...args),
+vi.mock("../../src/coordinators/group-dialog-coordinator", () => ({
+  showGroupDialog: (...args: unknown[]) => mockShowGroupDialog(...args),
 }));
 vi.mock("../../src/coordinators/world-coordinator", () => ({
-  showWorldDialog: (...args) => mockShowWorldDialog(...args),
+  showWorldDialog: (...args: unknown[]) => mockShowWorldDialog(...args),
 }));
 
 vi.mock("vue-sonner", () => ({
@@ -166,7 +168,7 @@ vi.mock("vue-sonner", () => ({
 import { useSearchStore } from "../../src/stores/search";
 
 describe("useSearchStore", () => {
-  let store;
+  let store: ReturnType<typeof useSearchStore>;
 
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -275,22 +277,26 @@ describe("useSearchStore", () => {
       mockGetInstanceFromShortName.mockResolvedValue({
         json: { location: "wrld_abc:123", shortName: "AbCdEfGh" },
       });
-      await store.directAccessWorld("AbCdEfGh");
+      store.directAccessWorld("AbCdEfGh");
       expect(mockGetInstanceFromShortName).toHaveBeenCalledWith({
         shortName: "AbCdEfGh",
       });
-      expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "AbCdEfGh");
+      await vi.waitFor(() => {
+        expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "AbCdEfGh");
+      });
     });
 
     test("resolves vrch.at short URL via API", async () => {
       mockGetInstanceFromShortName.mockResolvedValue({
         json: { location: "wrld_abc:123", shortName: "XyZ12345" },
       });
-      await store.directAccessWorld("https://vrch.at/XyZ12345");
+      store.directAccessWorld("https://vrch.at/XyZ12345");
       expect(mockGetInstanceFromShortName).toHaveBeenCalledWith({
         shortName: "XyZ12345",
       });
-      expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "XyZ12345");
+      await vi.waitFor(() => {
+        expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "XyZ12345");
+      });
     });
 
     test("parses vrchat.com/home/world/ URL", () => {
@@ -315,11 +321,13 @@ describe("useSearchStore", () => {
           shortName: "myShort1",
         },
       });
-      await store.directAccessWorld("https://vrchat.com/home/launch?worldId=wrld_abc&instanceId=123&shortName=myShort1");
+      store.directAccessWorld("https://vrchat.com/home/launch?worldId=wrld_abc&instanceId=123&shortName=myShort1");
       expect(mockGetInstanceFromShortName).toHaveBeenCalledWith({
         shortName: "myShort1",
       });
-      expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "myShort1");
+      await vi.waitFor(() => {
+        expect(mockShowWorldDialog).toHaveBeenCalledWith("wrld_abc:123", "myShort1");
+      });
     });
 
     test("handles /home/ relative path by prepending https://vrchat.com", () => {

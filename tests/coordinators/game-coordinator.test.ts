@@ -41,8 +41,8 @@ const mocks = vi.hoisted(() => ({
     setBool: vi.fn().mockResolvedValue(undefined),
     setString: vi.fn().mockResolvedValue(undefined),
   },
-  addAvatarWearTime: vi.fn(),
-  runLastLocationResetFlow: vi.fn(),
+  addAvatarWearTime: vi.fn<(...args: unknown[]) => void>(),
+  runLastLocationResetFlow: vi.fn<(...args: unknown[]) => void>(),
 }));
 
 vi.mock("vue-sonner", () => ({
@@ -77,7 +77,7 @@ vi.mock("../../src/stores/avatar", () => ({
 }));
 
 vi.mock("../../src/coordinators/avatar-coordinator", () => ({
-  addAvatarWearTime: (...args) => mocks.addAvatarWearTime(...args),
+  addAvatarWearTime: (...args: unknown[]) => mocks.addAvatarWearTime(...args),
 }));
 
 vi.mock("../../src/stores/gameLog", () => ({
@@ -103,7 +103,7 @@ vi.mock("../../src/stores/location", () => ({
 }));
 
 vi.mock("../../src/coordinators/location-coordinator", () => ({
-  runLastLocationResetFlow: (...args) => mocks.runLastLocationResetFlow(...args),
+  runLastLocationResetFlow: (...args: unknown[]) => mocks.runLastLocationResetFlow(...args),
 }));
 
 vi.mock("../../src/stores/modal", () => ({

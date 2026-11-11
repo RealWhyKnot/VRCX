@@ -4,6 +4,25 @@ import { ref } from "vue";
 
 import en from "../../src/localization/en.json";
 
+type DialogResult = {
+  ok: boolean;
+  reason: string;
+  checked?: boolean;
+  value?: unknown;
+};
+
+function isDialogResult(value: unknown): value is DialogResult {
+  return typeof value === "object" && value !== null && "ok" in value && "reason" in value;
+}
+
+async function settle(pending: Promise<unknown>): Promise<DialogResult> {
+  const result = await pending;
+  if (!isDialogResult(result)) {
+    throw new Error("dialog resolved without a result");
+  }
+  return result;
+}
+
 vi.mock("../../src/views/Feed/Feed.vue", () => ({
   default: { template: "<div />" },
 }));
@@ -14,12 +33,12 @@ vi.mock("../../src/plugins/router", () => ({
     push: vi.fn(),
     replace: vi.fn(),
     currentRoute: ref({ path: "/", name: "", meta: {} }),
-    isReady: vi.fn().mockResolvedValue(true),
+    isReady: vi.fn(() => Promise.resolve(true)),
   },
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -36,7 +55,7 @@ vi.mock("../../src/services/database", () => ({
     {
       get: (_target, prop) => {
         if (prop === "__esModule") return false;
-        return vi.fn().mockResolvedValue(null);
+        return vi.fn(() => Promise.resolve(null));
       },
     }
   ),
@@ -44,17 +63,17 @@ vi.mock("../../src/services/database", () => ({
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_key: string, fallback?: string) => fallback ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_key: string, isFallback?: boolean) => isFallback ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_key: string, fallback?: number) => fallback ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_key: string, fallback?: number) => fallback ?? 0),
     setFloat: vi.fn(),
-    getObject: vi.fn().mockReturnValue(null),
+    getObject: vi.fn(() => null),
     setObject: vi.fn(),
-    getArray: vi.fn().mockReturnValue([]),
+    getArray: vi.fn(() => []),
     setArray: vi.fn(),
     remove: vi.fn(),
   },
@@ -64,7 +83,7 @@ vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
 vi.mock("vue-i18n", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-i18n")>();
   const i18n = actual.createI18n({
     locale: "en",
     fallbackLocale: "en",
@@ -82,7 +101,7 @@ vi.mock("vue-i18n", async (importOriginal) => {
 import { useModalStore } from "../../src/stores/modal";
 
 describe("useModalStore", () => {
-  let store;
+  let store: ReturnType<typeof useModalStore>;
 
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -103,7 +122,7 @@ describe("useModalStore", () => {
 
       store.handleOk();
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(true);
       expect(result.reason).toBe("ok");
       expect(store.alertOpen).toBe(false);
@@ -116,7 +135,7 @@ describe("useModalStore", () => {
       });
       store.handleCancel();
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("cancel");
       expect(store.alertOpen).toBe(false);
@@ -129,7 +148,7 @@ describe("useModalStore", () => {
       });
       store.handleDismiss();
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("dismiss");
     });
@@ -146,11 +165,11 @@ describe("useModalStore", () => {
       expect(store.alertOpen).toBe(true);
 
       store.handleCancel();
-      await promise;
+      await settle(promise);
     });
 
-    test("uses custom confirmText and cancelText", () => {
-      store.confirm({
+    test("uses custom confirmText and cancelText", async () => {
+      const pending = store.confirm({
         title: "T",
         description: "D",
         confirmText: "Yes",
@@ -161,6 +180,7 @@ describe("useModalStore", () => {
       expect(store.alertCancelText).toBe("No");
 
       store.handleCancel();
+      await pending;
     });
 
     test("replaces previous dialog with reason replaced", async () => {
@@ -173,7 +193,7 @@ describe("useModalStore", () => {
         description: "second desc",
       });
 
-      const firstResult = await first;
+      const firstResult = await settle(first);
       expect(firstResult.ok).toBe(false);
       expect(firstResult.reason).toBe("replaced");
 
@@ -181,14 +201,14 @@ describe("useModalStore", () => {
       expect(store.alertOpen).toBe(true);
 
       store.handleOk();
-      const secondResult = await second;
+      const secondResult = await settle(second);
       expect(secondResult.ok).toBe(true);
     });
   });
 
   describe("alert", () => {
-    test("opens in alert mode with only ok button text", () => {
-      store.alert({
+    test("opens in alert mode with only ok button text", async () => {
+      const pending = store.alert({
         title: "Notice",
         description: "Something happened",
       });
@@ -198,6 +218,7 @@ describe("useModalStore", () => {
       expect(store.alertOpen).toBe(true);
 
       store.handleOk();
+      await pending;
     });
 
     test("handleCancel resolves as ok for alert mode", async () => {
@@ -207,7 +228,7 @@ describe("useModalStore", () => {
       });
       store.handleCancel();
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(true);
       expect(result.reason).toBe("ok");
     });
@@ -219,15 +240,15 @@ describe("useModalStore", () => {
       });
       store.handleDismiss();
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(true);
       expect(result.reason).toBe("ok");
     });
   });
 
   describe("prompt", () => {
-    test("opens prompt dialog with input value", () => {
-      store.prompt({
+    test("opens prompt dialog with input value", async () => {
+      const pending = store.prompt({
         title: "Enter name",
         description: "New name",
         inputValue: "default",
@@ -238,6 +259,7 @@ describe("useModalStore", () => {
       expect(store.promptInputValue).toBe("default");
 
       store.handlePromptCancel("");
+      await pending;
     });
 
     test("resolves with value on handlePromptOk", async () => {
@@ -248,7 +270,7 @@ describe("useModalStore", () => {
 
       store.handlePromptOk("myValue");
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(true);
       expect(result.reason).toBe("ok");
       expect(result.value).toBe("myValue");
@@ -264,14 +286,14 @@ describe("useModalStore", () => {
 
       store.handlePromptCancel("initial");
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("cancel");
       expect(result.value).toBe("initial");
     });
 
-    test("sets pattern and errorMessage", () => {
-      store.prompt({
+    test("sets pattern and errorMessage", async () => {
+      const pending = store.prompt({
         title: "T",
         description: "D",
         pattern: /^\d+$/,
@@ -282,6 +304,7 @@ describe("useModalStore", () => {
       expect(store.promptErrorMessage).toBe("Numbers only");
 
       store.handlePromptCancel("");
+      await pending;
     });
 
     test("replaces previous prompt with reason replaced", async () => {
@@ -296,13 +319,13 @@ describe("useModalStore", () => {
         inputValue: "b",
       });
 
-      const firstResult = await first;
+      const firstResult = await settle(first);
       expect(firstResult.ok).toBe(false);
       expect(firstResult.reason).toBe("replaced");
       expect(firstResult.value).toBe("a");
 
       store.handlePromptOk("b");
-      const secondResult = await second;
+      const secondResult = await settle(second);
       expect(secondResult.ok).toBe(true);
     });
   });
@@ -325,8 +348,8 @@ describe("useModalStore", () => {
   });
 
   describe("otpPrompt", () => {
-    test("opens otp dialog with correct mode and text", () => {
-      store.otpPrompt({
+    test("opens otp dialog with correct mode and text", async () => {
+      const pending = store.otpPrompt({
         title: "TOTP Verification",
         description: "Enter your 6-digit code",
         mode: "totp",
@@ -342,6 +365,7 @@ describe("useModalStore", () => {
       expect(store.otpCancelText).toBe("Use recovery code");
 
       store.handleOtpCancel("");
+      await pending;
     });
 
     test("resolves with value on handleOtpOk", async () => {
@@ -353,7 +377,7 @@ describe("useModalStore", () => {
 
       store.handleOtpOk("123456");
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(true);
       expect(result.reason).toBe("ok");
       expect(result.value).toBe("123456");
@@ -369,7 +393,7 @@ describe("useModalStore", () => {
 
       store.handleOtpCancel("123");
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("cancel");
       expect(result.value).toBe("123");
@@ -385,7 +409,7 @@ describe("useModalStore", () => {
 
       store.handleOtpDismiss("");
 
-      const result = await promise;
+      const result = await settle(promise);
       expect(result.ok).toBe(false);
       expect(result.reason).toBe("dismiss");
     });
@@ -403,11 +427,11 @@ describe("useModalStore", () => {
       expect(store.otpOpen).toBe(true);
 
       store.handleOtpCancel("");
-      await promise;
+      await settle(promise);
     });
 
-    test("sets otp mode correctly", () => {
-      store.otpPrompt({
+    test("sets otp mode correctly", async () => {
+      const pending = store.otpPrompt({
         title: "T",
         description: "D",
         mode: "otp",
@@ -416,10 +440,11 @@ describe("useModalStore", () => {
       expect(store.otpMode).toBe("otp");
 
       store.handleOtpCancel("");
+      await pending;
     });
 
-    test("defaults mode to totp when not specified", () => {
-      store.otpPrompt({
+    test("defaults mode to totp when not specified", async () => {
+      const pending = store.otpPrompt({
         title: "T",
         description: "D",
       });
@@ -427,6 +452,7 @@ describe("useModalStore", () => {
       expect(store.otpMode).toBe("totp");
 
       store.handleOtpCancel("");
+      await pending;
     });
 
     test("replaces previous otp dialog with reason replaced", async () => {
@@ -441,7 +467,7 @@ describe("useModalStore", () => {
         mode: "emailOtp",
       });
 
-      const firstResult = await first;
+      const firstResult = await settle(first);
       expect(firstResult.ok).toBe(false);
       expect(firstResult.reason).toBe("replaced");
       expect(firstResult.value).toBe("");
@@ -451,13 +477,13 @@ describe("useModalStore", () => {
       expect(store.otpOpen).toBe(true);
 
       store.handleOtpOk("654321");
-      const secondResult = await second;
+      const secondResult = await settle(second);
       expect(secondResult.ok).toBe(true);
       expect(secondResult.value).toBe("654321");
     });
 
-    test("uses default button text from i18n", () => {
-      store.otpPrompt({
+    test("uses default button text from i18n", async () => {
+      const pending = store.otpPrompt({
         title: "T",
         description: "D",
         mode: "totp",
@@ -467,6 +493,7 @@ describe("useModalStore", () => {
       expect(store.otpCancelText).toBe(en.dialog.alertdialog.cancel);
 
       store.handleOtpCancel("");
+      await pending;
     });
   });
 });

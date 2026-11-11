@@ -80,7 +80,7 @@ import { useUserStore } from "../../../stores/user";
 import { useVrcxStore } from "../../../stores/vrcx";
 import { useWorldStore } from "../../../stores/world";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import Select from "../../../components/ui/select/Select.vue";
 import SelectContent from "../../../components/ui/select/SelectContent.vue";

@@ -11,13 +11,14 @@ import { clearVRCXCache } from "../coordinators/vrcx-coordinator";
 import { useAuthStore } from "./auth";
 import { useDiscordPresenceSettingsStore } from "./settings/discord-presence";
 import { useFriendStore } from "./friend";
-import { handleGroupUserInstances } from "../coordinators/group-coordinator";
+import { handleGroupUserInstances } from "../coordinators/group-membership-coordinator";
 import { getCurrentUser, updateAutoStateChange } from "../coordinators/user-coordinator";
 import { useNotificationStore } from "./notification";
 import { useUserStore } from "./user";
 import { useVRCXUpdaterStore } from "./vrcx-updater";
 import { useVrStore } from "./vr";
 import { useVrcxStore } from "./vrcx";
+import { logFailure } from "./log-failure";
 import { watchState } from "../services/watch-state";
 
 import * as workerTimers from "worker-timers";
@@ -70,31 +71,33 @@ export const useUpdateLoopStore = defineStore("UpdateLoop", () => {
       if (watchState.isLoggedIn) {
         if (--state.nextCurrentUserRefresh <= 0) {
           state.nextCurrentUserRefresh = 300;
-          getCurrentUser();
+          void getCurrentUser().catch(logFailure("Refreshing current user failed:"));
         }
         if (--state.nextFriendsRefresh <= 0) {
           state.nextFriendsRefresh = 3600;
-          runRefreshFriendsListFlow();
-          authStore.updateStoredUser(userStore.currentUser);
+          void runRefreshFriendsListFlow().catch(logFailure("Refreshing friends list failed:"));
+          void authStore.updateStoredUser(userStore.currentUser).catch(logFailure("Updating stored user failed:"));
           if (userStore.currentUser.last_activity && new Date(userStore.currentUser.last_activity) > new Date(Date.now() - 3600 * 1000)) {
-            runRefreshPlayerModerationsFlow();
-            userStore.getAllProductPurchases();
+            void runRefreshPlayerModerationsFlow().catch(logFailure("Refreshing player moderations failed:"));
+            void userStore.getAllProductPurchases().catch(logFailure("Loading product purchases failed:"));
           }
         }
         if (--state.nextGroupInstanceRefresh <= 0) {
           if (watchState.isFriendsLoaded) {
             state.nextGroupInstanceRefresh = 300;
             const args = await groupRequest.getUsersGroupInstances();
-            handleGroupUserInstances(args);
+            void handleGroupUserInstances({ json: { ...args.json, instances: args.json.instances ?? [] } }).catch(
+              logFailure("Handling group instances failed:")
+            );
           }
-          AppApi.CheckGameRunning();
+          void AppApi.CheckGameRunning().catch(logFailure("Checking game running failed:"));
         }
         if (--state.nextAppUpdateCheck <= 0) {
           state.nextAppUpdateCheck = 3600;
           if (vrcxUpdaterStore.autoUpdateVRCX !== "Off") {
-            vrcxUpdaterStore.checkForVRCXUpdate();
+            void vrcxUpdaterStore.checkForVRCXUpdate().catch(logFailure("Checking for VRCX update failed:"));
           }
-          vrcxStore.tryAutoBackupVrcRegistry();
+          void vrcxStore.tryAutoBackupVrcRegistry().catch(logFailure("Backing up VRC registry failed:"));
         }
         if (--state.ipcTimeout <= 0) {
           vrcxStore.setIpcEnabled(false);
@@ -106,7 +109,7 @@ export const useUpdateLoopStore = defineStore("UpdateLoop", () => {
         if (--state.nextDiscordUpdate <= 0) {
           state.nextDiscordUpdate = 3;
           if (discordPresenceSettingsStore.discordActive) {
-            discordPresenceSettingsStore.updateDiscord();
+            void discordPresenceSettingsStore.updateDiscord().catch(logFailure("Updating Discord presence failed:"));
           }
         }
         if (--state.nextAutoStateChange <= 0) {
@@ -116,7 +119,7 @@ export const useUpdateLoopStore = defineStore("UpdateLoop", () => {
         if (isHostLinux && --state.nextGetLogCheck <= 0) {
           state.nextGetLogCheck = 0.5;
           const logLines = await LogWatcher.GetLogLines();
-          if (logLines) {
+          if (Array.isArray(logLines)) {
             await Promise.all(logLines.map((logLine) => addGameLogEvent(logLine)));
           }
         }
@@ -131,8 +134,8 @@ export const useUpdateLoopStore = defineStore("UpdateLoop", () => {
         }
         if (--state.nextBundleCheck <= 0) {
           state.nextBundleCheck = 10800;
-          notificationStore.checkInventoryBundles();
-          notificationStore.checkFreeStoreItems();
+          void notificationStore.checkInventoryBundles().catch(logFailure("Checking inventory bundles failed:"));
+          void notificationStore.checkFreeStoreItems().catch(logFailure("Checking free store items failed:"));
         }
       }
     } catch (err) {
@@ -142,23 +145,23 @@ export const useUpdateLoopStore = defineStore("UpdateLoop", () => {
     workerTimers.setTimeout(() => updateLoop(), 1000);
   }
 
-  function setNextClearVRCXCacheCheck(value) {
+  function setNextClearVRCXCacheCheck(value: number) {
     state.nextClearVRCXCacheCheck = value;
   }
 
-  function setNextGroupInstanceRefresh(value) {
+  function setNextGroupInstanceRefresh(value: number) {
     state.nextGroupInstanceRefresh = value;
   }
 
-  function setNextDiscordUpdate(value) {
+  function setNextDiscordUpdate(value: number) {
     state.nextDiscordUpdate = value;
   }
 
-  function setIpcTimeout(value) {
+  function setIpcTimeout(value: number) {
     state.ipcTimeout = value;
   }
 
-  function setNextCurrentUserRefresh(value) {
+  function setNextCurrentUserRefresh(value: number) {
     state.nextCurrentUserRefresh = value;
   }
 

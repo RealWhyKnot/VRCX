@@ -1,5 +1,18 @@
 import type { VrcxInstance } from "../../types/vrcx";
 
+export type InstanceJsonInput = Omit<Partial<VrcxInstance>, "creationLanguages"> & { creationLanguages?: unknown[] | undefined };
+
+export function toInstanceRecord(json: InstanceJsonInput): Partial<VrcxInstance> {
+  const { creationLanguages, ...rest } = json;
+  if (creationLanguages === undefined) {
+    return rest;
+  }
+  return {
+    ...rest,
+    creationLanguages: creationLanguages.filter((language): language is string => typeof language === "string"),
+  };
+}
+
 export function computeDisabledContentSettings(
   contentSettings: Record<string, boolean | undefined> | null | undefined,
   settingsList: readonly string[]

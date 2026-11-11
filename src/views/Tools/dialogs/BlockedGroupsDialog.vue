@@ -56,7 +56,7 @@ import { useI18n } from "vue-i18n";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { groupRequest } from "../../../api/group";
-import { showGroupDialog } from "../../../coordinators/group-coordinator";
+import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 
 const props = defineProps({
   isBlockedGroupsDialogVisible: {

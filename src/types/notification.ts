@@ -5,26 +5,26 @@ export type NotificationDetails = {
 
 export type NotificationRecord = {
   type: string;
-  displayName?: string;
-  previousDisplayName?: string;
-  senderUsername?: string;
-  senderUserId?: string;
-  sourceUserId?: string;
-  userId?: string;
-  location?: string;
-  instanceId?: string;
-  worldName?: string;
-  groupName?: string;
-  title?: string;
-  message?: string;
-  status?: string;
-  statusDescription?: string;
-  trustLevel?: string;
-  details?: NotificationDetails;
-  name?: string;
-  text?: string;
-  data?: string;
-  notyName?: string;
+  displayName?: string | undefined;
+  previousDisplayName?: string | undefined;
+  senderUsername?: string | undefined;
+  senderUserId?: string | undefined;
+  sourceUserId?: string | undefined;
+  userId?: string | undefined;
+  location?: string | undefined;
+  instanceId?: string | undefined;
+  worldName?: string | undefined;
+  groupName?: string | undefined;
+  title?: string | undefined;
+  message?: string | undefined;
+  status?: string | undefined;
+  statusDescription?: string | undefined;
+  trustLevel?: string | undefined;
+  details?: NotificationDetails | undefined;
+  name?: string | undefined;
+  text?: string | undefined;
+  data?: string | undefined;
+  notyName?: string | undefined;
 };
 
 export type NotificationMessage = {

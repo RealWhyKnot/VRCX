@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
     getString: vi.fn(),
     setString: vi.fn(),
   },
-  changeLogRemoveLinks: vi.fn((value) => value),
+  changeLogRemoveLinks: vi.fn((value: string) => value),
   toast: {
     error: vi.fn(),
     success: vi.fn(),
@@ -19,29 +19,32 @@ vi.mock("../../src/services/config", () => ({
 }));
 
 vi.mock("../../src/shared/utils/base/string", () => ({
-  changeLogRemoveLinks: (...args) => mocks.changeLogRemoveLinks(...args),
+  changeLogRemoveLinks: (value: string) => mocks.changeLogRemoveLinks(value),
 }));
 
 vi.mock("vue-sonner", () => ({
   toast: mocks.toast,
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
-function flushPromises() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+function flushPromises(): Promise<void> {
+  return Promise.resolve().then(() => Promise.resolve());
 }
 
 import { useVRCXUpdaterStore } from "../../src/stores/vrcx-updater";
 
 describe("useVRCXUpdaterStore.setAutoUpdateVRCX", () => {
   beforeEach(async () => {
-    mocks.configRepository.getString.mockImplementation((key, defaultValue) => {
+    mocks.configRepository.getString.mockImplementation((key: string, defaultValue?: string) => {
       if (key === "VRCX_autoUpdateVRCX") {
         return Promise.resolve("Off");
       }
@@ -55,9 +58,9 @@ describe("useVRCXUpdaterStore.setAutoUpdateVRCX", () => {
     });
     mocks.configRepository.setString.mockResolvedValue(undefined);
 
-    globalThis.AppApi = {
+    vi.stubGlobal("AppApi", {
       GetVersion: vi.fn().mockResolvedValue("2026.1.0"),
-    };
+    });
 
     setActivePinia(createPinia());
     useVRCXUpdaterStore();

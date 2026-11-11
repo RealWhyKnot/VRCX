@@ -1,11 +1,21 @@
-import type { ApiConfig, Permission, Success, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult } from "vrchat";
-import type { Json } from "../types/vrcx";
+import type { ApiConfig, CurrentUser, Permission, Success, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult } from "vrchat";
+import type { Json, RequestOptions } from "../types/vrcx";
 import { request } from "../services/request";
 import { handleConfig } from "../coordinators/user-coordinator";
 
+function requestObject<T extends object>(endpoint: string, options: RequestOptions): Promise<T> {
+  const isResponseObject = (value: unknown): value is T => typeof value === "object" && value !== null;
+  return request(endpoint, options).then((response) => {
+    if (!isResponseObject(response)) {
+      throw new Error(`Auth response is not an object: ${endpoint}`);
+    }
+    return response;
+  });
+}
+
 const authRequest = {
   verifyOTP(params: TwoFactorAuthCode): Promise<{ json: Json<Verify2FaResult>; params: TwoFactorAuthCode }> {
-    return request("auth/twofactorauth/otp/verify", {
+    return requestObject<Json<Verify2FaResult>>("auth/twofactorauth/otp/verify", {
       method: "POST",
       params,
     }).then((json) => {
@@ -18,7 +28,7 @@ const authRequest = {
   },
 
   verifyTOTP(params: TwoFactorAuthCode): Promise<{ json: Json<Verify2FaResult>; params: TwoFactorAuthCode }> {
-    return request("auth/twofactorauth/totp/verify", {
+    return requestObject<Json<Verify2FaResult>>("auth/twofactorauth/totp/verify", {
       method: "POST",
       params,
     }).then((json) => {
@@ -31,7 +41,7 @@ const authRequest = {
   },
 
   verifyEmailOTP(params: TwoFactorEmailCode): Promise<{ json: Json<Verify2FaEmailCodeResult>; params: TwoFactorEmailCode }> {
-    return request("auth/twofactorauth/emailotp/verify", {
+    return requestObject<Json<Verify2FaEmailCodeResult>>("auth/twofactorauth/emailotp/verify", {
       method: "POST",
       params,
     }).then((json) => {
@@ -44,7 +54,7 @@ const authRequest = {
   },
 
   getConfig(): Promise<{ json: Json<ApiConfig> }> {
-    return request("config", {
+    return requestObject<Json<ApiConfig>>("config", {
       method: "GET",
     }).then((json) => {
       const args = {
@@ -58,7 +68,7 @@ const authRequest = {
   getDeviceCode(): Promise<{
     json: { deviceCode: string; verificationUrlComplete: string; interval: number; expiresIn: number };
   }> {
-    return request("auth/device/code", {
+    return requestObject<{ deviceCode: string; verificationUrlComplete: string; interval: number; expiresIn: number }>("auth/device/code", {
       method: "POST",
     }).then((json) => {
       const args = {
@@ -68,8 +78,8 @@ const authRequest = {
     });
   },
 
-  getDeviceStatus(params: { deviceCode: string }): Promise<{ json: { user?: object }; params: { deviceCode: string } }> {
-    return request("auth/device/status", {
+  getDeviceStatus(params: { deviceCode: string }): Promise<{ json: { user?: Json<CurrentUser> }; params: { deviceCode: string } }> {
+    return requestObject<{ user?: Json<CurrentUser> }>("auth/device/status", {
       method: "POST",
       params,
     }).then((json) => {
@@ -82,7 +92,7 @@ const authRequest = {
   },
 
   resetPassword(params: { email: string }): Promise<{ json: Json<Success>; params: { email: string } }> {
-    return request("auth/password", {
+    return requestObject<Json<Success>>("auth/password", {
       method: "PUT",
       params,
     }).then((json) => {
@@ -95,7 +105,7 @@ const authRequest = {
   },
 
   getPermissions(): Promise<{ json: Json<Permission[]> }> {
-    return request("auth/permissions", {
+    return requestObject<Json<Permission[]>>("auth/permissions", {
       method: "GET",
       params: { condensed: true },
     }).then((json) => {

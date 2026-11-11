@@ -18,6 +18,12 @@ import { useInstanceStore } from "../instance";
 
 import { configRepository } from "../../services/config";
 
+function logDiscordPresenceError(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
+
 export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSettings", () => {
   const locationStore = useLocationStore();
   const gameStore = useGameStore();
@@ -55,54 +61,58 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
   const discordWorldNameAsDiscordStatus = ref(false);
   const discordMediaImage = ref(false);
 
+  function saveDiscordFlag(key: string, isEnabled: boolean) {
+    void configRepository.setBool(key, isEnabled).catch(logDiscordPresenceError(`Error saving ${key}:`));
+  }
+
   function setDiscordActive() {
     discordActive.value = !discordActive.value;
-    configRepository.setBool("discordActive", discordActive.value);
+    saveDiscordFlag("discordActive", discordActive.value);
   }
   function setDiscordInstance() {
     discordInstance.value = !discordInstance.value;
-    configRepository.setBool("discordInstance", discordInstance.value);
+    saveDiscordFlag("discordInstance", discordInstance.value);
   }
   function setDiscordHideInvite() {
     discordHideInvite.value = !discordHideInvite.value;
-    configRepository.setBool("discordHideInvite", discordHideInvite.value);
+    saveDiscordFlag("discordHideInvite", discordHideInvite.value);
   }
   function setDiscordJoinButton() {
     discordJoinButton.value = !discordJoinButton.value;
-    configRepository.setBool("discordJoinButton", discordJoinButton.value);
+    saveDiscordFlag("discordJoinButton", discordJoinButton.value);
   }
   function setDiscordHideImage() {
     discordHideImage.value = !discordHideImage.value;
-    configRepository.setBool("discordHideImage", discordHideImage.value);
+    saveDiscordFlag("discordHideImage", discordHideImage.value);
   }
   function setDiscordShowPlatform() {
     discordShowPlatform.value = !discordShowPlatform.value;
-    configRepository.setBool("discordShowPlatform", discordShowPlatform.value);
+    saveDiscordFlag("discordShowPlatform", discordShowPlatform.value);
   }
   function setDiscordWorldIntegration() {
     discordWorldIntegration.value = !discordWorldIntegration.value;
-    configRepository.setBool("discordWorldIntegration", discordWorldIntegration.value);
+    saveDiscordFlag("discordWorldIntegration", discordWorldIntegration.value);
   }
   function setDiscordWorldNameAsDiscordStatus() {
     discordWorldNameAsDiscordStatus.value = !discordWorldNameAsDiscordStatus.value;
-    configRepository.setBool("discordWorldNameAsDiscordStatus", discordWorldNameAsDiscordStatus.value);
+    saveDiscordFlag("discordWorldNameAsDiscordStatus", discordWorldNameAsDiscordStatus.value);
   }
   function setDiscordMediaImage() {
     discordMediaImage.value = !discordMediaImage.value;
-    configRepository.setBool("discordMediaImage", discordMediaImage.value);
+    saveDiscordFlag("discordMediaImage", discordMediaImage.value);
   }
 
   async function initDiscordPresenceSettings() {
     const [
-      discordActiveConfig,
-      discordInstanceConfig,
-      discordHideInviteConfig,
-      discordJoinButtonConfig,
-      discordHideImageConfig,
-      discordShowPlatformConfig,
-      discordWorldIntegrationConfig,
-      discordWorldNameAsDiscordStatusConfig,
-      discordMediaImageConfig,
+      isDiscordActiveConfig,
+      isDiscordInstanceConfig,
+      isDiscordHideInviteConfig,
+      isDiscordJoinButtonConfig,
+      isDiscordHideImageConfig,
+      isDiscordShowPlatformConfig,
+      isDiscordWorldIntegrationConfig,
+      isDiscordWorldNameAsDiscordStatusConfig,
+      isDiscordMediaImageConfig,
     ] = await Promise.all([
       configRepository.getBool("discordActive", false),
       configRepository.getBool("discordInstance", true),
@@ -115,22 +125,22 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
       configRepository.getBool("discordMediaImage", false),
     ]);
 
-    discordActive.value = discordActiveConfig;
-    discordInstance.value = discordInstanceConfig;
-    discordHideInvite.value = discordHideInviteConfig;
-    discordJoinButton.value = discordJoinButtonConfig;
-    discordHideImage.value = discordHideImageConfig;
-    discordShowPlatform.value = discordShowPlatformConfig;
-    discordWorldIntegration.value = discordWorldIntegrationConfig;
-    discordWorldNameAsDiscordStatus.value = discordWorldNameAsDiscordStatusConfig;
-    discordMediaImage.value = discordMediaImageConfig;
+    discordActive.value = isDiscordActiveConfig;
+    discordInstance.value = isDiscordInstanceConfig;
+    discordHideInvite.value = isDiscordHideInviteConfig;
+    discordJoinButton.value = isDiscordJoinButtonConfig;
+    discordHideImage.value = isDiscordHideImageConfig;
+    discordShowPlatform.value = isDiscordShowPlatformConfig;
+    discordWorldIntegration.value = isDiscordWorldIntegrationConfig;
+    discordWorldNameAsDiscordStatus.value = isDiscordWorldNameAsDiscordStatusConfig;
+    discordMediaImage.value = isDiscordMediaImageConfig;
   }
 
-  initDiscordPresenceSettings();
+  void initDiscordPresenceSettings().catch(logDiscordPresenceError("Error loading Discord presence settings:"));
 
   async function updateDiscord() {
     let currentLocation = locationStore.lastLocation.location;
-    let startTime = locationStore.lastLocation.date;
+    let startTime: number = locationStore.lastLocation.date ?? 0;
     if (locationStore.lastLocation.location === "traveling") {
       currentLocation = locationStore.lastLocationDestination;
       startTime = locationStore.lastLocationDestinationTime;
@@ -143,7 +153,7 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
       }
     }
     if (!discordActive.value || !isRealInstance(currentLocation)) {
-      setIsDiscordActive(false);
+      void setIsDiscordActive(false).catch(logDiscordPresenceError("Error clearing Discord activity:"));
       return;
     }
     if (currentLocation !== state.lastLocationDetails.tag) {
@@ -182,9 +192,9 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
 
       let platform = "";
       if (discordShowPlatform.value) {
-        platform = getPlatformLabel(userStore.currentUser.presence.platform, gameStore.isGameRunning, gameStore.isGameNoVR, t);
+        platform = getPlatformLabel(userStore.currentUser.presence.platform, gameStore.isGameRunning, gameStore.isGameNoVR === true, t);
       }
-      state.lastLocationDetails.groupAccessType = L.groupAccessType;
+      state.lastLocationDetails.groupAccessType = L.groupAccessType ?? "";
       if (L.groupAccessType) {
         if (L.groupAccessType === "public") {
           state.lastLocationDetails.groupAccessName = t("dialog.new_instance.group_access_type_public");
@@ -222,26 +232,26 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
           break;
       }
     }
-    setIsDiscordActive(true);
-    let hidePrivate = false;
+    void setIsDiscordActive(true).catch(logDiscordPresenceError("Error setting Discord activity:"));
+    let shouldHidePrivate = false;
     if (
       discordHideInvite.value &&
       (state.lastLocationDetails.accessType === "invite" ||
         state.lastLocationDetails.accessType === "invite+" ||
         state.lastLocationDetails.groupAccessType === "members")
     ) {
-      hidePrivate = true;
+      shouldHidePrivate = true;
     }
     const statusInfo = getStatusInfo(userStore.currentUser.status, discordHideInvite.value, t);
     const { statusName, statusImage } = statusInfo;
     if (statusInfo.hidePrivate) {
-      hidePrivate = true;
+      shouldHidePrivate = true;
     }
     let details = state.lastLocationDetails.worldName;
     let stateText = state.lastLocationDetails.accessName;
     let endTime = 0;
-    let activityType = ActivityType.Playing;
-    let statusDisplayType = discordWorldNameAsDiscordStatus.value ? StatusDisplayType.Details : StatusDisplayType.Name;
+    let activityType: number = ActivityType.Playing;
+    let statusDisplayType: number = discordWorldNameAsDiscordStatus.value ? StatusDisplayType.Details : StatusDisplayType.Name;
     let appId = "883308884863901717";
     let bigIcon = "vrchat";
     let detailsUrl = state.lastLocationDetails.worldLink;
@@ -299,7 +309,7 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
       }
     }
 
-    if (hidePrivate) {
+    if (shouldHidePrivate) {
       partyId = "";
       partySize = 0;
       partyMaxSize = 0;
@@ -316,9 +326,9 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
       statusDisplayType = StatusDisplayType.Name;
     }
     if (details.length < 2) {
-      details += "\uFFA0".repeat(2 - details.length);
+      details += String.fromCharCode(0xffa0).repeat(2 - details.length);
     }
-    Discord.SetAssets(
+    void Discord.SetAssets(
       details,
       stateText,
       detailsUrl,
@@ -340,7 +350,7 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
       appId,
       activityType,
       statusDisplayType
-    );
+    ).catch(logDiscordPresenceError("Error updating Discord activity:"));
   }
 
   function getMediaImage() {
@@ -354,16 +364,16 @@ export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSetti
     return url;
   }
 
-  async function setIsDiscordActive(active) {
-    if (active !== state.isDiscordActive) {
-      state.isDiscordActive = await Discord.SetActive(active);
+  async function setIsDiscordActive(isActive: boolean) {
+    if (isActive !== state.isDiscordActive) {
+      state.isDiscordActive = await Discord.SetActive(isActive);
     }
   }
 
-  async function saveDiscordOption(_configLabel = "") {
+  function saveDiscordOption(_configLabel = "") {
     state.lastLocationDetails.tag = "";
     updateLoopStore.setNextDiscordUpdate(3);
-    updateDiscord();
+    void updateDiscord().catch(logDiscordPresenceError("Error updating Discord presence:"));
   }
 
   return {

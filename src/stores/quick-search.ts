@@ -1,14 +1,38 @@
-import { computed, effectScope, ref, watch } from "vue";
+import { computed, effectScope, ref, watch, type EffectScope } from "vue";
 import { defineStore } from "pinia";
+import type { VrcxUser } from "../types/vrcx";
 import { useFriendStore } from "./friend";
 import { useSearchIndexStore } from "./search-index";
 import { useUserStore } from "./user";
-import { showGroupDialog } from "../coordinators/group-coordinator";
+import { isObjectRecord, type FriendSearchResult, type ItemSearchResult, type SearchWorkerResponse } from "./quick-search-worker-protocol";
+import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { showAvatarDialog } from "../coordinators/avatar-coordinator";
 import { showUserDialog } from "../coordinators/user-coordinator";
 
 import QuickSearchWorker from "./quick-search-worker.ts?worker&inline";
+
+type FriendResultItem = FriendSearchResult & {
+  ref: VrcxUser | undefined;
+};
+
+type SearchSelection = {
+  type: string;
+  id: string;
+};
+
+function isSearchWorkerResponse(value: unknown): value is SearchWorkerResponse {
+  if (!isObjectRecord(value) || value.type !== "searchResult") {
+    return false;
+  }
+  const payload = value.payload;
+  if (!isObjectRecord(payload)) {
+    return false;
+  }
+  return [payload.friends, payload.ownAvatars, payload.favAvatars, payload.ownWorlds, payload.favWorlds, payload.ownGroups, payload.joinedGroups].every(
+    (list) => Array.isArray(list)
+  );
+}
 
 export const useQuickSearchStore = defineStore("QuickSearch", () => {
   const friendStore = useFriendStore();
@@ -18,9 +42,9 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
   const isOpen = ref(false);
   const query = ref("");
 
-  let worker = null;
-  let indexUpdateTimer = null;
-  let indexWatchScope = null;
+  let worker: Worker | null = null;
+  let indexUpdateTimer: ReturnType<typeof setTimeout> | null = null;
+  let indexWatchScope: EffectScope | null = null;
 
   function getWorker() {
     if (!worker) {
@@ -36,13 +60,13 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
     worker = null;
   }
 
-  const friendResults = ref([]);
-  const ownAvatarResults = ref([]);
-  const favoriteAvatarResults = ref([]);
-  const ownWorldResults = ref([]);
-  const favoriteWorldResults = ref([]);
-  const ownGroupResults = ref([]);
-  const joinedGroupResults = ref([]);
+  const friendResults = ref<FriendResultItem[]>([]);
+  const ownAvatarResults = ref<ItemSearchResult[]>([]);
+  const favoriteAvatarResults = ref<ItemSearchResult[]>([]);
+  const ownWorldResults = ref<ItemSearchResult[]>([]);
+  const favoriteWorldResults = ref<ItemSearchResult[]>([]);
+  const ownGroupResults = ref<ItemSearchResult[]>([]);
+  const joinedGroupResults = ref<ItemSearchResult[]>([]);
 
   const hasResults = computed(
     () =>
@@ -55,7 +79,7 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
       joinedGroupResults.value.length > 0
   );
 
-  const currentUserId = computed(() => userStore.currentUser?.id);
+  const currentUserId = computed(() => userStore.currentUser.id);
 
   function scheduleIndexUpdate() {
     if (!isOpen.value) return;
@@ -128,8 +152,8 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
     }
   });
 
-  watch(isOpen, (open) => {
-    if (open) {
+  watch(isOpen, (isOpenNow) => {
+    if (isOpenNow) {
       startIndexWatchers();
       sendIndexUpdate();
       if (query.value && query.value.length >= 1) {
@@ -144,22 +168,22 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
     disposeWorker();
   });
 
-  function handleWorkerMessage(event) {
-    const { type, payload } = event.data;
-    if (type === "searchResult") {
-      if (payload.seq !== searchSeq) return;
+  function handleWorkerMessage(event: MessageEvent<unknown>) {
+    const data: unknown = event.data;
+    if (!isSearchWorkerResponse(data)) return;
+    const { payload } = data;
+    if (payload.seq !== searchSeq) return;
 
-      friendResults.value = payload.friends.map((item) => {
-        const friendEntry = friendStore.friends.get(item.id);
-        return { ...item, ref: friendEntry?.ref };
-      });
-      ownAvatarResults.value = payload.ownAvatars;
-      favoriteAvatarResults.value = payload.favAvatars;
-      ownWorldResults.value = payload.ownWorlds;
-      favoriteWorldResults.value = payload.favWorlds;
-      ownGroupResults.value = payload.ownGroups;
-      joinedGroupResults.value = payload.joinedGroups;
-    }
+    friendResults.value = payload.friends.map((item) => {
+      const friendEntry = friendStore.friends.get(item.id);
+      return { ...item, ref: friendEntry?.ref };
+    });
+    ownAvatarResults.value = payload.ownAvatars;
+    favoriteAvatarResults.value = payload.favAvatars;
+    ownWorldResults.value = payload.ownWorlds;
+    favoriteWorldResults.value = payload.favWorlds;
+    ownGroupResults.value = payload.ownGroups;
+    joinedGroupResults.value = payload.joinedGroups;
   }
 
   function clearResults() {
@@ -180,11 +204,11 @@ export const useQuickSearchStore = defineStore("QuickSearch", () => {
     isOpen.value = false;
   }
 
-  function setQuery(value) {
+  function setQuery(value: string) {
     query.value = value;
   }
 
-  function selectResult(item) {
+  function selectResult(item: SearchSelection | null | undefined) {
     if (!item) return;
 
     close();

@@ -1,4 +1,24 @@
-import type { CreateInstanceRequest, CurrentUser, Favorite, Group, Instance, Notification, UpdateInstanceRequest, User, World } from "vrchat";
+import type {
+  AgeVerificationStatus,
+  BannerType,
+  CreateInstanceRequest,
+  CurrentUser,
+  DeveloperType,
+  Favorite,
+  Group,
+  GroupAccessType,
+  Instance,
+  InstanceRegion,
+  InstanceType,
+  Notification,
+  Region,
+  UpdateInstanceRequest,
+  User,
+  UserState,
+  UserStatus,
+  World,
+} from "vrchat";
+import type { WorldRef } from "../shared/utils/world-transforms";
 
 export type Json<T> = T extends Date
   ? string
@@ -41,13 +61,35 @@ export type ParsedLocation = {
   ageGate: boolean;
 };
 
+type UserFallbacks = {
+  ageVerificationStatus: AgeVerificationStatus | "";
+  bannerType: BannerType | "";
+  bio: string;
+  bioLinks: string[];
+  developerType: DeveloperType | "";
+  instanceId: string;
+  location: string;
+  last_activity: string | null;
+  last_login: string | null;
+  note: string | null;
+  profilePicOverride: string;
+  profilePicOverrideThumbnail: string;
+  state: UserState | "";
+  status: UserStatus | "";
+  travelingToInstance: string;
+  travelingToLocation: string;
+  travelingToWorld: string;
+  userIcon: string;
+  worldId: string;
+};
+
 export type VrcxUser = {
   $location: Partial<ParsedLocation>;
   $location_at: number;
-  $online_for: number;
+  $online_for: number | null;
   $travelingToTime: number;
-  $offline_for: number;
-  $active_for: number;
+  $offline_for: number | null;
+  $active_for: number | null;
   $isVRCPlus: boolean;
   $isModerator: boolean;
   $isTroll: boolean;
@@ -56,7 +98,7 @@ export type VrcxUser = {
   $trustClass: string;
   $userColour: string;
   $trustSortNum: number;
-  $languages: string[];
+  $languages: { key: string; value: string }[];
   $joinCount: number;
   $timeSpent: number;
   $lastSeen: string;
@@ -67,31 +109,14 @@ export type VrcxUser = {
   $customTag: string;
   $customTagColour: string;
   $friendNumber: number;
-  $lastFetch: number;
+  $lastFetch?: number;
   $moderations: Moderations;
   $memo: string;
   $platform: string;
-} & Json<User>;
-
-export type VrcxCurrentUser = {
-  $online_for?: number;
-  $offline_for?: number | null;
-  $location_at?: number;
-  $travelingToTime?: number;
-  $previousAvatarSwapTime?: number | null;
-  $homeLocation?: Partial<ParsedLocation>;
-  $isVRCPlus?: boolean;
-  $isModerator?: boolean;
-  $isTroll?: boolean;
-  $isProbableTroll?: boolean;
-  $trustLevel?: string;
-  $trustClass?: string;
-  $userColour?: string;
-  $trustSortNum?: number;
-  $languages?: string[];
-  $locationTag?: string;
-  $travelingToLocation?: string;
-} & Json<CurrentUser>;
+  fallbackAvatar?: string;
+} & Omit<Json<User>, keyof UserFallbacks> &
+  UserFallbacks &
+  Partial<Omit<Json<CurrentUser>, keyof Json<User> | "fallbackAvatar">>;
 
 export type VrcxGroup = {
   initialRoleIds: string[];
@@ -103,12 +128,22 @@ export type VrcxGroup = {
   $languages: { key: string; value: string }[];
 } & Json<Group>;
 
+export type VrcxInstanceWorld = Partial<Omit<WorldRef, "slimInstances">> & { slimInstances?: unknown[] | undefined };
+
 export type VrcxInstance = {
   creationLanguages?: string[];
   languagesIso639?: string[];
   $fetchedAt: string;
   $disabledContentSettings: string[];
-} & Json<Instance>;
+  type: InstanceType | "";
+  region: InstanceRegion | "";
+  photonRegion: Region | "";
+  groupAccessType: GroupAccessType | null;
+  platforms: Partial<Json<Instance>["platforms"]>;
+  world: VrcxInstanceWorld;
+  hypeTrain?: { current?: { startDate: string; endDate: string } | null } | null;
+  clientNumber?: string;
+} & Omit<Json<Instance>, "creationLanguages" | "type" | "region" | "photonRegion" | "groupAccessType" | "platforms" | "world" | "clientNumber">;
 
 export type InstanceCount = {
   asOf: string;
@@ -161,7 +196,8 @@ export type MarketplaceAvatarSearchParams = {
 
 export type VrcxWorld = {
   $isLabs: boolean;
-} & Json<World>;
+  slimInstances?: unknown[];
+} & Omit<Json<World>, "slimInstances">;
 
 export type WorldRatingValue = "like" | "dislike";
 
@@ -182,7 +218,7 @@ export type RequestOptions = {
   headers?: Record<string, string>;
   body?: string;
   params?: unknown;
-  customMsg?: string;
+  customMsg?: string | undefined;
   inviteId?: string;
   uploadImage?: boolean;
   uploadImageLegacy?: boolean;

@@ -16,6 +16,35 @@ import { useUserStore } from "./user";
 import { useWristOverlaySettingsStore } from "./settings/wrist-overlay";
 import { watchState } from "../services/watch-state";
 
+type SharedFeedEntry = {
+  type?: string | null | undefined;
+  created_at?: string | null | undefined;
+  userId?: string | null | undefined;
+  senderUserId?: string | null | undefined;
+  displayName?: string | null | undefined;
+  location?: string | null | undefined;
+  details?: { location?: string | null; worldId?: string | null; worldName?: string | null } | null | undefined;
+  isFriend?: boolean | undefined;
+  isFavorite?: boolean | undefined;
+  isTraveling?: boolean | undefined;
+  tagColour?: string | undefined;
+  instanceDisplayName?: string | null | undefined;
+};
+
+type SharedFeedTraveler = {
+  id: string;
+  displayName: string;
+  created_at?: string;
+  $location: { tag?: string; worldId?: string; groupId?: string | null };
+};
+
+function pickTruthy(primary: string | null | undefined, fallback: string | null | undefined): string | null | undefined {
+  if (primary) {
+    return primary;
+  }
+  return fallback;
+}
+
 export const useSharedFeedStore = defineStore("SharedFeed", () => {
   const friendStore = useFriendStore();
   const notificationsSettingsStore = useNotificationsSettingsStore();
@@ -26,22 +55,23 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
   const moderationStore = useModerationStore();
   const notificationStore = useNotificationStore();
 
-  const onPlayerJoining = ref([]);
+  const onPlayerJoining = ref<SharedFeedEntry[]>([]);
 
   async function rebuildOnPlayerJoining() {
-    const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist.OnPlayerJoining;
-    const newOnPlayerJoining = [];
-    for (const ref of userStore.currentTravelers.values()) {
+    const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist["OnPlayerJoining"];
+    const newOnPlayerJoining: SharedFeedEntry[] = [];
+    const travelers: Iterable<SharedFeedTraveler> = userStore.currentTravelers.values();
+    for (const traveler of travelers) {
       if (!wristFilter || wristFilter === "Off") {
         break;
       }
-      const isFavorite = friendStore.localFavoriteFriends.has(ref.id);
-      if (locationStore.lastLocation.playerList.has(ref.id) || (wristFilter === "VIP" && !isFavorite)) {
+      const isFavorite = friendStore.localFavoriteFriends.has(traveler.id);
+      if (locationStore.lastLocation.playerList.has(traveler.id) || (wristFilter === "VIP" && !isFavorite)) {
         continue;
       }
-      if (ref.$location.tag === locationStore.lastLocation.location) {
+      if (traveler.$location.tag === locationStore.lastLocation.location) {
         const feedEntry = {
-          ...ref,
+          ...traveler,
           isFavorite,
           isFriend: true,
           type: "OnPlayerJoining",
@@ -49,14 +79,14 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
         newOnPlayerJoining.unshift(feedEntry);
         continue;
       }
-      const worldName = await getWorldName(ref.$location.worldId);
-      const groupName = await getGroupName(ref.$location.groupId);
+      const worldName = await getWorldName(traveler.$location.worldId);
+      const groupName = await getGroupName(traveler.$location.groupId);
       const feedEntry = {
-        created_at: ref.created_at,
+        created_at: traveler.created_at,
         type: "GPS",
-        userId: ref.id,
-        displayName: ref.displayName,
-        location: ref.$location.tag,
+        userId: traveler.id,
+        displayName: traveler.displayName,
+        location: traveler.$location.tag,
         worldName,
         groupName,
         previousLocation: "",
@@ -74,7 +104,7 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
     if (sharedFeedData.value.length > maxEntries) {
       sharedFeedData.value.splice(maxEntries);
     }
-    sendSharedFeed();
+    void sendSharedFeed().catch((err: unknown) => console.error(err));
   }
 
   watch(
@@ -88,18 +118,18 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
     ([isFriendsLoaded, isFavoritesLoaded]) => {
       if (isFriendsLoaded && isFavoritesLoaded) {
         sharedFeedData.value = [];
-        loadSharedFeed();
+        void loadSharedFeed().catch((err: unknown) => console.error(err));
       }
     },
     { flush: "sync" }
   );
 
-  const sharedFeedData = ref([]);
+  const sharedFeedData = ref<SharedFeedEntry[]>([]);
   const maxEntries = 25;
 
   async function loadSharedFeed() {
-    let newFeed = [];
-    const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist;
+    let newFeed: SharedFeedEntry[] = [];
+    const wristFilter: Record<string, string | undefined> = notificationsSettingsStore.sharedFeedFilters.wrist;
 
     const vipList = Array.from(friendStore.localFavoriteFriends.values());
     const friendList = Array.from(friendStore.friends.keys());
@@ -152,7 +182,7 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
     newFeed.splice(maxEntries);
 
     for (const entry of newFeed) {
-      const userId = entry.userId || entry.senderUserId;
+      const userId = pickTruthy(entry.userId, entry.senderUserId);
       entry.isFriend = false;
       entry.isFavorite = false;
       entry.tagColour = "";
@@ -162,19 +192,19 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
         entry.tagColour = userStore.customUserTags.get(userId)?.colour ?? "";
       }
 
-      const location = entry.location || entry.details?.location;
+      const location = pickTruthy(entry.location, entry.details?.location);
       if (location) {
         entry.instanceDisplayName = await instanceStore.getInstanceName(location);
       }
     }
     sharedFeedData.value = newFeed;
-    rebuildOnPlayerJoining();
+    void rebuildOnPlayerJoining().catch((err: unknown) => console.error(err));
   }
 
-  async function addEntry(data) {
+  async function addEntry(data: SharedFeedEntry) {
     const ctx = { ...data };
-    const userId = ctx.userId || ctx.senderUserId;
-    const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist;
+    const userId = pickTruthy(ctx.userId, ctx.senderUserId);
+    const wristFilter: Record<string, string | undefined> = notificationsSettingsStore.sharedFeedFilters.wrist;
     if (userId === userStore.currentUser.id) {
       return;
     }
@@ -194,12 +224,9 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
       tagColour = userStore.customUserTags.get(userId)?.colour ?? "";
     }
 
-    const location = ctx.location || ctx.details?.location;
+    const location = pickTruthy(ctx.location, ctx.details?.location);
     if (location) {
       ctx.instanceDisplayName = await instanceStore.getInstanceName(location);
-    }
-
-    {
     }
 
     if (ctx.type === "OnPlayerJoined" || ctx.type === "OnPlayerLeft") {
@@ -211,12 +238,13 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
       });
     }
 
+    const entryType = ctx.type ?? "";
     if (
-      wristFilter[ctx.type] &&
-      (wristFilter[ctx.type] === "On" ||
-        wristFilter[ctx.type] === "Everyone" ||
-        (wristFilter[ctx.type] === "Friends" && isFriend) ||
-        (wristFilter[ctx.type] === "VIP" && isFavorite))
+      wristFilter[entryType] &&
+      (wristFilter[entryType] === "On" ||
+        wristFilter[entryType] === "Everyone" ||
+        (wristFilter[entryType] === "Friends" && isFriend) ||
+        (wristFilter[entryType] === "VIP" && isFavorite))
     ) {
       addToSharedFeed({
         ...ctx,
@@ -227,27 +255,27 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
     }
   }
 
-  function addToSharedFeed(ref) {
-    sharedFeedData.value.unshift(ref);
+  function addToSharedFeed(entry: SharedFeedEntry) {
+    sharedFeedData.value.unshift(entry);
     if (sharedFeedData.value.length > maxEntries) {
       sharedFeedData.value.splice(maxEntries);
     }
-    sendSharedFeed();
+    void sendSharedFeed().catch((err: unknown) => console.error(err));
   }
 
-  function moderationAgainstCheck(ctx) {
-    const wristFilter = notificationsSettingsStore.sharedFeedFilters.wrist;
+  function moderationAgainstCheck(ctx: SharedFeedEntry) {
+    const wristFilter: Record<string, string | undefined> = notificationsSettingsStore.sharedFeedFilters.wrist;
 
-    for (const ref of moderationStore.cachedPlayerModerations.values()) {
-      if (ref.targetUserId !== ctx.userId) {
+    for (const moderation of moderationStore.cachedPlayerModerations.values()) {
+      if (moderation.targetUserId !== ctx.userId) {
         continue;
       }
 
-      let type = "";
-      if (ref.type === "block") {
-        type = `Blocked${ctx.type}`;
-      } else if (ref.type === "mute") {
-        type = `Muted${ctx.type}`;
+      let type: string;
+      if (moderation.type === "block") {
+        type = `Blocked${String(ctx.type)}`;
+      } else if (moderation.type === "mute") {
+        type = `Muted${String(ctx.type)}`;
       } else {
         continue;
       }
@@ -261,7 +289,7 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
         isFriend: ctx.isFriend,
         tagColour: ctx.tagColour,
       };
-      notificationStore.queueGameLogNoty(entry);
+      notificationStore.queueGameLogNoty({ ...entry, created_at: entry.created_at ?? "" });
       if (
         wristFilter[type] &&
         (wristFilter[type] === "Everyone" || (wristFilter[type] === "Friends" && ctx.isFriend) || (wristFilter[type] === "VIP" && ctx.isFavorite))
@@ -271,16 +299,16 @@ export const useSharedFeedStore = defineStore("SharedFeed", () => {
     }
   }
 
-  function addTag(userId, colour) {
-    let changed = false;
+  function addTag(userId: string, colour: string) {
+    let hasChanged = false;
     for (const entry of sharedFeedData.value) {
       if (entry.userId === userId) {
         entry.tagColour = colour;
-        changed = true;
+        hasChanged = true;
       }
     }
-    if (changed) {
-      sendSharedFeed();
+    if (hasChanged) {
+      void sendSharedFeed().catch((err: unknown) => console.error(err));
     }
   }
 

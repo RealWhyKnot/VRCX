@@ -1,6 +1,5 @@
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
@@ -12,34 +11,52 @@ import {
   parseNotificationDetails,
   sanitizeNotificationJson,
 } from "../../shared/utils/notification-transforms";
-import { checkCanInvite } from "../../shared/utils/invite";
-import { executeWithBackoff } from "../../shared/utils/retry";
-import { findUserByDisplayName } from "../../shared/utils/user";
 import { parseLocation } from "../../shared/utils/location-parser";
 import { removeFromArray } from "../../shared/utils/base/array";
-import { replaceBioSymbols } from "../../shared/utils/base/string";
-import { getUserMemo } from "../../coordinators/memo-coordinator";
-import { friendRequest } from "../../api/friend";
 import { instanceRequest } from "../../api/instance";
-import { inventoryRequest } from "../../api/inventory";
-import { marketplaceRequest } from "../../api/marketplace";
 import { notificationRequest } from "../../api/notification";
 import { queryRequest } from "../../api/query-request";
-import { VRCHAT_STORE_IDS } from "../../shared/constants/marketplace";
-import { getNotificationMessage, getUserIdFromNoty as getUserIdFromNotyBase, toNotificationText } from "../../shared/utils/notification-message";
 import { database, dbVars } from "../../services/database";
 import { getNotificationCategory, getNotificationTs } from "../../shared/utils/notification-category";
 import { AppDebug } from "../../services/app-config";
 import { createOverlayDispatch } from "./overlay-dispatch";
+import { createNotyPlayback, resolveNotyUserId } from "./noty-playback";
+import { createPipelineHandler } from "./pipeline";
+import { openNotificationLink } from "./open-link";
+import { createSeenQueue } from "./seen-queue";
+import { createNotificationActions } from "./actions";
+import { hasStatus, logError } from "./errors";
+import {
+  findLastStoredNotification,
+  findStoredNotification,
+  forEachNotificationPage,
+  hasBoopFields,
+  isNotificationExpired,
+  isStringArray,
+  readMaxTableSize,
+  toStoredNotifications,
+} from "./helpers";
+import {
+  addFailedFreeListingIds as addFailedFreeListingIdsFor,
+  checkFreeStoreItems as runFreeStoreItemCheck,
+  checkInventoryBundles as runInventoryBundleCheck,
+} from "./offer-checks";
+import type {
+  FreeStoreItemDialog,
+  InventoryBundleDialog,
+  NotificationArgs,
+  NotificationEntry,
+  NotificationJson,
+  NotificationTable,
+  NotyEntry,
+  StoredNotificationEntry,
+} from "./types";
 import { useAdvancedSettingsStore } from "../settings/advanced";
 import { useFavoriteStore } from "../favorite";
 import { useFriendStore } from "../friend";
 import { handleFriendAdd } from "../../coordinators/friend-relationship-coordinator";
 import { useGameStore } from "../game";
 import { useGeneralSettingsStore } from "../settings/general";
-
-import { showGroupDialog } from "../../coordinators/group-coordinator";
-import { showUserDialog } from "../../coordinators/user-coordinator";
 import { useInstanceStore } from "../instance";
 import { useLocationStore } from "../location";
 import { useModalStore } from "../modal";
@@ -69,7 +86,7 @@ export const useNotificationStore = defineStore("Notification", () => {
   const modalStore = useModalStore();
 
   const notificationInitStatus = ref(false);
-  const notificationTable = ref({
+  const notificationTable = ref<NotificationTable>({
     data: [],
     filters: [
       {
@@ -87,42 +104,94 @@ export const useNotificationStore = defineStore("Notification", () => {
       layout: "sizes,prev,pager,next,total",
     },
   });
-  const unseenNotifications = ref([]);
+  const unseenNotifications = ref<string[]>([]);
   const isNotificationsLoading = ref(false);
   const isNotificationCenterOpen = ref(false);
-  const inventoryBundleDialog = ref({
+  const inventoryBundleDialog = ref<InventoryBundleDialog>({
     visible: false,
     bundles: [],
   });
-  const shownBundleIds = new Set();
+  const shownBundleIds = new Set<string>();
 
-  const ignoredBundleTemplateIds = new Set(["invt_08e50f24-8807-4ec2-a0f9-9e008371280b"]);
-  const freeStoreItemDialog = ref({
+  const freeStoreItemDialog = ref<FreeStoreItemDialog>({
     visible: false,
     listings: [],
   });
-  const shownFreeListingIds = new Set();
+  const shownFreeListingIds = new Set<string>();
 
   const friendNotifications = computed(() => notificationTable.value.data.filter((n) => getNotificationCategory(n.type) === "friend"));
   const groupNotifications = computed(() => notificationTable.value.data.filter((n) => getNotificationCategory(n.type) === "group"));
   const otherNotifications = computed(() => notificationTable.value.data.filter((n) => getNotificationCategory(n.type) === "other"));
   const unseenSet = computed(() => new Set(unseenNotifications.value));
-  const unseenFriendNotifications = computed(() => friendNotifications.value.filter((n) => unseenSet.value.has(n.id)));
-  const unseenGroupNotifications = computed(() => groupNotifications.value.filter((n) => unseenSet.value.has(n.id)));
-  const unseenOtherNotifications = computed(() => otherNotifications.value.filter((n) => unseenSet.value.has(n.id)));
+  const isUnseen = (n: NotificationEntry) => typeof n.id !== "undefined" && unseenSet.value.has(n.id);
+  const unseenFriendNotifications = computed(() => friendNotifications.value.filter((n) => isUnseen(n)));
+  const unseenGroupNotifications = computed(() => groupNotifications.value.filter((n) => isUnseen(n)));
+  const unseenOtherNotifications = computed(() => otherNotifications.value.filter((n) => isUnseen(n)));
   const recentCutoff = computed(() => dayjs().subtract(24, "hour").valueOf());
   const recentFriendNotifications = computed(() =>
-    friendNotifications.value.filter((n) => !unseenSet.value.has(n.id) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
+    friendNotifications.value.filter((n) => !isUnseen(n) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
   );
   const recentGroupNotifications = computed(() =>
-    groupNotifications.value.filter((n) => !unseenSet.value.has(n.id) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
+    groupNotifications.value.filter((n) => !isUnseen(n) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
   );
   const recentOtherNotifications = computed(() =>
-    otherNotifications.value.filter((n) => !unseenSet.value.has(n.id) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
+    otherNotifications.value.filter((n) => !isUnseen(n) && n.seen !== false && getNotificationTs(n) > recentCutoff.value)
   );
   const hasUnseenNotifications = computed(() => unseenNotifications.value.length > 0);
 
-  const notyMap = {};
+  const overlay = createOverlayDispatch({
+    getUserIdFromNoty: (noty: NotyEntry) => resolveNotyUserId(noty, userStore),
+    queryRequest,
+    notificationsSettingsStore,
+    advancedSettingsStore,
+  });
+
+  const { playNoty, queueNotificationNoty, queueGameLogNoty, queueFeedNoty, queueFriendLogNoty, queueModerationNoty } = createNotyPlayback({
+    userStore,
+    friendStore,
+    gameStore,
+    locationStore,
+    notificationsSettingsStore,
+    wristOverlaySettingsStore,
+    overlay,
+  });
+
+  const { handlePipelineNotification } = createPipelineHandler({
+    generalSettingsStore,
+    favoriteStore,
+    locationStore,
+    userStore,
+    instanceStore,
+    handleNotificationHide,
+  });
+
+  const { queueMarkAsSeen, markAllAsSeen } = createSeenQueue({
+    notificationTable,
+    unseenNotifications,
+    uiStore,
+    handleNotificationSee,
+    handleNotificationV2Update,
+    handleNotificationV2Hide,
+  });
+
+  const {
+    acceptFriendRequestNotification,
+    hideNotification,
+    hideNotificationPrompt,
+    acceptRequestInvite,
+    sendNotificationResponse,
+    deleteNotificationLog,
+    deleteNotificationLogPrompt,
+  } = createNotificationActions({
+    t,
+    modalStore,
+    locationStore,
+    userStore,
+    notificationTable,
+    handleNotificationAccept,
+    handleNotificationHide,
+    handleNotificationV2Hide,
+  });
 
   watch(
     () => watchState.isLoggedIn,
@@ -132,7 +201,7 @@ export const useNotificationStore = defineStore("Notification", () => {
       inventoryBundleDialog.value.visible = false;
       freeStoreItemDialog.value.visible = false;
       if (isLoggedIn) {
-        initNotifications();
+        void initNotifications().catch(logError);
       }
     },
     { flush: "sync" }
@@ -140,35 +209,36 @@ export const useNotificationStore = defineStore("Notification", () => {
 
   watch(
     () => notificationsSettingsStore.inventoryBundleNotifications,
-    (enabled) => {
-      if (!enabled) {
+    (isEnabled) => {
+      if (!isEnabled) {
         inventoryBundleDialog.value.visible = false;
       } else if (watchState.isLoggedIn) {
-        checkInventoryBundles();
+        void checkInventoryBundles().catch(logError);
       }
     }
   );
 
   watch(
     () => notificationsSettingsStore.freeStoreItemNotifications,
-    (enabled) => {
-      if (!enabled) {
+    (isEnabled) => {
+      if (!isEnabled) {
         freeStoreItemDialog.value.visible = false;
       } else if (watchState.isLoggedIn) {
-        checkFreeStoreItems();
+        void checkFreeStoreItems().catch(logError);
       }
     }
   );
 
   async function init() {
-    notificationTable.value.filters[0].value = JSON.parse(await configRepository.getString("VRCX_notificationTableFilters", "[]"));
+    const raw: unknown = JSON.parse(await configRepository.getString("VRCX_notificationTableFilters", "[]"));
+    notificationTable.value.filters[0].value = isStringArray(raw) ? raw : [];
   }
 
-  init();
+  void init().catch(logError);
 
-  function handleNotification(args) {
-    args.ref = applyNotification(args.json);
-    const { ref } = args;
+  function handleNotification(args: NotificationArgs) {
+    const ref = applyNotification(args.json);
+    args.ref = ref;
     const array = notificationTable.value.data;
     const { length } = array;
     if (ref.seen) {
@@ -177,7 +247,7 @@ export const useNotificationStore = defineStore("Notification", () => {
       unseenNotifications.value.push(ref.id);
     }
     for (let i = 0; i < length; ++i) {
-      if (array[i].id === ref.id) {
+      if (array[i]?.id === ref.id) {
         array[i] = ref;
         return;
       }
@@ -185,39 +255,41 @@ export const useNotificationStore = defineStore("Notification", () => {
     if (ref.senderUserId !== userStore.currentUser.id) {
       const isExcludedType = ref.type === "friendRequest" || ref.type === "ignoredFriendRequest" || ref.type.includes(".");
       const isNotificationInitReady = !notificationInitStatus.value || !isNotificationsLoading.value;
-      const matchesNotificationTypeFilter =
-        notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
+      const isMatchingTypeFilter = notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
 
       if (!isExcludedType) {
         database.addNotificationToDatabase(ref);
       }
       if (isNotificationInitReady) {
-        if (ref.details?.worldId && !instanceStore.cachedInstances.has(ref.details.worldId)) {
-          const L = parseLocation(ref.details.worldId);
+        const worldId = ref.details["worldId"];
+        if (typeof worldId === "string" && worldId && !instanceStore.cachedInstances.has(worldId)) {
+          const L = parseLocation(worldId);
           if (L.isRealInstance) {
-            instanceRequest.getInstance({
-              worldId: L.worldId,
-              instanceId: L.instanceId,
-            });
+            void instanceRequest
+              .getInstance({
+                worldId: L.worldId,
+                instanceId: L.instanceId,
+              })
+              .catch(logError);
           }
         }
         queueNotificationNoty(ref);
-        sharedFeedStore.addEntry(ref);
+        void sharedFeedStore.addEntry(ref).catch(logError);
       }
-      if (matchesNotificationTypeFilter && !isExcludedType) {
+      if (isMatchingTypeFilter && !isExcludedType) {
         uiStore.notifyMenu("notification");
       }
     }
     notificationTable.value.data.push(ref);
     const D = userStore.userDialog;
-    if (D.visible === false || ref.type !== "friendRequest" || ref.senderUserId !== D.id) {
+    if (!D.visible || ref.type !== "friendRequest" || ref.senderUserId !== D.id) {
       return;
     }
     D.incomingRequest = true;
   }
 
-  function handleNotificationHide(notificationId) {
-    const ref = notificationTable.value.data.find((n) => n.id === notificationId);
+  function handleNotificationHide(notificationId: string) {
+    const ref = findStoredNotification(notificationTable.value.data, notificationId);
     if (typeof ref === "undefined") {
       return;
     }
@@ -235,147 +307,19 @@ export const useNotificationStore = defineStore("Notification", () => {
     });
   }
 
-  function handlePipelineNotification(args) {
-    const ref = args.json;
-    if (ref.type === "friendRequest" && generalSettingsStore.autoDeclineFriendRequests) {
-      handleAutoDeclineFriendRequest(ref);
-    }
-    if (ref.type !== "requestInvite" || generalSettingsStore.autoAcceptInviteRequests === "Off") {
-      return;
-    }
-    const allowedStatuses = generalSettingsStore.autoAcceptInviteStatuses;
-    if (allowedStatuses.length && !allowedStatuses.includes(userStore.currentUser.status)) {
-      return;
-    }
-
-    let currentLocation = locationStore.lastLocation.location;
-    if (locationStore.lastLocation.location === "traveling") {
-      currentLocation = locationStore.lastLocationDestination;
-    }
-    if (!currentLocation) {
-      currentLocation = userStore.currentUser.$locationTag;
-      if (userStore.currentUser.$travelingToLocation) {
-        currentLocation = userStore.currentUser.$travelingToLocation;
-      }
-    }
-    if (!currentLocation) {
-      return;
-    }
-    if (
-      generalSettingsStore.autoAcceptInviteRequests === "All Favorites" &&
-      !favoriteStore.state.favoriteFriends_.some((x) => x.id === ref.senderUserId) &&
-      !favoriteStore.isInAnyLocalFriendGroup(ref.senderUserId)
-    ) {
-      return;
-    }
-    if (generalSettingsStore.autoAcceptInviteRequests === "Selected Favorites") {
-      const groups = generalSettingsStore.autoAcceptInviteGroups;
-      if (groups.length === 0) {
-        return;
-      } else {
-        let found = false;
-        for (const groupKey of groups) {
-          if (groupKey.startsWith("local:")) {
-            const localGroup = groupKey.slice(6);
-            const localFavs = favoriteStore.localFriendFavorites[localGroup];
-            if (localFavs && localFavs.includes(ref.senderUserId)) {
-              found = true;
-              break;
-            }
-          } else {
-            if (favoriteStore.cachedFavoritesByObjectId.get(ref.senderUserId)?.$groupKey === groupKey) {
-              found = true;
-              break;
-            }
-          }
-        }
-        if (!found) {
-          return;
-        }
-      }
-    }
-    if (
-      !checkCanInvite(currentLocation, {
-        currentUserId: userStore.currentUser.id,
-        lastLocationStr: locationStore.lastLocation.location,
-        cachedInstances: instanceStore.cachedInstances,
-      })
-    ) {
-      return;
-    }
-
-    const L = parseLocation(currentLocation);
-    queryRequest
-      .fetch("world", {
-        worldId: L.worldId,
-      })
-      .then((args1) => {
-        notificationRequest
-          .sendInvite(
-            {
-              instanceId: L.tag,
-              worldId: L.tag,
-              worldName: args1.ref.name,
-              rsvp: true,
-            },
-            ref.senderUserId
-          )
-          .then((_args) => {
-            const text = `Auto invite sent to ${ref.senderUsername}`;
-            if (AppDebug.errorNoty) {
-              toast.dismiss(AppDebug.errorNoty);
-            }
-            AppDebug.errorNoty = toast.info(text);
-            console.log(text);
-            notificationRequest
-              .hideNotification({
-                notificationId: ref.id,
-              })
-              .then(() => {
-                handleNotificationHide(ref.id);
-              });
-            return _args;
-          })
-          .catch((err) => {
-            console.error(err);
-          });
-      });
-  }
-
-  async function handleAutoDeclineFriendRequest(ref) {
-    const joinInfo = await database.getJoinCount({
-      id: ref.senderUserId,
-      displayName: ref.senderUsername,
-    });
-    if (Number(joinInfo.joinCount) !== 0) {
-      return;
-    }
-
-    const text = `Auto declined friend request from ${ref.senderUsername}`;
-    if (AppDebug.errorNoty) {
-      toast.dismiss(AppDebug.errorNoty);
-    }
-    AppDebug.errorNoty = toast.info(text);
-    console.log(text);
-    await notificationRequest.hideNotification({
-      notificationId: ref.id,
-    });
-    handleNotificationHide(ref.id);
-  }
-
-  function appendNotificationTableEntry(entry) {
+  function appendNotificationTableEntry(entry: NotificationEntry) {
     notificationTable.value.data.push(entry);
   }
 
-  function setNotificationInitStatus(value) {
-    notificationInitStatus.value = value;
+  function setNotificationInitStatus(isReady: boolean) {
+    notificationInitStatus.value = isReady;
   }
 
   function clearUnseenNotifications() {
     unseenNotifications.value = [];
   }
 
-  function handleNotificationSee(notificationId) {
+  function handleNotificationSee(notificationId: string) {
     removeFromArray(unseenNotifications.value, notificationId);
     if (unseenNotifications.value.length === 0) {
       uiStore.removeNotify("notification");
@@ -387,77 +331,8 @@ export const useNotificationStore = defineStore("Notification", () => {
     database.seenNotificationV2(notificationId);
   }
 
-  const seeQueue = [];
-  const seenIds = new Set();
-  let seeProcessing = false;
-
-  async function processSeeQueue() {
-    if (seeProcessing) return;
-    seeProcessing = true;
-    let item;
-    while ((item = seeQueue.shift())) {
-      const { id, version } = item;
-      try {
-        await executeWithBackoff(
-          async () => {
-            if (version >= 2) {
-              const args = await notificationRequest.seeNotificationV2({
-                notificationId: id,
-              });
-              handleNotificationV2Update({
-                params: { notificationId: id },
-                json: { ...args.json, seen: true },
-              });
-            } else {
-              await notificationRequest.seeNotification({
-                notificationId: id,
-              });
-              handleNotificationSee(id);
-            }
-          },
-          {
-            maxRetries: 3,
-            baseDelay: 1000,
-            shouldRetry: (err) => err?.status === 429 || (err?.message || "").includes("429"),
-          }
-        );
-      } catch {
-        console.warn("Failed to mark notification as seen:", id);
-        if (version >= 2) {
-          handleNotificationV2Hide(id);
-        }
-      }
-    }
-    seeProcessing = false;
-  }
-
-  function queueMarkAsSeen(notificationId, version = 1) {
-    if (seenIds.has(notificationId)) return;
-    seenIds.add(notificationId);
-    seeQueue.push({ id: notificationId, version });
-    processSeeQueue();
-  }
-
-  function markAllAsSeen() {
-    const unseenIds = [...unseenNotifications.value];
-    for (const id of unseenIds) {
-      const ref = notificationTable.value.data.find((n) => n.id === id);
-      const version = ref?.version || 1;
-      queueMarkAsSeen(id, version);
-    }
-    unseenNotifications.value = [];
-    uiStore.removeNotify("notification");
-  }
-
-  function handleNotificationAccept(args) {
-    let ref;
-    const array = notificationTable.value.data;
-    for (let i = array.length - 1; i >= 0; i--) {
-      if (array[i].id === args.params.notificationId) {
-        ref = array[i];
-        break;
-      }
-    }
+  function handleNotificationAccept(args: { params: { notificationId: string }; ref?: NotificationEntry }) {
+    const ref = findLastStoredNotification(notificationTable.value.data, args.params.notificationId);
     if (typeof ref === "undefined") {
       return;
     }
@@ -469,21 +344,23 @@ export const useNotificationStore = defineStore("Notification", () => {
         notificationId: ref.id,
       },
     });
-    handleFriendAdd({
-      params: {
-        userId: ref.senderUserId,
-      },
-    });
+    if (ref.senderUserId !== undefined) {
+      handleFriendAdd({
+        params: {
+          userId: ref.senderUserId,
+        },
+      });
+    }
 
     const D = userStore.userDialog;
-    if (typeof args.ref === "undefined" || args.ref.type !== "friendRequest" || args.ref.senderUserId !== D.id) {
+    if (ref.type !== "friendRequest" || ref.senderUserId !== D.id) {
       return;
     }
     D.isFriend = true;
     D.incomingRequest = false;
   }
 
-  function handleNotificationExpire(args) {
+  function handleNotificationExpire(args: { ref: StoredNotificationEntry; params?: unknown }) {
     const { ref } = args;
     const D = userStore.userDialog;
     if (ref.type !== "friendRequest" || ref.senderUserId !== D.id) {
@@ -492,47 +369,40 @@ export const useNotificationStore = defineStore("Notification", () => {
     D.incomingRequest = false;
   }
 
-  function applyNotification(data) {
+  function applyNotification(data: NotificationJson): StoredNotificationEntry {
     const json = sanitizeNotificationJson({ ...data });
-    let ref;
-    const array = notificationTable.value.data;
-    for (let i = array.length - 1; i >= 0; i--) {
-      if (array[i].id === json.id) {
-        ref = array[i];
-        break;
-      }
-    }
-    if (typeof ref === "undefined") {
-      ref = createDefaultNotificationRef(json);
+    const existing = findLastStoredNotification(notificationTable.value.data, json["id"]);
+    let ref: StoredNotificationEntry;
+    if (existing) {
+      Object.assign(existing, json);
+      existing.$isExpired = false;
+      ref = existing;
     } else {
-      Object.assign(ref, json);
-      ref.$isExpired = false;
+      ref = createDefaultNotificationRef(json);
     }
     ref.details = parseNotificationDetails(ref.details);
     return ref;
   }
 
-  function applyNotificationV2(data) {
+  function applyNotificationV2(data: NotificationJson): StoredNotificationEntry {
     const json = sanitizeNotificationJson({ ...data });
-    let ref = notificationTable.value.data.find((n) => n.id === json.id);
-    if (typeof ref === "undefined") {
-      ref = createDefaultNotificationV2Ref(json);
-    } else {
-      Object.assign(ref, json);
+    const existing = findStoredNotification(notificationTable.value.data, json["id"]);
+    const ref: StoredNotificationEntry = existing ? Object.assign(existing, json) : { ...createDefaultNotificationV2Ref(json), created_at: "" };
+    ref.created_at = ref.createdAt ?? "";
+    if (hasBoopFields(ref)) {
+      applyBoopLegacyHandling(ref, AppDebug.endpointDomain);
     }
-    ref.created_at = ref.createdAt;
-    applyBoopLegacyHandling(ref, AppDebug.endpointDomain);
     return ref;
   }
 
-  function handleNotificationV2(args) {
+  function handleNotificationV2(args: NotificationArgs) {
     const ref = applyNotificationV2(args.json);
     if (ref.seen) {
       removeFromArray(unseenNotifications.value, ref.id);
     } else if (!unseenNotifications.value.includes(ref.id)) {
       unseenNotifications.value.push(ref.id);
     }
-    const existingNotification = notificationTable.value.data.find((n) => n.id === ref.id);
+    const existingNotification = findStoredNotification(notificationTable.value.data, ref.id);
     if (existingNotification) {
       Object.assign(existingNotification, ref);
       database.addNotificationV2ToDatabase(existingNotification);
@@ -540,35 +410,32 @@ export const useNotificationStore = defineStore("Notification", () => {
     }
 
     const isNotificationInitReady = !notificationInitStatus.value || !isNotificationsLoading.value;
-    const matchesNotificationTypeFilter = notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
-    if (isNotificationInitReady && matchesNotificationTypeFilter) {
+    const isMatchingTypeFilter = notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
+    if (isNotificationInitReady && isMatchingTypeFilter) {
       uiStore.notifyMenu("notification");
     }
     database.addNotificationV2ToDatabase(ref);
     notificationTable.value.data.push(ref);
     queueNotificationNoty(ref);
-    sharedFeedStore.addEntry(ref);
+    void sharedFeedStore.addEntry(ref).catch(logError);
   }
 
-  function handleNotificationV2Update(args) {
+  function handleNotificationV2Update(args: { params: { notificationId: string }; json: NotificationJson }) {
     const notificationId = args.params.notificationId;
     const json = { ...args.json };
-    if (!json) {
-      return;
-    }
-    json.id = notificationId;
+    json["id"] = notificationId;
     handleNotificationV2({
       json,
       params: {
         notificationId,
       },
     });
-    if (json.seen) {
+    if (json["seen"]) {
       handleNotificationSee(notificationId);
     }
   }
 
-  function handleNotificationV2Hide(notificationId) {
+  function handleNotificationV2Hide(notificationId: string) {
     database.expireNotificationV2(notificationId);
     const ref = notificationTable.value.data.find((n) => n.id === notificationId);
     if (ref) {
@@ -580,21 +447,14 @@ export const useNotificationStore = defineStore("Notification", () => {
   function expireFriendRequestNotifications() {
     const array = notificationTable.value.data;
     for (let i = array.length - 1; i >= 0; i--) {
-      if (array[i].type === "friendRequest" || array[i].type === "ignoredFriendRequest") {
+      if (array[i]?.type === "friendRequest" || array[i]?.type === "ignoredFriendRequest") {
         array.splice(i, 1);
       }
     }
   }
 
-  function expireNotification(notificationId) {
-    let ref;
-    const array = notificationTable.value.data;
-    for (let i = array.length - 1; i >= 0; i--) {
-      if (array[i].id === notificationId) {
-        ref = array[i];
-        break;
-      }
-    }
+  function expireNotification(notificationId: string) {
+    const ref = findLastStoredNotification(notificationTable.value.data, notificationId);
     if (typeof ref === "undefined") {
       return;
     }
@@ -608,10 +468,10 @@ export const useNotificationStore = defineStore("Notification", () => {
     });
   }
 
-  let refreshNotificationsPromise = null;
+  let refreshNotificationsPromise: Promise<void> | null = null;
   let refreshNotificationsBlockedUntil = 0;
 
-  function refreshNotifications() {
+  function refreshNotifications(): Promise<void> {
     if (refreshNotificationsPromise) {
       return refreshNotificationsPromise;
     }
@@ -626,18 +486,11 @@ export const useNotificationStore = defineStore("Notification", () => {
 
   async function fetchAllNotifications() {
     isNotificationsLoading.value = true;
-    let count;
-    let params;
     try {
       expireFriendRequestNotifications();
-      params = {
-        n: 100,
-        offset: 0,
-      };
-      count = 50;
-      for (let i = 0; i < count; i++) {
-        const args = await notificationRequest.getNotifications(params);
-        for (const json of args.json) {
+      await forEachNotificationPage(
+        (params) => notificationRequest.getNotifications(params),
+        (json) => {
           handleNotification({
             json,
             params: {
@@ -645,19 +498,10 @@ export const useNotificationStore = defineStore("Notification", () => {
             },
           });
         }
-        params.offset += 100;
-        if (args.json.length < 100) {
-          break;
-        }
-      }
-      params = {
-        n: 100,
-        offset: 0,
-      };
-      count = 50;
-      for (let i = 0; i < count; i++) {
-        const args = await notificationRequest.getNotificationsV2(params);
-        for (const json of args.json) {
+      );
+      await forEachNotificationPage(
+        (params) => notificationRequest.getNotificationsV2(params),
+        (json) => {
           handleNotificationV2({
             json,
             params: {
@@ -665,19 +509,10 @@ export const useNotificationStore = defineStore("Notification", () => {
             },
           });
         }
-        params.offset += 100;
-        if (args.json.length < 100) {
-          break;
-        }
-      }
-      params = {
-        n: 100,
-        offset: 0,
-      };
-      count = 50;
-      for (let i = 0; i < count; i++) {
-        const args = await notificationRequest.getHiddenFriendRequests(params);
-        for (const json of args.json) {
+      );
+      await forEachNotificationPage(
+        (params) => notificationRequest.getHiddenFriendRequests(params),
+        (json) => {
           handleNotification({
             json: { ...json, type: "ignoredFriendRequest" },
             params: {
@@ -685,14 +520,10 @@ export const useNotificationStore = defineStore("Notification", () => {
             },
           });
         }
-        params.offset += 100;
-        if (args.json.length < 100) {
-          break;
-        }
-      }
+      );
     } catch (err) {
       console.error(err);
-      if (err?.status === 429) {
+      if (hasStatus(err, 429)) {
         refreshNotificationsBlockedUntil = Date.now() + 120000;
       }
     } finally {
@@ -701,396 +532,27 @@ export const useNotificationStore = defineStore("Notification", () => {
     }
   }
 
-  function queueNotificationNoty(noty) {
-    noty.isFriend = friendStore.friends.has(noty.senderUserId);
-    noty.isFavorite = friendStore.localFavoriteFriends.has(noty.senderUserId);
-    const notyFilter = notificationsSettingsStore.sharedFeedFilters.noty;
-    if (
-      notyFilter[noty.type] &&
-      (notyFilter[noty.type] === "On" || notyFilter[noty.type] === "Friends" || (notyFilter[noty.type] === "VIP" && noty.isFavorite))
-    ) {
-      playNoty(noty);
-    }
-  }
-
-  function playNoty(noty) {
-    if (userStore.currentUser.status === "busy" || !watchState.isFriendsLoaded) {
-      return;
-    }
-    let displayName = "";
-    if (noty.type === "DisplayName" && noty.previousDisplayName) {
-      displayName = noty.previousDisplayName;
-    } else if (noty.displayName) {
-      displayName = noty.displayName;
-    } else if (noty.senderUsername) {
-      displayName = noty.senderUsername;
-    } else if (noty.sourceDisplayName) {
-      displayName = noty.sourceDisplayName;
-    }
-    if (displayName) {
-      const notyId = `${noty.type},${displayName}`;
-      if (notyMap[notyId] && notyMap[notyId] >= noty.created_at) {
-        return;
-      }
-      notyMap[notyId] = noty.created_at;
-    }
-    const bias = new Date(Date.now() - 60000).toJSON();
-    for (const [notyId, createdAt] of Object.entries(notyMap)) {
-      if (createdAt < bias) {
-        delete notyMap[notyId];
-      }
-    }
-    if (noty.created_at < bias) {
-      return;
-    }
-
-    const notiConditions = {
-      Always: () => true,
-      "Inside VR": () => gameStore.isSteamVRRunning,
-      "Outside VR": () => !gameStore.isSteamVRRunning,
-      "Game Closed": () => !gameStore.isGameRunning,
-      "Game Running": () => gameStore.isGameRunning,
-      "Desktop Mode": () => gameStore.isGameNoVR && gameStore.isGameRunning,
-      AFK: () => notificationsSettingsStore.afkDesktopToast && gameStore.isHmdAfk && gameStore.isGameRunning && !gameStore.isGameNoVR,
-    };
-
-    const playNotificationTTS = notiConditions[notificationsSettingsStore.notificationTTS]?.();
-    const playDesktopToast = notiConditions[notificationsSettingsStore.desktopToast]?.() || notiConditions["AFK"]();
-
-    const playOverlayToast = notiConditions[notificationsSettingsStore.overlayToast]?.();
-    const playOverlayNotification = notificationsSettingsStore.overlayNotifications && playOverlayToast;
-    const playXSNotification = notificationsSettingsStore.xsNotifications && playOverlayToast;
-    const playOvrtHudNotifications = notificationsSettingsStore.ovrtHudNotifications && playOverlayToast;
-    const playOvrtWristNotifications = notificationsSettingsStore.ovrtWristNotifications && playOverlayToast;
-
-    let message = "";
-    if (noty.title) {
-      message = `${noty.title}, ${noty.message}`;
-    } else if (noty.message) {
-      message = noty.message;
-    }
-    const messageList = ["inviteMessage", "requestMessage", "responseMessage"];
-    for (let k = 0; k < messageList.length; k++) {
-      if (typeof noty.details !== "undefined" && typeof noty.details[messageList[k]] !== "undefined") {
-        message = `, ${noty.details[messageList[k]]}`;
-      }
-    }
-    if (playNotificationTTS) {
-      playNotyTTS(noty, displayName, message);
-    }
-    if (playDesktopToast || playXSNotification || playOvrtHudNotifications || playOvrtWristNotifications || playOverlayNotification) {
-      if (notificationsSettingsStore.imageNotifications) {
-        notySaveImage(noty).then((image) => {
-          if (playXSNotification) {
-            displayXSNotification(noty, message, image);
-          }
-          if (playOvrtHudNotifications || playOvrtWristNotifications) {
-            displayOvrtNotification(playOvrtHudNotifications, playOvrtWristNotifications, noty, message, image);
-          }
-          if (playDesktopToast) {
-            displayDesktopToast(noty, message, image);
-          }
-          if (playOverlayNotification) {
-            displayOverlayNotification(noty, message, image);
-          }
-        });
-      } else {
-        if (playXSNotification) {
-          displayXSNotification(noty, message, "");
-        }
-        if (playOvrtHudNotifications || playOvrtWristNotifications) {
-          displayOvrtNotification(playOvrtHudNotifications, playOvrtWristNotifications, noty, message, "");
-        }
-        if (playDesktopToast) {
-          displayDesktopToast(noty, message, "");
-        }
-        if (playOverlayNotification) {
-          displayOverlayNotification(noty, message, "");
-        }
-      }
-    }
-  }
-
-  async function playNotyTTS(noty, displayName, message) {
-    if (notificationsSettingsStore.notificationTTSNickName) {
-      const userId = getUserIdFromNoty(noty);
-      const memo = await getUserMemo(userId);
-      if (memo.memo) {
-        const array = memo.memo.split("\n");
-        const nickName = array[0];
-        displayName = nickName;
-      }
-    }
-    const msg = getNotificationMessage(noty, message, displayName);
-    if (msg) {
-      notificationsSettingsStore.speak(toNotificationText(msg.title, msg.body, noty.type));
-    }
-  }
-
-  const { notySaveImage, displayDesktopToast, displayOverlayNotification, displayXSNotification, displayOvrtNotification } = createOverlayDispatch({
-    getUserIdFromNoty,
-    queryRequest,
-    notificationsSettingsStore,
-    advancedSettingsStore,
-  });
-
-  function getUserIdFromNoty(noty) {
-    const id = getUserIdFromNotyBase(noty);
-    if (id) return id;
-    if (noty.displayName) {
-      return findUserByDisplayName(userStore.cachedUsers, noty.displayName, userStore.cachedUserIdsByDisplayName)?.id ?? "";
-    }
-    return "";
-  }
-
-  function queueGameLogNoty(gamelog) {
-    const noty = structuredClone(gamelog);
-    let bias;
-
-    if (noty.type === "OnPlayerJoined") {
-      bias = locationStore.lastLocation.date + 30 * 1000;
-      if (Date.parse(noty.created_at) <= bias) {
-        return;
-      }
-    }
-    if (noty.type === "OnPlayerLeft" || noty.type === "BlockedOnPlayerLeft" || noty.type === "MutedOnPlayerLeft") {
-      bias = locationStore.lastLocationDestinationTime + 5 * 1000;
-      if (Date.parse(noty.created_at) <= bias) {
-        return;
-      }
-    }
-    if (noty.type === "Notification" || noty.type === "LocationDestination") {
-      return;
-    }
-    if (noty.type === "VideoPlay") {
-      if (!noty.videoName) {
-        return;
-      }
-      noty.notyName = noty.videoName;
-      if (noty.displayName) {
-        noty.notyName = `${noty.videoName} (${noty.displayName})`;
-      }
-    }
-    if (noty.type !== "VideoPlay" && noty.displayName === userStore.currentUser.displayName) {
-      return;
-    }
-    noty.isFriend = false;
-    noty.isFavorite = false;
-    if (noty.userId) {
-      noty.isFriend = friendStore.friends.has(noty.userId);
-      noty.isFavorite = friendStore.localFavoriteFriends.has(noty.userId);
-    } else if (noty.displayName) {
-      const ref = findUserByDisplayName(userStore.cachedUsers, noty.displayName, userStore.cachedUserIdsByDisplayName);
-      if (ref) {
-        noty.isFriend = friendStore.friends.has(ref.id);
-        noty.isFavorite = friendStore.localFavoriteFriends.has(ref.id);
-      }
-    }
-    const notyFilter = notificationsSettingsStore.sharedFeedFilters.noty;
-    if (
-      notyFilter[noty.type] &&
-      (notyFilter[noty.type] === "On" ||
-        notyFilter[noty.type] === "Everyone" ||
-        (notyFilter[noty.type] === "Friends" && noty.isFriend) ||
-        (notyFilter[noty.type] === "VIP" && noty.isFavorite))
-    ) {
-      playNoty(noty);
-    }
-  }
-
-  function queueFeedNoty(feed) {
-    const noty = { ...feed };
-    if (noty.type === "Avatar") {
-      return;
-    }
-
-    if (wristOverlaySettingsStore.hidePrivateFromFeed && noty.type === "GPS" && noty.location === "private") {
-      return;
-    }
-    noty.isFriend = friendStore.friends.has(noty.userId);
-    noty.isFavorite = friendStore.localFavoriteFriends.has(noty.userId);
-    const notyFilter = notificationsSettingsStore.sharedFeedFilters.noty;
-    if (
-      notyFilter[noty.type] &&
-      (notyFilter[noty.type] === "Everyone" || (notyFilter[noty.type] === "Friends" && noty.isFriend) || (notyFilter[noty.type] === "VIP" && noty.isFavorite))
-    ) {
-      playNoty(noty);
-    }
-  }
-
-  function queueFriendLogNoty(noty) {
-    if (noty.type === "FriendRequest") {
-      return;
-    }
-    noty.isFriend = friendStore.friends.has(noty.userId);
-    noty.isFavorite = friendStore.localFavoriteFriends.has(noty.userId);
-    const notyFilter = notificationsSettingsStore.sharedFeedFilters.noty;
-    if (
-      notyFilter[noty.type] &&
-      (notyFilter[noty.type] === "On" || notyFilter[noty.type] === "Friends" || (notyFilter[noty.type] === "VIP" && noty.isFavorite))
-    ) {
-      playNoty(noty);
-    }
-  }
-
-  function queueModerationNoty(noty) {
-    noty.isFriend = false;
-    noty.isFavorite = false;
-    if (noty.userId) {
-      noty.isFriend = friendStore.friends.has(noty.userId);
-      noty.isFavorite = friendStore.localFavoriteFriends.has(noty.userId);
-    }
-    const notyFilter = notificationsSettingsStore.sharedFeedFilters.noty;
-    if (notyFilter[noty.type] && notyFilter[noty.type] === "On") {
-      playNoty(noty);
-    }
-  }
-
   async function initNotifications() {
     notificationInitStatus.value = false;
-    let tableData = await database.getNotificationsV2();
-    const notifications = await database.getNotifications();
-    tableData = tableData.concat(notifications.filter((n) => !tableData.some((t) => t.id === n.id)));
+    const v2Entries = toStoredNotifications(await database.getNotificationsV2());
+    const legacyEntries = toStoredNotifications(await database.getNotifications());
+    const tableData = v2Entries.concat(legacyEntries.filter((n) => !v2Entries.some((t) => t.id === n.id)));
     tableData.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
-    tableData.splice(dbVars.maxTableSize);
+    tableData.splice(readMaxTableSize(dbVars));
     notificationTable.value.data = tableData;
-    refreshNotifications();
+    void refreshNotifications().catch(logError);
   }
 
-  async function checkInventoryBundles() {
-    if (!notificationsSettingsStore.inventoryBundleNotifications) {
-      return;
-    }
-    let bundles;
-    try {
-      const args = await inventoryRequest.getInventoryItems({
-        n: 100,
-        offset: 0,
-        types: "bundle",
-        order: "newest",
-      });
-      bundles = args.json.data;
-    } catch (err) {
-      console.error("Failed to check inventory bundles:", err);
-      return;
-    }
-    const newBundles = bundles.filter((item) => !shownBundleIds.has(item.id) && !ignoredBundleTemplateIds.has(item.templateId));
-    if (newBundles.length === 0) {
-      return;
-    }
-    for (const item of newBundles) {
-      shownBundleIds.add(item.id);
-    }
-    const dialog = inventoryBundleDialog.value;
-    if (dialog.visible) {
-      dialog.bundles.push(...newBundles);
-    } else {
-      dialog.bundles = newBundles;
-    }
-    dialog.visible = true;
+  function checkInventoryBundles() {
+    return runInventoryBundleCheck(notificationsSettingsStore, shownBundleIds, inventoryBundleDialog);
   }
 
-  function getEffectiveListingPrice(listing) {
-    if (userStore.isLocalUserVrcPlusSupporter && listing.vrcPlusDiscountPrice != null) {
-      return listing.vrcPlusDiscountPrice;
-    }
-    return listing.priceTokens;
+  function checkFreeStoreItems() {
+    return runFreeStoreItemCheck(notificationsSettingsStore, userStore, shownFreeListingIds, freeStoreItemDialog);
   }
 
-  function isListingOwned(listing) {
-    if (userStore.ownedListingIds.has(listing.id)) {
-      return true;
-    }
-    const productIds = listing.productIds ?? [];
-    return productIds.length > 0 && productIds.every((id) => userStore.ownedProductIds.has(id));
-  }
-
-  function isListingInBundle(listing, listings) {
-    const productIds = listing.productIds ?? [];
-    if (productIds.length === 0) {
-      return false;
-    }
-    for (const other of listings.values()) {
-      const bundleProductIds = other.productIds ?? [];
-      if (other.id !== listing.id && bundleProductIds.length > productIds.length && productIds.every((id) => bundleProductIds.includes(id))) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  async function checkFreeStoreItems() {
-    if (!notificationsSettingsStore.freeStoreItemNotifications) {
-      return;
-    }
-    let shelves;
-    try {
-      const [results] = await Promise.all([
-        Promise.all(
-          VRCHAT_STORE_IDS.map((storeId) =>
-            marketplaceRequest.getStoreShelves({
-              storeId,
-              fetch: "public",
-              hydrateListings: true,
-            })
-          )
-        ),
-        userStore.getAllProductPurchases(),
-      ]);
-      shelves = results.flatMap((args) => args.json ?? []);
-    } catch (err) {
-      console.error("Failed to check free store items:", err);
-      return;
-    }
-    const failedListingIds = await getFailedFreeListingIds();
-    const freeListings = new Map();
-    for (const shelf of shelves) {
-      for (const listing of shelf.listings ?? []) {
-        if (
-          listing.active &&
-          !getEffectiveListingPrice(listing) &&
-          !isListingOwned(listing) &&
-          !shownFreeListingIds.has(listing.id) &&
-          !failedListingIds.has(listing.id)
-        ) {
-          freeListings.set(listing.id, {
-            ...listing,
-            displayName: replaceBioSymbols(listing.displayName),
-          });
-        }
-      }
-    }
-    for (const listing of freeListings.values()) {
-      shownFreeListingIds.add(listing.id);
-    }
-    const newListings = Array.from(freeListings.values()).filter((listing) => !isListingInBundle(listing, freeListings));
-    if (newListings.length === 0) {
-      return;
-    }
-    const dialog = freeStoreItemDialog.value;
-    if (dialog.visible) {
-      dialog.listings.push(...newListings);
-    } else {
-      dialog.listings = newListings;
-    }
-    dialog.visible = true;
-  }
-
-  async function getFailedFreeListingIds() {
-    const data = await configRepository.getString(`VRCX_failedFreeListingIds_${userStore.currentUser.id}`, "[]");
-    return new Set(JSON.parse(data));
-  }
-
-  async function addFailedFreeListingIds(listingIds) {
-    if (listingIds.length === 0) {
-      return;
-    }
-    const key = `VRCX_failedFreeListingIds_${userStore.currentUser.id}`;
-    const failedIds = await getFailedFreeListingIds();
-    for (const id of listingIds) {
-      failedIds.add(id);
-    }
-    await configRepository.setString(key, JSON.stringify(Array.from(failedIds)));
+  function addFailedFreeListingIds(listingIds: string[]) {
+    return addFailedFreeListingIdsFor(userStore.currentUser.id, listingIds);
   }
 
   function testNotification() {
@@ -1099,195 +561,6 @@ export const useNotificationStore = defineStore("Notification", () => {
       created_at: new Date().toJSON(),
       data: t("view.settings.notifications.notifications.test_message"),
     });
-  }
-
-  function acceptFriendRequestNotification(row) {
-    modalStore
-      .confirm({
-        description: t("confirm.accept_friend_request"),
-        title: t("confirm.title"),
-      })
-      .then(({ ok }) => {
-        if (!ok) return;
-        notificationRequest
-          .acceptFriendRequestNotification({
-            notificationId: row.id,
-          })
-          .then((args) => {
-            handleNotificationAccept(args);
-          })
-          .catch((err) => {
-            if (err && err.message && err.message.includes("404")) {
-              handleNotificationHide(row.id);
-            }
-          });
-      })
-      .catch(() => {});
-  }
-
-  async function hideNotification(row) {
-    if (row.type === "ignoredFriendRequest") {
-      await friendRequest.deleteHiddenFriendRequest({ notificationId: row.id }, row.senderUserId);
-      handleNotificationHide(row.id);
-    } else {
-      notificationRequest
-        .hideNotification({
-          notificationId: row.id,
-        })
-        .then(() => {
-          handleNotificationHide(row.id);
-        });
-    }
-  }
-
-  function hideNotificationPrompt(row) {
-    modalStore
-      .confirm({
-        description: t("confirm.decline_type", { type: row.type }),
-        title: t("confirm.title"),
-      })
-      .then(({ ok }) => {
-        if (ok) hideNotification(row);
-      })
-      .catch(() => {});
-  }
-
-  function acceptRequestInvite(row) {
-    modalStore
-      .confirm({
-        description: t("confirm.send_invite"),
-        title: t("confirm.title"),
-      })
-      .then(({ ok }) => {
-        if (!ok) return;
-        let currentLocation = locationStore.lastLocation.location;
-        if (locationStore.lastLocation.location === "traveling") {
-          currentLocation = locationStore.lastLocationDestination;
-        }
-        if (!currentLocation) {
-          currentLocation = userStore.currentUser?.$locationTag;
-        }
-        const L = parseLocation(currentLocation);
-        queryRequest.fetch("world", { worldId: L.worldId }).then((args) => {
-          notificationRequest
-            .sendInvite(
-              {
-                instanceId: L.tag,
-                worldId: L.tag,
-                worldName: args.ref.name,
-                rsvp: true,
-              },
-              row.senderUserId
-            )
-            .then((_args) => {
-              toast(t("message.invite.sent"));
-              notificationRequest
-                .hideNotification({
-                  notificationId: row.id,
-                })
-                .then(() => {
-                  handleNotificationHide(row.id);
-                });
-              return _args;
-            });
-        });
-      })
-      .catch(() => {});
-  }
-
-  function sendNotificationResponse(notificationId, responses, responseType) {
-    if (!Array.isArray(responses) || responses.length === 0) return;
-    let responseData = "";
-    for (let i = 0; i < responses.length; i++) {
-      if (responses[i].type === responseType) {
-        responseData = responses[i].data;
-        break;
-      }
-    }
-    const params = { notificationId, responseType, responseData };
-    notificationRequest
-      .sendNotificationResponse(params)
-      .then((args) => {
-        console.log("Notification response", args);
-        if (!args.json) return;
-        handleNotificationV2Hide(notificationId);
-        toast.success(args.json);
-      })
-      .catch(() => {
-        handleNotificationV2Hide(notificationId);
-        notificationRequest.hideNotificationV2(notificationId);
-      });
-  }
-
-  function deleteNotificationLog(row) {
-    const idx = notificationTable.value.data.findIndex((e) => e.id === row.id);
-    if (idx !== -1) {
-      notificationTable.value.data.splice(idx, 1);
-    }
-    if (row.type !== "friendRequest" && row.type !== "ignoredFriendRequest") {
-      if (!row.version || row.version < 2) {
-        database.deleteNotification(row.id);
-      } else {
-        database.deleteNotificationV2(row.id);
-      }
-    }
-  }
-
-  function deleteNotificationLogPrompt(row) {
-    modalStore
-      .confirm({
-        description: t("confirm.delete_type", { type: row.type }),
-        title: t("confirm.title"),
-      })
-      .then(({ ok }) => {
-        if (ok) deleteNotificationLog(row);
-      })
-      .catch(() => {});
-  }
-
-  function isNotificationExpired(notification) {
-    if (notification.$isExpired !== undefined) {
-      return notification.$isExpired;
-    }
-    if (!notification.expiresAt) {
-      return false;
-    }
-    const expiresAt = dayjs(notification.expiresAt);
-    return expiresAt.isValid() && dayjs().isSameOrAfter(expiresAt);
-  }
-
-  function openNotificationLink(link) {
-    if (!link) {
-      return;
-    }
-    const data = link.split(":");
-    if (!data.length) {
-      return;
-    }
-    switch (data[0]) {
-      case "group":
-        showGroupDialog(data[1]);
-        break;
-      case "user":
-        showUserDialog(data[1]);
-        break;
-      case "event": {
-        const ids = data[1].split(",");
-        if (ids.length < 2) {
-          console.error("Invalid event notification link:", data[1]);
-          return;
-        }
-
-        showGroupDialog(ids[0]);
-
-        break;
-      }
-      case "openNotificationLink":
-      case "OpenSafetyCenter":
-      default:
-        toast.error(`Unsupported notification link type: "${link}"`);
-        break;
-    }
   }
 
   return {

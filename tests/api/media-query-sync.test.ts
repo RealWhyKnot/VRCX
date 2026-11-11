@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockRequest = vi.fn();
-const mockInvalidateQueries = vi.fn().mockResolvedValue();
-const mockRemoveQueries = vi.fn();
+const mockRequest = vi.fn<(...args: unknown[]) => unknown>();
+const mockInvalidateQueries = vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined);
+const mockRemoveQueries = vi.fn<(...args: unknown[]) => unknown>();
 
 vi.mock("../../src/services/request", () => ({
-  request: (...args) => mockRequest(...args),
+  request: (...args: unknown[]) => mockRequest(...args),
 }));
 
 vi.mock("../../src/stores/user", () => ({
@@ -16,18 +16,18 @@ vi.mock("../../src/stores/user", () => ({
 
 vi.mock("../../src/queries/client", () => ({
   queryClient: {
-    invalidateQueries: (...args) => mockInvalidateQueries(...args),
-    removeQueries: (...args) => mockRemoveQueries(...args),
+    invalidateQueries: (...args: unknown[]) => mockInvalidateQueries(...args),
+    removeQueries: (...args: unknown[]) => mockRemoveQueries(...args),
   },
 }));
 vi.mock("../../src/queries/keys", () => ({
   queryKeys: {
-    galleryFiles: (params) => ["gallery", "files", params],
-    prints: (params) => ["gallery", "prints", params],
-    print: (printId) => ["gallery", "print", printId],
-    inventoryItems: (params) => ["inventory", "items", params],
-    userInventoryItem: (params) => ["inventory", "item", params.userId, params.inventoryId],
-    file: (fileId) => ["file", fileId],
+    galleryFiles: (params: unknown) => ["gallery", "files", params],
+    prints: (params: unknown) => ["gallery", "prints", params],
+    print: (printId: unknown) => ["gallery", "print", printId],
+    inventoryItems: (params: unknown) => ["inventory", "items", params],
+    userInventoryItem: (params: { userId: string; inventoryId: string }) => ["inventory", "item", params.userId, params.inventoryId],
+    file: (fileId: unknown) => ["file", fileId],
   },
 }));
 
