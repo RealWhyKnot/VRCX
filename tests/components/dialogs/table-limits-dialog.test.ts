@@ -1,21 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import type * as Pinia from "pinia";
 
 const mocks = vi.hoisted(() => ({
-  close: vi.fn(),
-  save: vi.fn(),
+  close: vi.fn<(...args: unknown[]) => void>(),
+  save: vi.fn<(...args: unknown[]) => void>(),
   dialog: {
     value: { visible: true, maxTableSize: "1000", searchLimit: "100" },
   },
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({
+  ...(await importOriginal<typeof Pinia>()),
+  storeToRefs: <T>(store: T) => store,
+}));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
     tableLimitsDialog: mocks.dialog,
-    closeTableLimitsDialog: (...a) => mocks.close(...a),
-    saveTableLimitsDialog: (...a) => mocks.save(...a),
+    closeTableLimitsDialog: (...args: unknown[]) => mocks.close(...args),
+    saveTableLimitsDialog: (...args: unknown[]) => mocks.save(...args),
     TABLE_MAX_SIZE_MIN: 100,
     TABLE_MAX_SIZE_MAX: 5000,
     SEARCH_LIMIT_MIN: 10,
@@ -70,8 +74,8 @@ describe("TableLimitsDialog.vue", () => {
     const wrapper = mount(TableLimitsDialog);
     const buttons = wrapper.findAll('[data-testid="btn"]');
 
-    expect(buttons[1].attributes("disabled")).toBeDefined();
-    await buttons[0].trigger("click");
+    expect(buttons[1]?.attributes("disabled")).toBeDefined();
+    await buttons[0]?.trigger("click");
     expect(mocks.close).toHaveBeenCalled();
   });
 });

@@ -1,21 +1,31 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { DropdownMenuItemIndicator, DropdownMenuRadioItem, useForwardPropsEmits } from "reka-ui";
+import type { DropdownMenuRadioItemEmits } from "reka-ui";
 import { Circle } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  value: { type: String, required: true },
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: string;
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const emits = defineEmits(["select"]);
+const emits = defineEmits<DropdownMenuRadioItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
@@ -24,6 +34,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
   <DropdownMenuRadioItem
     data-slot="dropdown-menu-radio-item"
     v-bind="forwarded"
+    :value="props.value"
     :class="
       cn(
         'focus:bg-accent focus:text-accent-foreground relative flex cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4',

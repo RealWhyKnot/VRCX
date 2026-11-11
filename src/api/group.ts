@@ -64,18 +64,25 @@ import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 import { requestJson, requestAck } from "./request-json";
 
+type GroupPostRequest = Omit<CreateGroupPostRequest, "imageId"> & { imageId?: string | null | undefined };
+
+type GroupCalendarEventRequest = Omit<Json<CreateCalendarEventRequest>, "imageId"> & { imageId?: string | null | undefined };
+
 type GroupRoleFlags = {
   isAddedOnJoin?: boolean;
   requiresTwoFactor?: boolean;
   requiresPurchase?: boolean;
 };
 
-type GroupRoleCreateParams = { groupId: string } & CreateGroupRoleRequest & GroupRoleFlags;
+type GroupRolePermissionNames = { permissions?: string[] | undefined };
 
-type GroupRoleEditParams = { groupId: string; roleId: string } & UpdateGroupRoleRequest & GroupRoleFlags;
+type GroupRoleCreateParams = { groupId: string } & Omit<CreateGroupRoleRequest, "permissions"> & GroupRolePermissionNames & GroupRoleFlags;
 
-type GroupEventEditParams = { groupId: string; eventId: string } & Json<UpdateCalendarEventRequest> & {
+type GroupRoleEditParams = { groupId: string; roleId: string } & Omit<UpdateGroupRoleRequest, "permissions"> & GroupRolePermissionNames & GroupRoleFlags;
+
+type GroupEventEditParams = { groupId: string; eventId: string } & Omit<Json<UpdateCalendarEventRequest>, "imageId"> & {
     accessType?: CreateCalendarEventRequest["accessType"];
+    imageId?: string | null | undefined;
   };
 
 type GroupMembershipStatus = "invited" | "requested" | "userblocked";
@@ -339,9 +346,9 @@ const groupRequest = {
       return args;
     });
   },
-  editGroupPost(params: { groupId: string; postId: string } & Partial<CreateGroupPostRequest>): Promise<{
+  editGroupPost(params: { groupId: string; postId: string } & Partial<GroupPostRequest>): Promise<{
     json: Json<GroupPost>;
-    params: { groupId: string; postId: string } & Partial<CreateGroupPostRequest>;
+    params: { groupId: string; postId: string } & Partial<GroupPostRequest>;
   }> {
     return requestJson<Json<GroupPost>>(`groups/${params.groupId}/posts/${params.postId}`, {
       method: "PUT",
@@ -355,9 +362,7 @@ const groupRequest = {
       return args;
     });
   },
-  createGroupPost(
-    params: { groupId: string } & CreateGroupPostRequest
-  ): Promise<{ json: Json<GroupPost>; params: { groupId: string } & CreateGroupPostRequest }> {
+  createGroupPost(params: { groupId: string } & GroupPostRequest): Promise<{ json: Json<GroupPost>; params: { groupId: string } & GroupPostRequest }> {
     return requestJson<Json<GroupPost>>(`groups/${params.groupId}/posts`, {
       method: "POST",
       params,
@@ -958,8 +963,8 @@ const groupRequest = {
   },
 
   createGroupEvent(
-    params: { groupId: string } & Json<CreateCalendarEventRequest>
-  ): Promise<{ json: Json<CalendarEvent>; params: { groupId: string } & Json<CreateCalendarEventRequest> }> {
+    params: { groupId: string } & GroupCalendarEventRequest
+  ): Promise<{ json: Json<CalendarEvent>; params: { groupId: string } & GroupCalendarEventRequest }> {
     return requestJson<Json<CalendarEvent>>(`calendar/${params.groupId}/event`, {
       method: "POST",
       params,

@@ -1,12 +1,20 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { emptyMediaVariants } from ".";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  variant: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    variant?: VariantProps<typeof emptyMediaVariants>["variant"] | undefined;
+  }>(),
+  {
+    class: undefined,
+    variant: undefined,
+  }
+);
 </script>
 
 <template>

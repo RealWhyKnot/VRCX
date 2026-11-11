@@ -1,16 +1,30 @@
 <script setup lang="ts">
+import type { EmblaCarouselType, EmblaOptionsType, EmblaPluginType } from "embla-carousel";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { useProvideCarousel } from "./use-carousel";
 
-const props = defineProps({
-  opts: { type: Object, required: false },
-  plugins: { type: null, required: false },
-  orientation: { type: String, required: false, default: "horizontal" },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiCarousel" });
 
-const emits = defineEmits(["init-api"]);
+const props = withDefaults(
+  defineProps<{
+    opts?: EmblaOptionsType | undefined;
+    plugins?: EmblaPluginType[] | undefined;
+    orientation?: "horizontal" | "vertical";
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    opts: undefined,
+    plugins: undefined,
+    orientation: "horizontal",
+    class: undefined,
+  }
+);
+
+const emits = defineEmits<{
+  "init-api": [api: EmblaCarouselType];
+}>();
 
 const { canScrollNext, canScrollPrev, carouselApi, carouselRef, orientation, scrollNext, scrollPrev } = useProvideCarousel(props, emits);
 
@@ -24,7 +38,7 @@ defineExpose({
   scrollPrev,
 });
 
-function onKeyDown(event) {
+function onKeyDown(event: KeyboardEvent) {
   const prevKey = props.orientation === "vertical" ? "ArrowUp" : "ArrowLeft";
   const nextKey = props.orientation === "vertical" ? "ArrowDown" : "ArrowRight";
 

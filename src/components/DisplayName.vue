@@ -8,15 +8,20 @@ import { ref, watch } from "vue";
 import { queryRequest } from "../api/query-request";
 import { showUserDialog } from "../coordinators/user-coordinator";
 
-const props = defineProps({
-  userid: String,
-  location: String,
-  forceUpdateKey: Number,
-  hint: {
-    type: String,
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    userid?: string | undefined;
+    location?: string | undefined;
+    forceUpdateKey?: number | undefined;
+    hint?: string;
+  }>(),
+  {
+    userid: undefined,
+    location: undefined,
+    forceUpdateKey: undefined,
+    hint: "",
+  }
+);
 
 const username = ref(props.userid);
 
@@ -26,7 +31,7 @@ async function parse() {
     username.value = props.hint;
   } else if (props.userid) {
     const args = await queryRequest.fetch("user.dialog", { userId: props.userid });
-    if (args?.json?.displayName) {
+    if (args.json.displayName) {
       username.value = args.json.displayName;
     }
   }

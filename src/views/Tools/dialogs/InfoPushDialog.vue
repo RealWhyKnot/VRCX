@@ -6,7 +6,7 @@
       </DialogHeader>
 
       <div class="flex items-center gap-2">
-        <ToggleGroup type="single" variant="outline" size="sm" :model-value="activeCategory" @update:model-value="(value) => value && (activeCategory = value)">
+        <ToggleGroup type="single" variant="outline" size="sm" :model-value="activeCategory" @update:model-value="selectCategory">
           <ToggleGroupItem v-for="category in categories" :key="category.name" :value="category.name">
             {{ getCategoryLabel(category.name) }} ({{ category.count }})
           </ToggleGroupItem>
@@ -83,7 +83,7 @@
                     >
                       {{ getLinkLabel(getAction(item)) }}
                     </button>
-                    <span v-else>{{ getAction(item).command }}</span>
+                    <span v-else>{{ getAction(item)?.command }}</span>
                   </template>
                 </div>
               </div>
@@ -107,9 +107,9 @@
                 </template>
               </div>
 
-              <div v-if="item.data?.domainList?.length" class="flex flex-wrap items-center gap-1">
+              <div v-if="item.data.domainList?.length" class="flex flex-wrap items-center gap-1">
                 <span class="text-xs text-muted-foreground">{{ t("dialog.info_push.domains") }}:</span>
-                <Badge v-for="entry in item.data.domainList" :key="entry.domain" variant="outline">
+                <Badge v-for="entry in item.data.domainList" :key="entry.domain ?? ''" variant="outline">
                   {{ entry.domain }}
                 </Badge>
               </div>
@@ -147,41 +147,54 @@ import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { useI18n } from "vue-i18n";
+import type { InfoPush } from "vrchat";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
+import type { Json } from "../../../types/vrcx";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { openExternalLink } from "../../../shared/utils/app-actions";
 import { miscRequest } from "../../../api/misc";
 import { useGalleryStore } from "../../../stores/gallery";
+import { logError } from "../../../stores/vrcx-messages";
 
 const BANNER_CATEGORIES = ["quick-menu-banner", "loading-screen-banners"];
-const CATEGORY_ORDER = ["help-article", ...BANNER_CATEGORIES];
+const DEFAULT_CATEGORY = "help-article";
+const CATEGORY_ORDER: readonly string[] = [DEFAULT_CATEGORY, ...BANNER_CATEGORIES];
 
-const props = defineProps({
-  isInfoPushDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+type InfoPushItem = Json<InfoPush>;
+type InfoPushLink = { command: string; target: string; name: string };
+type InfoPushBlock = { type: "image" | "video" | "heading" | "text"; value: string };
+type InfoPushLocalized = string | { fallback: string } | null | undefined;
 
-const emit = defineEmits(["close"]);
+const props = withDefaults(
+  defineProps<{
+    isInfoPushDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isInfoPushDialogVisible: false,
+  }
+);
+
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const { showFullscreenImageDialog } = useGalleryStore();
 
-const infoPushes = ref([]);
+const infoPushes = ref<InfoPushItem[]>([]);
 const isLoading = ref(false);
-const activeCategory = ref(CATEGORY_ORDER[0]);
-const expandedIds = reactive(new Set());
-const listRef = ref(null);
+const activeCategory = ref(DEFAULT_CATEGORY);
+const expandedIds = reactive(new Set<string>());
+const listRef = ref<HTMLElement | null>(null);
 
-const itemsById = computed(() => new Map(infoPushes.value.map((item) => [item.id, item])));
+const itemsById = computed(() => new Map<string, InfoPushItem>(infoPushes.value.map((item): [string, InfoPushItem] => [item.id, item])));
 
-const categoryById = computed(() => new Map(infoPushes.value.map((item) => [item.id, getCategory(item)])));
+const categoryById = computed(() => new Map<string, string>(infoPushes.value.map((item): [string, string] => [item.id, getCategory(item)])));
 
 const categories = computed(() => {
-  const counts = new Map();
+  const counts = new Map<string, number>();
   for (const category of categoryById.value.values()) {
     counts.set(category, (counts.get(category) ?? 0) + 1);
   }
@@ -194,15 +207,21 @@ const filteredInfoPushes = computed(() => infoPushes.value.filter((item) => cate
 
 watch(
   () => props.isInfoPushDialogVisible,
-  (visible) => {
-    if (visible) {
-      loadInfoPush();
+  (isVisible) => {
+    if (isVisible) {
+      void loadInfoPush().catch(logError);
     }
   }
 );
 
 function closeDialog() {
   emit("close");
+}
+
+function selectCategory(value: unknown) {
+  if (typeof value === "string" && value !== "") {
+    activeCategory.value = value;
+  }
 }
 
 async function loadInfoPush() {
@@ -214,77 +233,80 @@ async function loadInfoPush() {
       require: "user-all",
       include: ["help-article", "quick-menu-banner", "loading-screen-banners"],
     });
-    infoPushes.value = (json ?? []).toSorted((a, b) => getSortDate(b) - getSortDate(a));
+    infoPushes.value = json.toSorted((a, b) => getSortDate(b) - getSortDate(a));
     if (!categories.value.some((category) => category.name === activeCategory.value)) {
-      activeCategory.value = categories.value[0]?.name ?? CATEGORY_ORDER[0];
+      activeCategory.value = categories.value[0]?.name ?? DEFAULT_CATEGORY;
     }
   } finally {
     isLoading.value = false;
   }
 }
 
-function getCategoryLabel(name) {
+function getCategoryLabel(name: string) {
   return CATEGORY_ORDER.includes(name) ? t(`dialog.info_push.categories.${name}`) : name;
 }
 
-function getCategoryRank(name) {
+function getCategoryRank(name: string) {
   const index = CATEGORY_ORDER.indexOf(name);
   return index === -1 ? CATEGORY_ORDER.length : index;
 }
 
-function getSortDate(item) {
+function getSortDate(item: InfoPushItem) {
   return Date.parse(item.startDate ?? item.createdAt) || 0;
 }
 
-function toggleInSet(set, id) {
+function toggleInSet(set: Set<string>, id: string) {
   if (!set.delete(id)) {
     set.add(id);
   }
 }
 
-function localize(value) {
+function localize(value: InfoPushLocalized): string {
   if (typeof value === "string") {
     return value;
   }
   return value?.fallback ?? "";
 }
 
-function getCategory(item) {
-  return item.tags?.find((tag) => CATEGORY_ORDER.includes(tag)) ?? "other";
+function firstFilled(...values: (string | null | undefined)[]): string {
+  return values.find((value): value is string => Boolean(value)) ?? "";
 }
 
-function getName(item) {
-  const data = item.data ?? {};
-  return localize(data.name) || data.title || localize(data.contentList?.name) || data.finalName || data.worldTag || data.version || item.id;
+function getCategory(item: InfoPushItem): string {
+  return item.tags.find((tag) => CATEGORY_ORDER.includes(tag)) ?? "other";
 }
 
-function getDescription(item) {
-  const data = item.data ?? {};
-  return (
-    localize(data.description) ||
-    data.subtitle ||
-    localize(data.tooltipDescription) ||
-    data.disclaimerText ||
-    data.body ||
-    data.search?.searchQuery ||
-    data.authorName ||
-    ""
+function getName(item: InfoPushItem): string {
+  const data = item.data;
+  return firstFilled(localize(data.name), data.title, localize(data.contentList?.name), data.finalName, data.worldTag, data.version, item.id);
+}
+
+function getDescription(item: InfoPushItem): string {
+  const data = item.data;
+  return firstFilled(
+    localize(data.description),
+    data.subtitle,
+    localize(data.tooltipDescription),
+    data.disclaimerText,
+    data.body,
+    data.search?.searchQuery,
+    data.authorName
   );
 }
 
-function getImageUrl(item) {
-  const data = item.data ?? {};
-  return data.imageUrl || data.thumbnailImageUrl || data.bannerImageUrl || data.iconImageUrl || "";
+function getImageUrl(item: InfoPushItem): string {
+  const data = item.data;
+  return firstFilled(data.imageUrl, data.thumbnailImageUrl, data.bannerImageUrl, data.iconImageUrl);
 }
 
-function getEndDateTooltip(item) {
+function getEndDateTooltip(item: InfoPushItem): string | undefined {
   if (!item.endDate) {
     return undefined;
   }
   return `${t("dialog.info_push.end_date")}: ${formatDateFilter(item.endDate, "long")}`;
 }
 
-function getStatus(item) {
+function getStatus(item: InfoPushItem): string {
   if (!item.isEnabled) {
     return "disabled";
   }
@@ -298,7 +320,7 @@ function getStatus(item) {
   return "";
 }
 
-function toPlainText(text) {
+function toPlainText(text: string) {
   return text
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "")
@@ -306,9 +328,9 @@ function toPlainText(text) {
     .trim();
 }
 
-function getArticleBlocks(item) {
-  const blocks = [];
-  for (const content of item.data?.article?.content ?? []) {
+function getArticleBlocks(item: InfoPushItem): InfoPushBlock[] {
+  const blocks: InfoPushBlock[] = [];
+  for (const content of item.data.article?.content ?? []) {
     if (content.imageUrl) {
       blocks.push({ type: "image", value: content.imageUrl });
     } else if (content.videoUrl) {
@@ -324,22 +346,22 @@ function getArticleBlocks(item) {
   return blocks;
 }
 
-function toLink(source) {
+function toLink(source: { command?: string | undefined; parameters?: string[] | undefined; name?: string | undefined }): InfoPushLink {
   return {
-    command: source.command,
+    command: source.command ?? "",
     target: source.parameters?.[0] ?? "",
     name: source.name ?? "",
   };
 }
 
-function getAction(item) {
-  const onPressed = item.data?.onPressed;
-  return onPressed?.command ? toLink(onPressed) : null;
+function getAction(item: InfoPushItem): InfoPushLink | undefined {
+  const onPressed = item.data.onPressed;
+  return onPressed?.command ? toLink(onPressed) : undefined;
 }
 
-function getLinks(item) {
-  const article = item.data?.article;
-  const links = new Map();
+function getLinks(item: InfoPushItem): InfoPushLink[] {
+  const article = item.data.article;
+  const links = new Map<string, InfoPushLink>();
   for (const source of [...(article?.moreInfoLinks ?? []), ...(article?.embeddedLinkData ?? [])]) {
     if (!source.command) {
       continue;
@@ -353,36 +375,40 @@ function getLinks(item) {
   return [...links.values()];
 }
 
-function isLinkActionable(link) {
-  if (link.command === "OpenURL") {
+function isLinkActionable(link: InfoPushLink | undefined) {
+  if (link?.command === "OpenURL") {
     return Boolean(link.target);
   }
-  return link.command === "OpenHelpArticle" && itemsById.value.has(link.target);
+  return link?.command === "OpenHelpArticle" && itemsById.value.has(link.target);
 }
 
-function getLinkLabel(link) {
-  if (link.name) {
+function getLinkLabel(link: InfoPushLink | undefined) {
+  if (link?.name) {
     return link.name;
   }
-  if (link.command === "OpenHelpArticle" && itemsById.value.has(link.target)) {
-    return getName(itemsById.value.get(link.target));
+  const linkedItem = link?.command === "OpenHelpArticle" ? itemsById.value.get(link.target) : undefined;
+  if (linkedItem) {
+    return getName(linkedItem);
   }
-  if (link.command === "OpenURL") {
+  if (link?.command === "OpenURL") {
     return t("dialog.info_push.open_link");
   }
-  return link.command;
+  return link?.command ?? "";
 }
 
-function runLink(link) {
-  if (link.command === "OpenURL") {
+function runLink(link: InfoPushLink | undefined) {
+  if (link?.command === "OpenURL") {
     openExternalLink(link.target);
-  } else if (link.command === "OpenHelpArticle") {
-    showInfoPush(link.target);
+  } else if (link?.command === "OpenHelpArticle") {
+    void showInfoPush(link.target).catch(logError);
   }
 }
 
-async function showInfoPush(id) {
-  activeCategory.value = categoryById.value.get(id);
+async function showInfoPush(id: string) {
+  const category = categoryById.value.get(id);
+  if (category) {
+    activeCategory.value = category;
+  }
   expandedIds.add(id);
   await nextTick();
   listRef.value?.querySelector(`#info-push-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { DropdownMenuContentEmits, DropdownMenuContentProps, PrimitiveProps } from "reka-ui";
 import { DropdownMenuContent, DropdownMenuPortal, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
@@ -7,42 +9,50 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  loop: { type: Boolean, required: false },
-  side: { type: null, required: false },
-  sideOffset: { type: Number, required: false, default: 4 },
-  sideFlip: { type: Boolean, required: false },
-  align: { type: null, required: false },
-  alignOffset: { type: Number, required: false },
-  alignFlip: { type: Boolean, required: false },
-  avoidCollisions: { type: Boolean, required: false },
-  collisionBoundary: { type: null, required: false },
-  collisionPadding: { type: [Number, Object], required: false },
-  arrowPadding: { type: Number, required: false },
-  sticky: {
-    type: String,
-    required: false,
-  },
-  hideWhenDetached: { type: Boolean, required: false },
-  positionStrategy: {
-    type: String,
-    required: false,
-  },
-  updatePositionStrategy: {
-    type: String,
-    required: false,
-  },
-  disableUpdateOnLayoutShift: { type: Boolean, required: false },
-  prioritizePosition: { type: Boolean, required: false },
-  reference: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    loop?: boolean;
+    side?: DropdownMenuContentProps["side"] | undefined;
+    sideOffset?: number | undefined;
+    sideFlip?: boolean;
+    align?: DropdownMenuContentProps["align"] | undefined;
+    alignOffset?: number | undefined;
+    alignFlip?: boolean;
+    avoidCollisions?: boolean;
+    collisionBoundary?: DropdownMenuContentProps["collisionBoundary"] | undefined;
+    collisionPadding?: DropdownMenuContentProps["collisionPadding"] | undefined;
+    arrowPadding?: number | undefined;
+    sticky?: DropdownMenuContentProps["sticky"] | undefined;
+    hideWhenDetached?: boolean;
+    positionStrategy?: DropdownMenuContentProps["positionStrategy"] | undefined;
+    updatePositionStrategy?: DropdownMenuContentProps["updatePositionStrategy"] | undefined;
+    disableUpdateOnLayoutShift?: boolean;
+    prioritizePosition?: boolean;
+    reference?: DropdownMenuContentProps["reference"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    side: undefined,
+    sideOffset: 4,
+    align: undefined,
+    alignOffset: undefined,
+    collisionBoundary: undefined,
+    collisionPadding: undefined,
+    arrowPadding: undefined,
+    sticky: undefined,
+    positionStrategy: undefined,
+    updatePositionStrategy: undefined,
+    reference: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<DropdownMenuContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

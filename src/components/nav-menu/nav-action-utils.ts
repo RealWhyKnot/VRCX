@@ -1,28 +1,36 @@
-export function isNavEntryActionable(entry) {
-  return Boolean(entry?.routeName || entry?.action || entry?.path);
+import type { Router, RouteLocationRaw } from "vue-router";
+
+import type { NavEntryTarget, NavRouteOptions, NavToolAction } from "./nav-menu-types";
+
+export function isNavEntryActionable(entry: NavEntryTarget | null | undefined): boolean {
+  return Boolean(entry?.routeName) || Boolean(entry?.action) || Boolean(entry?.path);
 }
 
-export function navigateToRoute(router, routeName, routeParams = undefined) {
+function pushRoute(router: Router, target: RouteLocationRaw): void {
+  void router.push(target).catch((error: unknown) => console.error("Failed to navigate", error));
+}
+
+export function navigateToRoute(router: Router, routeName: string | null | undefined, routeParams?: { id: string }): void {
   if (!routeName) {
     return;
   }
 
   if (routeParams) {
-    router.push({ name: routeName, params: routeParams });
+    pushRoute(router, { name: routeName, params: routeParams });
     return;
   }
 
-  router.push({ name: routeName });
+  pushRoute(router, { name: routeName });
 }
 
-export function triggerNavEntryAction(entry, { router, directAccessPaste }) {
+export function triggerNavEntryAction(entry: NavEntryTarget | null | undefined, { router, directAccessPaste }: NavRouteOptions): NavToolAction | undefined {
   if (!entry) {
-    return;
+    return undefined;
   }
 
   if (entry.action === "direct-access") {
     directAccessPaste();
-    return;
+    return undefined;
   }
 
   if (entry.action && typeof entry.action === "object") {
@@ -31,10 +39,11 @@ export function triggerNavEntryAction(entry, { router, directAccessPaste }) {
 
   if (entry.routeName) {
     navigateToRoute(router, entry.routeName, entry.routeParams);
-    return;
+    return undefined;
   }
 
   if (entry.path) {
-    router.push(entry.path);
+    pushRoute(router, entry.path);
   }
+  return undefined;
 }

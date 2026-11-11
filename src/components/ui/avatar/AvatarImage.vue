@@ -1,18 +1,13 @@
 <script setup lang="ts">
+import type { AvatarImageProps } from "reka-ui";
 import { AvatarImage } from "reka-ui";
 
-const props = defineProps({
-  src: { type: String, required: true },
-  referrerPolicy: { type: null, required: false },
-  crossOrigin: { type: null, required: false },
-  loading: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
+const props = defineProps<AvatarImageProps & { src: string; loading?: "lazy" | "eager" }>();
+const delegatedProps: Record<string, unknown> = props;
 </script>
 
 <template>
-  <AvatarImage data-slot="avatar-image" v-bind="props" class="aspect-square size-full">
+  <AvatarImage data-slot="avatar-image" :src="props.src" v-bind="delegatedProps" class="aspect-square size-full">
     <slot />
   </AvatarImage>
 </template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Input from "@/components/ui/input/Input.vue";
 import { cn } from "@/lib/utils";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 </script>
 
 <template>

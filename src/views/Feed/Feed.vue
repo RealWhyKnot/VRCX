@@ -85,9 +85,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import { ListFilter, Star } from "lucide-vue-next";
 import { getLocalTimeZone, today } from "@internationalized/date";
+import type { DateRange } from "reka-ui";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
@@ -98,6 +99,7 @@ import PopoverContent from "../../components/ui/popover/PopoverContent.vue";
 import PopoverTrigger from "../../components/ui/popover/PopoverTrigger.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFeedStore } from "../../stores/feed";
+import { logFailure } from "../../stores/log-failure";
 import { useVrcxStore } from "../../stores/vrcx";
 import ToggleGroup from "../../components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../components/ui/toggle-group/ToggleGroupItem.vue";
@@ -109,6 +111,9 @@ import RangeCalendar from "../../components/ui/range-calendar/RangeCalendar.vue"
 import Toggle from "../../components/ui/toggle/Toggle.vue";
 import { columns as baseColumns } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+import type { FeedRow } from "../../services/database/feed";
+
+defineOptions({ name: "FeedView" });
 
 const { feedTable, feedTableData } = storeToRefs(useFeedStore());
 const { feedTableLookup } = useFeedStore();
@@ -121,7 +126,7 @@ const feedFilterTypes = ["GPS", "Online", "Offline", "Status", "Avatar", "Bio"];
 
 const popoverOpen = ref(false);
 const todayDate = today(getLocalTimeZone());
-const dateRange = ref(undefined);
+const dateRange = shallowRef<DateRange | null>(null);
 const hasDateFilter = computed(() => !!(feedTable.value.dateFrom || feedTable.value.dateTo));
 const activeFilterCount = computed(() => (hasDateFilter.value ? 1 : 0));
 
@@ -139,23 +144,21 @@ function applyDateFilter() {
     feedTable.value.dateTo = "";
   }
   popoverOpen.value = false;
-  feedTableLookup();
+  void feedTableLookup().catch(logFailure("Failed to look up feed table:"));
 }
 
 function clearDateFilter() {
-  dateRange.value = undefined;
+  dateRange.value = null;
   feedTable.value.dateFrom = "";
   feedTable.value.dateTo = "";
   popoverOpen.value = false;
-  feedTableLookup();
+  void feedTableLookup().catch(logFailure("Failed to look up feed table:"));
 }
-
-const feedRef = ref(null);
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-function getFeedRowId(row) {
-  return `row:${row.rowId}:${row?.type ?? ""}`;
+function getFeedRowId(row: FeedRow) {
+  return `row:${row.rowId}:${row.type}`;
 }
 
 const { table, pagination } = useVrcxVueTable({
@@ -185,7 +188,7 @@ const totalItems = computed(() => {
   return length > max && length < max + 51 ? max : length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,
@@ -201,8 +204,8 @@ const activeFilterSelection = computed(() => {
   return filter;
 });
 
-function handleFeedFilterChange(value) {
-  const selected = Array.isArray(value) ? value : [];
+function handleFeedFilterChange(value: unknown) {
+  const selected = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
   const wasAll = activeFilterSelection.value.includes("All");
   const hasAll = selected.includes("All");
   const types = selected.filter((v) => v !== "All");
@@ -214,7 +217,7 @@ function handleFeedFilterChange(value) {
   } else {
     feedTable.value.filter = types.length === feedFilterTypes.length ? [] : types.length ? types : [];
   }
-  feedTableLookup();
+  void feedTableLookup().catch(logFailure("Failed to look up feed table:"));
 }
 </script>
 

@@ -6,6 +6,8 @@ import { DialogRoot, useForwardPropsEmits } from "reka-ui";
 
 import DialogStateProvider from "./DialogStateProvider.vue";
 
+defineOptions({ name: "UiDialog" });
+
 const props = defineProps<{
   open?: DialogRootProps["open"];
   defaultOpen?: DialogRootProps["defaultOpen"];

@@ -68,29 +68,32 @@ import { instanceRequest } from "../../api/instance";
 import { useGalleryStore } from "../../stores/gallery";
 import { useGroupStore } from "../../stores/group";
 import GallerySelectDialog from "./GroupDialog/GallerySelectDialog.vue";
+import type { GallerySelectDialogState, GallerySelectionPayload } from "./GroupDialog/group-dialog-types";
 import { extractFileId, extractFileVersion } from "@/shared/utils/file-utils";
 import { parseLocation } from "@/shared/utils/location-parser";
-import { storeToRefs } from "pinia";
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-  location: {
-    type: String,
-    required: true,
-  },
-});
+type AnnouncementParams = Parameters<typeof instanceRequest.instanceAnnouncement>[0];
 
-const emit = defineEmits(["update:open"]);
+const props = withDefaults(
+  defineProps<{
+    open?: boolean;
+    location: string;
+  }>(),
+  {
+    open: false,
+  }
+);
+
+const emit = defineEmits<{
+  "update:open": [isOpen: boolean];
+}>();
 const { t } = useI18n();
 const { showFullscreenImageDialog } = useGalleryStore();
 const groupStore = useGroupStore();
 
 const message = ref("");
 const loading = ref(false);
-const gallerySelectDialog = ref({
+const gallerySelectDialog = ref<GallerySelectDialogState>({
   visible: false,
   selectedFileId: "",
   selectedFileVersion: undefined,
@@ -104,8 +107,8 @@ const canSubmit = computed(() => {
 
 watch(
   () => props.open,
-  (open) => {
-    if (open) {
+  (isOpen) => {
+    if (isOpen) {
       message.value = "";
       clearImage();
     }
@@ -116,7 +119,7 @@ function showGallerySelectDialog() {
   gallerySelectDialog.value.visible = true;
 }
 
-function handleGalleryImageSelect({ imageUrl, fileId, fileVersion }) {
+function handleGalleryImageSelect({ imageUrl, fileId, fileVersion }: GallerySelectionPayload) {
   gallerySelectDialog.value.selectedImageUrl = imageUrl;
   gallerySelectDialog.value.selectedFileId = fileId;
   gallerySelectDialog.value.selectedFileVersion = fileVersion;
@@ -134,8 +137,8 @@ function closeDialog() {
   }
 }
 
-function handleOpenChange(open) {
-  if (!open) {
+function handleOpenChange(isOpen: boolean) {
+  if (!isOpen) {
     closeDialog();
   }
 }
@@ -146,16 +149,16 @@ async function sendAnnouncement() {
   }
 
   const L = parseLocation(props.location);
-  const group = groupStore.cachedGroups.get(L.groupId);
+  const group = L.groupId ? groupStore.cachedGroups.get(L.groupId) : undefined;
   const fileId = extractFileId(group?.bannerUrl);
   const fileVersion = extractFileVersion(group?.bannerUrl);
 
-  const params = {
+  const params: AnnouncementParams = {
     location: props.location,
     title: "Instance Announcement",
     message: message.value.trim(),
-    imageId: fileId ?? undefined,
-    imageVersion: fileVersion ?? undefined,
+    imageId: fileId,
+    imageVersion: fileVersion,
   };
   if (gallerySelectDialog.value.selectedFileId) {
     params.imageId = gallerySelectDialog.value.selectedFileId;

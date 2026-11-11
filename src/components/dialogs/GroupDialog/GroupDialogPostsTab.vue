@@ -49,13 +49,13 @@
           </div>
           <pre class="text-xs font-[inherit]" style="display: inline-block; vertical-align: top; white-space: pre-wrap; margin: 0">{{ post.text || "-" }}</pre>
           <div v-if="post.authorId" class="mt-1 clear-both flex w-full items-center justify-end text-xs">
-            <TooltipWrapper v-if="post.roleIds.length" side="top">
+            <TooltipWrapper v-if="postRoleIds(post).length" side="top">
               <template #content>
                 <span>{{ t("dialog.group.posts.visibility") }}</span>
                 <br />
-                <template v-for="roleId in post.roleIds" :key="roleId">
+                <template v-for="roleId in postRoleIds(post)" :key="roleId">
                   <template v-for="role in groupDialog.ref.roles" :key="role.id + roleId"><span v-if="role.id === roleId" v-text="role.name" /> </template>
-                  <template v-if="post.roleIds.indexOf(roleId) < post.roleIds.length - 1"><span>,&nbsp;</span></template>
+                  <template v-if="postRoleIds(post).indexOf(roleId) < postRoleIds(post).length - 1"><span>,&nbsp;</span></template>
                 </template>
               </template>
               <Eye style="margin-right: 6px" />
@@ -70,7 +70,7 @@
                   <span>{{ t("dialog.group.posts.edited_at") }} {{ formatDateFilter(post.updatedAt, "long") }}</span>
                 </template>
               </template>
-              <Timer :epoch="Date.parse(post.updatedAt)" />
+              <Timer :epoch="Date.parse(post.updatedAt ?? '')" />
             </TooltipWrapper>
           </div>
         </div>
@@ -80,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import Timer from "@/components/Timer.vue";
 import { Eye, Image, Pencil, Trash2 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
@@ -90,21 +91,20 @@ import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
+import type { GroupPostEntry } from "../../../stores/group-types";
 
-defineProps({
-  showGroupPostEditDialog: {
-    type: Function,
-    required: true,
-  },
-  confirmDeleteGroupPost: {
-    type: Function,
-    required: true,
-  },
-});
+defineProps<{
+  showGroupPostEditDialog: (groupId: string, post: GroupPostEntry | null) => void;
+  confirmDeleteGroupPost: (post: GroupPostEntry) => void;
+}>();
 
 const { t } = useI18n();
 
 const { groupDialog } = storeToRefs(useGroupStore());
 const { updateGroupPostSearch } = useGroupStore();
 const { showFullscreenImageDialog } = useGalleryStore();
+
+function postRoleIds(post: GroupPostEntry) {
+  return post.roleIds ?? [];
+}
 </script>

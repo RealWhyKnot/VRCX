@@ -8,12 +8,23 @@ import { storeToRefs } from "pinia";
 
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import { i18n } from "../../plugins/i18n";
+import type { FriendLogHistoryRow } from "../../stores/friend-types";
 import { useUiStore } from "../../stores/ui";
 import { showUserDialog } from "../../coordinators/user-coordinator";
+import type { VrcxColumn } from "../FriendList/vrcx-column";
 
 const { t } = i18n.global;
 
-export const createColumns = ({ onDelete, onDeletePrompt }) => {
+function firstTruthy(...values: (string | null | undefined)[]): string {
+  return values.find((value) => value) ?? "";
+}
+
+type FriendLogColumnsOptions = {
+  onDelete: (row: FriendLogHistoryRow) => void;
+  onDeletePrompt: (row: FriendLogHistoryRow) => void;
+};
+
+export const createColumns = ({ onDelete, onDeletePrompt }: FriendLogColumnsOptions): VrcxColumn<FriendLogHistoryRow>[] => {
   const { shiftHeld } = storeToRefs(useUiStore());
 
   return [
@@ -37,9 +48,8 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
         </Button>
       ),
       cell: ({ row }) => {
-        const createdAt = row.getValue("created_at");
-        const shortText = formatDateFilter(createdAt, "short");
-        const longText = formatDateFilter(createdAt, "long");
+        const shortText = formatDateFilter(row.original.created_at, "short");
+        const longText = formatDateFilter(row.original.created_at, "long");
 
         return (
           <Tooltip>
@@ -55,12 +65,11 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
     },
     {
       accessorKey: "type",
-
       size: 160,
       header: () => t("table.friendLog.type"),
       meta: { label: () => t("table.friendLog.type") },
       cell: ({ row }) => {
-        const type = row.getValue("type");
+        const type = row.original.type ?? "";
         return (
           <Badge variant="outline" class="text-muted-foreground">
             {t(`view.friend_log.filters.${type}`)}
@@ -79,7 +88,7 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
       },
       cell: ({ row }) => {
         const original = row.original;
-        const displayName = original.displayName || original.userId || "";
+        const displayName = firstTruthy(original.displayName, original.userId);
         return (
           <span class="block w-full whitespace-normal wrap-break-word cursor-pointer">
             {original.type === "DisplayName" ? (

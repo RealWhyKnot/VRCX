@@ -4,22 +4,24 @@ import ItemContent from "@/components/ui/item/ItemContent.vue";
 import ItemMedia from "@/components/ui/item/ItemMedia.vue";
 import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 import { computed, ref } from "vue";
+import type { ComponentPublicInstance } from "vue";
 import { GripVertical } from "lucide-vue-next";
 import { useSortable } from "@dnd-kit/vue/sortable";
 
-const props = defineProps({
-  id: { type: String, required: true },
-  index: { type: Number, required: true },
-  label: { type: String, required: true },
-});
+const props = defineProps<{
+  id: string;
+  index: number;
+  label: string;
+}>();
 
-const element = ref(null);
+const element = ref<ComponentPublicInstance | null>(null);
 
-const { isDragSource } = useSortable({
+const sortable = useSortable({
   id: computed(() => props.id),
   index: computed(() => props.index),
   element,
 });
+const isDragSource = computed(() => Boolean(sortable.isDragSource.value));
 </script>
 
 <template>

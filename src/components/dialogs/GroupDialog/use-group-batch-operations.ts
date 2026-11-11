@@ -1,20 +1,49 @@
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
 import { toast } from "vue-sonner";
 
-export function useGroupBatchOperations(deps) {
+import type { GroupMemberModerationState, GroupMemberSelection } from "../../../stores/group-types";
+import type { GroupRequest } from "./group-moderation-types";
+
+export type GroupRoleChangeArgs = Awaited<ReturnType<GroupRequest["removeGroupMemberRole"]>>;
+export type GroupMemberPropsArgs = Awaited<ReturnType<GroupRequest["setGroupMemberProps"]>>;
+
+export type GroupBatchCallbacks = {
+  onComplete?: (() => void) | undefined;
+};
+
+export type GroupBatchOperationsDeps = {
+  groupMemberModeration: Ref<Pick<GroupMemberModerationState, "id" | "selectedUsersArray">>;
+  currentUser: Ref<{ id: string }>;
+  deselectedUsers: (userId: string | null, isAll?: boolean) => void;
+  groupRequest: GroupRequest;
+  handleGroupMemberRoleChange: (args: GroupRoleChangeArgs) => void;
+  handleGroupMemberProps: (args: GroupMemberPropsArgs) => void;
+};
+
+type BatchAction = (user: GroupMemberSelection, groupId: string) => Promise<unknown>;
+
+type RunBatchOperationOptions = {
+  action: BatchAction;
+  logPrefix: string;
+  successMessage: string;
+  errorMessage: string;
+  skipSelf?: boolean;
+  onComplete?: (() => void) | undefined;
+};
+
+export function useGroupBatchOperations(deps: GroupBatchOperationsDeps) {
   const progressCurrent = ref(0);
   const progressTotal = ref(0);
 
-  async function runBatchOperation({ action, logPrefix, successMessage, errorMessage, skipSelf = true, onComplete }) {
+  async function runBatchOperation({ action, logPrefix, successMessage, errorMessage, skipSelf = true, onComplete }: RunBatchOperationOptions) {
     const users = [...deps.groupMemberModeration.value.selectedUsersArray];
     const memberCount = users.length;
     const groupId = deps.groupMemberModeration.value.id;
     progressTotal.value = memberCount;
-    let allSuccess = true;
+    let isAllSuccess = true;
 
-    for (let i = 0; i < memberCount; i++) {
+    for (const [i, user] of users.entries()) {
       if (!progressTotal.value) break;
-      const user = users[i];
       progressCurrent.value = i + 1;
 
       if (skipSelf && user.userId === deps.currentUser.value.id) continue;
@@ -22,14 +51,14 @@ export function useGroupBatchOperations(deps) {
       console.log(`${logPrefix} ${user.userId} ${i + 1}/${memberCount}`);
       try {
         await action(user, groupId);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(err);
-        toast.error(`${errorMessage}: ${err}`);
-        allSuccess = false;
+        toast.error(`${errorMessage}: ${String(err)}`);
+        isAllSuccess = false;
       }
     }
 
-    if (allSuccess) {
+    if (isAllSuccess) {
       toast.success(successMessage.replace("{count}", String(memberCount)));
     }
     progressCurrent.value = 0;
@@ -38,7 +67,7 @@ export function useGroupBatchOperations(deps) {
     if (onComplete) onComplete();
   }
 
-  async function groupMembersBan(callbacks) {
+  async function groupMembersBan(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.banGroupMember({
@@ -52,7 +81,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersUnban(callbacks) {
+  async function groupMembersUnban(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.unbanGroupMember({
@@ -66,7 +95,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersKick(callbacks) {
+  async function groupMembersKick(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.kickGroupMember({
@@ -80,7 +109,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersSaveNote(noteValue, callbacks) {
+  async function groupMembersSaveNote(noteValue: string, callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: async (user, groupId) => {
         if (user.managerNotes === noteValue) return;
@@ -97,12 +126,12 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersRemoveRoles(roleIds, callbacks) {
+  async function groupMembersRemoveRoles(roleIds: string[], callbacks?: GroupBatchCallbacks) {
     const rolesToRemoveSet = new Set(roleIds);
     await runBatchOperation({
       action: async (user, groupId) => {
-        const currentRoles = new Set(user.roleIds || []);
-        const rolesToRemoveForUser = [];
+        const currentRoles = new Set(user.roleIds);
+        const rolesToRemoveForUser: string[] = [];
         rolesToRemoveSet.forEach((roleId) => {
           if (currentRoles.has(roleId)) {
             rolesToRemoveForUser.push(roleId);
@@ -125,12 +154,12 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersAddRoles(roleIds, callbacks) {
+  async function groupMembersAddRoles(roleIds: string[], callbacks?: GroupBatchCallbacks) {
     const rolesToAddSet = new Set(roleIds);
     await runBatchOperation({
       action: async (user, groupId) => {
-        const currentRoles = new Set(user.roleIds || []);
-        const rolesToAddForUser = [];
+        const currentRoles = new Set(user.roleIds);
+        const rolesToAddForUser: string[] = [];
         rolesToAddSet.forEach((roleId) => {
           if (!currentRoles.has(roleId)) {
             rolesToAddForUser.push(roleId);
@@ -153,7 +182,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersDeleteSentInvite(callbacks) {
+  async function groupMembersDeleteSentInvite(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.deleteSentGroupInvite({
@@ -167,7 +196,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersAcceptInviteRequest(callbacks) {
+  async function groupMembersAcceptInviteRequest(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.acceptGroupInviteRequest({
@@ -181,7 +210,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersRejectInviteRequest(callbacks) {
+  async function groupMembersRejectInviteRequest(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.rejectGroupInviteRequest({
@@ -195,7 +224,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersBlockJoinRequest(callbacks) {
+  async function groupMembersBlockJoinRequest(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.blockGroupInviteRequest({
@@ -209,7 +238,7 @@ export function useGroupBatchOperations(deps) {
     });
   }
 
-  async function groupMembersDeleteBlockedRequest(callbacks) {
+  async function groupMembersDeleteBlockedRequest(callbacks?: GroupBatchCallbacks) {
     await runBatchOperation({
       action: (user, groupId) =>
         deps.groupRequest.deleteBlockedGroupRequest({

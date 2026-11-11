@@ -20,10 +20,7 @@
         size="sm"
         :model-value="photonEventOverlayFilter"
         :disabled="!openVR || !photonEventOverlay"
-        @update:model-value="
-          setPhotonEventOverlayFilter($event);
-          saveEventOverlay();
-        "
+        @update:model-value="handlePhotonEventOverlayFilterChange"
       >
         <ToggleGroupItem value="VIP">{{ t("view.settings.advanced.photon.event_hud.filter_favorites") }}</ToggleGroupItem>
         <ToggleGroupItem value="Friends">{{ t("view.settings.advanced.photon.event_hud.filter_friends") }}</ToggleGroupItem>
@@ -36,16 +33,7 @@
       }}</Button>
     </div>
     <div class="options-container-item">
-      <Select
-        :model-value="photonEventTableTypeOverlayFilter"
-        multiple
-        @update:model-value="
-          (v) => {
-            setPhotonEventTableTypeOverlayFilter(v);
-            photonEventTableFilterChange();
-          }
-        "
-      >
+      <Select :model-value="photonEventTableTypeOverlayFilter" multiple @update:model-value="handlePhotonEventTableTypeOverlayFilterChange">
         <SelectTrigger style="flex: 1">
           <SelectValue :placeholder="t('view.settings.advanced.photon.event_hud.type_filter_placeholder')" />
         </SelectTrigger>
@@ -72,10 +60,7 @@
         size="sm"
         :model-value="timeoutHudOverlayFilter"
         :disabled="!openVR || !timeoutHudOverlay"
-        @update:model-value="
-          setTimeoutHudOverlayFilter($event);
-          saveEventOverlay();
-        "
+        @update:model-value="handleTimeoutHudOverlayFilterChange"
       >
         <ToggleGroupItem value="VIP">{{ t("view.settings.advanced.photon.timeout_hud.filter_favorites") }}</ToggleGroupItem>
         <ToggleGroupItem value="Friends">{{ t("view.settings.advanced.photon.timeout_hud.filter_friends") }}</ToggleGroupItem>
@@ -102,6 +87,7 @@ import SelectTrigger from "../../../components/ui/select/SelectTrigger.vue";
 import SelectValue from "../../../components/ui/select/SelectValue.vue";
 import ToggleGroup from "../../../components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem.vue";
+import { logError } from "../../../stores/notification/errors";
 import { useNotificationsSettingsStore } from "../../../stores/settings/notifications";
 import { usePhotonStore } from "../../../stores/photon";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
@@ -124,4 +110,25 @@ const { photonEventOverlay, photonEventOverlayFilter, photonEventTableTypeOverla
   storeToRefs(usePhotonStore());
 
 const { openVR } = storeToRefs(useNotificationsSettingsStore());
+
+function handlePhotonEventOverlayFilterChange(value: unknown) {
+  if (typeof value === "string") {
+    setPhotonEventOverlayFilter(value);
+  }
+  saveEventOverlay();
+}
+
+function handlePhotonEventTableTypeOverlayFilterChange(value: unknown) {
+  if (Array.isArray(value)) {
+    setPhotonEventTableTypeOverlayFilter(value.filter((item): item is string => typeof item === "string"));
+  }
+  void photonEventTableFilterChange().catch(logError);
+}
+
+function handleTimeoutHudOverlayFilterChange(value: unknown) {
+  if (typeof value === "string") {
+    setTimeoutHudOverlayFilter(value);
+  }
+  saveEventOverlay();
+}
 </script>

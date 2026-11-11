@@ -1,17 +1,36 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
+import type { AcceptableValue } from "reka-ui";
+import type { SearchWorlds } from "vrchat";
 
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { useAuthStore } from "../../../stores/auth";
 import { useSearchStore } from "../../../stores/search";
 import { useWorldStore } from "../../../stores/world";
 import { worldRequest } from "../../../api/world";
+import { logFailure } from "../../../stores/log-failure";
+import type { WorldRef } from "../../../shared/utils/world-transforms";
 
-function createDefaultSearchWorldParams() {
+type SearchWorldParams = NonNullable<SearchWorlds["query"]>;
+type SearchWorldOrder = NonNullable<SearchWorldParams["order"]>;
+
+type SearchWorldRow = {
+  index?: number;
+  sortHeading?: string;
+  sortOrder?: string;
+  sortOwnership?: string;
+  tag?: string | null;
+};
+
+function createDefaultSearchWorldParams(): SearchWorldParams {
   return {
     n: 60,
     offset: 0,
   };
+}
+
+function toSearchWorldOrder(value: string | undefined): SearchWorldOrder {
+  return value === "ascending" ? "ascending" : "descending";
 }
 
 export function useSearchWorld() {
@@ -21,16 +40,16 @@ export function useSearchWorld() {
 
   const searchWorldOption = ref("");
   const searchWorldLabs = ref(false);
-  const searchWorldParams = ref(createDefaultSearchWorldParams());
-  const searchWorldCategoryIndex = ref(null);
-  const searchWorldResults = ref([]);
+  const searchWorldParams = ref<SearchWorldParams>(createDefaultSearchWorldParams());
+  const searchWorldCategoryIndex = ref<number | null>(null);
+  const searchWorldResults = ref<WorldRef[]>([]);
   const isSearchWorldLoading = ref(false);
 
-  function searchWorld(ref) {
+  function searchWorld(row: SearchWorldRow) {
     searchWorldOption.value = "";
-    searchWorldCategoryIndex.value = ref?.index ?? null;
+    searchWorldCategoryIndex.value = row.index ?? null;
     const params = createDefaultSearchWorldParams();
-    switch (ref.sortHeading) {
+    switch (row.sortHeading ?? "") {
       case "featured":
         params.sort = "order";
         params.featured = true;
@@ -72,13 +91,13 @@ export function useSearchWorld() {
         params.search = replaceBioSymbols(searchText.value);
         break;
     }
-    params.order = ref.sortOrder || "descending";
-    if (ref.sortOwnership === "mine") {
+    params.order = toSearchWorldOrder(row.sortOrder);
+    if (row.sortOwnership === "mine") {
       params.user = "me";
       params.releaseStatus = "all";
     }
-    if (ref.tag) {
-      params.tag = ref.tag;
+    if (row.tag) {
+      params.tag = row.tag;
     }
     if (!searchWorldLabs.value) {
       if (params.tag) {
@@ -92,37 +111,37 @@ export function useSearchWorld() {
     moreSearchWorld();
   }
 
-  function handleSearchWorldCategorySelect(index) {
-    searchWorldCategoryIndex.value = index;
-    const row = cachedConfig.value?.dynamicWorldRows?.find((r) => r.index === index);
-    searchWorld(row || {});
+  function handleSearchWorldCategorySelect(value: AcceptableValue | AcceptableValue[]) {
+    if (typeof value !== "number") return;
+    searchWorldCategoryIndex.value = value;
+    const row = cachedConfig.value.dynamicWorldRows?.find((r) => r.index === value);
+    searchWorld(row ?? {});
   }
 
-  function moreSearchWorld(go) {
+  function moreSearchWorld(go?: number) {
     const params = searchWorldParams.value;
     if (go) {
-      params.offset += params.n * go;
-      if (params.offset < 0) {
-        params.offset = 0;
-      }
+      const offset = (params.offset ?? 0) + (params.n ?? 0) * go;
+      params.offset = offset < 0 ? 0 : offset;
     }
     isSearchWorldLoading.value = true;
-    worldRequest
+    void worldRequest
       .getWorlds(params, searchWorldOption.value)
       .finally(() => {
         isSearchWorldLoading.value = false;
       })
       .then((args) => {
-        const map = new Map();
+        const map = new Map<string, WorldRef>();
         for (const json of args.json) {
           const ref = cachedWorlds.get(json.id);
-          if (typeof ref !== "undefined") {
+          if (ref !== undefined) {
             map.set(ref.id, ref);
           }
         }
         searchWorldResults.value = Array.from(map.values());
         return args;
-      });
+      })
+      .catch(logFailure("Searching worlds failed:"));
   }
 
   function clearWorldSearch() {

@@ -32,6 +32,7 @@ type GitHubAsset = {
 
 type GitHubRelease = {
   name: string;
+  tag_name?: string | undefined;
   body: string;
   published_at: string;
   prerelease: boolean;

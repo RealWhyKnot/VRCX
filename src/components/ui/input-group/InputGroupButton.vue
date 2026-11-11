@@ -1,14 +1,24 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
+import type { buttonVariants } from "@/components/ui/button";
 import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
 
 import { inputGroupButtonVariants } from ".";
 
-const props = defineProps({
-  size: { type: null, required: false, default: "xs" },
-  variant: { type: null, required: false, default: "ghost" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    size?: VariantProps<typeof inputGroupButtonVariants>["size"] | undefined;
+    variant?: VariantProps<typeof buttonVariants>["variant"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    size: "xs",
+    variant: "ghost",
+    class: undefined,
+  }
+);
 </script>
 
 <template>

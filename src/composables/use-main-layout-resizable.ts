@@ -12,10 +12,13 @@ export function useMainLayoutResizable() {
   const asideMinSize = 12;
   const asideMaxPx = 700;
 
-  const isAsideCollapsed = (layout) => Array.isArray(layout) && layout.length >= 2 && layout[layout.length - 1] <= 1;
+  const isAsideCollapsed = (layout: number[]) => {
+    const lastSize = layout[layout.length - 1];
+    return layout.length >= 2 && lastSize !== undefined && lastSize <= 1;
+  };
 
   const isAsideCollapsedState = ref(false);
-  const handleLayout = (sizes) => {
+  const handleLayout = (sizes: number[]) => {
     if (!Array.isArray(sizes) || sizes.length < 2) {
       isAsideCollapsedState.value = false;
       return;

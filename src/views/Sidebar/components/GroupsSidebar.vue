@@ -1,12 +1,12 @@
 <template>
-  <div ref="scrollRootRef" class="relative h-full">
+  <div class="relative h-full">
     <div ref="scrollViewportRef" class="h-full w-full overflow-auto">
       <div class="px-1.5 py-2.5">
         <div v-if="virtualRows.length" class="relative w-full box-border" :style="virtualContainerStyle">
           <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
             <div
               v-if="item.row"
-              :ref="virtualizer.measureElement"
+              :ref="measureRowElement"
               class="absolute left-0 top-0 w-full box-border"
               :data-index="item.virtualItem.index"
               :style="rowStyle(item)"
@@ -61,12 +61,13 @@
         </div>
       </div>
     </div>
-    <BackToTop :virtualizer="virtualizer" :target="scrollViewportRef" :tooltip="false" />
+    <BackToTop :virtualizer="virtualizer" :target="scrollViewportRef ?? ''" :tooltip="false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import type { CSSProperties } from "vue";
 import { ChevronDown, Users } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
@@ -75,23 +76,29 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
+import type { VirtualItem } from "@tanstack/vue-virtual";
 
 import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
 import ContextMenuContent from "../../../components/ui/context-menu/ContextMenuContent.vue";
 import ContextMenuItem from "../../../components/ui/context-menu/ContextMenuItem.vue";
 import ContextMenuTrigger from "../../../components/ui/context-menu/ContextMenuTrigger.vue";
+import type { GroupCollapseConfig, GroupSidebarRow } from "../groups-sidebar-utils";
 import { buildGroupHeaderRow, buildGroupItemRow, estimateGroupRowSize, getGroupId } from "../groups-sidebar-utils";
 import { convertFileUrlToImageUrl } from "../../../shared/utils/common";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
+import type { GroupInstanceEntry } from "../../../stores/group-types";
 import { useGroupStore } from "../../../stores/group";
 import { useLaunchStore } from "../../../stores/launch";
+import { logFailure } from "../../../stores/log-failure";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { instanceRequest } from "../../../api/instance";
 
 import BackToTop from "../../../components/BackToTop.vue";
 import Location from "../../../components/Location.vue";
+
+type VirtualRowItem = { virtualItem: VirtualItem; row: GroupSidebarRow | undefined };
 
 const { t } = useI18n();
 
@@ -101,116 +108,128 @@ const { sortGroupInstancesByInGame } = useGroupStore();
 const { groupInstances } = storeToRefs(useGroupStore());
 const { checkCanInviteSelf } = useInviteChecks();
 
-const groupInstancesCfg = ref({});
-const scrollViewportRef = ref(null);
-const scrollRootRef = ref(null);
+const groupInstancesCfg = ref<GroupCollapseConfig>({});
+const scrollViewportRef = ref<HTMLDivElement | null>(null);
 
 const groupedGroupInstances = computed(() => {
-  const groupMap = new Map();
+  const groupMap = new Map<string, GroupInstanceEntry[]>();
 
-  groupInstances.value.forEach((ref) => {
-    const groupId = ref.group.groupId;
-    if (!groupMap.has(groupId)) {
-      groupMap.set(groupId, []);
+  groupInstances.value.forEach((entry) => {
+    const groupId = entry.group.groupId;
+    const entries = groupMap.get(groupId);
+    if (entries) {
+      entries.push(entry);
+    } else {
+      groupMap.set(groupId, [entry]);
     }
-    groupMap.get(groupId).push(ref);
 
-    if (!groupInstancesCfg.value[ref.group?.groupId]) {
+    if (!groupInstancesCfg.value[groupId]) {
       groupInstancesCfg.value = {
-        [ref.group.groupId]: {
+        [groupId]: {
           isCollapsed: false,
         },
         ...groupInstancesCfg.value,
       };
     }
   });
-  return Array.from(groupMap.values()).sort(sortGroupInstancesByInGame);
+  return Array.from(groupMap.values()).sort((a, b) => {
+    const first = a[0];
+    const second = b[0];
+    if (!first || !second) return 0;
+    return sortGroupInstancesByInGame(first, second);
+  });
 });
 
-const buildGroupHeaderRowLocal = (group, index) => buildGroupHeaderRow(group, index, groupInstancesCfg.value);
-
-const buildGroupItemRowLocal = (ref, index, groupId) => buildGroupItemRow(ref, index, groupId, isAgeGatedInstancesVisible.value);
-
-const virtualRows = computed(() => {
-  const rows = [];
+const virtualRows = computed<GroupSidebarRow[]>(() => {
+  const rows: GroupSidebarRow[] = [];
   groupedGroupInstances.value.forEach((group, index) => {
-    if (!group?.length) return;
+    if (!group.length) return;
     const groupId = getGroupId(group);
-    rows.push(buildGroupHeaderRowLocal(group, index));
+    rows.push(buildGroupHeaderRow(group, index, groupInstancesCfg.value));
     if (!groupInstancesCfg.value[groupId]?.isCollapsed) {
-      group.forEach((ref, idx) => {
-        rows.push(buildGroupItemRowLocal(ref, idx, groupId));
+      group.forEach((entry, idx) => {
+        rows.push(buildGroupItemRow(entry, idx, groupId, isAgeGatedInstancesVisible.value));
       });
     }
   });
   return rows;
 });
 
-const estimateRowSize = (row) => estimateGroupRowSize(row);
-
 const virtualizer = useVirtualizer(
   computed(() => ({
     count: virtualRows.value.length,
     getScrollElement: () => scrollViewportRef.value,
-    estimateSize: (index) => estimateRowSize(virtualRows.value[index]),
-    getItemKey: (index) => virtualRows.value[index]?.key ?? index,
+    estimateSize: (index: number) => estimateGroupRowSize(virtualRows.value[index]),
+    getItemKey: (index: number) => virtualRows.value[index]?.key ?? index,
     overscan: 6,
   }))
 );
 
-const virtualItems = computed(() => {
-  const items = virtualizer.value?.getVirtualItems?.() ?? [];
-  return items.map((virtualItem) => ({
+function measureRowElement(node: unknown) {
+  if (node === null || node instanceof Element) {
+    virtualizer.value.measureElement(node);
+  }
+}
+
+const virtualItems = computed<VirtualRowItem[]>(() =>
+  virtualizer.value.getVirtualItems().map((virtualItem) => ({
     virtualItem,
     row: virtualRows.value[virtualItem.index],
-  }));
-});
+  }))
+);
 
-const virtualContainerStyle = computed(() => ({
-  height: `${virtualizer.value?.getTotalSize?.() ?? 0}px`,
+const virtualContainerStyle = computed<CSSProperties>(() => ({
+  height: `${virtualizer.value.getTotalSize()}px`,
   width: "100%",
 }));
 
-const rowStyle = (item) => ({
-  transform: `translateY(${item.virtualItem.start}px)`,
-});
+function rowStyle(item: VirtualRowItem): CSSProperties {
+  return {
+    transform: `translateY(${item.virtualItem.start}px)`,
+  };
+}
 
-function getSmallGroupIconUrl(url) {
+function getSmallGroupIconUrl(url: string) {
   return convertFileUrlToImageUrl(url);
 }
 
-function toggleGroupSidebarCollapse(groupId) {
-  groupInstancesCfg.value[groupId].isCollapsed = !groupInstancesCfg.value[groupId].isCollapsed;
+function toggleGroupSidebarCollapse(groupId: string) {
+  const entry = groupInstancesCfg.value[groupId];
+  if (!entry) return;
+  entry.isCollapsed = !entry.isCollapsed;
 }
 
-function groupInstanceLaunch(location) {
+function groupInstanceLaunch(location: string | undefined) {
   if (!location) return;
-  launchStore.showLaunchDialog(location);
+  void launchStore.showLaunchDialog(location).catch(logFailure("show launch dialog"));
 }
 
-function groupInstanceSelfInvite(location) {
+function groupInstanceSelfInvite(location: string | undefined) {
   if (!location) return;
   const L = parseLocation(location);
   if (!L.isRealInstance) return;
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: L.instanceId,
       worldId: L.worldId,
     })
     .then(() => {
       toast.success(t("message.invite.self_sent"));
-    });
+    })
+    .catch(logFailure("send self invite"));
+}
+
+function remeasureVirtualRows() {
+  void nextTick(() => {
+    virtualizer.value.measure();
+  }).catch(logFailure("measure group rows"));
 }
 
 onMounted(() => {
-  nextTick(() => {
-    virtualizer.value?.measure?.();
-  });
+  remeasureVirtualRows();
 });
 
 watch(virtualRows, () => {
-  nextTick(() => {
-    virtualizer.value?.measure?.();
-  });
+  remeasureVirtualRows();
 });
 </script>

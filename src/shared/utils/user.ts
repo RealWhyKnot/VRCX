@@ -8,36 +8,36 @@ type RgbColour = { r: number; g: number; b: number };
 
 type UserTimestampContext = {
   ref: {
-    state?: string;
-    $online_for?: number;
-    $active_for?: number;
-    $offline_for?: number;
+    state?: string | undefined;
+    $online_for?: number | null | undefined;
+    $active_for?: number | null | undefined;
+    $offline_for?: number | null | undefined;
   };
 };
 
 type StatusUser = {
   id?: string;
   userId?: string;
-  status?: string;
+  status?: string | undefined;
   location?: string;
   state?: string;
   isFriend?: boolean;
-  $platform?: string;
+  $platform?: string | undefined;
 };
 
 type StatusCurrentUser = {
   id?: string;
-  presence?: { platform?: string };
+  presence?: { platform?: string | null | undefined } | undefined;
   onlineFriends?: string[];
   activeFriends?: string[];
 };
 
 type ImageUser = {
-  iconUrl?: string;
-  thumbnailUrl?: string;
-  currentAvatarThumbnailImageUrl?: string;
-  currentAvatarImageUrl?: string;
-  profilePicOverride?: string;
+  iconUrl?: string | undefined;
+  thumbnailUrl?: string | undefined;
+  currentAvatarThumbnailImageUrl?: string | undefined;
+  currentAvatarImageUrl?: string | undefined;
+  profilePicOverride?: string | undefined;
 };
 
 const THEME_COLOR_LIMITS = Object.freeze({
@@ -169,7 +169,7 @@ function invertHexColor(colorValue: string): string {
   return rgbToHex(invertedRgb);
 }
 
-function isMobilePlatform(platform: string | undefined): boolean {
+function isMobilePlatform(platform: string | null | undefined): boolean {
   return platform !== undefined && platform !== "standalonewindows" && platform !== "web";
 }
 

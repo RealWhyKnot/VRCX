@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import type { DateValue } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { CalendarRootProps, PrimitiveProps } from "reka-ui";
 import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from "reka-ui";
 import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core";
 import { createYear, createYearRange, toDate } from "reka-ui/date";
 import NativeSelect from "@/components/ui/native-select/NativeSelect.vue";
 import NativeSelectOption from "@/components/ui/native-select/NativeSelectOption.vue";
 import { computed, toRaw } from "vue";
-import { getLocalTimeZone, today } from "@internationalized/date";
+import { CalendarDate, CalendarDateTime, ZonedDateTime, getLocalTimeZone, today } from "@internationalized/date";
 import { cn } from "@/lib/utils";
 
 import CalendarCell from "./CalendarCell.vue";
@@ -20,61 +23,70 @@ import CalendarHeading from "./CalendarHeading.vue";
 import CalendarNextButton from "./CalendarNextButton.vue";
 import CalendarPrevButton from "./CalendarPrevButton.vue";
 
-const props = defineProps({
-  defaultValue: { type: null, required: false },
-  defaultPlaceholder: { type: null, required: false },
-  placeholder: { type: null, required: false },
-  pagedNavigation: { type: Boolean, required: false },
-  preventDeselect: { type: Boolean, required: false },
-  weekStartsOn: {
-    type: Number,
-    required: false,
-  },
-  weekdayFormat: {
-    type: String,
-    required: false,
-  },
-  calendarLabel: { type: String, required: false },
-  fixedWeeks: { type: Boolean, required: false },
-  maxValue: { type: null, required: false },
-  minValue: { type: null, required: false },
-  locale: { type: String, required: false },
-  numberOfMonths: { type: Number, required: false },
-  disabled: { type: Boolean, required: false },
-  readonly: { type: Boolean, required: false },
-  initialFocus: { type: Boolean, required: false },
-  isDateDisabled: {
-    type: Function,
-    required: false,
-  },
-  isDateUnavailable: {
-    type: Function,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  nextPage: {
-    type: Function,
-    required: false,
-  },
-  prevPage: {
-    type: Function,
-    required: false,
-  },
-  modelValue: { type: null, required: false, default: undefined },
-  multiple: { type: Boolean, required: false },
-  disableDaysOutsideCurrentView: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  layout: { type: null, required: false, default: undefined },
-  yearRange: {
-    type: Array,
-    required: false,
-  },
-});
-const emits = defineEmits(["update:modelValue", "update:placeholder"]);
+defineOptions({ name: "UiCalendar" });
 
-const delegatedProps = reactiveOmit(props, "class", "layout", "placeholder");
+const props = withDefaults(
+  defineProps<{
+    defaultValue?: DateValue | undefined;
+    defaultPlaceholder?: DateValue | undefined;
+    placeholder?: DateValue | undefined;
+    pagedNavigation?: boolean;
+    preventDeselect?: boolean;
+    weekStartsOn?: number | undefined;
+    weekdayFormat?: CalendarRootProps["weekdayFormat"] | undefined;
+    calendarLabel?: string | undefined;
+    fixedWeeks?: boolean;
+    maxValue?: DateValue | undefined;
+    minValue?: DateValue | undefined;
+    locale?: string | undefined;
+    numberOfMonths?: number | undefined;
+    disabled?: boolean;
+    readonly?: boolean;
+    initialFocus?: boolean;
+    isDateDisabled?: CalendarRootProps["isDateDisabled"] | undefined;
+    isDateUnavailable?: CalendarRootProps["isDateUnavailable"] | undefined;
+    dir?: CalendarRootProps["dir"] | undefined;
+    nextPage?: CalendarRootProps["nextPage"] | undefined;
+    prevPage?: CalendarRootProps["prevPage"] | undefined;
+    modelValue?: DateValue | DateValue[] | undefined;
+    multiple?: boolean;
+    disableDaysOutsideCurrentView?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    layout?: string | undefined;
+    yearRange?: DateValue[] | undefined;
+  }>(),
+  {
+    defaultValue: undefined,
+    defaultPlaceholder: undefined,
+    placeholder: undefined,
+    weekStartsOn: undefined,
+    weekdayFormat: undefined,
+    calendarLabel: undefined,
+    maxValue: undefined,
+    minValue: undefined,
+    locale: undefined,
+    numberOfMonths: undefined,
+    isDateDisabled: undefined,
+    isDateUnavailable: undefined,
+    dir: undefined,
+    nextPage: undefined,
+    prevPage: undefined,
+    modelValue: undefined,
+    as: undefined,
+    class: undefined,
+    layout: undefined,
+    yearRange: undefined,
+  }
+);
+
+const emits = defineEmits<{
+  "update:modelValue": [value: DateValue | DateValue[] | undefined];
+  "update:placeholder": [value: DateValue];
+}>();
+
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class", "layout", "placeholder");
 
 const placeholder = useVModel(props, "placeholder", emits, {
   passive: true,
@@ -87,9 +99,9 @@ const yearRange = computed(() => {
   return (
     props.yearRange ??
     createYearRange({
-      start: props?.minValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone())).cycle("year", -100),
+      start: props.minValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone())).cycle("year", -100),
 
-      end: props?.maxValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone())).cycle("year", 10),
+      end: props.maxValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone())).cycle("year", 10),
     })
   );
 });
@@ -98,6 +110,27 @@ const [DefineMonthTemplate, ReuseMonthTemplate] = createReusableTemplate();
 const [DefineYearTemplate, ReuseYearTemplate] = createReusableTemplate();
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
+
+function isDateValue(value: unknown): value is DateValue {
+  return value instanceof CalendarDate || value instanceof CalendarDateTime || value instanceof ZonedDateTime;
+}
+
+function placeholderBinding(): { placeholder?: DateValue } {
+  const current: unknown = placeholder.value;
+  return isDateValue(current) ? { placeholder: current } : {};
+}
+
+function selectMonth(event: Event) {
+  if (event.target instanceof HTMLSelectElement && placeholder.value) {
+    placeholder.value = placeholder.value.set({ month: Number(event.target.value) });
+  }
+}
+
+function selectYear(event: Event) {
+  if (event.target instanceof HTMLSelectElement && placeholder.value) {
+    placeholder.value = placeholder.value.set({ year: Number(event.target.value) });
+  }
+}
 </script>
 
 <template>
@@ -107,16 +140,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
         <div class="absolute inset-0 flex h-full items-center text-sm pl-2 pointer-events-none">
           {{ formatter.custom(toDate(date), { month: "short" }) }}
         </div>
-        <NativeSelect
-          class="text-xs h-8 pr-6 pl-2 text-transparent relative"
-          @change="
-            (e) => {
-              placeholder = placeholder.set({
-                month: Number(e?.target?.value),
-              });
-            }
-          "
-        >
+        <NativeSelect class="text-xs h-8 pr-6 pl-2 text-transparent relative" @change="selectMonth">
           <NativeSelectOption
             v-for="month in createYear({ dateObj: date })"
             :key="month.toString()"
@@ -136,16 +160,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
         <div class="absolute inset-0 flex h-full items-center text-sm pl-2 pointer-events-none">
           {{ formatter.custom(toDate(date), { year: "numeric" }) }}
         </div>
-        <NativeSelect
-          class="text-xs h-8 pr-6 pl-2 text-transparent relative"
-          @change="
-            (e) => {
-              placeholder = placeholder.set({
-                year: Number(e?.target?.value),
-              });
-            }
-          "
-        >
+        <NativeSelect class="text-xs h-8 pr-6 pl-2 text-transparent relative" @change="selectYear">
           <NativeSelectOption v-for="year in yearRange" :key="year.toString()" :value="year.year" :selected="date.year === year.year">
             {{ formatter.custom(toDate(year), { year: "numeric" }) }}
           </NativeSelectOption>
@@ -154,7 +169,13 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
     </div>
   </DefineYearTemplate>
 
-  <CalendarRoot v-slot="{ grid, weekDays, date }" v-bind="forwarded" v-model:placeholder="placeholder" data-slot="calendar" :class="cn('p-3', props.class)">
+  <CalendarRoot
+    v-slot="{ grid, weekDays, date }"
+    v-bind="{ ...forwarded, ...placeholderBinding() }"
+    data-slot="calendar"
+    :class="cn('p-3', props.class)"
+    @update:placeholder="placeholder = $event"
+  >
     <CalendarHeader class="pt-0">
       <nav class="flex items-center gap-1 absolute top-0 inset-x-0 justify-between">
         <CalendarPrevButton>

@@ -1,6 +1,14 @@
 import { computed } from "vue";
+import type { Ref } from "vue";
 
-export function useActivityDataFilter(activityDetailData, isDetailVisible, isSoloInstanceVisible, isNoFriendInstanceVisible) {
+import type { InstanceActivityEntry } from "../activity-types";
+
+export function useActivityDataFilter(
+  activityDetailData: Ref<InstanceActivityEntry[][]>,
+  isDetailVisible: Ref<boolean>,
+  isSoloInstanceVisible: Ref<boolean>,
+  isNoFriendInstanceVisible: Ref<boolean>
+) {
   const filteredActivityDetailData = computed(() => {
     if (!isDetailVisible.value) {
       return [];

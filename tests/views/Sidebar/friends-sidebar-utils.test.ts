@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../../../src/views/Sidebar/friends-sidebar-utils";
 
@@ -10,7 +10,7 @@ describe("buildToggleRow", () => {
       key: "online",
       label: "Online",
       count: null,
-      expanded: true,
+      isExpanded: true,
       headerPadding: null,
       paddingBottom: null,
       onClick: null,
@@ -18,18 +18,18 @@ describe("buildToggleRow", () => {
   });
 
   test("accepts all optional parameters", () => {
-    const onClick = () => {};
+    const onClick = vi.fn<() => void>();
     const row = buildToggleRow({
       key: "vip",
       label: "VIP",
       count: 5,
-      expanded: false,
+      isExpanded: false,
       headerPadding: 10,
       paddingBottom: 8,
       onClick,
     });
     expect(row.count).toBe(5);
-    expect(row.expanded).toBe(false);
+    expect(row.isExpanded).toBe(false);
     expect(row.headerPadding).toBe(10);
     expect(row.paddingBottom).toBe(8);
     expect(row.onClick).toBe(onClick);

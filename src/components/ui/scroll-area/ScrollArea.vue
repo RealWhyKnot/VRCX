@@ -1,32 +1,49 @@
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false });
 
+import type { PrimitiveProps, ScrollAreaRootProps } from "reka-ui";
 import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from "reka-ui";
-import { ref, useAttrs } from "vue";
+import type { ClassValue } from "clsx";
+import type { ComponentPublicInstance } from "vue";
+import { computed, ref, useAttrs } from "vue";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
 
 import ScrollBar from "./ScrollBar.vue";
 
-const props = defineProps({
-  type: { type: null, required: false },
-  dir: { type: null, required: false },
-  scrollHideDelay: { type: Number, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    type?: ScrollAreaRootProps["type"] | undefined;
+    dir?: ScrollAreaRootProps["dir"] | undefined;
+    scrollHideDelay?: number | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    type: undefined,
+    dir: undefined,
+    scrollHideDelay: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.type === undefined ? {} : { type: props.type }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  ...(props.scrollHideDelay === undefined ? {} : { scrollHideDelay: props.scrollHideDelay }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 
 const attrs = useAttrs();
-const viewportEl = ref(null);
+const viewportEl = ref<unknown>(null);
 
-function setViewportEl(el) {
-  viewportEl.value = el?.$el ?? el ?? null;
+function setViewportEl(el: Element | ComponentPublicInstance | null) {
+  viewportEl.value = el instanceof Element ? el : (el?.$el ?? null);
 }
 
-defineExpose({ viewportEl, update: () => {} });
+defineExpose({ viewportEl, update: () => undefined });
 </script>
 
 <template>

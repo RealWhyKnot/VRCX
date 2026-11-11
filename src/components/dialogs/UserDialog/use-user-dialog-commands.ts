@@ -1,4 +1,6 @@
 import { ref } from "vue";
+import type { Ref } from "vue";
+import type { ModerateUserRequest, InviteMessage, Notification, PlayerModeration } from "vrchat";
 
 import { favoriteRequest } from "../../../api/favorite";
 import { friendRequest } from "../../../api/friend";
@@ -9,10 +11,100 @@ import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { database } from "../../../services/database";
 import { recordRecentAction } from "../../../composables/use-recent-actions";
+import type { Json, VrcxUser } from "../../../types/vrcx";
+import type { CurrentUserState, UserDialogState } from "../../../stores/user-state";
+import type { LastLocation } from "../../../stores/location";
+import type { GroupInviteDialogState } from "../../../stores/group-types";
+import type { FriendLogHistoryRow } from "../../../stores/friend-types";
 
-export function useUserDialogCommands(
-  userDialog,
-  {
+export type SendInviteParams = {
+  instanceId?: string;
+  worldId?: string;
+  worldName?: string;
+  platform?: string;
+  messageSlot?: number;
+  requestSlot?: number;
+};
+
+export type SendInviteDialogState = {
+  messageSlot?: Partial<Json<InviteMessage>>;
+  userId: string;
+  params: SendInviteParams;
+};
+
+type Translate = (key: string, named?: Record<string, string>) => string;
+
+type ToastFn = {
+  (message: string): unknown;
+  success: (message: string) => unknown;
+  error: (message: string) => unknown;
+};
+
+type ConfirmDescriptor = {
+  title: string;
+  description: string;
+  destructive?: boolean;
+};
+
+type ConfirmedCommand = {
+  confirm: () => ConfirmDescriptor;
+  handler: (userId: string) => void | Promise<void>;
+};
+
+type CommandEntry = string | (() => void) | ConfirmedCommand;
+
+type UserDialogCommandsDeps = {
+  t: Translate;
+  toast: ToastFn;
+  modalStore: {
+    confirm: (options: ConfirmDescriptor) => Promise<{ ok: boolean }>;
+  };
+  currentUser: Ref<CurrentUserState>;
+  cachedUsers: Map<string, VrcxUser>;
+  friendLogTable: Ref<{ data: Partial<FriendLogHistoryRow>[] }>;
+  lastLocation: Ref<LastLocation>;
+  lastLocationDestination: Ref<string>;
+  inviteGroupDialog: Ref<GroupInviteDialogState>;
+  showUserDialog: (userId: string) => void;
+  showFavoriteDialog: (type: string, objectId: string) => void;
+  showAvatarDialog: (avatarId: string) => void;
+  showAvatarAuthorDialog: (refUserId: string, ownerUserId: string, currentAvatarImageUrl: string) => Promise<void>;
+  showModerateGroupDialog: (userId: string) => void;
+  showSendBoopDialog: (userId: string) => void;
+  showModerationReportDialog: (report: { type: "user"; contentId: string; contentName?: string }) => void;
+  showGalleryPage: (tab?: unknown) => void;
+  getFriendRequest: (userId: string) => string | undefined;
+  handleFriendDelete: (args: { params: { userId: string } }) => void;
+  applyPlayerModeration: (json: Json<PlayerModeration>) => { targetUserId: string; sourceUserId: string; type: string };
+  handlePlayerModerationDelete: (args: { params: Pick<ModerateUserRequest, "type" | "moderated"> }) => void;
+  refreshInviteMessageTableData: (mode: "message" | "request") => void;
+  clearInviteImageUpload: () => void;
+  instanceStore: {
+    showPreviousInstancesListDialog: (variant: "user", targetRef: Partial<VrcxUser>) => Promise<void>;
+  };
+  useNotificationStore: () => {
+    handleNotificationAccept: (args: { params: { notificationId: string } }) => void;
+    handleNotificationHide: (notificationId: string) => void;
+  };
+  showEditProfileDialog: () => void;
+};
+
+function isSuccessResponse(json: object): boolean {
+  return "success" in json && Boolean(json.success);
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Error && "status" in error && error.status === 404;
+}
+
+function logRejection(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
+
+export function useUserDialogCommands(userDialog: Ref<UserDialogState>, deps: UserDialogCommandsDeps) {
+  const {
     t,
     toast,
     modalStore,
@@ -39,100 +131,102 @@ export function useUserDialogCommands(
     instanceStore,
     useNotificationStore,
     showEditProfileDialog,
-  }
-) {
+  } = deps;
+
   const sendInviteDialogVisible = ref(false);
-  const sendInviteDialog = ref({
+  const sendInviteDialog = ref<SendInviteDialogState>({
     messageSlot: {},
     userId: "",
     params: {},
   });
   const sendInviteRequestDialogVisible = ref(false);
 
-  function handleSendFriendRequest(args) {
-    const ref = cachedUsers.get(args.params.userId);
-    if (typeof ref === "undefined") {
+  function handleSendFriendRequest(args: { json: Json<Notification>; params: { userId: string } }) {
+    const cachedUser = cachedUsers.get(args.params.userId);
+    if (typeof cachedUser === "undefined") {
       return;
     }
     const friendLogHistory = {
       created_at: new Date().toJSON(),
       type: "FriendRequest",
-      userId: ref.id,
-      displayName: ref.displayName,
+      userId: cachedUser.id,
+      displayName: cachedUser.displayName,
     };
     friendLogTable.value.data.push(friendLogHistory);
     database.addFriendLogHistory(friendLogHistory);
 
     const D = userDialog.value;
-    if (D.visible === false || D.id !== args.params.userId) {
+    if (!D.visible || D.id !== args.params.userId) {
       return;
     }
-    if (args.json.success) {
+    if (isSuccessResponse(args.json)) {
       D.isFriend = true;
     } else {
       D.outgoingRequest = true;
     }
   }
 
-  function handleCancelFriendRequest(args) {
-    const ref = cachedUsers.get(args.params.userId);
-    if (typeof ref === "undefined") {
+  function handleCancelFriendRequest(args: { params: { userId: string } }) {
+    const cachedUser = cachedUsers.get(args.params.userId);
+    if (typeof cachedUser === "undefined") {
       return;
     }
     const friendLogHistory = {
       created_at: new Date().toJSON(),
       type: "CancelFriendRequest",
-      userId: ref.id,
-      displayName: ref.displayName,
+      userId: cachedUser.id,
+      displayName: cachedUser.displayName,
     };
     friendLogTable.value.data.push(friendLogHistory);
     database.addFriendLogHistory(friendLogHistory);
     const D = userDialog.value;
-    if (D.visible === false || D.id !== args.params.userId) {
+    if (!D.visible || D.id !== args.params.userId) {
       return;
     }
     D.outgoingRequest = false;
   }
 
-  function handleSendPlayerModeration(args) {
-    const ref = applyPlayerModeration(args.json);
+  function handleSendPlayerModeration(args: { json: Json<PlayerModeration> }) {
+    const moderation = applyPlayerModeration(args.json);
     const D = userDialog.value;
-    if (D.visible === false || (ref.targetUserId !== D.id && ref.sourceUserId !== currentUser.value.id)) {
+    if (!D.visible || (moderation.targetUserId !== D.id && moderation.sourceUserId !== currentUser.value.id)) {
       return;
     }
-    if (ref.type === "block") {
+    if (moderation.type === "block") {
       D.isBlock = true;
-    } else if (ref.type === "mute") {
+    } else if (moderation.type === "mute") {
       D.isMute = true;
-    } else if (ref.type === "interactOff") {
+    } else if (moderation.type === "interactOff") {
       D.isInteractOff = true;
-    } else if (ref.type === "muteChat") {
+    } else if (moderation.type === "muteChat") {
       D.isMuteChat = true;
     }
     toast.success(t("message.user.moderated"));
   }
 
-  function setPlayerModeration(userId, type) {
+  function setPlayerModeration(userId: string, type: number) {
     const D = userDialog.value;
-    AppApi.SetVRChatUserModeration(currentUser.value.id, userId, type).then((result) => {
-      if (result) {
-        if (type === 4) {
-          D.isShowAvatar = false;
-          D.isHideAvatar = true;
-        } else if (type === 5) {
-          D.isShowAvatar = true;
-          D.isHideAvatar = false;
+    void AppApi.SetVRChatUserModeration(currentUser.value.id, userId, type)
+      .then((isUpdated) => {
+        if (isUpdated) {
+          if (type === 4) {
+            D.isShowAvatar = false;
+            D.isHideAvatar = true;
+          } else if (type === 5) {
+            D.isShowAvatar = true;
+            D.isHideAvatar = false;
+          } else {
+            D.isShowAvatar = false;
+            D.isHideAvatar = false;
+          }
         } else {
-          D.isShowAvatar = false;
-          D.isHideAvatar = false;
+          toast.error(t("message.avatar.change_moderation_failed"));
         }
-      } else {
-        toast.error(t("message.avatar.change_moderation_failed"));
-      }
-    });
+      })
+      .catch(logRejection("Failed to set player moderation:"));
   }
 
-  function showSendInviteDialogFn(params, userId) {
+  function showSendInviteDialogFn(params: SendInviteParams, userId: string) {
     sendInviteDialog.value = {
       params,
       userId,
@@ -143,7 +237,7 @@ export function useUserDialogCommands(
     sendInviteDialogVisible.value = true;
   }
 
-  function showSendInviteRequestDialogFn(params, userId) {
+  function showSendInviteRequestDialogFn(params: SendInviteParams, userId: string) {
     sendInviteDialog.value = {
       params,
       userId,
@@ -154,7 +248,7 @@ export function useUserDialogCommands(
     sendInviteRequestDialogVisible.value = true;
   }
 
-  function buildCommandMap() {
+  function buildCommandMap(): Record<string, CommandEntry> {
     const D = () => userDialog.value;
 
     return {
@@ -167,7 +261,7 @@ export function useUserDialogCommands(
         copyToClipboard(`https://vrchat.com/home/user/${D().id}`, t("message.user.url_copied"));
       },
       "Copy DisplayName": () => {
-        copyToClipboard(D().ref.displayName, t("message.user.display_name_copied"));
+        copyToClipboard(D().ref.displayName ?? "", t("message.user.display_name_copied"));
       },
       "Copy UserId": () => {
         copyToClipboard(D().id, t("message.user.id_copied"));
@@ -179,7 +273,7 @@ export function useUserDialogCommands(
         showEditProfileDialog();
       },
       "Request Invite": () => {
-        notificationRequest
+        void notificationRequest
           .sendRequestInvite(
             {
               platform: "standalonewindows",
@@ -190,11 +284,12 @@ export function useUserDialogCommands(
             toast(t("message.user.request_invite_sent"));
             recordRecentAction(D().id, "Request Invite");
             return args;
-          });
+          })
+          .catch(logRejection("Failed to request invite:"));
       },
       "Invite Message": () => {
         const L = parseLocation(lastLocation.value.location);
-        queryRequest
+        void queryRequest
           .fetch("world", {
             worldId: L.worldId,
           })
@@ -207,7 +302,8 @@ export function useUserDialogCommands(
               },
               D().id
             );
-          });
+          })
+          .catch(logRejection("Failed to load world for invite message:"));
       },
       "Request Invite Message": () => {
         showSendInviteRequestDialogFn(
@@ -223,12 +319,12 @@ export function useUserDialogCommands(
           currentLocation = lastLocationDestination.value;
         }
         const L = parseLocation(currentLocation);
-        queryRequest
+        void queryRequest
           .fetch("world", {
             worldId: L.worldId,
           })
           .then((args) => {
-            notificationRequest
+            void notificationRequest
               .sendInvite(
                 {
                   instanceId: L.tag,
@@ -241,12 +337,14 @@ export function useUserDialogCommands(
                 toast(t("message.invite.sent"));
                 recordRecentAction(D().id, "Invite");
                 return _args;
-              });
-          });
+              })
+              .catch(logRejection("Failed to send invite:"));
+          })
+          .catch(logRejection("Failed to load world for invite:"));
       },
       "Show Avatar Author": () => {
-        const { currentAvatarImageUrl } = D().ref;
-        showAvatarAuthorDialog(D().id, D().$avatarInfo.ownerId, currentAvatarImageUrl);
+        const currentAvatarImageUrl = D().ref.currentAvatarImageUrl ?? "";
+        void showAvatarAuthorDialog(D().id, D().$avatarInfo.ownerId, currentAvatarImageUrl).catch(logRejection("Failed to show avatar author:"));
       },
       "Show Fallback Avatar Details": () => {
         const { fallbackAvatar } = D().ref;
@@ -257,7 +355,7 @@ export function useUserDialogCommands(
         }
       },
       "Previous Instances": () => {
-        instanceStore.showPreviousInstancesListDialog("user", D().ref);
+        void instanceStore.showPreviousInstancesListDialog("user", D().ref).catch(logRejection("Failed to show previous instances:"));
       },
       "Manage Gallery": () => {
         userDialog.value.visible = false;
@@ -275,7 +373,7 @@ export function useUserDialogCommands(
         showModerationReportDialog({
           type: "user",
           contentId: D().id,
-          contentName: D().ref.displayName,
+          contentName: D().ref.displayName ?? "",
         });
       },
       "Group Moderation": () => {
@@ -305,9 +403,11 @@ export function useUserDialogCommands(
           }),
         }),
         handler: (userId) => {
-          favoriteRequest.deleteFavorite({
-            objectId: userId,
-          });
+          void favoriteRequest
+            .deleteFavorite({
+              objectId: userId,
+            })
+            .catch(logRejection("Failed to delete favorite:"));
         },
       },
       "Accept Friend Request": {
@@ -324,16 +424,16 @@ export function useUserDialogCommands(
               userId,
             });
             handleSendFriendRequest(args);
-          } else {
-            notificationRequest
+          } else if (typeof key === "string") {
+            void notificationRequest
               .acceptFriendRequestNotification({
                 notificationId: key,
               })
               .then((args) => {
                 useNotificationStore().handleNotificationAccept(args);
               })
-              .catch((err) => {
-                if (err && err.message && err.message.includes("404")) {
+              .catch((err: unknown) => {
+                if (isNotFoundError(err)) {
                   useNotificationStore().handleNotificationHide(key);
                 }
               });
@@ -354,14 +454,15 @@ export function useUserDialogCommands(
               userId,
             });
             handleCancelFriendRequest(args);
-          } else {
-            notificationRequest
+          } else if (typeof key === "string") {
+            void notificationRequest
               .hideNotification({
                 notificationId: key,
               })
               .then(() => {
                 useNotificationStore().handleNotificationHide(key);
-              });
+              })
+              .catch(logRejection("Failed to decline friend request:"));
           }
         },
       },
@@ -541,15 +642,15 @@ export function useUserDialogCommands(
 
   const commandMap = buildCommandMap();
 
-  let componentCallbacks = {};
+  let componentCallbacks: Partial<Record<string, () => void>> = {};
 
-  function registerCallbacks(callbacks) {
+  function registerCallbacks(callbacks: Partial<Record<string, () => void>>) {
     componentCallbacks = callbacks;
   }
 
-  function userDialogCommand(command) {
+  function userDialogCommand(command: string) {
     const D = userDialog.value;
-    if (D.visible === false) {
+    if (!D.visible) {
       return;
     }
 
@@ -572,16 +673,10 @@ export function useUserDialogCommands(
       return;
     }
 
-    if (entry.confirm) {
-      modalStore
-        .confirm(entry.confirm())
-        .then(({ ok }) => {
-          if (ok) {
-            entry.handler(D.id);
-          }
-        })
-        .catch(() => {});
-    }
+    void modalStore
+      .confirm(entry.confirm())
+      .then(({ ok }) => (ok ? entry.handler(D.id) : undefined))
+      .catch(logRejection("Failed to run user dialog command:"));
   }
 
   return {

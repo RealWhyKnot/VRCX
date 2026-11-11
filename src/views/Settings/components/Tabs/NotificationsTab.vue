@@ -41,7 +41,7 @@
 
     <SettingsGroup :title="t('view.settings.notifications.notifications.desktop_notifications.header')">
       <SettingsItem :label="t('view.settings.notifications.notifications.desktop_notifications.when_to_display')">
-        <Select :model-value="desktopToast" @update:model-value="setDesktopToast">
+        <Select :model-value="desktopToast" @update:model-value="handleDesktopToastChange">
           <SelectTrigger size="sm">
             <SelectValue />
           </SelectTrigger>
@@ -68,7 +68,7 @@
 
     <SettingsGroup :title="t('view.settings.notifications.notifications.text_to_speech.header')">
       <SettingsItem :label="t('view.settings.notifications.notifications.text_to_speech.when_to_play')">
-        <Select :model-value="notificationTTS" @update:model-value="saveNotificationTTS">
+        <Select :model-value="notificationTTS" @update:model-value="handleNotificationTTSChange">
           <SelectTrigger size="sm">
             <SelectValue />
           </SelectTrigger>
@@ -83,7 +83,7 @@
       </SettingsItem>
 
       <SettingsItem :label="t('view.settings.notifications.notifications.text_to_speech.tts_voice')">
-        <Select :model-value="ttsVoiceIndex" :disabled="notificationTTS === 'Never'" @update:model-value="(v) => (ttsVoiceIndex = v)">
+        <Select :model-value="ttsVoiceIndex" :disabled="notificationTTS === 'Never'" @update:model-value="handleTTSVoiceIndexChange">
           <SelectTrigger size="sm">
             <SelectValue :placeholder="getTTSVoiceName()" />
           </SelectTrigger>
@@ -138,13 +138,14 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { Play } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
+import { logError } from "@/stores/notification/errors";
 import { useNotificationStore } from "@/stores/notification";
 import { useNotificationsSettingsStore } from "@/stores/settings/notifications";
 import { useUserStore } from "@/stores/user";
@@ -190,7 +191,7 @@ const feedFiltersDialogMode = ref("");
 const ttsVoiceIndex = computed({
   get: () => {
     const currentName = getTTSVoiceName();
-    const idx = TTSvoices.value.findIndex((v) => v?.name === currentName);
+    const idx = TTSvoices.value.findIndex((v) => v.name === currentName);
     return idx >= 0 ? idx : null;
   },
   set: (value) => {
@@ -199,6 +200,24 @@ const ttsVoiceIndex = computed({
     }
   },
 });
+
+function handleDesktopToastChange(value: unknown) {
+  if (typeof value === "string") {
+    setDesktopToast(value);
+  }
+}
+
+function handleNotificationTTSChange(value: unknown) {
+  if (typeof value === "string") {
+    void saveNotificationTTS(value).catch(logError);
+  }
+}
+
+function handleTTSVoiceIndexChange(value: unknown) {
+  if (typeof value === "number") {
+    ttsVoiceIndex.value = value;
+  }
+}
 
 function showNotyFeedFiltersDialog() {
   feedFiltersDialogMode.value = "noty";

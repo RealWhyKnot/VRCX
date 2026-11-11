@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { NumberFieldInput } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 </script>
 
 <template>

@@ -29,43 +29,53 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { inviteMessagesRequest } from "../../../api/invite-messages";
+import { logError } from "../../../stores/vrcx-messages";
+import type { InviteMessage, InviteMessageType } from "vrchat";
+import type { Json } from "../../../types/vrcx";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  isEditInviteMessageDialogVisible: { type: Boolean, default: false },
-  inviteMessage: { type: Object, required: true },
-});
+const props = withDefaults(
+  defineProps<{
+    isEditInviteMessageDialogVisible?: boolean | undefined;
+    inviteMessage: Partial<Json<InviteMessage>>;
+  }>(),
+  {
+    isEditInviteMessageDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["update:isEditInviteMessageDialogVisible", "updateInviteMessages"]);
+const emit = defineEmits<{
+  "update:isEditInviteMessageDialogVisible": [value: boolean];
+  updateInviteMessages: [messageType: InviteMessageType];
+}>();
 
 const message = ref("");
 
 watch(
   () => props.inviteMessage,
   (inviteMessage) => {
-    if (inviteMessage) {
-      message.value = inviteMessage.message;
-    }
+    message.value = inviteMessage.message ?? "";
   },
   { deep: true }
 );
 
 function saveEditInviteMessage() {
   closeDialog();
-  if (props.inviteMessage.message !== message.value) {
-    const slot = props.inviteMessage.slot;
-    const messageType = props.inviteMessage.messageType;
+  const { message: originalMessage, slot, messageType } = props.inviteMessage;
+  if (originalMessage !== message.value && slot !== undefined && messageType !== undefined) {
     const params = {
       message: message.value,
     };
-    inviteMessagesRequest
+    void inviteMessagesRequest
       .editInviteMessage(params, messageType, slot)
-      .catch((err) => {
-        throw err;
-      })
       .then((args) => {
-        if (args.json[slot].message === props.inviteMessage.message) {
+        const updatedMessage = args.json[slot];
+        if (updatedMessage === undefined) {
+          throw new TypeError(`No invite message in slot ${slot}`);
+        }
+        const { message: savedMessage } = updatedMessage;
+        if (savedMessage === originalMessage) {
           const errorMessage = t("message.invite.message_update_failed");
           toast.error(errorMessage);
           throw new Error(errorMessage);
@@ -74,7 +84,8 @@ function saveEditInviteMessage() {
           emit("updateInviteMessages", messageType);
         }
         return args;
-      });
+      })
+      .catch(logError);
   }
 }
 

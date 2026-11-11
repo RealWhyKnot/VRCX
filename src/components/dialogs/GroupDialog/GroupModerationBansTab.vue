@@ -17,7 +17,7 @@
         <Button variant="outline" size="sm" :disabled="!hasGroupPermission(groupRef, 'group-bans-manage')" @click="$emit('import')">{{
           t("dialog.group_member_moderation.import_bans")
         }}</Button>
-        <InputGroupField v-model="tableData.filters[0].value" clearable size="sm" class="w-80" :placeholder="t('dialog.group.members.search')" />
+        <InputGroupField v-model="searchText" clearable size="sm" class="w-80" :placeholder="t('dialog.group.members.search')" />
       </div>
     </div>
 
@@ -41,41 +41,46 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { hasGroupPermission } from "@/shared/utils/group";
-import { createColumns } from "./group-member-moderation-bans-columns.tsx";
+import type { VrcxGroup } from "../../../types/vrcx";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
+import { createColumns, type GroupBansColumnContext } from "./group-member-moderation-bans-columns.tsx";
+import type { ModerationRow } from "./group-moderation-types";
+import { useGroupTableSearch } from "./use-group-table-search";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-const props = defineProps({
-  loading: { type: Boolean, default: false },
-  tableData: { type: Object, required: true },
-  groupRef: { type: Object, default: () => ({}) },
-  pageSizes: { type: Array, required: true },
-  columnContext: {
-    type: Object,
-    required: true,
-  },
-  handlePageChange: { type: Function, required: true },
-});
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean;
+    tableData: GroupMemberModerationTable<ModerationRow>;
+    groupRef?: Partial<VrcxGroup>;
+    pageSizes: number[];
+    columnContext: GroupBansColumnContext;
+    handlePageChange: (page: number) => void;
+  }>(),
+  {
+    loading: false,
+    groupRef: () => ({}),
+  }
+);
 
-defineEmits(["refresh", "select-all", "export", "import"]);
+defineEmits<{
+  refresh: [];
+  "select-all": [rows: ModerationRow[]];
+  export: [];
+  import: [];
+}>();
 
 const { t } = useI18n();
 
-const bansSearch = computed(() =>
-  String(props.tableData.filters?.[0]?.value ?? "")
-    .trim()
-    .toLowerCase()
-);
+const { searchText, searchQuery } = useGroupTableSearch(() => props.tableData.filters);
 
 const filteredRows = computed(() => {
-  const rows = Array.isArray(props.tableData.data) ? props.tableData.data : [];
-  const q = bansSearch.value;
+  const rows = props.tableData.data;
+  const q = searchQuery.value;
   if (!q) {
     return rows;
   }
-  return rows.filter((r) => {
-    const name = (r?.$displayName ?? r?.user?.displayName ?? "").toString().toLowerCase();
-    return name.includes(q);
-  });
+  return rows.filter((r) => (r.$displayName ?? r.user?.displayName ?? "").toLowerCase().includes(q));
 });
 
 const columns = computed(() => createColumns(props.columnContext));
@@ -86,8 +91,8 @@ const { table: tanstackTable } = useVrcxVueTable({
     return filteredRows.value;
   },
   columns,
-  getRowId: (row) => String(row?.userId ?? row?.id ?? ""),
-  initialPagination: { pageIndex: props.tableData.pageIndex ?? 0, pageSize: props.tableData.pageSize ?? 15 },
+  getRowId: (row) => String(row.userId),
+  initialPagination: { pageIndex: props.tableData.pageIndex, pageSize: props.tableData.pageSize },
   tableOptions: {
     autoResetPageIndex: false,
   },

@@ -6,7 +6,7 @@
       </DialogHeader>
       <div class="options-container-item">
         <span class="name">{{ t("view.settings.appearance.appearance.bio_language") }}</span>
-        <Select :model-value="bioLanguage" @update:model-value="setBioLanguage">
+        <Select :model-value="bioLanguage" @update:model-value="handleBioLanguageChange">
           <SelectTrigger size="sm" style="float: right">
             <SelectValue :placeholder="String(getLanguageName(bioLanguage) || bioLanguage || '')" />
           </SelectTrigger>
@@ -75,11 +75,7 @@
             <FieldContent>
               <div class="flex gap-2 items-start">
                 <div class="flex-1">
-                  <Select
-                    v-if="availableModels.length > 0"
-                    :model-value="form.translationApiModel"
-                    @update:model-value="(value) => (form.translationApiModel = value)"
-                  >
+                  <Select v-if="availableModels.length > 0" :model-value="form.translationApiModel" @update:model-value="handleTranslationApiModelChange">
                     <SelectTrigger size="sm" style="width: 100%">
                       <SelectValue :placeholder="t('dialog.translation_api.openai.model')" />
                     </SelectTrigger>
@@ -176,18 +172,25 @@ const {
 const { t } = useI18n();
 
 const isFetchingModels = ref(false);
-const availableModels = ref([]);
+const availableModels = ref<string[]>([]);
 
-const props = defineProps({
-  isTranslationApiDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(defineProps<{ isTranslationApiDialogVisible?: boolean }>(), { isTranslationApiDialogVisible: false });
 
-const emit = defineEmits(["update:isTranslationApiDialogVisible"]);
+const emit = defineEmits<{ "update:isTranslationApiDialogVisible": [value: boolean] }>();
 
-function handleTranslationApiTypeChange(value) {
+function handleBioLanguageChange(value: unknown) {
+  if (typeof value === "string") {
+    setBioLanguage(value);
+  }
+}
+
+function handleTranslationApiModelChange(value: unknown) {
+  if (typeof value === "string") {
+    form.translationApiModel = value;
+  }
+}
+
+function handleTranslationApiTypeChange(value: unknown) {
   form.translationApiType = String(value);
 }
 
@@ -210,8 +213,8 @@ const loadFormFromStore = () => {
 
 watch(
   () => props.isTranslationApiDialogVisible,
-  (visible) => {
-    if (visible) {
+  (isVisible) => {
+    if (isVisible) {
       loadFormFromStore();
     }
   },
@@ -251,7 +254,7 @@ async function fetchModels() {
       key: form.translationApiKey,
     });
 
-    if (models && models.length > 0) {
+    if (models.length > 0) {
       availableModels.value = models;
       toast.success(t("dialog.translation_api.msg_models_fetched", { count: models.length }));
     } else {

@@ -143,7 +143,7 @@ describe("normalizeClock", () => {
 });
 
 describe("loadVisibility", () => {
-  let storage;
+  let storage: MockStorage;
 
   beforeEach(() => {
     storage = createMockStorage();
@@ -178,7 +178,7 @@ describe("loadVisibility", () => {
 
 describe("loadClocks", () => {
   const defaults = [{ offset: 9 }, { offset: 0 }, { offset: -5 }];
-  let storage;
+  let storage: MockStorage;
 
   beforeEach(() => {
     storage = createMockStorage();
@@ -218,13 +218,15 @@ describe("loadClocks", () => {
     const a = loadClocks(storage, defaults);
     const b = loadClocks(storage, defaults);
     expect(a).not.toBe(b);
-    a[0].offset = 999;
-    expect(b[0].offset).not.toBe(999);
+    const first = a[0];
+    if (!first) throw new Error("expected a first clock");
+    first.offset = 999;
+    expect(b[0]?.offset).not.toBe(999);
   });
 });
 
 describe("loadClockCount", () => {
-  let storage;
+  let storage: MockStorage;
 
   beforeEach(() => {
     storage = createMockStorage();
@@ -284,11 +286,19 @@ describe("formatAppUptime", () => {
 });
 
 function createMockStorage() {
-  const data = new Map();
+  const data = new Map<string, string>();
   return {
-    getItem: (key) => (data.has(key) ? data.get(key) : null),
-    setItem: (key, value) => data.set(key, String(value)),
-    removeItem: (key) => data.delete(key),
-    clear: () => data.clear(),
+    getItem: (key: string): string | null => data.get(key) ?? null,
+    setItem: (key: string, value: string): void => {
+      data.set(key, value);
+    },
+    removeItem: (key: string): void => {
+      data.delete(key);
+    },
+    clear: (): void => {
+      data.clear();
+    },
   };
 }
+
+type MockStorage = ReturnType<typeof createMockStorage>;

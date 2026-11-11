@@ -66,73 +66,76 @@ function closeDialog() {
   changeLogDialog.value.visible = false;
 }
 
-function handleLinkClick(event) {
-  const target = event.target.closest("a");
-  if (target?.href) {
+function handleLinkClick(event: MouseEvent) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  const link = event.target.closest("a");
+  if (link?.href) {
     event.preventDefault();
     event.stopPropagation();
 
-    openExternalLink(target.href);
+    openExternalLink(link.href);
   }
 }
 </script>
 
-<style>
-.changelog-dialog img {
+<style scoped>
+.changelog-dialog :global(img) {
   width: 100%;
 }
 
-.changelog-markdown ul,
-.changelog-markdown ol {
+.changelog-markdown :global(ul),
+.changelog-markdown :global(ol) {
   padding-left: 1.5rem;
   margin: 0.5rem 0 1rem;
   list-style-position: outside;
 }
 
-.changelog-markdown ul {
+.changelog-markdown :global(ul) {
   list-style-type: disc;
 }
 
-.changelog-markdown ol {
+.changelog-markdown :global(ol) {
   list-style-type: decimal;
 }
 
-.changelog-markdown li {
+.changelog-markdown :global(li) {
   margin: 0.25rem 0;
 }
 
-.changelog-markdown h1,
-.changelog-markdown h2,
-.changelog-markdown h3,
-.changelog-markdown h4,
-.changelog-markdown h5,
-.changelog-markdown h6 {
+.changelog-markdown :global(h1),
+.changelog-markdown :global(h2),
+.changelog-markdown :global(h3),
+.changelog-markdown :global(h4),
+.changelog-markdown :global(h5),
+.changelog-markdown :global(h6) {
   font-weight: 600;
   line-height: 1.25;
   margin: 1.25rem 0 0.5rem;
 }
 
-.changelog-markdown h1 {
+.changelog-markdown :global(h1) {
   font-size: 1.5rem;
 }
 
-.changelog-markdown h2 {
+.changelog-markdown :global(h2) {
   font-size: 1.25rem;
 }
 
-.changelog-markdown h3 {
+.changelog-markdown :global(h3) {
   font-size: 1.125rem;
 }
 
-.changelog-markdown h4 {
+.changelog-markdown :global(h4) {
   font-size: 1rem;
 }
 
-.changelog-markdown h5 {
+.changelog-markdown :global(h5) {
   font-size: 0.95rem;
 }
 
-.changelog-markdown h6 {
+.changelog-markdown :global(h6) {
   font-size: 0.9rem;
 }
 </style>

@@ -1,18 +1,31 @@
 <script setup lang="ts">
+import type { PrimitiveProps, RangeCalendarCellTriggerProps } from "reka-ui";
 import { RangeCalendarCellTrigger, useForwardProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  day: { type: null, required: true },
-  month: { type: null, required: true },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false, default: "button" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    day: RangeCalendarCellTriggerProps["day"];
+    month: RangeCalendarCellTriggerProps["month"];
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: "button",
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  day: props.day,
+  month: props.month,
+  asChild: props.asChild,
+  as: props.as,
+}));
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>

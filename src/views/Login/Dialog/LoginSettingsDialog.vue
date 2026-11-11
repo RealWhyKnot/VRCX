@@ -103,7 +103,7 @@ const isLinux = computed(() => isLinuxHost());
 
 watch(open, (isOpen) => {
   if (isOpen) {
-    proxyServerLocal.value = vrcxStore.proxyServer || "";
+    proxyServerLocal.value = vrcxStore.proxyServer;
   }
 });
 
@@ -113,8 +113,8 @@ async function handleCustomEndpointToggle() {
 
 async function saveProxy() {
   vrcxStore.setProxyServer(proxyServerLocal.value);
-  await VRCXStorage.Set("VRCX_ProxyServer", vrcxStore.proxyServer);
-  await VRCXStorage.Save();
+  await window.VRCXStorage.Set("VRCX_ProxyServer", vrcxStore.proxyServer);
+  await window.VRCXStorage.Save();
 }
 
 async function saveAndRestart() {

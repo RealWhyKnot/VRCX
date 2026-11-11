@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    class: undefined,
+  }
+);
 </script>
 
 <template>

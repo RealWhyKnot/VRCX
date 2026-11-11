@@ -110,15 +110,44 @@ import { useInviteStore } from "../../../stores/invite";
 import { useLocationStore } from "../../../stores/location";
 import NewInstanceDialog from "../../../components/dialogs/NewInstanceDialog/NewInstanceDialog.vue";
 
-const props = defineProps({
-  group: [Object, String],
-  favorite: Object,
-  isLocalFavorite: { type: Boolean, default: false },
-  editMode: { type: Boolean, default: false },
-  selected: { type: Boolean, default: false },
-});
+type FavoriteWorldDetails = {
+  name?: string | null;
+  authorName?: string | null;
+  thumbnailImageUrl?: string | null;
+  releaseStatus?: string | null;
+  occupants?: number | null;
+};
 
-const emit = defineEmits(["toggle-select"]);
+type FavoriteWorldEntry = FavoriteWorldDetails & {
+  id: string;
+  deleted?: boolean;
+  ref?: FavoriteWorldDetails | null;
+};
+
+type FavoriteGroupEntry = {
+  key?: string;
+  name?: string;
+};
+
+const props = withDefaults(
+  defineProps<{
+    group?: string | FavoriteGroupEntry | null | undefined;
+    favorite: FavoriteWorldEntry;
+    isLocalFavorite?: boolean;
+    editMode?: boolean;
+    selected?: boolean;
+  }>(),
+  {
+    group: undefined,
+    isLocalFavorite: false,
+    editMode: false,
+    selected: false,
+  }
+);
+
+const emit = defineEmits<{
+  "toggle-select": [value: boolean];
+}>();
 const { showFavoriteDialog } = useFavoriteStore();
 const { lastLocation } = storeToRefs(useLocationStore());
 
@@ -129,26 +158,36 @@ const newInstanceDialogLocationTag = ref("");
 
 const isSelected = computed({
   get: () => props.selected,
-  set: (value) => emit("toggle-select", value),
+  set: (isChecked: boolean) => emit("toggle-select", isChecked),
 });
 
-const localFavRef = computed(() => (props.isLocalFavorite ? props.favorite : props.favorite?.ref));
+const localFavRef = computed(() => (props.isLocalFavorite ? props.favorite : props.favorite.ref));
 
-const displayName = computed(() => localFavRef.value?.name || props.favorite?.name || props.favorite?.id);
+const displayName = computed(() => [localFavRef.value?.name, props.favorite.name, props.favorite.id].find((name) => !!name));
 
-const showUnavailable = computed(() => !props.isLocalFavorite && props.favorite?.deleted);
+const showUnavailable = computed(() => !props.isLocalFavorite && props.favorite.deleted);
 
 const isPrivateWorld = computed(() => localFavRef.value?.releaseStatus === "private");
 
 const authorText = computed(() => {
-  const author = localFavRef.value?.authorName || "";
+  const author = localFavRef.value?.authorName ?? "";
   const occupants = localFavRef.value?.occupants;
   return occupants ? `${author} (${occupants})` : author;
 });
 
 const smallThumbnail = computed(() => {
-  const url = localFavRef.value?.thumbnailImageUrl?.replace("256", "128");
-  return url || localFavRef.value?.thumbnailImageUrl;
+  const thumbnailImageUrl = localFavRef.value?.thumbnailImageUrl;
+  if (!thumbnailImageUrl) {
+    return thumbnailImageUrl;
+  }
+  return thumbnailImageUrl.replace("256", "128");
+});
+
+const favoriteGroupName = computed(() => {
+  if (typeof props.group === "string") {
+    return props.group;
+  }
+  return props.group?.name ?? props.group?.key;
 });
 
 const deleteMenuLabel = computed(() => (props.isLocalFavorite ? t("view.favorite.delete_tooltip") : t("view.favorite.unfavorite_tooltip")));
@@ -168,7 +207,9 @@ function handleViewDetails() {
 
 function handleNewInstance() {
   newInstanceDialogLocationTag.value = "";
-  nextTick(() => (newInstanceDialogLocationTag.value = props.favorite.id));
+  void nextTick(() => {
+    newInstanceDialogLocationTag.value = props.favorite.id;
+  }).catch((error: unknown) => console.error(error));
 }
 
 function handleSelfInvite() {
@@ -177,10 +218,13 @@ function handleSelfInvite() {
 
 function handleDeleteFavorite() {
   if (props.isLocalFavorite) {
-    removeLocalWorldFavorite(props.favorite.id, props.group);
+    const groupName = favoriteGroupName.value;
+    if (groupName !== undefined) {
+      removeLocalWorldFavorite(props.favorite.id, groupName);
+    }
     return;
   }
-  favoriteRequest.deleteFavorite({ objectId: props.favorite.id });
+  void favoriteRequest.deleteFavorite({ objectId: props.favorite.id }).catch((error: unknown) => console.error(error));
 }
 </script>
 

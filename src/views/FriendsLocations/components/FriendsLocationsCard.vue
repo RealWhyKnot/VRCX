@@ -1,7 +1,7 @@
 <template>
-  <UserContextMenu :user-id="friend.id" :state="friend.state" :location="friend.ref?.location">
+  <UserContextMenu :user-id="friend.id" :state="friend.state" :location="friend.ref?.location ?? ''">
     <Card class="friend-card x-hover-card hover:bg-muted relative" :style="cardStyle" @click="showUserDialog(friend.id)">
-      <ProfileEffect :enabled="showCosmetics" :profile-effect="friend.ref.profileEffect" class="object-cover rounded-lg" />
+      <ProfileEffect :enabled="showCosmetics" :profile-effect="friend.ref?.profileEffect ?? ''" class="object-cover rounded-lg" />
       <div class="friend-card__header grid items-center mb-1.75">
         <div class="relative inline-block flex-none size-9 mr-2.5">
           <Avatar class="size-full rounded-full">
@@ -10,7 +10,7 @@
               <User class="text-muted-foreground" :size="Math.max(16, 20 * cardScale)" />
             </AvatarFallback>
           </Avatar>
-          <IconFrame :enabled="showCosmetics" :icon-frame="friend.ref.iconFrame" />
+          <IconFrame :enabled="showCosmetics" :icon-frame="friend.ref?.iconFrame ?? ''" />
         </div>
         <span class="friend-card__status-dot absolute rounded-full pointer-events-none" :class="statusDotClass"></span>
         <div class="friend-card__name relative font-semibold overflow-hidden text-ellipsis whitespace-nowrap" :title="friend.name">
@@ -25,16 +25,11 @@
           <Pencil v-if="friend.ref?.statusDescription" class="h-3.5 w-3.5 mr-0.5" style="opacity: 0.7" />
           {{ friend.ref?.statusDescription || "&nbsp;" }}
         </div>
-        <div
-          v-if="displayInstanceInfo"
-          class="friend-card__world flex items-center justify-start box-border max-w-full min-w-0 overflow-hidden"
-          :title="friend.worldName"
-          @click.stop
-        >
+        <div v-if="displayInstanceInfo" class="friend-card__world flex items-center justify-start box-border max-w-full min-w-0 overflow-hidden" @click.stop>
           <Location
             class="friend-card__location flex w-full overflow-hidden wrap-break-word text-center"
-            :location="friend.ref?.location"
-            :traveling="friend.ref?.travelingToLocation"
+            :location="friend.ref?.location ?? ''"
+            :traveling="friend.ref?.travelingToLocation ?? ''"
             enable-context-menu
             link
           />
@@ -55,6 +50,7 @@ import { Pencil, User } from "lucide-vue-next";
 import { computed } from "vue";
 
 import { useUserDisplay } from "../../../composables/use-user-display";
+import type { FriendContext } from "../../../stores/friend-types";
 
 import Location from "../../../components/Location.vue";
 import UserContextMenu from "../../../components/UserContextMenu.vue";
@@ -62,28 +58,23 @@ import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { userImage, userStatusClass } = useUserDisplay();
 
-const props = defineProps({
-  friend: {
-    type: Object,
-    required: true,
-  },
-  cardScale: {
-    type: Number,
-    default: 1,
-  },
-  displayInstanceInfo: {
-    type: Boolean,
-    default: true,
-  },
-  showCosmetics: {
-    type: Boolean,
-    default: true,
-  },
-  cardSpacing: {
-    type: Number,
-    default: 1,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    friend: FriendContext;
+    cardScale?: number;
+    displayInstanceInfo?: boolean;
+    showCosmetics?: boolean;
+    cardSpacing?: number;
+  }>(),
+  {
+    cardScale: 1,
+    displayInstanceInfo: true,
+    showCosmetics: true,
+    cardSpacing: 1,
+  }
+);
+
+const STATUS_DOT_FLAGS = ["online", "active-joinme", "active-askme", "active-busy", "active", "joinme", "askme", "busy", "offline"];
 
 const cardStyle = computed(() => ({
   "--card-scale": props.cardScale,
@@ -95,36 +86,9 @@ const cardStyle = computed(() => ({
 
 const statusDotClass = computed(() => {
   const status = userStatusClass(props.friend.ref, props.friend.pendingOffline);
+  const activeFlag = STATUS_DOT_FLAGS.find((flag) => status?.[flag]);
 
-  if (status?.online) {
-    return "friend-card__status-dot--online";
-  }
-  if (status?.["active-joinme"]) {
-    return "friend-card__status-dot--active-joinme";
-  }
-  if (status?.["active-askme"]) {
-    return "friend-card__status-dot--active-askme";
-  }
-  if (status?.["active-busy"]) {
-    return "friend-card__status-dot--active-busy";
-  }
-  if (status?.active) {
-    return "friend-card__status-dot--active";
-  }
-  if (status?.joinme) {
-    return "friend-card__status-dot--joinme";
-  }
-  if (status?.askme) {
-    return "friend-card__status-dot--askme";
-  }
-  if (status?.busy) {
-    return "friend-card__status-dot--busy";
-  }
-  if (status?.offline) {
-    return "friend-card__status-dot--offline";
-  }
-
-  return "friend-card__status-dot--hidden";
+  return activeFlag ? `friend-card__status-dot--${activeFlag}` : "friend-card__status-dot--hidden";
 });
 </script>
 

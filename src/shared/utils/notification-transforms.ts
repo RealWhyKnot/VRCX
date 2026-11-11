@@ -2,6 +2,13 @@ import { replaceBioSymbols } from "./base/string";
 
 type NotificationJson = Record<string, unknown>;
 
+type NotificationResponseRef = {
+  type: string;
+  data: string;
+  icon?: string | undefined;
+  text?: string | undefined;
+};
+
 type BoopNotificationRef = {
   type: string;
   title: string;
@@ -71,6 +78,7 @@ export function createDefaultNotificationRef(json: NotificationJson) {
 }
 
 export function createDefaultNotificationV2Ref(json: NotificationJson) {
+  const responses: NotificationResponseRef[] = [];
   return {
     id: "",
     createdAt: "",
@@ -87,7 +95,7 @@ export function createDefaultNotificationV2Ref(json: NotificationJson) {
     senderUsername: "",
     receiverUserId: "",
     data: {},
-    responses: [] as unknown[],
+    responses,
     details: {},
     version: 2,
     canDelete: false,

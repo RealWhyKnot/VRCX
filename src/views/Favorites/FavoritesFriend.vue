@@ -17,9 +17,9 @@
         @import="handleFriendImportClick"
         @export="handleFriendExportClick"
       />
-      <ResizablePanelGroup ref="splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
+      <ResizablePanelGroup :ref="splitter.splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
         <ResizablePanel
-          ref="splitterPanelRef"
+          :ref="splitter.splitterPanelRef"
           :default-size="splitterDefaultSize"
           :min-size="splitterMinSize"
           :max-size="splitterMaxSize"
@@ -163,7 +163,7 @@
                 </div>
                 <InputGroupField
                   v-else
-                  ref="newLocalGroupInput"
+                  :ref="localGroups.newLocalGroupInput"
                   v-model="newLocalGroupName"
                   size="sm"
                   class="w-full"
@@ -206,7 +206,7 @@
                 <span v-else>No Group Selected</span>
               </template>
             </FavoritesContentHeader>
-            <div ref="friendFavoritesContainerRef" class="flex-1 min-h-0">
+            <div :ref="cardScaling.containerRef" class="flex-1 min-h-0">
               <template v-if="activeRemoteGroup && !isSearchActive">
                 <div class="h-full pr-2 overflow-auto">
                   <template v-if="currentFriendFavorites.length">
@@ -295,6 +295,9 @@ import DropdownMenuSubTrigger from "../../components/ui/dropdown-menu/DropdownMe
 import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFavoriteStore } from "../../stores/favorite";
+import type { FavoriteGroupSlot, FavoriteObjectCtx } from "../../stores/favorite-types";
+import { isVrcxUser } from "../../stores/friend-types";
+import { logFailure } from "../../stores/log-failure";
 import { useModalStore } from "../../stores/modal";
 import { useUserStore } from "../../stores/user";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
@@ -302,6 +305,7 @@ import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
 import { debounce } from "../../shared/utils/common";
 import { favoriteRequest } from "../../api/favorite";
+import type { VrcxUser } from "../../types/vrcx";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.ts";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
@@ -318,18 +322,18 @@ import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesFriendItem from "./components/FavoritesFriendItem.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
 import FriendExportDialog from "./dialogs/FriendExportDialog.vue";
+import "./favorites-layout.css";
 
-const friendGroupVisibilityOptions = ref(["public", "friends", "private"]);
+type FavoriteFriendEntry = {
+  id: string;
+  name?: string | undefined;
+  ref?: VrcxUser | undefined;
+};
 
-const {
-  splitterGroupRef,
-  splitterPanelRef,
-  defaultSize: splitterDefaultSize,
-  minSize: splitterMinSize,
-  maxSize: splitterMaxSize,
-  handleLayout,
-  setDragging: splitterSetDragging,
-} = useFavoritesSplitter({ configKey: "VRCX_FavoritesFriendSplitter" });
+const friendGroupVisibilityOptions = ["public", "friends", "private"] as const;
+
+const splitter = useFavoritesSplitter({ configKey: "VRCX_FavoritesFriendSplitter" });
+const { defaultSize: splitterDefaultSize, minSize: splitterMinSize, maxSize: splitterMaxSize, handleLayout, setDragging: splitterSetDragging } = splitter;
 
 const { sortFavorites } = storeToRefs(useAppearanceSettingsStore());
 const { setSortFavorites } = useAppearanceSettingsStore();
@@ -350,14 +354,7 @@ const userStore = useUserStore();
 const { cachedUsers } = storeToRefs(userStore);
 const { t } = useI18n();
 
-const {
-  cardScale: friendCardScale,
-  cardSpacing: friendCardSpacing,
-  slider: friendCardScaleSlider,
-  spacingSlider: friendCardSpacingSlider,
-  containerRef: friendFavoritesContainerRef,
-  gridStyle: friendFavoritesGridStyle,
-} = useFavoritesCardScaling({
+const cardScaling = useFavoritesCardScaling({
   configKey: "VRCX_FavoritesFriendCardScale",
   spacingConfigKey: "VRCX_FavoritesFriendCardSpacing",
   min: 0.6,
@@ -374,12 +371,19 @@ const {
   baseActionMargin: 8,
   baseCheckboxMargin: 10,
 });
+const {
+  cardScale: friendCardScale,
+  cardSpacing: friendCardSpacing,
+  slider: friendCardScaleSlider,
+  spacingSlider: friendCardSpacingSlider,
+  gridStyle: friendFavoritesGridStyle,
+} = cardScaling;
 
 const friendCardScalePercent = computed(() => Math.round(friendCardScale.value * 100));
 const friendCardSpacingPercent = computed(() => Math.round(friendCardSpacing.value * 100));
 const friendCardScaleValue = computed({
   get: () => [friendCardScale.value],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     const next = value?.[0];
     if (typeof next === "number") {
       friendCardScale.value = next;
@@ -388,7 +392,7 @@ const friendCardScaleValue = computed({
 });
 const friendCardSpacingValue = computed({
   get: () => [friendCardSpacing.value],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     const next = value?.[0];
     if (typeof next === "number") {
       friendCardSpacing.value = next;
@@ -398,14 +402,12 @@ const friendCardSpacingValue = computed({
 
 const friendExportDialogVisible = ref(false);
 const friendFavoriteSearch = ref("");
-const friendFavoriteSearchResults = ref([]);
+const friendFavoriteSearchResults = ref<FavoriteFriendEntry[]>([]);
 const friendEditMode = ref(false);
 const friendToolbarMenuOpen = ref(false);
 
 const {
-  selectedGroup,
   activeGroupMenu,
-  isRemoteGroupSelected,
   isLocalGroupSelected,
   remoteGroupMenuKey,
   localGroupMenuKey,
@@ -426,9 +428,23 @@ const {
   },
 });
 
-function handleSortFavoritesChange(value) {
-  const next = value === "date";
-  if (next !== sortFavorites.value) {
+const localGroups = useFavoritesLocalGroups({
+  createGroup: newLocalFriendFavoriteGroup,
+  selectGroup,
+});
+const { isCreatingLocalGroup, newLocalGroupName, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } = localGroups;
+
+function toFriendEntry(favorite: FavoriteObjectCtx): FavoriteFriendEntry {
+  return {
+    id: favorite.id,
+    name: favorite.name,
+    ref: isVrcxUser(favorite.ref) ? favorite.ref : undefined,
+  };
+}
+
+function handleSortFavoritesChange(value: string) {
+  const isDateSort = value === "date";
+  if (isDateSort !== sortFavorites.value) {
     setSortFavorites();
   }
 }
@@ -452,36 +468,38 @@ function handleFriendExportClick() {
 }
 
 const searchableFriendEntries = computed(() => {
-  const seen = new Set();
-  const entries = [];
-  favoriteFriends.value.forEach((favorite) => {
-    if (!favorite?.ref || !favorite.id || seen.has(favorite.id)) {
-      return;
+  const seen = new Set<string>();
+  const entries: FavoriteFriendEntry[] = [];
+  for (const favorite of favoriteFriends.value) {
+    const entry = toFriendEntry(favorite);
+    if (!entry.ref || !entry.id || seen.has(entry.id)) {
+      continue;
     }
-    seen.add(favorite.id);
-    entries.push(favorite);
-  });
+    seen.add(entry.id);
+    entries.push(entry);
+  }
   return entries;
 });
 
-const currentFriendFavorites = computed(() => {
+const currentFriendFavorites = computed<FavoriteFriendEntry[]>(() => {
   if (!activeRemoteGroup.value) {
     return [];
   }
-  return groupedByGroupKeyFavoriteFriends.value[activeRemoteGroup.value.key] || [];
+  return (groupedByGroupKeyFavoriteFriends.value[activeRemoteGroup.value.key] ?? []).map(toFriendEntry);
 });
 
-const currentLocalFriendFavorites = computed(() => {
+const currentLocalFriendFavorites = computed<FavoriteFriendEntry[]>(() => {
   if (!activeLocalGroupName.value) {
     return [];
   }
-  const userIds = localFriendFavorites.value[activeLocalGroupName.value] || [];
+  const userIds = localFriendFavorites.value[activeLocalGroupName.value] ?? [];
   return userIds.map((userId) => {
-    const ref = cachedUsers.value.get(userId);
+    const user = cachedUsers.value.get(userId);
+    const displayName = user?.displayName;
     return {
       id: userId,
-      ref: ref || undefined,
-      name: ref?.displayName || userId,
+      ref: user ?? undefined,
+      name: displayName === "" ? userId : (displayName ?? userId),
     };
   });
 });
@@ -501,31 +519,20 @@ watch(
   { immediate: true }
 );
 
-watch(isSearchActive, (active) => {
-  if (active && friendEditMode.value) {
+watch(isSearchActive, (isActive) => {
+  if (isActive && friendEditMode.value) {
     friendEditMode.value = false;
   }
 });
 
 watch(
   () => friendEditMode.value,
-  (value) => {
-    if (!value) {
+  (isEditing) => {
+    if (!isEditing) {
       clearSelectedFriends();
     }
   }
 );
-
-function getBadgeVariant(visibility) {
-  switch (visibility) {
-    case "public":
-      return "default";
-    case "friends":
-      return "secondary";
-    case "private":
-      return "destructive";
-  }
-}
 
 function showFriendExportDialog() {
   friendExportDialogVisible.value = true;
@@ -533,11 +540,11 @@ function showFriendExportDialog() {
 
 function handleRefreshFavorites() {
   refreshFavorites();
-  getLocalWorldFavorites();
-  getLocalFriendFavorites();
+  void getLocalWorldFavorites().catch(logFailure("Refresh local world favorites"));
+  void getLocalFriendFavorites().catch(logFailure("Refresh local friend favorites"));
 }
 
-function handleGroupClick(type, key) {
+function handleGroupClick(type: string, key: string) {
   if (hasSearchInput.value) {
     friendFavoriteSearch.value = "";
     doSearchFriendFavorites("");
@@ -545,26 +552,25 @@ function handleGroupClick(type, key) {
   selectGroup(type, key);
 }
 
-function doSearchFriendFavorites(searchTerm) {
+function doSearchFriendFavorites(searchTerm?: string) {
   const search = (searchTerm ?? friendFavoriteSearch.value).trim().toLowerCase();
   if (search.length < 3) {
     friendFavoriteSearchResults.value = [];
     return;
   }
-  const filtered = searchableFriendEntries.value.filter((favorite) => {
-    const ref = favorite.ref;
-    if (!ref || typeof ref.id === "undefined" || typeof ref.displayName === "undefined") {
+  friendFavoriteSearchResults.value = searchableFriendEntries.value.filter((favorite) => {
+    const user = favorite.ref;
+    if (!user) {
       return false;
     }
-    const username = ref.username || "";
-    return ref.displayName.toLowerCase().includes(search) || username.toLowerCase().includes(search);
+    const username = user.username ?? "";
+    return user.displayName.toLowerCase().includes(search) || username.toLowerCase().includes(search);
   });
-  friendFavoriteSearchResults.value = filtered;
 }
 const searchFriendFavorites = debounce(doSearchFriendFavorites, 200);
 
-function toggleFriendSelection(id, value) {
-  if (value) {
+function toggleFriendSelection(id: string, isSelected: boolean) {
+  if (isSelected) {
     if (!selectedFavoriteFriends.value.includes(id)) {
       selectedFavoriteFriends.value.push(id);
     }
@@ -607,27 +613,29 @@ function showFriendBulkUnfavoriteSelectionConfirm() {
       description: `Are you sure you want to unfavorite ${total} favorites?\n            This action cannot be undone.`,
       title: `Delete ${total} favorites?`,
     })
-    .then(({ ok }) => ok && bulkUnfavoriteSelectedFriends([...selectedFavoriteFriends.value]))
-    .catch(() => {});
+    .then(({ ok }) => {
+      if (ok) {
+        bulkUnfavoriteSelectedFriends([...selectedFavoriteFriends.value]);
+      }
+    })
+    .catch(logFailure("Friend favorites dialog"));
 }
 
-function bulkUnfavoriteSelectedFriends(ids) {
+function bulkUnfavoriteSelectedFriends(ids: string[]) {
   if (isLocalGroupSelected.value && activeLocalGroupName.value) {
     ids.forEach((id) => {
       removeLocalFriendFavorite(id, activeLocalGroupName.value);
     });
   } else {
     ids.forEach((id) => {
-      favoriteRequest.deleteFavorite({
-        objectId: id,
-      });
+      void favoriteRequest.deleteFavorite({ objectId: id }).catch(logFailure("Remove friend favorite"));
     });
   }
   selectedFavoriteFriends.value = [];
   friendEditMode.value = false;
 }
 
-function clearFavoriteGroup(ctx) {
+function clearFavoriteGroup(group: FavoriteGroupSlot) {
   modalStore
     .confirm({
       description: t("confirm.clear_group"),
@@ -635,31 +643,33 @@ function clearFavoriteGroup(ctx) {
     })
     .then(({ ok }) => {
       if (ok) {
-        favoriteRequest.clearFavoriteGroup({
-          type: ctx.type,
-          group: ctx.name,
-        });
+        void favoriteRequest
+          .clearFavoriteGroup({
+            type: group.type,
+            group: group.name,
+          })
+          .catch(logFailure("Clear friend favorite group"));
       }
     })
-    .catch(() => {});
+    .catch(logFailure("Friend favorites dialog"));
 }
 
-function handleVisibilitySelection(group, visibility) {
+function handleVisibilitySelection(group: FavoriteGroupSlot, visibility: (typeof friendGroupVisibilityOptions)[number]) {
   const menuKey = remoteGroupMenuKey(group.key);
   changeFriendGroupVisibility(group.name, visibility, menuKey);
 }
 
-function handleRemoteRename(group) {
+function handleRemoteRename(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   changeFavoriteGroupName(group);
 }
 
-function handleRemoteClear(group) {
+function handleRemoteClear(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   clearFavoriteGroup(group);
 }
 
-function changeFavoriteGroupName(group) {
+function changeFavoriteGroupName(group: FavoriteGroupSlot) {
   const currentName = group.displayName || group.name;
   modalStore
     .prompt({
@@ -677,7 +687,7 @@ function changeFavoriteGroupName(group) {
       if (!newName || newName === currentName) {
         return;
       }
-      favoriteRequest
+      void favoriteRequest
         .saveFavoriteGroup({
           type: "friend",
           group: group.name,
@@ -692,47 +702,37 @@ function changeFavoriteGroupName(group) {
           });
           toast.success(t("prompt.change_favorite_group_name.message.success"));
           refreshFavorites();
-        });
+        })
+        .catch(logFailure("Rename friend favorite group"));
     })
-    .catch(() => {});
+    .catch(logFailure("Friend favorites dialog"));
 }
 
-function changeFriendGroupVisibility(name, visibility, menuKey = null) {
+function changeFriendGroupVisibility(name: string, visibility: (typeof friendGroupVisibilityOptions)[number], menuKey: string | null = null) {
   const params = {
     type: "friend",
     group: name,
     visibility,
   };
-  favoriteRequest.saveFavoriteGroup(params).then((args) => {
-    handleFavoriteGroup({
-      json: args.json,
-      params: {
-        favoriteGroupId: args.json.id,
-      },
-    });
-    toast.success(t("message.group.visibility_updated"));
-    if (menuKey) {
-      handleGroupMenuVisible(menuKey, false);
-    }
-    refreshFavorites();
-    return args;
-  });
+  void favoriteRequest
+    .saveFavoriteGroup(params)
+    .then((args) => {
+      handleFavoriteGroup({
+        json: args.json,
+        params: {
+          favoriteGroupId: args.json.id,
+        },
+      });
+      toast.success(t("message.group.visibility_updated"));
+      if (menuKey) {
+        handleGroupMenuVisible(menuKey, false);
+      }
+      refreshFavorites();
+    })
+    .catch(logFailure("Change friend favorite group visibility"));
 }
 
-function formatVisibility(value) {
-  if (!value) {
-    return "";
-  }
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-const { isCreatingLocalGroup, newLocalGroupName, newLocalGroupInput, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } =
-  useFavoritesLocalGroups({
-    createGroup: newLocalFriendFavoriteGroup,
-    selectGroup,
-  });
-
-function handleLocalRename(group) {
+function handleLocalRename(group: string) {
   handleGroupMenuVisible(localGroupMenuKey(group), false);
   modalStore
     .prompt({
@@ -756,10 +756,10 @@ function handleLocalRename(group) {
       }
       toast.success(t("prompt.change_favorite_group_name.message.success"));
     })
-    .catch(() => {});
+    .catch(logFailure("Friend favorites dialog"));
 }
 
-function handleLocalDelete(group) {
+function handleLocalDelete(group: string) {
   handleGroupMenuVisible(localGroupMenuKey(group), false);
   modalStore
     .confirm({
@@ -773,10 +773,6 @@ function handleLocalDelete(group) {
         selectDefaultGroup();
       }
     })
-    .catch(() => {});
+    .catch(logFailure("Friend favorites dialog"));
 }
 </script>
-
-<style>
-@import "./favorites-layout.css";
-</style>

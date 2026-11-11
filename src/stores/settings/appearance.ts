@@ -79,7 +79,7 @@ export const useAppearanceSettingsStore = defineStore("AppearanceSettings", () =
   const tablePageSizes = ref<number[]>([...DEFAULT_TABLE_PAGE_SIZES]);
   const dtHour12 = ref<boolean>(false);
   const dtIsoFormat = ref<boolean>(false);
-  const weekStartsOn = ref<number>(1);
+  const weekStartsOn = ref<0 | 1 | 6>(1);
   const sidebarSortMethod1 = ref<string>("Sort Private to Bottom");
   const sidebarSortMethod2 = ref<string>("Sort by Time in Instance");
   const sidebarSortMethod3 = ref<string>("Sort by Last Active");
@@ -208,7 +208,7 @@ export const useAppearanceSettingsStore = defineStore("AppearanceSettings", () =
 
     dtHour12.value = isDtHour12Config;
     dtIsoFormat.value = isDtIsoFormatConfig;
-    weekStartsOn.value = [0, 1, 6].includes(weekStartsOnConfig) ? weekStartsOnConfig : 1;
+    weekStartsOn.value = weekStartsOnConfig === 0 || weekStartsOnConfig === 6 ? weekStartsOnConfig : 1;
 
     currentCulture.value = await AppApi.CurrentCulture();
 
@@ -396,7 +396,7 @@ export const useAppearanceSettingsStore = defineStore("AppearanceSettings", () =
   const setDtIsoFormat = createBooleanToggle(dtIsoFormat, "VRCX_dtIsoFormat");
 
   function setWeekStartsOn(value: number) {
-    const v = [0, 1, 6].includes(value) ? value : 1;
+    const v = value === 0 || value === 6 ? value : 1;
     weekStartsOn.value = v;
     saveSetting(configRepository.setInt("VRCX_weekStartsOn", v));
   }

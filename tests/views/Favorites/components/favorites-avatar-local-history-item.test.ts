@@ -1,30 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
+import type { AvatarHistoryEntry } from "../../../../src/stores/avatar";
+
 const mocks = vi.hoisted(() => ({
-  showFavoriteDialog: vi.fn(),
-  showAvatarDialog: vi.fn(),
-  selectAvatarWithConfirmation: vi.fn(),
+  showFavoriteDialog: vi.fn<(type: string, objectId: string) => void>(),
+  showAvatarDialog: vi.fn<(avatarId: string) => void>(),
+  selectAvatarWithConfirmation: vi.fn<(id: string) => void>(),
   currentUser: { currentAvatar: "" },
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("pinia")>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: <T>(store: T) => store,
   };
 });
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
 vi.mock("../../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
-    showFavoriteDialog: (...args) => mocks.showFavoriteDialog(...args),
+    showFavoriteDialog: (...args: Parameters<typeof mocks.showFavoriteDialog>) => mocks.showFavoriteDialog(...args),
   }),
 }));
 vi.mock("../../../../src/stores/user", () => ({
@@ -34,8 +36,8 @@ vi.mock("../../../../src/stores/user", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
-  showAvatarDialog: (...args) => mocks.showAvatarDialog(...args),
-  selectAvatarWithConfirmation: (...args) => mocks.selectAvatarWithConfirmation(...args),
+  showAvatarDialog: (...args: Parameters<typeof mocks.showAvatarDialog>) => mocks.showAvatarDialog(...args),
+  selectAvatarWithConfirmation: (...args: Parameters<typeof mocks.selectAvatarWithConfirmation>) => mocks.selectAvatarWithConfirmation(...args),
 }));
 
 vi.mock("@/components/ui/item/Item.vue", () => ({
@@ -127,25 +129,32 @@ vi.mock("lucide-vue-next", () => ({
 
 import FavoritesAvatarLocalHistoryItem from "../../../../src/views/Favorites/components/FavoritesAvatarLocalHistoryItem.vue";
 
-function mountItem(props = {}) {
+function mountItem(props: { favorite?: Partial<AvatarHistoryEntry> } = {}) {
   return mount(FavoritesAvatarLocalHistoryItem, {
     props: {
       favorite: {
         id: "avtr_hist_1",
         name: "Local History Avatar",
+        authorId: null,
         authorName: "Author",
+        created_at: null,
+        description: null,
+        imageUrl: null,
+        releaseStatus: null,
         thumbnailImageUrl: "https://example.com/history_256.png",
+        updated_at: null,
+        version: null,
         ...props.favorite,
       },
     },
   });
 }
 
-async function clickMenuItem(wrapper, text) {
+async function clickMenuItem(wrapper: ReturnType<typeof mountItem>, text: string) {
   const buttons = wrapper.findAll("button");
   const target = buttons.find((btn) => btn.text().includes(text));
   expect(target, `menu item not found: ${text}`).toBeTruthy();
-  await target.trigger("click");
+  await target?.trigger("click");
 }
 
 describe("FavoritesAvatarLocalHistoryItem.vue", () => {

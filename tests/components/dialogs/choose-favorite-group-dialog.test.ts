@@ -1,26 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { ref } from "vue";
+import type * as Pinia from "pinia";
 
 const mocks = vi.hoisted(() => ({
-  addFavorite: vi.fn(() => Promise.resolve()),
-  deleteFavoriteNoConfirm: vi.fn(),
-  toastSuccess: vi.fn(),
+  addFavorite: vi.fn<(params: { type: string; favoriteId: string; tags: string }) => Promise<void>>(() => Promise.resolve()),
+  deleteFavoriteNoConfirm: vi.fn<(objectId: string) => void>(),
+  toastSuccess: vi.fn<(message: string) => void>(),
   favoriteDialog: {
     __v_isRef: true,
     value: {
       visible: true,
       type: "friend",
       objectId: "usr_1",
-      currentGroup: null,
+      currentGroup: {},
     },
   },
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({
+  ...(await importOriginal<typeof Pinia>()),
+  storeToRefs: <T>(store: T) => store,
+}));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("vue-sonner", () => ({
-  toast: { success: (...a) => mocks.toastSuccess(...a) },
+  toast: { success: (message: string) => mocks.toastSuccess(message) },
 }));
 vi.mock("../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
@@ -44,7 +48,7 @@ vi.mock("../../../src/stores/favorite", () => ({
     hasLocalWorldFavorite: vi.fn(() => false),
     hasLocalAvatarFavorite: vi.fn(() => false),
     localAvatarFavGroupLength: vi.fn(() => 0),
-    deleteFavoriteNoConfirm: (...a) => mocks.deleteFavoriteNoConfirm(...a),
+    deleteFavoriteNoConfirm: (objectId: string) => mocks.deleteFavoriteNoConfirm(objectId),
     localFriendFavGroupLength: vi.fn(() => 0),
     hasLocalFriendFavorite: vi.fn(() => false),
   }),
@@ -53,7 +57,7 @@ vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({ isLocalUserVrcPlusSupporter: ref(true) }),
 }));
 vi.mock("../../../src/api/favorite", () => ({
-  favoriteRequest: { addFavorite: (...a) => mocks.addFavorite(...a) },
+  favoriteRequest: { addFavorite: (...args: Parameters<typeof mocks.addFavorite>) => mocks.addFavorite(...args) },
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
   default: { template: "<div><slot /></div>" },
@@ -85,7 +89,7 @@ describe("ChooseFavoriteGroupDialog.vue", () => {
       visible: true,
       type: "friend",
       objectId: "usr_1",
-      currentGroup: null,
+      currentGroup: {},
     };
   });
 

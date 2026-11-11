@@ -117,37 +117,52 @@ import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore } from "../../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 import { useGalleryStore } from "../../../stores/gallery";
-import { useUserStore } from "../../../stores/user";
-import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { addLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { favoriteRequest } from "../../../api/favorite";
 import { worldRequest } from "../../../api/world";
 import { createColumns } from "./world-import-columns.tsx";
 import { removeFromArray } from "../../../shared/utils/base/array";
+import type { WorldRef } from "../../../shared/utils/world-transforms";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
-import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { logFailure } from "../../../stores/log-failure";
+
+type WorldImportDialogState = {
+  loading: boolean;
+  progress: number;
+  progressTotal: number;
+  input: string;
+  worldIdList: Set<string>;
+  errors: string;
+  worldImportFavoriteGroup: FavoriteGroupSlot | null;
+  worldImportLocalFavoriteGroup: string | null;
+  importProgress: number;
+  importProgressTotal: number;
+};
 
 const { favoriteWorldGroups, worldImportDialogInput, worldImportDialogVisible, localWorldFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { localWorldFavGroupLength, getCachedFavoritesByObjectId } = useFavoriteStore();
 
 const { showFullscreenImageDialog } = useGalleryStore();
 
-const emit = defineEmits(["update:worldImportDialogInput"]);
+const emit = defineEmits<{
+  "update:worldImportDialogInput": [value: string];
+}>();
 
 const { t } = useI18n();
 
-const worldImportDialog = ref({
+const worldImportDialog = ref<WorldImportDialogState>({
   loading: false,
   progress: 0,
   progressTotal: 0,
   input: "",
-  worldIdList: new Set(),
+  worldIdList: new Set<string>(),
   errors: "",
   worldImportFavoriteGroup: null,
   worldImportLocalFavoriteGroup: null,
@@ -158,14 +173,14 @@ const worldImportDialog = ref({
 const worldImportFavoriteGroupSelection = ref("");
 const worldImportLocalFavoriteGroupSelection = ref("");
 
-const worldImportTable = ref({
+const worldImportTable = ref<{ data: WorldRef[]; layout: string }>({
   data: [],
   layout: "table",
 });
 
 const tableStyle = { maxHeight: "400px" };
 
-const rows = computed(() => (Array.isArray(worldImportTable.value?.data) ? worldImportTable.value.data.slice() : []));
+const rows = computed(() => worldImportTable.value.data.slice());
 
 const columns = computed(() =>
   createColumns({
@@ -182,29 +197,31 @@ const { table } = useVrcxVueTable({
     return rows.value;
   },
   columns: columns.value,
-  getRowId: (row) => String(row?.id ?? ""),
+  getRowId: (row) => row.id,
   enablePagination: false,
   enableSorting: false,
 });
+
+const isLoading = () => worldImportDialog.value.loading;
 
 const isVisible = computed({
   get() {
     return worldImportDialogVisible.value;
   },
-  set(visible) {
-    worldImportDialogVisible.value = visible;
+  set(isOpen: boolean) {
+    worldImportDialogVisible.value = isOpen;
   },
 });
 
 watch(
   () => worldImportDialogVisible.value,
-  (visible) => {
-    if (visible) {
+  (isOpen) => {
+    if (isOpen) {
       clearWorldImportTable();
       resetWorldImport();
       if (worldImportDialogInput.value) {
         worldImportDialog.value.input = worldImportDialogInput.value;
-        processWorldImportList();
+        void processWorldImportList().catch(logFailure("World import list"));
         emit("update:worldImportDialogInput", "");
       }
     }
@@ -220,24 +237,24 @@ async function processWorldImportList() {
   const D = worldImportDialog.value;
   D.loading = true;
   const regexWorldId = /wrld_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
-  let match = [];
-  const worldIdList = new Set();
-  while ((match = regexWorldId.exec(D.input)) !== null) {
+  const worldIdList = new Set<string>();
+  let match = regexWorldId.exec(D.input);
+  while (match !== null) {
     worldIdList.add(match[0]);
+    match = regexWorldId.exec(D.input);
   }
   D.input = "";
   D.errors = "";
   D.progress = 0;
   D.progressTotal = worldIdList.size;
   const data = Array.from(worldIdList);
-  for (let i = 0; i < data.length; ++i) {
+  for (const worldId of data) {
     if (!isVisible.value) {
       resetWorldImport();
     }
-    if (!D.loading || !isVisible.value) {
+    if (!isLoading() || !isVisible.value) {
       break;
     }
-    const worldId = data[i];
     if (!D.worldIdList.has(worldId)) {
       try {
         const args = await worldRequest.getWorld({
@@ -246,7 +263,7 @@ async function processWorldImportList() {
         worldImportTable.value.data.push(args.ref);
         D.worldIdList.add(worldId);
       } catch (err) {
-        D.errors = D.errors.concat(`WorldId: ${worldId}\n${err}\n\n`);
+        D.errors = D.errors.concat(`WorldId: ${worldId}\n${String(err)}\n\n`);
       }
     }
     D.progress++;
@@ -256,39 +273,41 @@ async function processWorldImportList() {
   D.progressTotal = 0;
 }
 
-function deleteItemWorldImport(ref) {
-  removeFromArray(worldImportTable.value.data, ref);
-  worldImportDialog.value.worldIdList.delete(ref.id);
+function deleteItemWorldImport(item: WorldRef) {
+  removeFromArray(worldImportTable.value.data, item);
+  worldImportDialog.value.worldIdList.delete(item.id);
 }
 
 function clearWorldImportTable() {
   worldImportTable.value.data = [];
-  worldImportDialog.value.worldIdList = new Set();
+  worldImportDialog.value.worldIdList = new Set<string>();
 }
 
-function selectWorldImportGroup(group) {
+function selectWorldImportGroup(group: FavoriteGroupSlot | null) {
   worldImportDialog.value.worldImportLocalFavoriteGroup = null;
   worldImportDialog.value.worldImportFavoriteGroup = group;
   worldImportFavoriteGroupSelection.value = group?.name ?? "";
   worldImportLocalFavoriteGroupSelection.value = "";
 }
 
-function selectWorldImportLocalGroup(group) {
+function selectWorldImportLocalGroup(group: string | null) {
   worldImportDialog.value.worldImportFavoriteGroup = null;
   worldImportDialog.value.worldImportLocalFavoriteGroup = group;
   worldImportFavoriteGroupSelection.value = "";
   worldImportLocalFavoriteGroupSelection.value = group ?? "";
 }
 
-function handleWorldImportGroupSelect(value) {
-  worldImportFavoriteGroupSelection.value = value;
-  const group = favoriteWorldGroups.value.find((g) => g.name === value) ?? null;
+function handleWorldImportGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  worldImportFavoriteGroupSelection.value = selectedValue;
+  const group = favoriteWorldGroups.value.find((g) => g.name === selectedValue) ?? null;
   selectWorldImportGroup(group);
 }
 
-function handleWorldImportLocalGroupSelect(value) {
-  worldImportLocalFavoriteGroupSelection.value = value;
-  selectWorldImportLocalGroup(value || null);
+function handleWorldImportLocalGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  worldImportLocalFavoriteGroupSelection.value = selectedValue;
+  selectWorldImportLocalGroup(selectedValue || null);
 }
 
 function cancelWorldImport() {
@@ -301,29 +320,29 @@ async function importWorldImportTable() {
     return;
   }
   D.loading = true;
-  const data = [...worldImportTable.value.data].reverse();
+  const data = [...worldImportTable.value.data];
   D.importProgressTotal = data.length;
-  let ref = undefined;
+  let current: WorldRef | null = null;
   try {
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (!D.loading || !isVisible.value) {
+    for (const item of data) {
+      if (!isLoading() || !isVisible.value) {
         break;
       }
-      ref = data[i];
+      current = item;
       if (D.worldImportFavoriteGroup) {
-        if (getCachedFavoritesByObjectId(ref.id)) {
+        if (getCachedFavoritesByObjectId(item.id)) {
           throw new Error("World is already in favorites");
         }
-        await addFavoriteWorld(ref, D.worldImportFavoriteGroup, false);
+        await addFavoriteWorld(item, D.worldImportFavoriteGroup);
       } else if (D.worldImportLocalFavoriteGroup) {
-        addLocalWorldFavorite(ref.id, D.worldImportLocalFavoriteGroup);
+        addLocalWorldFavorite(item.id, D.worldImportLocalFavoriteGroup);
       }
-      removeFromArray(worldImportTable.value.data, ref);
-      D.worldIdList.delete(ref.id);
+      removeFromArray(worldImportTable.value.data, item);
+      D.worldIdList.delete(item.id);
       D.importProgress++;
     }
   } catch (err) {
-    D.errors = `Name: ${ref?.name}\nWorldId: ${ref?.id}\n${err}\n\n`;
+    D.errors = `Name: ${current?.name}\nWorldId: ${current?.id}\n${String(err)}\n\n`;
   } finally {
     D.importProgress = 0;
     D.importProgressTotal = 0;
@@ -331,18 +350,11 @@ async function importWorldImportTable() {
   }
 }
 
-function addFavoriteWorld(ref, group, message) {
-  return favoriteRequest
-    .addFavorite({
-      type: group.type,
-      favoriteId: ref.id,
-      tags: group.name,
-    })
-    .then((args) => {
-      if (message) {
-        toast.success("World added to favorites");
-      }
-      return args;
-    });
+function addFavoriteWorld(world: WorldRef, group: FavoriteGroupSlot) {
+  return favoriteRequest.addFavorite({
+    type: group.type,
+    favoriteId: world.id,
+    tags: group.name,
+  });
 }
 </script>

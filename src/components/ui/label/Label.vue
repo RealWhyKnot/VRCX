@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { Label } from "reka-ui";
+import { computed } from "vue";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  for: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiLabel" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = defineProps<{
+  for?: string;
+  asChild?: boolean;
+  as?: PrimitiveProps["as"];
+  class?: ClassValue;
+}>();
+
+const delegatedProps = computed(() => ({
+  ...(props.for === undefined ? {} : { for: props.for }),
+  ...(props.as === undefined ? {} : { as: props.as }),
+  asChild: props.asChild,
+}));
 </script>
 
 <template>

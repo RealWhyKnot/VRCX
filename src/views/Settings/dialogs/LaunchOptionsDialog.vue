@@ -70,8 +70,8 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import Badge from "../../../components/ui/badge/Badge.vue";
 import { openExternalLink } from "../../../shared/utils/app-actions";
+import { logError } from "../../../stores/notification/errors";
 import { useLaunchStore } from "../../../stores/launch";
 
 import { configRepository } from "../../../services/config";
@@ -89,29 +89,35 @@ const launchOptionsDialog = ref({
 const isLinux = computed(() => isLinuxHost());
 
 function init() {
-  configRepository.getString("launchArguments").then((launchArguments) => (launchOptionsDialog.value.launchArguments = launchArguments));
+  void configRepository
+    .getString("launchArguments")
+    .then((launchArguments) => (launchOptionsDialog.value.launchArguments = launchArguments ?? ""))
+    .catch(logError);
 
-  configRepository.getString("vrcLaunchPathOverride").then((vrcLaunchPathOverride) => {
-    if (vrcLaunchPathOverride === null || vrcLaunchPathOverride === "null") {
-      launchOptionsDialog.value.vrcLaunchPathOverride = "";
-      configRepository.setString("vrcLaunchPathOverride", "");
-    } else {
-      launchOptionsDialog.value.vrcLaunchPathOverride = vrcLaunchPathOverride;
-    }
-  });
+  void configRepository
+    .getString("vrcLaunchPathOverride")
+    .then((vrcLaunchPathOverride) => {
+      if (vrcLaunchPathOverride === null || vrcLaunchPathOverride === "null") {
+        launchOptionsDialog.value.vrcLaunchPathOverride = "";
+        void configRepository.setString("vrcLaunchPathOverride", "").catch(logError);
+      } else {
+        launchOptionsDialog.value.vrcLaunchPathOverride = vrcLaunchPathOverride;
+      }
+    })
+    .catch(logError);
 }
 
 init();
 
 function updateLaunchOptions() {
   const D = launchOptionsDialog.value;
-  D.launchArguments = String(D.launchArguments).replace(/\s+/g, " ").trim();
-  configRepository.setString("launchArguments", D.launchArguments);
+  D.launchArguments = D.launchArguments.replace(/\s+/g, " ").trim();
+  void configRepository.setString("launchArguments", D.launchArguments).catch(logError);
   if (D.vrcLaunchPathOverride && D.vrcLaunchPathOverride.endsWith(".exe") && !D.vrcLaunchPathOverride.endsWith("launch.exe")) {
     toast.error(t("message.launch.invalid_path"));
     return;
   }
-  configRepository.setString("vrcLaunchPathOverride", D.vrcLaunchPathOverride);
+  void configRepository.setString("vrcLaunchPathOverride", D.vrcLaunchPathOverride).catch(logError);
   toast.success("Updated launch options");
   closeDialog();
 }

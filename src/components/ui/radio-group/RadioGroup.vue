@@ -1,27 +1,37 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { RadioGroupRootEmits, RadioGroupRootProps } from "reka-ui";
 import { RadioGroupRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  modelValue: { type: null, required: false },
-  defaultValue: { type: null, required: false },
-  disabled: { type: Boolean, required: false },
-  orientation: {
-    type: String,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  loop: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:modelValue"]);
+const props = defineProps<{
+  modelValue?: RadioGroupRootProps["modelValue"];
+  defaultValue?: RadioGroupRootProps["defaultValue"];
+  disabled?: boolean;
+  orientation?: RadioGroupRootProps["orientation"];
+  dir?: RadioGroupRootProps["dir"];
+  loop?: boolean;
+  asChild?: boolean;
+  as?: RadioGroupRootProps["as"];
+  name?: string;
+  required?: boolean;
+  class?: ClassValue;
+}>();
+const emits = defineEmits<RadioGroupRootEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  disabled: props.disabled,
+  ...(props.orientation === undefined ? {} : { orientation: props.orientation }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  loop: props.loop,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

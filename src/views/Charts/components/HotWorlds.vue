@@ -64,7 +64,7 @@
           <div v-for="(column, colIdx) in columns" :key="colIdx" class="min-w-0 flex-1">
             <button
               v-for="world in column"
-              :key="world.worldId"
+              :key="world.worldId ?? world._rank"
               type="button"
               class="group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent cursor-pointer"
               :class="world._rank === 1 ? 'bg-primary/[0.04]' : ''"
@@ -76,7 +76,7 @@
 
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
-                  <span class="block max-w-[380px] truncate text-sm font-medium hover:underline cursor-pointer" @click.stop="showWorldDialog(world.worldId)">
+                  <span class="block max-w-[380px] truncate text-sm font-medium hover:underline cursor-pointer" @click.stop="openWorldDialog(world.worldId)">
                     {{ world.worldName }}
                   </span>
                   <template v-if="world.trend === 'rising'">
@@ -158,7 +158,7 @@
           <div v-else class="space-y-0.5">
             <button
               v-for="friend in friendDetail"
-              :key="friend.userId"
+              :key="friend.userId ?? friend.displayName ?? ''"
               type="button"
               class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent cursor-pointer"
               @click="openUserDialog(friend.userId)"
@@ -198,20 +198,21 @@ import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { showUserDialog } from "@/coordinators/user-coordinator";
 import { showWorldDialog } from "@/coordinators/world-coordinator";
 import { database } from "@/services/database";
+import type { HotWorld, HotWorldFriend } from "@/services/database/feed";
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 
 const { t } = useI18n();
 const { isDarkMode } = storeToRefs(useAppearanceSettingsStore());
 
-const hotWorldsRef = ref(null);
+const hotWorldsRef = ref<HTMLDivElement | null>(null);
 const isLoading = ref(true);
 const isLoadingDetail = ref(false);
 const selectedDays = ref(30);
-const hotWorlds = ref([]);
-const friendDetail = ref([]);
+const hotWorlds = ref<HotWorld[]>([]);
+const friendDetail = ref<HotWorldFriend[]>([]);
 
 const isSheetOpen = ref(false);
-const selectedWorld = ref(null);
+const selectedWorld = ref<HotWorld | null>(null);
 
 const containerResizeObserver = new ResizeObserver(() => {
   setContainerHeight();
@@ -226,8 +227,8 @@ const columns = computed(() => {
 });
 
 const maxFriends = computed(() => {
-  if (displayed.value.length === 0) return 1;
-  return displayed.value[0].uniqueFriends || 1;
+  const topFriends = displayed.value[0]?.uniqueFriends ?? 0;
+  return topFriends > 0 ? topFriends : 1;
 });
 
 const risingCount = computed(() => {
@@ -239,11 +240,11 @@ const coolingCount = computed(() => {
 });
 
 const totalVisits = computed(() => {
-  return displayed.value.reduce((sum, w) => sum + (w.visitCount || 0), 0);
+  return displayed.value.reduce((sum, w) => sum + (w.visitCount ?? 0), 0);
 });
 
-function getBarWidth(uniqueFriends) {
-  return `${Math.max(4, (uniqueFriends / maxFriends.value) * 100)}%`;
+function getBarWidth(uniqueFriends: number | null) {
+  return `${Math.max(4, ((uniqueFriends ?? 0) / maxFriends.value) * 100)}%`;
 }
 
 function setContainerHeight() {
@@ -254,11 +255,11 @@ function setContainerHeight() {
   }
 }
 
-function handleDaysChange(value) {
-  if (!value) return;
-  selectedDays.value = parseInt(value, 10);
+function handleDaysChange(value: unknown) {
+  if (typeof value !== "string" || value === "") return;
+  selectedDays.value = Number(value);
   handleSheetClose(false);
-  loadData();
+  void loadData().catch(logLoadError);
 }
 
 async function loadData() {
@@ -273,7 +274,12 @@ async function loadData() {
   }
 }
 
-async function openDetail(world) {
+function logLoadError(error: unknown) {
+  console.error("Error loading hot worlds:", error);
+}
+
+async function openDetail(world: HotWorld) {
+  if (!world.worldId) return;
   selectedWorld.value = world;
   isSheetOpen.value = true;
   isLoadingDetail.value = true;
@@ -287,21 +293,25 @@ async function openDetail(world) {
   }
 }
 
-function handleSheetClose(open) {
-  if (!open) {
+function handleSheetClose(isOpen: boolean) {
+  if (!isOpen) {
     isSheetOpen.value = false;
     selectedWorld.value = null;
     friendDetail.value = [];
   }
 }
 
-function handleWorldClick() {
-  if (selectedWorld.value?.worldId) {
-    showWorldDialog(selectedWorld.value.worldId);
+function openWorldDialog(worldId: string | null) {
+  if (worldId) {
+    showWorldDialog(worldId);
   }
 }
 
-function openUserDialog(userId) {
+function handleWorldClick() {
+  openWorldDialog(selectedWorld.value?.worldId ?? null);
+}
+
+function openUserDialog(userId: string | null) {
   showUserDialog(userId);
 }
 
@@ -310,7 +320,7 @@ onMounted(() => {
     containerResizeObserver.observe(hotWorldsRef.value);
   }
   setContainerHeight();
-  loadData();
+  void loadData().catch(logLoadError);
 });
 
 onBeforeUnmount(() => {

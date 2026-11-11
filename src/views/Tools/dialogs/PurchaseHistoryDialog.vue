@@ -81,26 +81,8 @@
                   {{ transaction.reasonLabel }}
                 </Badge>
               </div>
-              <div v-if="transaction.fromUserDisplayName || transaction.toUserDisplayName" class="text-muted-foreground">
-                <template v-if="transaction.fromUserDisplayName">
-                  {{ t("dialog.purchase_history.from") }}:
-                  <span
-                    :class="{ 'cursor-pointer hover:underline': transaction.fromUserId }"
-                    @click="transaction.fromUserId && showUserDialog(transaction.fromUserId)"
-                  >
-                    {{ transaction.fromUserDisplayName }}
-                  </span>
-                </template>
-                <template v-if="transaction.fromUserDisplayName && transaction.toUserDisplayName"> · </template>
-                <template v-if="transaction.toUserDisplayName">
-                  {{ t("dialog.purchase_history.from") }}:
-                  <span
-                    :class="{ 'cursor-pointer hover:underline': transaction.toUserId }"
-                    @click="transaction.toUserId && showUserDialog(transaction.toUserId)"
-                  >
-                    {{ transaction.toUserDisplayName }}
-                  </span>
-                </template>
+              <div v-if="transaction.fromUserDisplayName" class="text-muted-foreground">
+                {{ t("dialog.purchase_history.from") }}: {{ transaction.fromUserDisplayName }}
               </div>
               <div class="mt-1 text-xs text-muted-foreground">
                 {{ formatDateFilter(transaction.date, "long") }}
@@ -146,16 +128,20 @@ import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
 import { marketplaceRequest } from "../../../api/marketplace";
-import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { logError } from "../../../stores/vrcx-messages";
 
-const props = defineProps({
-  isPurchaseHistoryDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isPurchaseHistoryDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isPurchaseHistoryDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const userStore = useUserStore();
@@ -165,13 +151,16 @@ const { showFullscreenImageDialog } = useGalleryStore();
 const isLoading = ref(false);
 const typeFilter = ref("all");
 const activeTab = ref("purchases");
-const transactions = ref([]);
+type TransactionRow = NonNullable<Awaited<ReturnType<typeof marketplaceRequest.getEconomyTransactions>>["json"]["transactions"]>[number];
+const transactions = ref<TransactionRow[]>([]);
 
 const purchases = computed(() =>
   Array.from(cachedPurchases.value.values())
     .filter((purchase) => purchase.buyerId === currentUser.value.id)
     .sort((a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime())
 );
+
+type PurchaseRow = (typeof purchases.value)[number];
 
 const typeOptions = computed(() => [
   { value: "all", label: t("dialog.purchase_history.all") },
@@ -187,8 +176,8 @@ const filteredPurchases = computed(() =>
 
 watch(
   () => props.isPurchaseHistoryDialogVisible,
-  (visible) => {
-    if (visible) {
+  (isVisible) => {
+    if (isVisible) {
       loadActiveTab();
     }
   }
@@ -196,7 +185,7 @@ watch(
 
 watch(activeTab, (tab) => {
   if (tab === "transactions" && !transactions.value.length) {
-    loadTransactions();
+    void loadTransactions().catch(logError);
   }
 });
 
@@ -205,11 +194,8 @@ function closeDialog() {
 }
 
 function loadActiveTab() {
-  if (activeTab.value === "transactions") {
-    loadTransactions();
-  } else {
-    loadPurchases();
-  }
+  const load = activeTab.value === "transactions" ? loadTransactions : loadPurchases;
+  void load().catch(logError);
 }
 
 async function loadPurchases() {
@@ -225,17 +211,17 @@ async function loadTransactions() {
   isLoading.value = true;
   try {
     const { json } = await marketplaceRequest.getEconomyTransactions({ n: 100 });
-    transactions.value = json.transactions ?? [];
+    transactions.value = Array.isArray(json.transactions) ? json.transactions : [];
   } finally {
     isLoading.value = false;
   }
 }
 
-function getFileImageUrl(fileId) {
+function getFileImageUrl(fileId: string) {
   return `${AppDebug.endpointDomain}/file/${fileId}/1/`;
 }
 
-function formatPrice(purchase) {
+function formatPrice(purchase: PurchaseRow) {
   if (!purchase.purchasePrice) {
     return t("dialog.purchase_history.free");
   }

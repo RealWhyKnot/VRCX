@@ -52,7 +52,7 @@
                       <User class="size-5 text-muted-foreground" />
                     </AvatarFallback>
                   </Avatar>
-                  <IconFrame :icon-frame="user.iconFrame" />
+                  <IconFrame :icon-frame="user.iconFrame ?? ''" />
                 </ItemMedia>
                 <ItemContent class="min-w-0">
                   <ItemTitle class="flex items-center gap-1.5 max-w-full">
@@ -95,7 +95,7 @@
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem v-for="row in cachedConfig.dynamicWorldRows" :key="row.index" :value="row.index">
+                  <SelectItem v-for="(row, rowIndex) in cachedConfig.dynamicWorldRows" :key="row.index ?? rowIndex" :value="row.index ?? rowIndex">
                     {{ row.name }}
                   </SelectItem>
                 </SelectGroup>
@@ -140,7 +140,11 @@
       <TabsContent value="avatar" class="flex flex-col min-h-0 flex-1">
         <div class="flex flex-col min-h-0" style="flex: 9">
           <div class="shrink-0 mb-3 flex items-center justify-end gap-2">
-            <Select v-if="avatarRemoteDatabaseProviderList.length > 0" :model-value="avatarRemoteDatabaseProvider" @update:model-value="setAvatarProvider">
+            <Select
+              v-if="avatarRemoteDatabaseProviderList.length > 0"
+              :model-value="avatarRemoteDatabaseProvider"
+              @update:model-value="handleAvatarProviderSelect"
+            >
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.search.avatar.search_provider')" />
               </SelectTrigger>
@@ -255,11 +259,11 @@
           </div>
           <template v-else-if="searchGroupResults.length > 0">
             <Item
-              v-for="group in searchGroupResults"
-              :key="group.id"
+              v-for="(group, groupIndex) in searchGroupResults"
+              :key="group.id ?? groupIndex"
               size="sm"
               class="cursor-pointer gap-2 px-3 py-2 hover:bg-muted x-hover-list rounded-none"
-              @click="showGroupDialog(group.id)"
+              @click="group.id && showGroupDialog(group.id)"
             >
               <ItemMedia variant="image">
                 <Avatar class="rounded-sm">
@@ -333,6 +337,7 @@ import TabsList from "@/components/ui/tabs/TabsList.vue";
 import TabsTrigger from "@/components/ui/tabs/TabsTrigger.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
+import type { AcceptableValue } from "reka-ui";
 
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useAuthStore } from "../../stores/auth";
@@ -341,6 +346,9 @@ import { useSearchStore } from "../../stores/search";
 import { commaNumber, replaceBioSymbols } from "../../shared/utils/base/string";
 import { convertFileUrlToImageUrl } from "../../shared/utils/common";
 import { languageClass } from "../../shared/utils/user";
+import { logFailure } from "../../stores/log-failure";
+import type { Json } from "../../types/vrcx";
+import type { Avatar as AvatarModel } from "vrchat";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { showAvatarDialog } from "../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../coordinators/group-dialog-coordinator";
@@ -352,9 +360,17 @@ import { useSearchUser } from "./composables/use-search-user";
 import { useSearchGroup } from "./composables/use-search-group";
 import { useSearchMarketplace } from "./composables/use-search-marketplace";
 
+defineOptions({ name: "SearchView" });
+
 const { randomUserColours } = storeToRefs(useAppearanceSettingsStore());
 const { avatarRemoteDatabaseProviderList, avatarRemoteDatabaseProvider, isAvatarProviderDialogVisible } = storeToRefs(useAvatarProviderStore());
 const { setAvatarProvider } = useAvatarProviderStore();
+
+function handleAvatarProviderSelect(value: AcceptableValue | AcceptableValue[]) {
+  if (typeof value === "string") {
+    setAvatarProvider(value);
+  }
+}
 
 const { searchText, searchUserResults } = storeToRefs(useSearchStore());
 const { clearSearch } = useSearchStore();
@@ -366,16 +382,22 @@ const { userImage } = useUserDisplay();
 const activeSearchTab = ref("user");
 
 const keys = useMagicKeys();
-const stopPrevWatch = whenever(keys["Alt+ArrowLeft"], () => {
-  if (!paginationConfig.value.prevDisabled) {
-    paginationConfig.value.onPrev();
+const stopPrevWatch = whenever(
+  () => keys["Alt+ArrowLeft"]?.value,
+  () => {
+    if (!paginationConfig.value.prevDisabled) {
+      paginationConfig.value.onPrev();
+    }
   }
-});
-const stopNextWatch = whenever(keys["Alt+ArrowRight"], () => {
-  if (!paginationConfig.value.nextDisabled) {
-    paginationConfig.value.onNext();
+);
+const stopNextWatch = whenever(
+  () => keys["Alt+ArrowRight"]?.value,
+  () => {
+    if (!paginationConfig.value.nextDisabled) {
+      paginationConfig.value.onNext();
+    }
   }
-});
+);
 onUnmounted(() => {
   stopPrevWatch();
   stopNextWatch();
@@ -425,8 +447,8 @@ const paginationConfig = computed(() => {
         show: searchUserResults.value.length > 0 && !isSearchUserLoading.value,
         prevDisabled: !searchUserParams.value.offset,
         nextDisabled: searchUserResults.value.length < pageSize,
-        onPrev: () => handleMoreSearchUser(-1),
-        onNext: () => handleMoreSearchUser(1),
+        onPrev: () => runSearchTask(handleMoreSearchUser(-1)),
+        onNext: () => runSearchTask(handleMoreSearchUser(1)),
       };
     case "world":
       return {
@@ -449,28 +471,32 @@ const paginationConfig = computed(() => {
         show: searchMarketplaceResults.value.length > 0 && !isSearchMarketplaceLoading.value,
         prevDisabled: !searchMarketplaceParams.value.offset,
         nextDisabled: !searchMarketplaceHasNext.value,
-        onPrev: () => moreSearchMarketplace(-1),
-        onNext: () => moreSearchMarketplace(1),
+        onPrev: () => runSearchTask(moreSearchMarketplace(-1)),
+        onNext: () => runSearchTask(moreSearchMarketplace(1)),
       };
     case "group":
       return {
         show: searchGroupResults.value.length > 0 && !isSearchGroupLoading.value,
         prevDisabled: !searchGroupParams.value.offset,
         nextDisabled: searchGroupResults.value.length < pageSize,
-        onPrev: () => moreSearchGroup(-1),
-        onNext: () => moreSearchGroup(1),
+        onPrev: () => runSearchTask(moreSearchGroup(-1)),
+        onNext: () => runSearchTask(moreSearchGroup(1)),
       };
     default:
-      return { show: false, prevDisabled: true, nextDisabled: true, onPrev: () => {}, onNext: () => {} };
+      return { show: false, prevDisabled: true, nextDisabled: true, onPrev: () => undefined, onNext: () => undefined };
   }
 });
 
-function getSmallThumbnailUrl(url) {
+function runSearchTask(task: Promise<unknown>) {
+  void task.catch(logFailure("Search request failed:"));
+}
+
+function getSmallThumbnailUrl(url: string | null | undefined) {
   return convertFileUrlToImageUrl(url);
 }
 
-function formatMarketplacePrice(avatar) {
-  const prices = (avatar.publishedListings ?? []).map((listing) => listing.priceTokens).filter((price) => typeof price === "number");
+function formatMarketplacePrice(avatar: Json<AvatarModel>) {
+  const prices = (avatar.publishedListings ?? []).map((listing) => listing.priceTokens).filter((price): price is number => typeof price === "number");
   const lowestPrice = prices.length ? Math.min(...prices) : avatar.lowestPrice;
   const highestPrice = prices.length ? Math.max(...prices) : avatar.highestPrice;
   if (lowestPrice == null) {
@@ -491,7 +517,7 @@ function handleClearSearch() {
   clearSearch();
 }
 
-function updateSearchText(text) {
+function updateSearchText(text: string) {
   searchText.value = text;
 }
 
@@ -502,19 +528,19 @@ function search() {
   }
   switch (activeSearchTab.value) {
     case "user":
-      searchUser();
+      runSearchTask(searchUser());
       break;
     case "world":
       searchWorld({});
       break;
     case "avatar":
-      searchAvatar();
+      runSearchTask(searchAvatar());
       break;
     case "marketplace":
-      searchMarketplace();
+      runSearchTask(searchMarketplace());
       break;
     case "group":
-      searchGroup();
+      runSearchTask(searchGroup());
       break;
   }
 }

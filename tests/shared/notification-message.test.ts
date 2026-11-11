@@ -396,26 +396,26 @@ describe("getNotificationMessage with displayNameOverride", () => {
 
 describe("getUserIdFromNoty", () => {
   test("returns userId when present", () => {
-    expect(getUserIdFromNoty({ userId: "usr_1" })).toBe("usr_1");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined", userId: "usr_1" })).toBe("usr_1");
   });
 
   test("returns senderUserId when userId is missing", () => {
-    expect(getUserIdFromNoty({ senderUserId: "usr_2" })).toBe("usr_2");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined", senderUserId: "usr_2" })).toBe("usr_2");
   });
 
   test("returns sourceUserId as last priority", () => {
-    expect(getUserIdFromNoty({ sourceUserId: "usr_3" })).toBe("usr_3");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined", sourceUserId: "usr_3" })).toBe("usr_3");
   });
 
   test("prefers userId over senderUserId", () => {
-    expect(getUserIdFromNoty({ userId: "usr_1", senderUserId: "usr_2" })).toBe("usr_1");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined", userId: "usr_1", senderUserId: "usr_2" })).toBe("usr_1");
   });
 
   test("returns empty string when no id fields", () => {
-    expect(getUserIdFromNoty({ displayName: "Alice" })).toBe("");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined", displayName: "Alice" })).toBe("");
   });
 
   test("returns empty string for empty object", () => {
-    expect(getUserIdFromNoty({})).toBe("");
+    expect(getUserIdFromNoty({ type: "OnPlayerJoined" })).toBe("");
   });
 });

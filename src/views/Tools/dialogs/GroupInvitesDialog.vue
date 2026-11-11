@@ -21,7 +21,7 @@
         <DataTableEmpty v-if="!groups.length && !isLoading" type="nodata" />
         <div v-for="group in groups" :key="group.id" class="flex items-center gap-3 border-b py-2 last:border-b-0">
           <Avatar class="size-9 flex-none">
-            <AvatarImage :src="group.iconUrl" class="object-cover" />
+            <AvatarImage v-if="group.iconUrl" :src="group.iconUrl" class="object-cover" />
             <AvatarFallback>
               <Users class="size-4 text-muted-foreground" />
             </AvatarFallback>
@@ -30,7 +30,7 @@
             <button
               type="button"
               class="block max-w-full truncate font-medium hover:underline cursor-pointer"
-              @click="showGroupDialog(group.groupId)"
+              @click="showGroupDialog(group.id)"
               v-text="group.name"
             ></button>
             <div class="truncate text-xs text-muted-foreground">{{ group.shortCode }}.{{ group.discriminator }} · {{ group.memberCount }}</div>
@@ -82,36 +82,44 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { groupRequest } from "../../../api/group";
+import { hasGroupId, type GroupMembershipStatus, type GroupRow } from "./group-rows";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { useModalStore } from "../../../stores/modal";
+import { logError } from "../../../stores/vrcx-messages";
 
-const props = defineProps({
-  isGroupInvitesDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isGroupInvitesDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isGroupInvitesDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const modalStore = useModalStore();
 
-const groups = ref([]);
+const groups = ref<GroupRow[]>([]);
 const isLoading = ref(false);
 
-const activeTab = ref("invited");
+const activeTab = ref<GroupMembershipStatus>("invited");
 
 watch(
   () => props.isGroupInvitesDialogVisible,
-  (visible) => {
-    if (visible) {
-      loadGroups();
+  (isVisible) => {
+    if (isVisible) {
+      void loadGroups().catch(logError);
     }
   }
 );
 
-watch(activeTab, () => loadGroups());
+watch(activeTab, () => {
+  void loadGroups().catch(logError);
+});
 
 function closeDialog() {
   emit("close");
@@ -122,33 +130,33 @@ async function loadGroups() {
   isLoading.value = true;
   try {
     const { json } = await groupRequest.getMyGroupsByStatus({ membershipStatus: activeTab.value });
-    groups.value = json ?? [];
+    groups.value = json.filter(hasGroupId);
   } finally {
     isLoading.value = false;
   }
 }
 
-function removeGroup(id) {
+function removeGroup(id: GroupRow["id"]) {
   groups.value = groups.value.filter((g) => g.id !== id);
 }
 
-async function acceptInvite(group) {
-  await groupRequest.joinGroup({ groupId: group.groupId });
+async function acceptInvite(group: GroupRow) {
+  await groupRequest.joinGroup({ groupId: group.id });
   removeGroup(group.id);
   toast.success(t("dialog.group_invites.accepted"));
 }
 
-async function declineInvite(group) {
-  await groupRequest.declineGroupInvite({ groupId: group.groupId });
+async function declineInvite(group: GroupRow) {
+  await groupRequest.declineGroupInvite({ groupId: group.id });
   removeGroup(group.id);
 }
 
-async function cancelRequest(group) {
-  await groupRequest.cancelGroupRequest({ groupId: group.groupId });
+async function cancelRequest(group: GroupRow) {
+  await groupRequest.cancelGroupRequest({ groupId: group.id });
   removeGroup(group.id);
 }
 
-async function blockGroup(group) {
+async function blockGroup(group: GroupRow) {
   const { ok } = await modalStore.confirm({
     title: t("confirm.title"),
     description: t("confirm.block_group"),
@@ -157,7 +165,7 @@ async function blockGroup(group) {
   if (!ok) {
     return;
   }
-  await groupRequest.blockGroup({ groupId: group.groupId });
+  await groupRequest.blockGroup({ groupId: group.id });
   removeGroup(group.id);
 }
 </script>

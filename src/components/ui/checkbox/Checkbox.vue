@@ -1,24 +1,39 @@
 <script setup lang="ts">
+import type { CheckboxRootEmits, CheckboxRootProps, PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { CheckboxIndicator, CheckboxRoot, useForwardPropsEmits } from "reka-ui";
 import { Check } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  defaultValue: { type: [Boolean, String], required: false },
-  modelValue: { type: [Boolean, String, null], required: false },
-  disabled: { type: Boolean, required: false },
-  value: { type: null, required: false },
-  id: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:modelValue"]);
+defineOptions({ name: "UiCheckbox" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = withDefaults(
+  defineProps<{
+    defaultValue?: boolean | string;
+    modelValue?: boolean | string | null;
+    disabled?: boolean;
+    value?: CheckboxRootProps["value"] | undefined;
+    id?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    name?: string | undefined;
+    required?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    defaultValue: false,
+    modelValue: false,
+    value: undefined,
+    id: undefined,
+    as: undefined,
+    name: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<CheckboxRootEmits>();
+
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

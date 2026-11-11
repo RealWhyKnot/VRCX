@@ -102,7 +102,7 @@
           <span class="text-muted-foreground shrink-0">{{ t("dialog.world.info.favorites") }}</span>
           <span class="text-right text-muted-foreground">
             {{ commaNumber(worldDialog.ref.favorites) }}
-            <template v-if="worldDialog.ref?.favorites > 0 && worldDialog.ref?.visits > 0"> ({{ favoriteRate }}%) </template>
+            <template v-if="(worldDialog.ref.favorites ?? 0) > 0 && (worldDialog.ref.visits ?? 0) > 0"> ({{ favoriteRate }}%) </template>
           </span>
         </div>
         <TooltipWrapper
@@ -179,12 +179,12 @@ import { ChevronDown, Copy } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
-import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 import { useAuthStore } from "../../../stores/auth";
 import { useInstanceStore } from "../../../stores/instance";
 import { useWorldStore } from "../../../stores/world";
+import { logError } from "../../../stores/vrcx-messages";
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { timeAgo, timeToText } from "../../../shared/utils/base/format";
 import { useWorldDialogInfo } from "./use-world-dialog-info";
@@ -198,7 +198,7 @@ const { showPreviousInstancesListDialog: openPreviousInstancesListDialog } = use
 const { isTimeInLabVisible, timeInLab, favoriteRate, worldTags, worldDialogPlatform, worldDialogPlatformCreatedAt, commaNumber, formatDateFilter } =
   useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion: authStore.cachedConfig.sdkUnityVersion });
 
-function showPreviousInstancesListDialog(worldRef) {
-  openPreviousInstancesListDialog("world", worldRef);
+function showPreviousInstancesListDialog(worldRef: unknown) {
+  void openPreviousInstancesListDialog("world", worldRef).catch(logError);
 }
 </script>

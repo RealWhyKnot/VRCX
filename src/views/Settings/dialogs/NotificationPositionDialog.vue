@@ -24,7 +24,7 @@
           />
           <rect style="fill: #c4c4c4" x="5" y="5" width="290" height="158.75" rx="2.5" />
         </svg>
-        <RadioGroup :model-value="notificationPosition" class="absolute inset-0" @update:model-value="changeNotificationPosition">
+        <RadioGroup :model-value="notificationPosition" class="absolute inset-0" @update:model-value="handleNotificationPositionChange">
           <RadioGroupItem
             id="notificationPosition-topLeft"
             aria-label="topLeft"
@@ -107,16 +107,17 @@ const notificationsSettingsStore = useNotificationsSettingsStore();
 const { notificationPosition } = storeToRefs(notificationsSettingsStore);
 const { changeNotificationPosition } = notificationsSettingsStore;
 
-defineProps({
-  isNotificationPositionDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+withDefaults(defineProps<{ isNotificationPositionDialogVisible?: boolean }>(), { isNotificationPositionDialogVisible: false });
 
-const emit = defineEmits(["update:isNotificationPositionDialogVisible"]);
+const emit = defineEmits<{ "update:isNotificationPositionDialogVisible": [value: boolean] }>();
 
 function closeDialog() {
   emit("update:isNotificationPositionDialogVisible", false);
+}
+
+function handleNotificationPositionChange(value: unknown) {
+  if (typeof value === "string") {
+    changeNotificationPosition(value);
+  }
 }
 </script>

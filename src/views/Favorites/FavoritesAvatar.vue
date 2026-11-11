@@ -17,9 +17,9 @@
         @import="handleAvatarImportClick"
         @export="handleAvatarExportClick"
       />
-      <ResizablePanelGroup ref="splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
+      <ResizablePanelGroup :ref="splitter.splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
         <ResizablePanel
-          ref="splitterPanelRef"
+          :ref="splitter.splitterPanelRef"
           :default-size="splitterDefaultSize"
           :min-size="splitterMinSize"
           :max-size="splitterMaxSize"
@@ -188,7 +188,7 @@
                 </TooltipWrapper>
                 <InputGroupField
                   v-else
-                  ref="newLocalGroupInput"
+                  :ref="localGroups.newLocalGroupInput"
                   v-model="newLocalGroupName"
                   size="sm"
                   class="w-full"
@@ -233,7 +233,7 @@
             <FavoritesContentHeader
               v-model:edit-mode="avatarEditMode"
               :edit-mode-disabled="isSearchActive || !activeRemoteGroup"
-              :edit-mode-visible="avatarEditMode && !isSearchActive && activeRemoteGroup"
+              :edit-mode-visible="avatarEditMode && !isSearchActive && activeRemoteGroup !== null"
               :is-all-selected="isAllAvatarsSelected"
               :has-selection="hasAvatarSelection"
               @toggle-select-all="toggleSelectAllAvatars"
@@ -264,7 +264,7 @@
                 <span v-else>{{ t("view.favorite.avatars.no_group_selected") }}</span>
               </template>
             </FavoritesContentHeader>
-            <div ref="avatarFavoritesContainerRef" class="flex-1 min-h-0">
+            <div :ref="avatarCardScaling.containerRef" class="flex-1 min-h-0">
               <template v-if="isSearchActive">
                 <div class="favorites-content__scroll favorites-content__scroll--native h-full overflow-auto">
                   <div
@@ -346,7 +346,7 @@
                 <div class="h-full pr-2 overflow-auto">
                   <template v-if="avatarHistory.length">
                     <div class="favorites-card-list" :style="avatarFavoritesGridStyle(avatarHistory.length)">
-                      <FavoritesAvatarLocalHistoryItem v-for="favorite in avatarHistory" :key="favorite.id" :favorite="favorite" />
+                      <FavoritesAvatarLocalHistoryItem v-for="(favorite, index) in avatarHistory" :key="favorite.id ?? index" :favorite="favorite" />
                     </div>
                   </template>
                   <div v-else class="flex items-center justify-center text-[13px] h-full">
@@ -393,12 +393,15 @@ import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useAvatarStore } from "../../stores/avatar";
 import { useFavoriteStore } from "../../stores/favorite";
 import { useModalStore } from "../../stores/modal";
+import type { FavoriteGroupSlot, FavoriteObjectCtx } from "../../stores/favorite-types";
+import { logFailure } from "../../stores/log-failure";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
 import { avatarRequest } from "../../api/avatar";
 import { favoriteRequest } from "../../api/favorite";
 import { debounce } from "../../shared/utils/common";
+import { promptClearAvatarHistory, showAvatarDialog, applyAvatar } from "../../coordinators/avatar-coordinator";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.ts";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
@@ -421,23 +424,47 @@ import FavoritesToolbar from "./components/FavoritesToolbar.vue";
 import { InvalidAvatarsProgressToast } from "./components/invalid-avatars-progress-toast.tsx";
 
 import * as workerTimers from "worker-timers";
+import "./favorites-layout.css";
+
+type AvatarFavoriteDetails = {
+  id: string;
+  name?: string | null;
+  authorName?: string | null;
+  thumbnailImageUrl?: string | null;
+  releaseStatus?: string | null;
+};
+
+type AvatarFavoriteEntry = {
+  id: string;
+  name?: string | null;
+  deleted?: boolean;
+  ref?: AvatarFavoriteDetails | null;
+};
+
+type AvatarSearchEntry = {
+  id: string;
+  name: string;
+  authorName: string;
+  thumbnailImageUrl?: string | null | undefined;
+};
+
+type RefreshToken = {
+  cancelled: boolean;
+  resolve: (() => void) | null;
+};
 
 const AVATAR_GROUP_PLACEHOLDERS = Array.from({ length: 5 }, (_, index) => ({
   key: `avatar:avatars${index + 1}`,
   displayName: `Group ${index + 1}`,
 }));
 
-const avatarGroupVisibilityOptions = ref(["public", "friends", "private"]);
+const AVATAR_FAVORITES_LOG_LABEL = "Avatar favorites view";
+
+const avatarGroupVisibilityOptions = ["public", "friends", "private"] as const;
+type AvatarGroupVisibility = (typeof avatarGroupVisibilityOptions)[number];
 const historyGroupKey = "local-history";
-const {
-  splitterGroupRef,
-  splitterPanelRef,
-  defaultSize: splitterDefaultSize,
-  minSize: splitterMinSize,
-  maxSize: splitterMaxSize,
-  handleLayout,
-  setDragging: splitterSetDragging,
-} = useFavoritesSplitter({ configKey: "VRCX_FavoritesAvatarSplitter" });
+const splitter = useFavoritesSplitter({ configKey: "VRCX_FavoritesAvatarSplitter" });
+const { defaultSize: splitterDefaultSize, minSize: splitterMinSize, maxSize: splitterMaxSize, handleLayout, setDragging: splitterSetDragging } = splitter;
 
 const { sortFavorites } = storeToRefs(useAppearanceSettingsStore());
 const { setSortFavorites } = useAppearanceSettingsStore();
@@ -454,17 +481,9 @@ const {
 } = storeToRefs(favoriteStore);
 const { showAvatarImportDialog, localAvatarFavGroupLength, localAvatarFavoritesList, handleFavoriteGroup } = favoriteStore;
 const { avatarHistory } = storeToRefs(useAvatarStore());
-import { promptClearAvatarHistory, showAvatarDialog, applyAvatar } from "../../coordinators/avatar-coordinator";
 const { t } = useI18n();
 
-const {
-  cardScale: avatarCardScale,
-  cardSpacing: avatarCardSpacing,
-  slider: avatarCardScaleSlider,
-  spacingSlider: avatarCardSpacingSlider,
-  containerRef: avatarFavoritesContainerRef,
-  gridStyle: avatarFavoritesGridStyle,
-} = useFavoritesCardScaling({
+const avatarCardScaling = useFavoritesCardScaling({
   configKey: "VRCX_FavoritesAvatarCardScale",
   spacingConfigKey: "VRCX_FavoritesAvatarCardSpacing",
   min: 0.6,
@@ -481,23 +500,30 @@ const {
   baseActionMargin: 8,
   baseCheckboxMargin: 10,
 });
+const {
+  cardScale: avatarCardScale,
+  cardSpacing: avatarCardSpacing,
+  slider: avatarCardScaleSlider,
+  spacingSlider: avatarCardSpacingSlider,
+  gridStyle: avatarFavoritesGridStyle,
+} = avatarCardScaling;
 
 const avatarCardScalePercent = computed(() => Math.round(avatarCardScale.value * 100));
 const avatarCardSpacingPercent = computed(() => Math.round(avatarCardSpacing.value * 100));
 const avatarCardScaleValue = computed({
   get: () => [avatarCardScale.value],
-  set: (value) => {
-    const next = value?.[0];
-    if (typeof next === "number") {
+  set: (value: number[]) => {
+    const next = value[0];
+    if (next !== undefined) {
       avatarCardScale.value = next;
     }
   },
 });
 const avatarCardSpacingValue = computed({
   get: () => [avatarCardSpacing.value],
-  set: (value) => {
-    const next = value?.[0];
-    if (typeof next === "number") {
+  set: (value: number[]) => {
+    const next = value[0];
+    if (next !== undefined) {
       avatarCardSpacing.value = next;
     }
   },
@@ -505,12 +531,12 @@ const avatarCardSpacingValue = computed({
 
 const avatarExportDialogVisible = ref(false);
 const avatarFavoriteSearch = ref("");
-const avatarFavoriteSearchResults = ref([]);
+const avatarFavoriteSearchResults = ref<AvatarSearchEntry[]>([]);
 const avatarEditMode = ref(false);
 const avatarToolbarMenuOpen = ref(false);
 const refreshingLocalFavorites = ref(false);
-const worker = ref(null);
-const refreshCancelToken = ref(null);
+const worker = ref<ReturnType<typeof workerTimers.setTimeout> | null>(null);
+const refreshCancelToken = ref<RefreshToken | null>(null);
 const avatarGroupPlaceholders = AVATAR_GROUP_PLACEHOLDERS;
 
 const {
@@ -542,9 +568,35 @@ const {
 
 const historyGroupMenuKey = "history";
 
-function handleSortFavoritesChange(value) {
-  const next = value === "date";
-  if (next !== sortFavorites.value) {
+function isAvatarFavoriteDetails(value: unknown): value is AvatarFavoriteDetails {
+  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
+}
+
+function isAvatarSearchEntry(value: unknown): value is AvatarSearchEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "name" in value &&
+    "authorName" in value &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.authorName === "string"
+  );
+}
+
+function toAvatarFavoriteEntry(favorite: FavoriteObjectCtx): AvatarFavoriteEntry {
+  return {
+    id: favorite.id,
+    name: favorite.name,
+    deleted: favorite.deleted ?? false,
+    ref: isAvatarFavoriteDetails(favorite.ref) ? favorite.ref : null,
+  };
+}
+
+function handleSortFavoritesChange(value: string) {
+  const isDateSort = value === "date";
+  if (isDateSort !== sortFavorites.value) {
     setSortFavorites();
   }
 }
@@ -568,31 +620,30 @@ function handleAvatarExportClick() {
 }
 
 const groupedAvatarFavorites = computed(() => {
-  const grouped = {};
+  const grouped = new Map<string, AvatarFavoriteEntry[]>();
   favoriteAvatars.value.forEach((avatar) => {
     if (!avatar.groupKey) {
       return;
     }
-    if (!grouped[avatar.groupKey]) {
-      grouped[avatar.groupKey] = [];
-    }
-    grouped[avatar.groupKey].push(avatar);
+    const group = grouped.get(avatar.groupKey) ?? [];
+    group.push(toAvatarFavoriteEntry(avatar));
+    grouped.set(avatar.groupKey, group);
   });
   return grouped;
 });
 
-const currentRemoteFavorites = computed(() => {
+const currentRemoteFavorites = computed<AvatarFavoriteEntry[]>(() => {
   if (!activeRemoteGroup.value) {
     return [];
   }
-  return groupedAvatarFavorites.value[activeRemoteGroup.value.key] || [];
+  return groupedAvatarFavorites.value.get(activeRemoteGroup.value.key) ?? [];
 });
 
-const currentLocalFavorites = computed(() => {
+const currentLocalFavorites = computed<AvatarFavoriteEntry[]>(() => {
   if (!activeLocalGroupName.value) {
     return [];
   }
-  return localAvatarFavorites.value[activeLocalGroupName.value] || [];
+  return localAvatarFavorites.value[activeLocalGroupName.value] ?? [];
 });
 
 const isAllAvatarsSelected = computed(() => {
@@ -611,7 +662,7 @@ watch(
   () => {
     remoteAvatarGroupsResolved.value = favoriteAvatarGroups.value.length > 0;
     if (!hasUserSelectedAvatarGroup.value) {
-      const preferred = favoriteAvatarGroups.value.find((group) => group.count > 0) || favoriteAvatarGroups.value[0] || avatarGroupPlaceholders[0];
+      const preferred = favoriteAvatarGroups.value.find((group) => group.count > 0) ?? favoriteAvatarGroups.value[0] ?? avatarGroupPlaceholders[0];
       if (preferred) {
         selectGroup("remote", preferred.key);
       }
@@ -621,22 +672,22 @@ watch(
   { immediate: true }
 );
 
-watch(isSearchActive, (active) => {
-  if (active && avatarEditMode.value) {
+watch(isSearchActive, (isActive) => {
+  if (isActive && avatarEditMode.value) {
     avatarEditMode.value = false;
   }
 });
 
 watch(
   () => avatarEditMode.value,
-  (value) => {
-    if (!value) {
+  (isEditMode) => {
+    if (!isEditMode) {
       clearSelectedAvatars();
     }
   }
 );
 
-function handleGroupClick(type, key) {
+function handleGroupClick(type: string, key: string) {
   if (hasSearchInput.value) {
     avatarFavoriteSearch.value = "";
     doSearchAvatarFavorites("");
@@ -644,14 +695,14 @@ function handleGroupClick(type, key) {
   selectGroup(type, key, { userInitiated: true });
 }
 
-const { isCreatingLocalGroup, newLocalGroupName, newLocalGroupInput, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } =
-  useFavoritesLocalGroups({
-    createGroup: newLocalAvatarFavoriteGroup,
-    selectGroup,
-  });
+const localGroups = useFavoritesLocalGroups({
+  createGroup: newLocalAvatarFavoriteGroup,
+  selectGroup,
+});
+const { isCreatingLocalGroup, newLocalGroupName, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } = localGroups;
 
-function toggleAvatarSelection(id, value) {
-  if (value) {
+function toggleAvatarSelection(id: string, isChecked: boolean) {
+  if (isChecked) {
     if (!selectedFavoriteAvatars.value.includes(id)) {
       selectedFavoriteAvatars.value.push(id);
     }
@@ -670,35 +721,35 @@ function showAvatarExportDialog() {
 
 function handleRefreshFavorites() {
   refreshFavorites();
-  getLocalAvatarFavorites();
+  void getLocalAvatarFavorites().catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function handleVisibilitySelection(group, visibility) {
+function handleVisibilitySelection(group: FavoriteGroupSlot, visibility: AvatarGroupVisibility) {
   const menuKey = remoteGroupMenuKey(group.key);
   changeAvatarGroupVisibility(group.name, visibility, menuKey);
 }
 
-function handleRemoteRename(group) {
+function handleRemoteRename(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   changeFavoriteGroupName(group);
 }
 
-function handleRemoteClear(group) {
+function handleRemoteClear(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   clearFavoriteGroup(group);
 }
 
-function handleLocalRename(groupName) {
+function handleLocalRename(groupName: string) {
   handleGroupMenuVisible(localGroupMenuKey(groupName), false);
   promptLocalAvatarFavoriteGroupRename(groupName);
 }
 
-function handleLocalDelete(groupName) {
+function handleLocalDelete(groupName: string) {
   handleGroupMenuVisible(localGroupMenuKey(groupName), false);
   promptLocalAvatarFavoriteGroupDelete(groupName);
 }
 
-async function handleCheckInvalidAvatars(groupName) {
+async function handleCheckInvalidAvatars(groupName: string) {
   handleGroupMenuVisible(localGroupMenuKey(groupName), false);
 
   const startCheckResult = await modalStore.confirm({
@@ -718,7 +769,7 @@ async function handleCheckInvalidAvatars(groupName) {
     percentage: 0,
   });
 
-  let progressToastId;
+  let progressToastId: string | number | undefined;
 
   try {
     progressToastId = toast(markRaw(InvalidAvatarsProgressToast), {
@@ -726,7 +777,11 @@ async function handleCheckInvalidAvatars(groupName) {
       componentProps: {
         t,
         progress: progressState,
-        onDismiss: () => progressToastId && toast.dismiss(progressToastId),
+        onDismiss: () => {
+          if (progressToastId) {
+            toast.dismiss(progressToastId);
+          }
+        },
       },
     });
 
@@ -785,7 +840,7 @@ async function handleCheckInvalidAvatars(groupName) {
       toast.dismiss(progressToastId);
     }
     console.error(err);
-    toast.error(String(err.message || err));
+    toast.error(err instanceof Error && err.message ? err.message : String(err));
   }
 }
 
@@ -794,7 +849,7 @@ function handleHistoryClear() {
   promptClearAvatarHistory();
 }
 
-function changeFavoriteGroupName(group) {
+function changeFavoriteGroupName(group: FavoriteGroupSlot) {
   const currentName = group.displayName || group.name;
   modalStore
     .prompt({
@@ -812,7 +867,7 @@ function changeFavoriteGroupName(group) {
       if (!newName || newName === currentName) {
         return;
       }
-      favoriteRequest
+      void favoriteRequest
         .saveFavoriteGroup({
           type: "avatar",
           group: group.name,
@@ -827,34 +882,37 @@ function changeFavoriteGroupName(group) {
           });
           toast.success(t("prompt.change_favorite_group_name.message.success"));
           refreshFavorites();
-        });
+        })
+        .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
     })
-    .catch(() => {});
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function changeAvatarGroupVisibility(name, visibility, menuKey = null) {
+function changeAvatarGroupVisibility(name: string, visibility: AvatarGroupVisibility, menuKey: string | null = null) {
   const params = {
     type: "avatar",
     group: name,
     visibility,
   };
-  favoriteRequest.saveFavoriteGroup(params).then((args) => {
-    handleFavoriteGroup({
-      json: args.json,
-      params: {
-        favoriteGroupId: args.json.id,
-      },
-    });
-    toast.success("Group visibility changed");
-    if (menuKey) {
-      handleGroupMenuVisible(menuKey, false);
-    }
-    refreshFavorites();
-    return args;
-  });
+  void favoriteRequest
+    .saveFavoriteGroup(params)
+    .then((args) => {
+      handleFavoriteGroup({
+        json: args.json,
+        params: {
+          favoriteGroupId: args.json.id,
+        },
+      });
+      toast.success("Group visibility changed");
+      if (menuKey) {
+        handleGroupMenuVisible(menuKey, false);
+      }
+      refreshFavorites();
+    })
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function clearFavoriteGroup(ctx) {
+function clearFavoriteGroup(ctx: FavoriteGroupSlot) {
   modalStore
     .confirm({
       description: t("confirm.clear_group"),
@@ -863,16 +921,18 @@ function clearFavoriteGroup(ctx) {
     })
     .then(({ ok }) => {
       if (ok) {
-        favoriteRequest.clearFavoriteGroup({
-          type: ctx.type,
-          group: ctx.name,
-        });
+        void favoriteRequest
+          .clearFavoriteGroup({
+            type: ctx.type,
+            group: ctx.name,
+          })
+          .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
       }
     })
-    .catch(() => {});
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function promptLocalAvatarFavoriteGroupRename(group) {
+function promptLocalAvatarFavoriteGroupRename(group: string) {
   modalStore
     .prompt({
       title: t("prompt.local_favorite_group_rename.header"),
@@ -887,17 +947,17 @@ function promptLocalAvatarFavoriteGroupRename(group) {
       if (!ok) return;
       if (value) {
         renameLocalAvatarFavoriteGroup(value, group);
-        nextTick(() => {
+        void nextTick(() => {
           if (localAvatarFavoriteGroups.value.includes(value)) {
             selectGroup("local", value);
           }
-        });
+        }).catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
       }
     })
-    .catch(() => {});
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function promptLocalAvatarFavoriteGroupDelete(group) {
+function promptLocalAvatarFavoriteGroupDelete(group: string) {
   modalStore
     .confirm({
       description: t("confirm.delete_group", { name: group }),
@@ -909,49 +969,33 @@ function promptLocalAvatarFavoriteGroupDelete(group) {
         deleteLocalAvatarFavoriteGroup(group);
       }
     })
-    .catch(() => {});
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function doSearchAvatarFavorites(value) {
-  if (typeof value === "string") {
-    avatarFavoriteSearch.value = value;
+function doSearchAvatarFavorites(searchTerm?: string) {
+  if (typeof searchTerm === "string") {
+    avatarFavoriteSearch.value = searchTerm;
   }
   const search = avatarFavoriteSearch.value.trim().toLowerCase();
   if (search.length < 3) {
     avatarFavoriteSearchResults.value = [];
     return;
   }
-  const results = [];
-  const seen = new Set();
+  const results: AvatarSearchEntry[] = [];
+  const seen = new Set<string>();
+  const addMatch = (candidate: unknown) => {
+    if (!isAvatarSearchEntry(candidate) || seen.has(candidate.id)) {
+      return;
+    }
+    if (candidate.name.toLowerCase().includes(search) || candidate.authorName.toLowerCase().includes(search)) {
+      seen.add(candidate.id);
+      results.push(candidate);
+    }
+  };
   localAvatarFavoriteGroups.value.forEach((group) => {
-    const favorites = localAvatarFavorites.value[group];
-    if (!favorites) {
-      return;
-    }
-    favorites.forEach((ref) => {
-      if (!ref || typeof ref.id === "undefined" || typeof ref.name === "undefined" || typeof ref.authorName === "undefined") {
-        return;
-      }
-      if (ref.name.toLowerCase().includes(search) || ref.authorName.toLowerCase().includes(search)) {
-        if (!seen.has(ref.id)) {
-          seen.add(ref.id);
-          results.push(ref);
-        }
-      }
-    });
+    (localAvatarFavorites.value[group] ?? []).forEach((entry) => addMatch(entry));
   });
-  favoriteAvatars.value.forEach((favorite) => {
-    const ref = favorite.ref;
-    if (!ref || typeof ref.id === "undefined" || typeof ref.name === "undefined" || typeof ref.authorName === "undefined") {
-      return;
-    }
-    if (ref.name.toLowerCase().includes(search) || ref.authorName.toLowerCase().includes(search)) {
-      if (!seen.has(ref.id)) {
-        seen.add(ref.id);
-        results.push(ref);
-      }
-    }
-  });
+  favoriteAvatars.value.forEach((favorite) => addMatch(favorite.ref));
   avatarFavoriteSearchResults.value = results;
 }
 const searchAvatarFavorites = debounce(doSearchAvatarFavorites, 200);
@@ -961,14 +1005,15 @@ async function refreshLocalAvatarFavorites() {
     return;
   }
   refreshingLocalFavorites.value = true;
-  const token = {
+  const token: RefreshToken = {
     cancelled: false,
     resolve: null,
   };
   refreshCancelToken.value = token;
+  const isRefreshCancelled = () => token.cancelled;
   try {
     for (const avatarId of localAvatarFavoritesList) {
-      if (token.cancelled) {
+      if (isRefreshCancelled()) {
         break;
       }
       try {
@@ -979,10 +1024,10 @@ async function refreshLocalAvatarFavorites() {
       } catch (err) {
         console.error(err);
       }
-      if (token.cancelled) {
+      if (isRefreshCancelled()) {
         break;
       }
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         token.resolve = resolve;
         worker.value = workerTimers.setTimeout(() => {
           worker.value = null;
@@ -1008,9 +1053,7 @@ function cancelLocalAvatarRefresh() {
   }
   if (refreshCancelToken.value) {
     refreshCancelToken.value.cancelled = true;
-    if (typeof refreshCancelToken.value.resolve === "function") {
-      refreshCancelToken.value.resolve();
-    }
+    refreshCancelToken.value.resolve?.();
   }
   if (worker.value) {
     workerTimers.clearTimeout(worker.value);
@@ -1055,14 +1098,16 @@ function showAvatarBulkUnfavoriteSelectionConfirm() {
         bulkUnfavoriteSelectedAvatars(selectedFavoriteAvatars.value);
       }
     })
-    .catch(() => {});
+    .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
 }
 
-function bulkUnfavoriteSelectedAvatars(ids) {
+function bulkUnfavoriteSelectedAvatars(ids: string[]) {
   ids.forEach((id) => {
-    favoriteRequest.deleteFavorite({
-      objectId: id,
-    });
+    void favoriteRequest
+      .deleteFavorite({
+        objectId: id,
+      })
+      .catch(logFailure(AVATAR_FAVORITES_LOG_LABEL));
   });
   selectedFavoriteAvatars.value = [];
   avatarEditMode.value = false;
@@ -1071,15 +1116,4 @@ function bulkUnfavoriteSelectedAvatars(ids) {
 onBeforeUnmount(() => {
   cancelLocalAvatarRefresh();
 });
-
-function formatVisibility(value) {
-  if (!value) {
-    return "";
-  }
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
 </script>
-
-<style>
-@import "./favorites-layout.css";
-</style>

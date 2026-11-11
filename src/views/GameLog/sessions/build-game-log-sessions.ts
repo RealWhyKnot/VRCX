@@ -1,95 +1,112 @@
+import type { GameLogEntry, GameLogSessionMember, SessionLocation, SessionSegment } from "../../../stores/gameLog/types";
+
+export type GameLogSessionEvent = GameLogEntry & {
+  count?: number | undefined;
+  playCount?: number | undefined;
+};
+
+type SegmentDraft = {
+  epoch: number;
+  id: number;
+  created_at: string;
+  location: string | null | undefined;
+  worldId: string | null | undefined;
+  worldName: string | null | undefined;
+  groupName: string | null | undefined;
+  duration: number | null;
+  events: GameLogSessionEvent[];
+};
+
 const TOLERANCE_MS = 1000;
 const AGGREGATE_THRESHOLD = 5;
 const AGGREGATE_WINDOW_MS = 5000;
 
-function toEpoch(dateStr) {
+function toEpoch(dateStr: string | null | undefined): number {
   if (!dateStr) return 0;
   const t = Date.parse(dateStr);
   return Number.isNaN(t) ? 0 : t;
 }
 
-function findSegmentIndex(eventEpoch, segmentsAsc) {
+function findSegmentIndex(eventEpoch: number, segmentsAsc: SegmentDraft[]): number {
   const target = eventEpoch + TOLERANCE_MS;
-  for (let i = segmentsAsc.length - 1; i >= 0; i--) {
-    if (segmentsAsc[i].epoch <= target) return i;
-  }
-  return 0;
+  const index = segmentsAsc.findLastIndex((segment) => segment.epoch <= target);
+  return index === -1 ? 0 : index;
 }
 
-function toMember(e) {
+function toMember(e: GameLogEntry): GameLogSessionMember {
   return {
-    displayName: e.displayName,
-    userId: e.userId,
+    displayName: e.displayName ?? null,
+    userId: e.userId ?? null,
     created_at: e.created_at,
-    isFriend: e.isFriend,
-    isFavorite: e.isFavorite,
+    isFriend: e.isFriend ?? false,
+    isFavorite: e.isFavorite ?? false,
   };
 }
 
-function makeGroup(groupType, batch) {
+function makeGroup(groupType: string, batch: GameLogSessionEvent[]): GameLogSessionEvent {
   return {
     type: groupType,
-    created_at: batch[0].created_at,
+    created_at: batch[0]?.created_at ?? "",
     count: batch.length,
     members: batch.map(toMember),
   };
 }
 
-function aggregateTailEvents(events, matchType, groupType) {
+function collapseIntoGroup(events: GameLogSessionEvent[], indices: number[], groupType: string, batch: GameLogSessionEvent[]) {
+  const firstIndex = indices[0];
+  if (firstIndex === undefined) return;
+  const group = makeGroup(groupType, batch);
+  for (const index of [...indices].reverse()) {
+    events.splice(index, 1);
+  }
+  events.splice(firstIndex, 0, group);
+}
+
+function aggregateTailEvents(events: GameLogSessionEvent[], matchType: string, groupType: string) {
   if (events.length === 0) return;
 
-  let lastIdx = -1;
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i].type === matchType) {
-      lastIdx = i;
-      break;
-    }
-  }
+  const lastIdx = events.findLastIndex((event) => event.type === matchType);
   if (lastIdx === -1) return;
 
-  const windowStart = toEpoch(events[lastIdx].created_at) - AGGREGATE_WINDOW_MS;
-  const indices = [];
+  const windowStart = toEpoch(events[lastIdx]?.created_at) - AGGREGATE_WINDOW_MS;
+  const indices: number[] = [];
+  const batch: GameLogSessionEvent[] = [];
   for (let i = lastIdx; i >= 0; i--) {
-    if (toEpoch(events[i].created_at) < windowStart) break;
-    if (events[i].type === matchType) indices.unshift(i);
-  }
-  if (indices.length < AGGREGATE_THRESHOLD) return;
-
-  const batch = indices.map((i) => events[i]);
-  const group = makeGroup(groupType, batch);
-
-  for (let i = indices.length - 1; i >= 0; i--) events.splice(indices[i], 1);
-  events.splice(indices[0], 0, group);
-}
-
-function aggregateHeadEvents(events, matchType, groupType) {
-  if (events.length === 0) return;
-
-  let firstIdx = -1;
-  for (let i = 0; i < events.length; i++) {
-    if (events[i].type === matchType) {
-      firstIdx = i;
-      break;
+    const event = events[i];
+    if (!event || toEpoch(event.created_at) < windowStart) break;
+    if (event.type === matchType) {
+      indices.unshift(i);
+      batch.unshift(event);
     }
   }
+  if (indices.length < AGGREGATE_THRESHOLD) return;
+
+  collapseIntoGroup(events, indices, groupType, batch);
+}
+
+function aggregateHeadEvents(events: GameLogSessionEvent[], matchType: string, groupType: string) {
+  if (events.length === 0) return;
+
+  const firstIdx = events.findIndex((event) => event.type === matchType);
   if (firstIdx === -1) return;
 
-  const windowEnd = toEpoch(events[firstIdx].created_at) + AGGREGATE_WINDOW_MS;
-  const indices = [];
+  const windowEnd = toEpoch(events[firstIdx]?.created_at) + AGGREGATE_WINDOW_MS;
+  const indices: number[] = [];
+  const batch: GameLogSessionEvent[] = [];
   for (let i = firstIdx; i < events.length; i++) {
-    if (toEpoch(events[i].created_at) > windowEnd) break;
-    if (events[i].type === matchType) indices.push(i);
+    const event = events[i];
+    if (!event || toEpoch(event.created_at) > windowEnd) break;
+    if (event.type === matchType) {
+      indices.push(i);
+      batch.push(event);
+    }
   }
   if (indices.length < AGGREGATE_THRESHOLD) return;
 
-  const batch = indices.map((i) => events[i]);
-  const group = makeGroup(groupType, batch);
-
-  for (let i = indices.length - 1; i >= 0; i--) events.splice(indices[i], 1);
-  events.splice(indices[0], 0, group);
+  collapseIntoGroup(events, indices, groupType, batch);
 }
 
-function applyAggregation(segmentsAsc) {
+function applyAggregation(segmentsAsc: SegmentDraft[]) {
   for (const seg of segmentsAsc) {
     aggregateTailEvents(seg.events, "OnPlayerLeft", "LeftGroup");
     aggregateTailEvents(seg.events, "OnPlayerJoined", "JoinGroup");
@@ -97,14 +114,27 @@ function applyAggregation(segmentsAsc) {
   }
 }
 
-function deduplicateVideoPlay(events) {
+function videoKey(event: GameLogSessionEvent): string | null | undefined {
+  if (event.videoUrl) return event.videoUrl;
+  return event.videoName;
+}
+
+function playCountOf(event: GameLogSessionEvent): number {
+  if (event.playCount) return event.playCount;
+  return 1;
+}
+
+function toDuration(time: number | null | undefined): number | null {
+  if (time) return time;
+  return null;
+}
+
+function deduplicateVideoPlay(events: GameLogSessionEvent[]) {
   for (let i = events.length - 1; i > 0; i--) {
-    if (
-      events[i].type === "VideoPlay" &&
-      events[i - 1].type === "VideoPlay" &&
-      (events[i].videoUrl || events[i].videoName) === (events[i - 1].videoUrl || events[i - 1].videoName)
-    ) {
-      events[i - 1].playCount = (events[i - 1].playCount || 1) + (events[i].playCount || 1);
+    const current = events[i];
+    const previous = events[i - 1];
+    if (current && previous && current.type === "VideoPlay" && previous.type === "VideoPlay" && videoKey(current) === videoKey(previous)) {
+      previous.playCount = playCountOf(previous) + playCountOf(current);
       events.splice(i, 1);
     }
   }
@@ -113,12 +143,28 @@ function deduplicateVideoPlay(events) {
   }
 }
 
-export function buildGameLogSessions(locationSegments, flatEvents) {
-  if (!locationSegments || locationSegments.length === 0) {
+function dedupeFlatEvents(flatEvents: GameLogEntry[]): GameLogEntry[] {
+  const seen = new Set<string>();
+  return flatEvents.filter((e) => {
+    const key = `${e.type}\0${e.created_at}\0${e.userId ?? ""}\0${e.location ?? ""}\0${e.videoUrl ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function pickSegmentIndex(candidates: number[], segmentsAsc: SegmentDraft[], eventEpoch: number): number {
+  const target = eventEpoch + TOLERANCE_MS;
+  const matched = candidates.findLast((index) => (segmentsAsc[index]?.epoch ?? Number.POSITIVE_INFINITY) <= target);
+  return matched ?? candidates[0] ?? 0;
+}
+
+export function buildGameLogSessions(locationSegments: SessionLocation[], flatEvents: GameLogEntry[]): { segments: SessionSegment[] } {
+  if (locationSegments.length === 0) {
     return { segments: [] };
   }
 
-  const segmentsAsc = locationSegments
+  const segmentsAsc: SegmentDraft[] = locationSegments
     .map((loc) => ({
       id: loc.id,
       created_at: loc.created_at,
@@ -127,51 +173,30 @@ export function buildGameLogSessions(locationSegments, flatEvents) {
       worldId: loc.worldId,
       worldName: loc.worldName,
       groupName: loc.groupName,
-      duration: loc.time || null,
+      duration: toDuration(loc.time),
       events: [],
     }))
     .sort((a, b) => a.epoch - b.epoch);
 
-  let dedupedEvents = flatEvents;
-  if (flatEvents && flatEvents.length > 0) {
-    const seen = new Set();
-    dedupedEvents = flatEvents.filter((e) => {
-      const key = `${e.type}\0${e.created_at}\0${e.userId || ""}\0${e.location || ""}\0${e.videoUrl || ""}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
+  const dedupedEvents = dedupeFlatEvents(flatEvents);
 
-  const locationMap = new Map();
-  for (let i = 0; i < segmentsAsc.length; i++) {
-    const loc = segmentsAsc[i].location;
-    if (!locationMap.has(loc)) locationMap.set(loc, []);
-    locationMap.get(loc).push(i);
-  }
-
-  if (dedupedEvents && dedupedEvents.length > 0) {
-    for (const event of dedupedEvents) {
-      const eventEpoch = toEpoch(event.created_at);
-      const candidates = event.location ? locationMap.get(event.location) : null;
-      let idx;
-
-      if (candidates && candidates.length > 0) {
-        idx = candidates[0];
-        if (candidates.length > 1) {
-          for (let j = candidates.length - 1; j >= 0; j--) {
-            if (segmentsAsc[candidates[j]].epoch <= eventEpoch + TOLERANCE_MS) {
-              idx = candidates[j];
-              break;
-            }
-          }
-        }
-      } else {
-        idx = findSegmentIndex(eventEpoch, segmentsAsc);
-      }
-
-      segmentsAsc[idx].events.push({ ...event });
+  const locationMap = new Map<string | null | undefined, number[]>();
+  segmentsAsc.forEach((segment, i) => {
+    const indices = locationMap.get(segment.location);
+    if (indices) {
+      indices.push(i);
+    } else {
+      locationMap.set(segment.location, [i]);
     }
+  });
+
+  for (const event of dedupedEvents) {
+    const eventEpoch = toEpoch(event.created_at);
+    const candidates = event.location ? locationMap.get(event.location) : undefined;
+
+    const idx = candidates && candidates.length > 0 ? pickSegmentIndex(candidates, segmentsAsc, eventEpoch) : findSegmentIndex(eventEpoch, segmentsAsc);
+
+    segmentsAsc[idx]?.events.push({ ...event });
   }
 
   for (const seg of segmentsAsc) {
@@ -185,7 +210,7 @@ export function buildGameLogSessions(locationSegments, flatEvents) {
 
   for (const seg of segmentsAsc) {
     const windowEnd = seg.epoch + AGGREGATE_WINDOW_MS;
-    const joinedIds = new Set();
+    const joinedIds = new Set<string>();
     for (const e of seg.events) {
       if (toEpoch(e.created_at) > windowEnd) break;
       if (e.type === "OnPlayerJoined" && e.userId) {
@@ -195,7 +220,7 @@ export function buildGameLogSessions(locationSegments, flatEvents) {
     if (joinedIds.size > 0) {
       for (let i = seg.events.length - 1; i >= 0; i--) {
         const e = seg.events[i];
-        if (toEpoch(e.created_at) > windowEnd) continue;
+        if (!e || toEpoch(e.created_at) > windowEnd) continue;
         if (e.type === "OnPlayerLeft" && e.userId && joinedIds.has(e.userId)) {
           seg.events.splice(i, 1);
         }
@@ -209,7 +234,17 @@ export function buildGameLogSessions(locationSegments, flatEvents) {
     deduplicateVideoPlay(seg.events);
   }
   for (const seg of segmentsAsc) seg.events.reverse();
-  const segments = segmentsAsc.reverse().map(({ epoch: _epoch, ...rest }) => rest);
+
+  const segments: SessionSegment[] = segmentsAsc.reverse().map((seg) => ({
+    id: seg.id,
+    created_at: seg.created_at,
+    location: seg.location,
+    worldId: seg.worldId,
+    worldName: seg.worldName,
+    groupName: seg.groupName,
+    duration: seg.duration,
+    events: seg.events,
+  }));
 
   return { segments };
 }

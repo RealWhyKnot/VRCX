@@ -3,7 +3,40 @@ import { useResizeObserver } from "@vueuse/core";
 
 import { configRepository } from "../../../services/config.ts";
 
-function clamp(value, min, max) {
+type CardScalingOptions = {
+  min?: number;
+  max?: number;
+  step?: number;
+  spacingMin?: number;
+  spacingMax?: number;
+  spacingStep?: number;
+  baseWidth?: number;
+  baseGap?: number;
+  gapStep?: number;
+  configKey?: string;
+  spacingConfigKey?: string;
+  basePaddingY?: number;
+  basePaddingX?: number;
+  baseContentGap?: number;
+  baseActionGap?: number;
+  baseActionGroupGap?: number;
+  baseActionMargin?: number;
+  baseCheckboxMargin?: number;
+  minGap?: number;
+  minPadding?: number;
+  defaultSpacing?: number;
+};
+
+type GridLayoutOptions = {
+  preferredColumns?: number;
+  forceStretch?: boolean;
+  disableAutoStretch?: boolean;
+  matchMaxColumnWidth?: boolean;
+};
+
+const LEADING_FLOAT_PATTERN = /^\s*[+-]?(?:Infinity|\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
+
+function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) {
     return min;
   }
@@ -16,7 +49,12 @@ function clamp(value, min, max) {
   return value;
 }
 
-export function useFavoritesCardScaling(options = {}) {
+function parseLeadingFloat(value: string): number {
+  const match = LEADING_FLOAT_PATTERN.exec(value);
+  return match ? Number(match[0]) : Number.NaN;
+}
+
+export function useFavoritesCardScaling(options: CardScalingOptions = {}) {
   const slider = {
     min: options.min ?? 0.6,
     max: options.max ?? 1,
@@ -45,36 +83,35 @@ export function useFavoritesCardScaling(options = {}) {
 
   const cardScaleBase = ref(1);
   const cardSpacingBase = ref(defaultSpacing);
-  const containerRef = ref(null);
+  const containerRef = ref<HTMLElement | null>(null);
   const containerWidth = ref(0);
 
-  const updateContainerWidth = (el = containerRef.value) => {
-    const element = el ?? containerRef.value;
+  const updateContainerWidth = (element: HTMLElement | null = containerRef.value) => {
     if (!element) {
       containerWidth.value = 0;
       return;
     }
-    containerWidth.value = Math.max(element.clientWidth ?? element.offsetWidth ?? 0, 0);
+    containerWidth.value = Math.max(element.clientWidth, 0);
   };
 
   const cardScale = computed({
     get: () => cardScaleBase.value,
-    set: (value) => {
-      const nextValue = clamp(Number(value) || 1, slider.min, slider.max);
+    set: (value: number) => {
+      const nextValue = clamp(value || 1, slider.min, slider.max);
       cardScaleBase.value = nextValue;
       if (configKey) {
-        configRepository.setString(configKey, String(nextValue));
+        void configRepository.setString(configKey, String(nextValue)).catch((error: unknown) => console.error(error));
       }
     },
   });
 
   const cardSpacing = computed({
     get: () => cardSpacingBase.value,
-    set: (value) => {
-      const nextValue = clamp(Number(value) || 1, spacingSlider.min, spacingSlider.max);
+    set: (value: number) => {
+      const nextValue = clamp(value || 1, spacingSlider.min, spacingSlider.max);
       cardSpacingBase.value = nextValue;
       if (spacingConfigKey) {
-        configRepository.setString(spacingConfigKey, String(nextValue));
+        void configRepository.setString(spacingConfigKey, String(nextValue)).catch((error: unknown) => console.error(error));
       }
     },
   });
@@ -92,18 +129,18 @@ export function useFavoritesCardScaling(options = {}) {
     const actionsMargin = Math.max(0, baseActionMargin * cardScale.value * spacing);
     const checkboxMargin = Math.max(0, baseCheckboxMargin * cardScale.value * spacing);
 
-    return (count = 1, options = {}) => {
-      const width = Math.max(containerWidth.value ?? 0, 0);
-      const itemCount = Math.max(Number(count) || 0, 0);
+    return (count = 1, layoutOptions: GridLayoutOptions = {}) => {
+      const width = Math.max(containerWidth.value, 0);
+      const itemCount = Math.max(count || 0, 0);
       const safeCount = itemCount > 0 ? itemCount : 1;
       const maxColumns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minWidth + gap)) || 1) : 1;
-      const preferredColumns = options?.preferredColumns;
+      const preferredColumns = layoutOptions.preferredColumns;
       const requestedColumns = preferredColumns ? Math.max(1, Math.min(Math.round(preferredColumns), maxColumns)) : maxColumns;
       const columns = Math.max(1, Math.min(safeCount, requestedColumns));
-      const forceStretch = Boolean(options?.forceStretch);
-      const disableAutoStretch = Boolean(options?.disableAutoStretch);
-      const matchMaxColumnWidth = Boolean(options?.matchMaxColumnWidth);
-      const shouldStretch = !disableAutoStretch && (forceStretch || itemCount >= maxColumns);
+      const shouldForceStretch = Boolean(layoutOptions.forceStretch);
+      const shouldDisableAutoStretch = Boolean(layoutOptions.disableAutoStretch);
+      const shouldMatchMaxColumnWidth = Boolean(layoutOptions.matchMaxColumnWidth);
+      const shouldStretch = !shouldDisableAutoStretch && (shouldForceStretch || itemCount >= maxColumns);
 
       let cardWidth = minWidth;
       const maxColumnWidth = maxColumns > 0 ? (width - gap * (maxColumns - 1)) / maxColumns : minWidth;
@@ -114,7 +151,7 @@ export function useFavoritesCardScaling(options = {}) {
         if (Number.isFinite(rawWidth) && rawWidth > 0) {
           cardWidth = Math.max(minWidth, rawWidth);
         }
-      } else if (matchMaxColumnWidth && Number.isFinite(maxColumnWidth) && maxColumnWidth > 0) {
+      } else if (shouldMatchMaxColumnWidth && Number.isFinite(maxColumnWidth) && maxColumnWidth > 0) {
         cardWidth = Math.max(minWidth, maxColumnWidth);
       }
 
@@ -123,7 +160,7 @@ export function useFavoritesCardScaling(options = {}) {
         "--favorites-card-gap": `${Math.round(gap)}px`,
         "--favorites-card-target-width": `${Math.round(cardWidth)}px`,
         "--favorites-grid-columns": `${columns}`,
-        "--favorites-card-scale": `${cardScale.value.toFixed(2)}`,
+        "--favorites-card-scale": cardScale.value.toFixed(2),
         "--favorites-card-padding-y": `${Math.round(paddingY)}px`,
         "--favorites-card-padding-x": `${Math.round(paddingX)}px`,
         "--favorites-card-content-gap": `${Math.round(contentGap)}px`,
@@ -131,7 +168,7 @@ export function useFavoritesCardScaling(options = {}) {
         "--favorites-card-action-group-gap": `${Math.round(actionsGroupGap)}px`,
         "--favorites-card-action-margin": `${Math.round(actionsMargin)}px`,
         "--favorites-card-checkbox-margin": `${Math.round(checkboxMargin)}px`,
-        "--favorites-card-spacing-scale": `${cardSpacing.value.toFixed(2)}`,
+        "--favorites-card-spacing-scale": cardSpacing.value.toFixed(2),
       };
     };
   });
@@ -144,37 +181,37 @@ export function useFavoritesCardScaling(options = {}) {
         return;
       }
 
-      nextTick(() => updateContainerWidth(element));
+      void nextTick(() => updateContainerWidth(element)).catch((error: unknown) => console.error(error));
     },
     { immediate: true }
   );
 
   useResizeObserver(containerRef, (entries) => {
     const [entry] = entries;
-    const width = entry?.contentRect?.width ?? containerRef.value?.clientWidth ?? 0;
+    const width = entry?.contentRect.width ?? containerRef.value?.clientWidth ?? 0;
     containerWidth.value = Math.max(width, 0);
   });
 
-  onBeforeMount(async () => {
-    try {
-      if (configKey) {
-        const storedScale = await configRepository.getString(configKey, "1");
-        const parsedScale = parseFloat(storedScale);
-        if (!Number.isNaN(parsedScale)) {
-          cardScaleBase.value = clamp(parsedScale, slider.min, slider.max);
-        }
+  async function loadCardPreferences() {
+    if (configKey) {
+      const storedScale = await configRepository.getString(configKey, "1");
+      const parsedScale = parseLeadingFloat(storedScale);
+      if (!Number.isNaN(parsedScale)) {
+        cardScaleBase.value = clamp(parsedScale, slider.min, slider.max);
       }
-
-      if (spacingConfigKey) {
-        const storedSpacing = await configRepository.getString(spacingConfigKey, String(defaultSpacing));
-        const parsedSpacing = parseFloat(storedSpacing);
-        if (!Number.isNaN(parsedSpacing)) {
-          cardSpacingBase.value = clamp(parsedSpacing, spacingSlider.min, spacingSlider.max);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load favorites card preferences", error);
     }
+
+    if (spacingConfigKey) {
+      const storedSpacing = await configRepository.getString(spacingConfigKey, String(defaultSpacing));
+      const parsedSpacing = parseLeadingFloat(storedSpacing);
+      if (!Number.isNaN(parsedSpacing)) {
+        cardSpacingBase.value = clamp(parsedSpacing, spacingSlider.min, spacingSlider.max);
+      }
+    }
+  }
+
+  onBeforeMount(() => {
+    void loadCardPreferences().catch((error: unknown) => console.error("Failed to load favorites card preferences", error));
   });
 
   return {

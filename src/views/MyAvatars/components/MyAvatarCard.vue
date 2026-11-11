@@ -48,8 +48,8 @@
                     class="shrink-0 px-1 py-0 rounded-sm leading-tight"
                     :style="{
                       fontSize: `${Math.max(8, Math.round(14 * cardScale))}px`,
-                      borderColor: getTagColor(tagEntry.tag).bg,
-                      color: getTagColor(tagEntry.tag).text,
+                      borderColor: getAvatarTagColor(tagEntry.tag).bg,
+                      color: getAvatarTagColor(tagEntry.tag).text,
                     }"
                   >
                     {{ tagEntry.tag }}
@@ -121,8 +121,8 @@
             variant="outline"
             class="text-xs px-1.5 py-0"
             :style="{
-              borderColor: getTagColor(tagEntry.tag).bg,
-              color: getTagColor(tagEntry.tag).text,
+              borderColor: getAvatarTagColor(tagEntry.tag).bg,
+              color: getAvatarTagColor(tagEntry.tag).text,
             }"
           >
             {{ tagEntry.tag }}
@@ -205,7 +205,7 @@ import Badge from "@/components/ui/badge/Badge.vue";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";
 import Separator from "@/components/ui/separator/Separator.vue";
-import { getTagColor } from "@/shared/constants/tags";
+import { getAvatarTagColor, type AvatarContextAction, type MyAvatar } from "../types";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -214,45 +214,45 @@ const hoverOpen = ref(false);
 const contextMenuOpen = ref(false);
 const imageLoadError = ref(false);
 
-const handleContextMenuOpen = (open) => {
-  contextMenuOpen.value = open;
-  if (open) {
+const handleContextMenuOpen = (isOpen: boolean) => {
+  contextMenuOpen.value = isOpen;
+  if (isOpen) {
     hoverOpen.value = false;
   }
 };
 
-const handleHoverOpen = (open) => {
+const handleHoverOpen = (isOpen: boolean) => {
   if (contextMenuOpen.value) {
     return;
   }
-  hoverOpen.value = open;
+  hoverOpen.value = isOpen;
 };
 
-const props = defineProps({
-  avatar: {
-    type: Object,
-    required: true,
-  },
-  currentAvatarId: {
-    type: String,
-    default: "",
-  },
-  cardScale: {
-    type: Number,
-    default: 0.6,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    avatar: MyAvatar;
+    currentAvatarId?: string;
+    cardScale?: number;
+  }>(),
+  {
+    currentAvatarId: "",
+    cardScale: 0.6,
+  }
+);
 
-const emit = defineEmits(["click", "context-action"]);
+const emit = defineEmits<{
+  click: [];
+  "context-action": [action: AvatarContextAction, avatar: MyAvatar];
+}>();
 
 const isActive = computed(() => props.avatar.id === props.currentAvatarId);
 
 const platformInfo = computed(() => getAvailablePlatforms(props.avatar.unityPackages));
 
 const perfInfo = computed(() => getPlatformInfo(props.avatar.unityPackages));
-const pcPerf = computed(() => perfInfo.value?.pc?.performanceRating ?? "");
-const androidPerf = computed(() => perfInfo.value?.android?.performanceRating ?? "");
-const iosPerf = computed(() => perfInfo.value?.ios?.performanceRating ?? "");
+const pcPerf = computed(() => perfInfo.value.pc.performanceRating ?? "");
+const androidPerf = computed(() => perfInfo.value.android.performanceRating ?? "");
+const iosPerf = computed(() => perfInfo.value.ios.performanceRating ?? "");
 </script>
 
 <style scoped>

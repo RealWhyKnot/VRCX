@@ -19,7 +19,7 @@
                   :model-value="newInstanceDialog.accessType"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.accessType = value;
+                      newInstanceDialog.accessType = String(value);
                       buildInstance();
                     }
                   "
@@ -44,7 +44,7 @@
                   :model-value="newInstanceDialog.groupAccessType"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.groupAccessType = value;
+                      newInstanceDialog.groupAccessType = String(value);
                       buildInstance();
                     }
                   "
@@ -76,7 +76,7 @@
                   :model-value="newInstanceDialog.region"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.region = value;
+                      newInstanceDialog.region = String(value);
                       buildInstance();
                     }
                   "
@@ -108,7 +108,7 @@
                   size="sm"
                   :maxlength="128"
                   show-count
-                  @click="$event.target.tagName === 'INPUT' && $event.target.select()"
+                  @click="selectInputText"
                   @change="buildInstance"
                 />
               </FieldContent>
@@ -134,7 +134,7 @@
                     <SelectGroup>
                       <SelectItem value="none">{{ t("dialog.new_instance.none") }}</SelectItem>
                       <SelectItem v-for="category in instanceCategories" :key="category.id" :value="category.id">
-                        <i v-if="instanceCategoryIcons[category.iconUrl]" :class="instanceCategoryIcons[category.iconUrl]" />
+                        <i v-if="categoryIconClass(category.iconUrl)" :class="categoryIconClass(category.iconUrl)" />
                         {{ category.name }}
                       </SelectItem>
                     </SelectGroup>
@@ -222,7 +222,7 @@
                   <template #item="{ item, selected }">
                     <div class="flex w-full items-center p-1.5 text-[13px]">
                       <div class="relative inline-block flex-none size-9 mr-2.5">
-                        <img class="size-full rounded-full object-cover" :src="item.iconUrl" loading="lazy" />
+                        <img class="size-full rounded-full object-cover" :src="groupIconUrl(item)" loading="lazy" />
                       </div>
                       <div class="flex-1 overflow-hidden">
                         <span class="block truncate font-medium leading-[18px]" v-text="item.label"></span>
@@ -250,7 +250,7 @@
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem v-for="role in newInstanceDialog.selectedGroupRoles" :key="role.id" :value="role.id">
+                      <SelectItem v-for="role in newInstanceDialog.selectedGroupRoles" :key="role.id ?? ''" :value="role.id ?? ''">
                         {{ role.name }}
                       </SelectItem>
                     </SelectGroup>
@@ -262,12 +262,7 @@
               <Field>
                 <FieldLabel>{{ t("dialog.new_instance.location") }}</FieldLabel>
                 <FieldContent>
-                  <InputGroupField
-                    v-model="newInstanceDialog.location"
-                    size="sm"
-                    readonly
-                    @click="$event.target.tagName === 'INPUT' && $event.target.select()"
-                  />
+                  <InputGroupField v-model="newInstanceDialog.location" size="sm" readonly @click="selectInputText" />
                 </FieldContent>
               </Field>
               <Field>
@@ -292,7 +287,7 @@
                   :model-value="newInstanceDialog.accessType"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.accessType = value;
+                      newInstanceDialog.accessType = String(value);
                       buildLegacyInstance();
                     }
                   "
@@ -317,7 +312,7 @@
                   :model-value="newInstanceDialog.groupAccessType"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.groupAccessType = value;
+                      newInstanceDialog.groupAccessType = String(value);
                       buildLegacyInstance();
                     }
                   "
@@ -339,7 +334,7 @@
                   :model-value="newInstanceDialog.region"
                   @update:model-value="
                     (value) => {
-                      newInstanceDialog.region = value;
+                      newInstanceDialog.region = String(value);
                       buildLegacyInstance();
                     }
                   "
@@ -360,12 +355,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.new_instance.world_id") }}</FieldLabel>
               <FieldContent>
-                <InputGroupField
-                  v-model="newInstanceDialog.worldId"
-                  size="sm"
-                  @click="$event.target.tagName === 'INPUT' && $event.target.select()"
-                  @change="buildLegacyInstance"
-                />
+                <InputGroupField v-model="newInstanceDialog.worldId" size="sm" @click="selectInputText" @change="buildLegacyInstance" />
               </FieldContent>
             </Field>
             <Field>
@@ -397,15 +387,15 @@
                 >
                   <template #item="{ item, selected }">
                     <div class="flex w-full items-center p-1.5 text-[13px]">
-                      <template v-if="item.user">
-                        <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(item.user)">
-                          <img class="size-full rounded-full object-cover" :src="userImage(item.user)" loading="lazy" />
+                      <template v-if="creatorUser(item)">
+                        <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(creatorUser(item))">
+                          <img class="size-full rounded-full object-cover" :src="userImage(creatorUser(item))" loading="lazy" />
                         </div>
                         <div class="flex-1 overflow-hidden">
                           <span
-                            class="block truncate font-medium leading-[18px]"
-                            :style="{ color: item.user.$userColour }"
-                            v-text="item.user.displayName"
+                            class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+                            :style="{ '--user-colour': creatorUser(item)?.$userColour }"
+                            v-text="creatorUser(item)?.displayName"
                           ></span>
                         </div>
                       </template>
@@ -435,7 +425,7 @@
                   <template #item="{ item, selected }">
                     <div class="flex w-full items-center p-1.5 text-[13px]">
                       <div class="relative inline-block flex-none size-9 mr-2.5">
-                        <img class="size-full rounded-full object-cover" :src="item.iconUrl" loading="lazy" />
+                        <img class="size-full rounded-full object-cover" :src="groupIconUrl(item)" loading="lazy" />
                       </div>
                       <div class="flex-1 overflow-hidden">
                         <span class="block truncate font-medium leading-[18px]" v-text="item.label"></span>
@@ -449,7 +439,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.new_instance.location") }}</FieldLabel>
               <FieldContent>
-                <InputGroupField v-model="newInstanceDialog.location" size="sm" readonly @click="$event.target.tagName === 'INPUT' && $event.target.select()" />
+                <InputGroupField v-model="newInstanceDialog.location" size="sm" readonly @click="selectInputText" />
               </FieldContent>
             </Field>
             <Field>
@@ -551,7 +541,9 @@ import SelectItem from "../../ui/select/SelectItem.vue";
 import SelectTrigger from "../../ui/select/SelectTrigger.vue";
 import SelectValue from "../../ui/select/SelectValue.vue";
 import { useFriendStore } from "../../../stores/friend";
+import type { FriendContext } from "../../../stores/friend-types";
 import { useGroupStore } from "../../../stores/group";
+import { logFailure } from "../../../stores/log-failure";
 import { useInviteStore } from "../../../stores/invite";
 import { useLaunchStore } from "../../../stores/launch";
 import { useLocationStore } from "../../../stores/location";
@@ -564,16 +556,14 @@ import VirtualCombobox from "../../ui/virtual-combobox/VirtualCombobox.vue";
 import { useNewInstanceBuilder } from "./use-new-instance-builder";
 
 import InviteDialog from "../InviteDialog/InviteDialog.vue";
+import type { InviteDialogState } from "../InviteDialog/invite-dialog-types";
 import { useUserDisplay } from "../../../composables/use-user-display";
 
 const { userImage, userStatusClass } = useUserDisplay();
 
-const props = defineProps({
-  newInstanceDialogLocationTag: {
-    type: String,
-    required: true,
-  },
-});
+const props = defineProps<{
+  newInstanceDialogLocationTag: string;
+}>();
 const newInstanceTabs = computed(() => [
   { value: "Normal", label: t("dialog.new_instance.normal") },
   { value: "Legacy", label: t("dialog.new_instance.legacy") },
@@ -586,6 +576,7 @@ const { currentUserGroups } = storeToRefs(useGroupStore());
 const { lastLocation } = storeToRefs(useLocationStore());
 const { showLaunchDialog, tryOpenInstanceInVrc } = useLaunchStore();
 const { currentUser, subsetOfLanguages } = storeToRefs(useUserStore());
+const { cachedUsers } = useUserStore();
 const { canOpenInstanceInGame } = useInviteStore();
 
 const {
@@ -603,32 +594,42 @@ const {
   instanceVibes,
 } = useNewInstanceBuilder(toRef(props, "newInstanceDialogLocationTag"));
 
+function selectInputText(event: MouseEvent) {
+  const target = event.target;
+  if (target instanceof HTMLInputElement) {
+    target.select();
+  }
+}
+
+function categoryIconClass(iconUrl: string): string | undefined {
+  const icons: Record<string, string | undefined> = instanceCategoryIcons;
+  return icons[iconUrl];
+}
+
 const canAgeGate = computed(() => {
   if (newInstanceDialog.value.accessType === "group") {
     return hasGroupPermission(newInstanceDialog.value.groupRef, "group-instance-age-gated-create");
   }
-  return currentUser.value?.ageVerificationStatus === "18+";
+  return currentUser.value.ageVerificationStatus === "18+";
 });
 
 const languageOptions = computed(() =>
-  Object.entries(subsetOfLanguages.value ?? {}).map(([value, label]) => ({
+  Object.entries(subsetOfLanguages.value).map(([value, label]) => ({
     value,
     label,
   }))
 );
 
-const selectedLanguageSummary = computed(() =>
-  (newInstanceDialog.value.languages ?? []).map((language) => subsetOfLanguages.value?.[language] ?? language).join(", ")
-);
+const selectedLanguageSummary = computed(() => newInstanceDialog.value.languages.map((language) => subsetOfLanguages.value[language] ?? language).join(", "));
 
 const selectedCategoryName = computed(() => instanceCategories.value.find((category) => category.id === newInstanceDialog.value.categoryId)?.name);
 
 const selectedVibeSummary = computed(() => {
   const vibeById = new Map(instanceVibes.value.map((vibe) => [vibe.id, vibe.title]));
-  return (newInstanceDialog.value.vibeIds ?? []).map((id) => vibeById.get(id) ?? id).join(", ");
+  return newInstanceDialog.value.vibeIds.map((id) => vibeById.get(id) ?? id).join(", ");
 });
 
-const inviteDialog = ref({
+const inviteDialog = ref<InviteDialogState>({
   visible: false,
   loading: false,
   worldId: "",
@@ -639,9 +640,6 @@ const inviteDialog = ref({
 
 const instanceCreatableGroups = computed(() => {
   return Array.from(currentUserGroups.value.values()).filter((group) => {
-    if (!group) {
-      return false;
-    }
     return (
       hasGroupPermission(group, "group-instance-public-create") ||
       hasGroupPermission(group, "group-instance-plus-create") ||
@@ -650,15 +648,22 @@ const instanceCreatableGroups = computed(() => {
   });
 });
 
+const groupIconUrlById = computed(
+  () => new Map<string, string | undefined>(Array.from(currentUserGroups.value.values()).map((group) => [String(group.id), group.iconUrl ?? undefined]))
+);
+
+function groupIconUrl(item: { value: string | number }) {
+  return groupIconUrlById.value.get(String(item.value));
+}
+
 const normalGroupPickerGroups = computed(() => [
   {
     key: "instanceCreatableGroups",
     label: t("dialog.new_instance.group_placeholder"),
     items: instanceCreatableGroups.value.map((group) => ({
       value: String(group.id),
-      label: group.name,
-      search: group.name,
-      iconUrl: group.iconUrl,
+      label: group.name ?? "",
+      search: group.name ?? "",
     })),
   },
 ]);
@@ -671,20 +676,19 @@ const legacyGroupPickerGroups = computed(() => [
       .filter(Boolean)
       .map((group) => ({
         value: String(group.id),
-        label: group.name,
-        search: group.name,
-        iconUrl: group.iconUrl,
+        label: group.name ?? "",
+        search: group.name ?? "",
       })),
   },
 ]);
 
 const selectedRoleSummary = computed(() => {
-  const roleIds = newInstanceDialog.value.roleIds ?? [];
+  const roleIds = newInstanceDialog.value.roleIds;
   if (!Array.isArray(roleIds) || roleIds.length === 0) {
     return "";
   }
-  const roleById = new Map((newInstanceDialog.value.selectedGroupRoles ?? []).map((r) => [r.id, r.name]));
-  const names = roleIds.map((id) => roleById.get(id) ?? String(id));
+  const roleById = new Map(newInstanceDialog.value.selectedGroupRoles.map((r) => [r.id, r.name]));
+  const names = roleIds.map((id) => roleById.get(id) ?? id);
   return names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
 });
 
@@ -712,54 +716,71 @@ const friendSections = computed(() => [
 ]);
 
 const friendById = computed(() => {
-  const map = new Map();
+  const map = new Map<string, FriendContext>();
   for (const section of friendSections.value) {
-    for (const friend of section.friends ?? []) {
+    for (const friend of section.friends) {
       map.set(friend.id, friend);
     }
   }
   return map;
 });
 
-function resolveUserDisplayName(userId) {
-  if (currentUser.value?.id && currentUser.value.id === userId) {
+type CreatorUser = NonNullable<FriendContext["ref"]>;
+
+const creatorUserById = computed(() => {
+  const map = new Map<string, CreatorUser>();
+  const self = cachedUsers.get(currentUser.value.id);
+  if (self) {
+    map.set(currentUser.value.id, self);
+  }
+  for (const section of friendSections.value) {
+    for (const friend of section.friends) {
+      if (friend.ref) {
+        map.set(friend.id, friend.ref);
+      }
+    }
+  }
+  return map;
+});
+
+function creatorUser(item: { value: string | number }) {
+  return creatorUserById.value.get(String(item.value));
+}
+
+function resolveUserDisplayName(userId: string) {
+  if (currentUser.value.id && currentUser.value.id === userId) {
     return currentUser.value.displayName;
   }
   const friend = friendById.value.get(userId);
-  return friend?.ref?.displayName ?? friend?.name ?? String(userId);
+  return friend?.ref?.displayName ?? friend?.name ?? userId;
 }
 
 const creatorPickerGroups = computed(() => {
-  const groups = [];
+  const groups: { key: string; label: string; items: { value: string; label: string; search: string }[] }[] = [];
 
-  if (currentUser.value) {
-    groups.push({
-      key: "me",
-      label: t("side_panel.me"),
-      items: [
-        {
-          value: String(currentUser.value.id),
-          label: currentUser.value.displayName,
-          search: currentUser.value.displayName,
-          user: currentUser.value,
-        },
-      ],
-    });
-  }
+  groups.push({
+    key: "me",
+    label: t("side_panel.me"),
+    items: [
+      {
+        value: currentUser.value.id,
+        label: currentUser.value.displayName,
+        search: currentUser.value.displayName,
+      },
+    ],
+  });
 
-  const addFriendGroup = ({ key, label, friends }) => {
-    if (!friends?.length) return;
+  const addFriendGroup = ({ key, label, friends }: { key: string; label: string; friends: FriendContext[] }) => {
+    if (!friends.length) return;
     groups.push({
       key,
       label,
       items: friends.map((friend) => {
-        const user = friend?.ref ?? null;
         const displayName = resolveUserDisplayName(friend.id);
         return {
-          value: String(friend.id),
+          value: friend.id,
           label: displayName,
           search: displayName,
-          user,
         };
       }),
     });
@@ -774,12 +795,12 @@ function closeInviteDialog() {
   inviteDialog.value.visible = false;
 }
 
-function showInviteDialog(tag) {
+function showInviteDialog(tag: string) {
   if (!isRealInstance(tag)) {
     return;
   }
   const L = parseLocation(tag);
-  queryRequest
+  void queryRequest
     .fetch("world", {
       worldId: L.worldId,
     })
@@ -798,20 +819,21 @@ function showInviteDialog(tag) {
         D.friendsInInstance.push(ctx);
       }
       D.visible = true;
-    });
+    })
+    .catch(logFailure("Loading the world for the invite dialog failed:"));
 }
 
-function handleAttachGame(location, shortName) {
-  tryOpenInstanceInVrc(location, shortName);
+function handleAttachGame(location: string, shortName: string) {
+  void tryOpenInstanceInVrc(location, shortName).catch(logFailure("Opening the instance in VRChat failed:"));
   closeInviteDialog();
 }
 
-function selfInvite(location) {
+function selfInvite(location: string) {
   const L = parseLocation(location);
   if (!L.isRealInstance) {
     return;
   }
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: L.instanceId,
       worldId: L.worldId,
@@ -819,27 +841,29 @@ function selfInvite(location) {
     .then((args) => {
       toast.success(t("message.invite.self_sent"));
       return args;
-    });
+    })
+    .catch(logFailure("Sending the self invite failed:"));
 }
 
-async function copyInstanceUrl(location) {
+async function copyInstanceUrl(location: string) {
   const L = parseLocation(location);
   const args = await instanceRequest.getInstanceShortName({
     worldId: L.worldId,
     instanceId: L.instanceId,
   });
-  if (args.json) {
+  if (args.json.shortName) {
+    L.shortName = args.json.shortName;
+  }
+  const resLocation = `${args.instance.worldId}:${args.instance.instanceId}`;
+  if (resLocation === newInstanceDialog.value.location) {
+    const shortName = args.json.shortName ?? "";
+    let secureOrShortName = args.json.secureName;
     if (args.json.shortName) {
-      L.shortName = args.json.shortName;
+      secureOrShortName = args.json.shortName;
     }
-    const resLocation = `${args.instance.worldId}:${args.instance.instanceId}`;
-    if (resLocation === newInstanceDialog.value.location) {
-      const shortName = args.json.shortName;
-      const secureOrShortName = args.json.shortName || args.json.secureName;
-      newInstanceDialog.value.shortName = shortName;
-      newInstanceDialog.value.secureOrShortName = secureOrShortName;
-      updateNewInstanceDialog(true);
-    }
+    newInstanceDialog.value.shortName = shortName;
+    newInstanceDialog.value.secureOrShortName = secureOrShortName;
+    updateNewInstanceDialog(true);
   }
   const newUrl = getLaunchURL(L);
   copyToClipboard(newUrl);

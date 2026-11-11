@@ -1,6 +1,7 @@
+import type { NavDefinition, NavLayoutEntry, NavLayoutItemEntry, NavTranslate } from "./nav-menu-types";
 import { DASHBOARD_NAV_KEY_PREFIX } from "../../shared/constants/dashboard";
 
-export function createBaseDefaultNavLayout(t) {
+export function createBaseDefaultNavLayout(t: NavTranslate): NavLayoutEntry[] {
   return [
     { type: "item", key: "feed" },
     { type: "item", key: "friends-locations" },
@@ -38,9 +39,9 @@ export function createBaseDefaultNavLayout(t) {
   ];
 }
 
-export function insertDashboardEntries(layout, dashboardDefinitions) {
-  const nextLayout = Array.isArray(layout) ? [...layout] : [];
-  const dashboardEntries = (dashboardDefinitions || []).map((def) => ({
+export function insertDashboardEntries(layout: NavLayoutEntry[], dashboardDefinitions: NavDefinition[]): NavLayoutEntry[] {
+  const nextLayout = [...layout];
+  const dashboardEntries = dashboardDefinitions.map((def): NavLayoutItemEntry => ({
     type: "item",
     key: def.key,
   }));
@@ -60,6 +61,6 @@ export function insertDashboardEntries(layout, dashboardDefinitions) {
   return nextLayout;
 }
 
-export function isDashboardNavKey(key) {
-  return String(key || "").startsWith(DASHBOARD_NAV_KEY_PREFIX);
+export function isDashboardNavKey(key: string | null | undefined): boolean {
+  return (key ?? "").startsWith(DASHBOARD_NAV_KEY_PREFIX);
 }

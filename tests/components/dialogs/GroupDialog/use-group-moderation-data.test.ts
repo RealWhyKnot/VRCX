@@ -1,16 +1,19 @@
 import { reactive, ref } from "vue";
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+import type { GroupMemberRecord } from "../../../../src/coordinators/group-coordinator";
+import type { GroupMemberModerationTable } from "../../../../src/stores/group-types";
+import type { ModerationLogRow, ModerationRow, ModerationTables } from "../../../../src/components/dialogs/GroupDialog/group-moderation-types";
 
 vi.mock("vue-sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
   return {
     useI18n: () => ({
-      t: (key) => key,
+      t: (key: string) => key,
       locale: vue.ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: vue.ref("en") },
+      global: { t: (key: string) => key, locale: vue.ref("en") },
       install: vi.fn(),
     }),
   };
@@ -33,7 +36,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref: vRef } = vue;
   return {
     ...actual,
@@ -59,13 +62,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_k: string, d?: string) => d ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_k: string, isDefault?: boolean) => isDefault ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_k: string, d?: number) => d ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_k: string, d?: number) => d ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -95,33 +98,40 @@ vi.mock("../../../../src/api/user", () => ({
 }));
 vi.mock("../../../../src/api/query-request", () => ({
   queryRequest: {
-    fetch: vi.fn(),
+    fetch: (...args: unknown[]) => mockQueryFetch(...args),
   },
 }));
 
 vi.mock("worker-timers", () => ({
-  setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
-  clearTimeout: (id) => globalThis.clearTimeout(id),
+  get setTimeout() {
+    return globalThis.setTimeout;
+  },
+  get clearTimeout() {
+    return globalThis.clearTimeout;
+  },
 }));
 
 import { useGroupModerationData } from "../../../../src/components/dialogs/GroupDialog/use-group-moderation-data";
-import { queryRequest } from "../../../../src/api/query-request";
 
-function createTables() {
+const mockQueryFetch = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+
+function createTables(): ModerationTables {
   return {
-    members: reactive({ data: [], pageSize: 15 }),
-    bans: reactive({
+    members: reactive<GroupMemberModerationTable<ModerationRow>>({ data: [], pageSize: 15, pageIndex: 0 }),
+    bans: reactive<GroupMemberModerationTable<ModerationRow>>({
       data: [],
       filters: [{ prop: ["$displayName"], value: "" }],
       pageSize: 15,
+      pageIndex: 0,
     }),
-    invites: reactive({ data: [], pageSize: 15 }),
-    joinRequests: reactive({ data: [], pageSize: 15 }),
-    blocked: reactive({ data: [], pageSize: 15 }),
-    logs: reactive({
+    invites: reactive<GroupMemberModerationTable<ModerationRow>>({ data: [], pageSize: 15, pageIndex: 0 }),
+    joinRequests: reactive<GroupMemberModerationTable<ModerationRow>>({ data: [], pageSize: 15, pageIndex: 0 }),
+    blocked: reactive<GroupMemberModerationTable<ModerationRow>>({ data: [], pageSize: 15, pageIndex: 0 }),
+    logs: reactive<GroupMemberModerationTable<ModerationLogRow>>({
       data: [],
       filters: [{ prop: ["description"], value: "" }],
       pageSize: 15,
+      pageIndex: 0,
     }),
   };
 }
@@ -135,7 +145,7 @@ function createDeps(overrides = {}) {
       groupRef: { memberCount: 10, roles: [] },
     }),
     currentUser: ref({ id: "usr_self" }),
-    applyGroupMember: vi.fn((json) => json),
+    applyGroupMember: vi.fn((json: GroupMemberRecord) => json),
     handleGroupMember: vi.fn(),
     tables,
     selection: {
@@ -158,7 +168,7 @@ function createDeps(overrides = {}) {
 describe("useGroupModerationData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryRequest.fetch.mockReset();
+    mockQueryFetch.mockReset();
   });
 
   describe("getAllGroupBans", () => {
@@ -378,7 +388,7 @@ describe("useGroupModerationData", () => {
       await addGroupMemberToSelection("usr_1");
 
       expect(deps.selection.setSelectedUsers).toHaveBeenCalledWith("usr_1", member);
-      expect(queryRequest.fetch).not.toHaveBeenCalled();
+      expect(mockQueryFetch).not.toHaveBeenCalled();
     });
 
     test("falls back to user API when member has no user object", async () => {
@@ -388,14 +398,14 @@ describe("useGroupModerationData", () => {
         params: {},
       });
       deps.applyGroupMember.mockReturnValue({ userId: "usr_1" });
-      queryRequest.fetch.mockResolvedValue({
+      mockQueryFetch.mockResolvedValue({
         json: { id: "usr_1", displayName: "Alice" },
       });
 
       const { addGroupMemberToSelection } = useGroupModerationData(deps);
       await addGroupMemberToSelection("usr_1");
 
-      expect(queryRequest.fetch).toHaveBeenCalledWith("user.dialog", {
+      expect(mockQueryFetch).toHaveBeenCalledWith("user.dialog", {
         userId: "usr_1",
       });
       expect(deps.selection.setSelectedUsers).toHaveBeenCalledWith(
@@ -476,7 +486,7 @@ describe("useGroupModerationData", () => {
     test("ignores stale responses after the query changed", async () => {
       vi.useFakeTimers();
       const deps = createDeps();
-      let resolveFirst;
+      let resolveFirst: ((value: unknown) => void) | undefined;
       deps.groupRequest.getGroupMembersSearch
         .mockImplementationOnce(
           () =>
@@ -500,7 +510,8 @@ describe("useGroupModerationData", () => {
 
       expect(deps.tables.members.data).toEqual([{ userId: "usr_new", $selected: false }]);
 
-      resolveFirst({
+      expect(resolveFirst).toBeDefined();
+      resolveFirst?.({
         json: { results: [{ userId: "usr_stale" }] },
         params: { groupId: "grp_test" },
       });
@@ -513,7 +524,7 @@ describe("useGroupModerationData", () => {
       vi.useFakeTimers();
       const deps = createDeps();
       deps.groupRequest.getGroupMember.mockResolvedValue({
-        json: null,
+        json: { userId: "usr_self", user: { displayName: "Self User" } },
         params: {},
       });
       const firstPage = Array.from({ length: 100 }, (_, i) => ({
@@ -531,7 +542,7 @@ describe("useGroupModerationData", () => {
         });
 
       const { setGroupMemberSortOrder, groupMembersSearch, memberSearch } = useGroupModerationData(deps);
-      await setGroupMemberSortOrder({ id: "x", name: "sort", value: "joinedAt:asc" });
+      await setGroupMemberSortOrder({ name: "sort", value: "joinedAt:asc" });
 
       memberSearch.value = "jam";
       deps.groupRequest.getGroupMembersSearch.mockResolvedValue({

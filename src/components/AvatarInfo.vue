@@ -18,16 +18,26 @@ import { useI18n } from "vue-i18n";
 
 import TooltipWrapper from "./ui/tooltip/TooltipWrapper.vue";
 import { getAvatarName, showAvatarAuthorDialog } from "../coordinators/avatar-coordinator";
+import { logFailure } from "../stores/log-failure";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  imageurl: String,
-  userid: String,
-  hintownerid: String,
-  hintavatarname: [String, Object],
-  avatartags: Array,
-});
+const props = withDefaults(
+  defineProps<{
+    imageurl?: string | undefined;
+    userid?: string | undefined;
+    hintownerid?: string | undefined;
+    hintavatarname?: string | Record<string, unknown> | undefined;
+    avatartags?: string[] | undefined;
+  }>(),
+  {
+    imageurl: undefined,
+    userid: undefined,
+    hintownerid: undefined,
+    hintavatarname: undefined,
+    avatartags: undefined,
+  }
+);
 
 const avatarName = ref("");
 const avatarType = ref("");
@@ -66,13 +76,13 @@ const parse = async () => {
   }
 
   if (Array.isArray(props.avatartags)) {
-    avatarTags.value = props.avatartags.map((tag) => String(tag).replace("content_", "")).join(", ");
+    avatarTags.value = props.avatartags.map((tag) => tag.replace("content_", "")).join(", ");
   }
 };
 
 const confirm = () => {
   if (!props.imageurl) return;
-  showAvatarAuthorDialog(props.userid, ownerId, props.imageurl);
+  void showAvatarAuthorDialog(props.userid, ownerId, props.imageurl).catch(logFailure("Failed to show avatar author:"));
 };
 
 watch([() => props.imageurl, () => props.userid, () => props.avatartags], parse, { immediate: true });

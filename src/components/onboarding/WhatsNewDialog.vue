@@ -133,12 +133,16 @@ const hueMap = {
   "mouse-pointer-click": "45",
 };
 
-function resolveIcon(iconName) {
-  return iconMap[iconName] ?? Search;
+type IconName = keyof typeof iconMap;
+
+const isIconName = (name: string): name is IconName => Object.hasOwn(iconMap, name);
+
+function resolveIcon(iconName: string) {
+  return isIconName(iconName) ? iconMap[iconName] : Search;
 }
 
-function resolveHue(iconName) {
-  return hueMap[iconName] ?? "210";
+function resolveHue(iconName: string): string {
+  return isIconName(iconName) ? hueMap[iconName] : "210";
 }
 
 async function handleViewChangelog() {

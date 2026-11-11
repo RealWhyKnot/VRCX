@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, type DOMWrapper } from "@vue/test-utils";
 const mocks = vi.hoisted(() => ({
-  makeRef: (value) => ({ value, __v_isRef: true }),
-  handleSessionsEventFilterChange: vi.fn(),
-  toggleSessionsVipFilter: vi.fn(),
-  setSessionsSearch: vi.fn(),
-  setSessionsDateRange: vi.fn(),
-  clearSessionsDateRange: vi.fn(),
-  loadMoreSessionsSegments: vi.fn(),
+  makeRef: <T>(value: T) => ({ value, __v_isRef: true }),
+  handleSessionsEventFilterChange: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  toggleSessionsVipFilter: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  setSessionsSearch: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  setSessionsDateRange: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  clearSessionsDateRange: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  loadMoreSessionsSegments: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
 }));
 
-const sessionsSegments = mocks.makeRef([]);
+const sessionsSegments = mocks.makeRef<unknown[]>([]);
 const sessionsLoading = mocks.makeRef(false);
 const sessionsHasMore = mocks.makeRef(false);
 const sessionsVipFilter = mocks.makeRef(false);
@@ -23,12 +23,12 @@ const sessionsDateRangeMaxDays = mocks.makeRef(7);
 const weekStartsOn = mocks.makeRef(0);
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: <T>(store: T) => store,
 }));
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
     locale: "en-US",
   }),
 }));
@@ -36,8 +36,8 @@ vi.mock("vue-i18n", () => ({
 vi.mock("@internationalized/date", () => ({
   getLocalTimeZone: () => "UTC",
   today: () => ({}),
-  fromDate: (date) => date,
-  toDate: (date) => date,
+  fromDate: (date: unknown) => date,
+  toDate: (date: unknown) => date,
 }));
 
 vi.mock("../../../src/stores/gameLog", () => ({
@@ -52,12 +52,12 @@ vi.mock("../../../src/stores/gameLog", () => ({
     sessionsEventFilterSelection,
     sessionsEventFilterTypes,
     sessionsDateRangeMaxDays,
-    toggleSessionsVipFilter: (...args) => mocks.toggleSessionsVipFilter(...args),
-    handleSessionsEventFilterChange: (...args) => mocks.handleSessionsEventFilterChange(...args),
-    setSessionsSearch: (...args) => mocks.setSessionsSearch(...args),
-    setSessionsDateRange: (...args) => mocks.setSessionsDateRange(...args),
-    clearSessionsDateRange: (...args) => mocks.clearSessionsDateRange(...args),
-    loadMoreSessionsSegments: (...args) => mocks.loadMoreSessionsSegments(...args),
+    toggleSessionsVipFilter: (...args: unknown[]) => mocks.toggleSessionsVipFilter(...args),
+    handleSessionsEventFilterChange: (...args: unknown[]) => mocks.handleSessionsEventFilterChange(...args),
+    setSessionsSearch: (...args: unknown[]) => mocks.setSessionsSearch(...args),
+    setSessionsDateRange: (...args: unknown[]) => mocks.setSessionsDateRange(...args),
+    clearSessionsDateRange: (...args: unknown[]) => mocks.clearSessionsDateRange(...args),
+    loadMoreSessionsSegments: (...args: unknown[]) => mocks.loadMoreSessionsSegments(...args),
   }),
 }));
 vi.mock("../../../src/stores/settings/appearance", () => ({
@@ -160,7 +160,7 @@ vi.mock("lucide-vue-next", () => ({
 
 import GameLogSessions from "../../../src/views/GameLog/components/GameLogSessions.vue";
 
-function clickButtonByText(wrapper, text) {
+function clickButtonByText(wrapper: { findAll: (selector: string) => DOMWrapper<Element>[] }, text: string) {
   const button = wrapper.findAll("button").find((node) => node.text().includes(text));
   if (!button) {
     throw new Error(`Cannot find button with text: ${text}`);
@@ -180,10 +180,13 @@ describe("GameLogSessions.vue", () => {
     mocks.setSessionsDateRange.mockReset();
     mocks.clearSessionsDateRange.mockReset();
     mocks.loadMoreSessionsSegments.mockReset();
-    global.IntersectionObserver = class {
-      disconnect() {}
-      observe() {}
-    };
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        disconnect = vi.fn();
+        observe = vi.fn();
+      }
+    );
   });
 
   test("updates event filters via toggle group", async () => {
@@ -211,7 +214,7 @@ describe("GameLogSessions.vue", () => {
     await clickButtonByText(wrapper, "common.actions.confirm");
 
     expect(mocks.setSessionsDateRange).toHaveBeenCalledTimes(1);
-    expect(mocks.setSessionsDateRange.mock.calls[0][0]).toContain("T");
-    expect(mocks.setSessionsDateRange.mock.calls[0][1]).toContain("T");
+    expect(mocks.setSessionsDateRange.mock.calls[0]?.[0]).toContain("T");
+    expect(mocks.setSessionsDateRange.mock.calls[0]?.[1]).toContain("T");
   });
 });

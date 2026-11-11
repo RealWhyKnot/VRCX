@@ -3,24 +3,24 @@ import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  openExternalLink: vi.fn(),
-  getVRChatResolution: vi.fn((res) => res),
+  openExternalLink: vi.fn<(...args: unknown[]) => void>(),
+  getVRChatResolution: vi.fn((res: string) => res),
   toast: {
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
   },
   appApi: {
-    ReadConfigFileSafe: vi.fn().mockResolvedValue(null),
-    WriteConfigFile: vi.fn(),
+    ReadConfigFileSafe: vi.fn<() => Promise<string>>().mockResolvedValue(""),
+    WriteConfigFile: vi.fn<(json: string) => Promise<void>>().mockResolvedValue(undefined),
   },
   assetBundleManager: {
-    DeleteAllCache: vi.fn().mockResolvedValue(undefined),
+    DeleteAllCache: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   },
-  sweepVRChatCache: vi.fn(),
-  getVRChatCacheSize: vi.fn(),
-  folderSelectorDialog: vi.fn().mockResolvedValue(null),
-  confirm: vi.fn().mockResolvedValue({ ok: false }),
+  sweepVRChatCache: vi.fn<(...args: unknown[]) => void>(),
+  getVRChatCacheSize: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  folderSelectorDialog: vi.fn<(oldPath?: string | null) => Promise<string | null>>().mockResolvedValue(null),
+  confirm: vi.fn<(options: unknown) => Promise<{ ok: boolean }>>().mockResolvedValue({ ok: false }),
 }));
 
 const isVRChatConfigDialogVisible = ref(false);
@@ -29,22 +29,14 @@ const VRChatTotalCacheSize = ref("30");
 const VRChatCacheSizeLoading = ref(false);
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => {
-    const result = {};
-    for (const key in store) {
-      if (store[key] && typeof store[key] === "object" && "__v_isRef" in store[key]) {
-        result[key] = store[key];
-      }
-    }
-    return result;
-  },
-  defineStore: (id, fn) => fn,
+  storeToRefs: (store: unknown) => store,
+  defineStore: (_id: string, setup: unknown) => setup,
 }));
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
-    locale: require("vue").ref("en"),
+    t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key),
+    locale: ref("en"),
   }),
 }));
 
@@ -69,14 +61,14 @@ vi.mock("../../../../src/stores/modal", () => ({
 }));
 
 vi.mock("../../../../src/shared/utils/app-actions", () => ({
-  openExternalLink: (...args) => mocks.openExternalLink(...args),
+  openExternalLink: (...args: unknown[]) => mocks.openExternalLink(...args),
 }));
 vi.mock("../../../../src/shared/utils/setting", () => ({
-  getVRChatResolution: (...args) => mocks.getVRChatResolution(...args),
+  getVRChatResolution: (res: string) => mocks.getVRChatResolution(res),
 }));
 
 vi.mock("../../../../src/shared/constants/settings", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("../../../../src/shared/constants/settings")>();
   return {
     ...actual,
     VRChatCameraResolutions: [
@@ -97,11 +89,11 @@ vi.mock("vue-sonner", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/game-coordinator", () => ({
-  runSweepVRChatCacheFlow: (...args) => mocks.sweepVRChatCache(...args),
+  runSweepVRChatCacheFlow: (...args: unknown[]) => mocks.sweepVRChatCache(...args),
 }));
 
-globalThis.AppApi = mocks.appApi;
-globalThis.AssetBundleManager = mocks.assetBundleManager;
+vi.stubGlobal("AppApi", mocks.appApi);
+vi.stubGlobal("AssetBundleManager", mocks.assetBundleManager);
 
 import VRChatConfigDialog from "../../../../src/views/Settings/dialogs/VRChatConfigDialog.vue";
 
@@ -173,7 +165,7 @@ describe("VRChatConfigDialog.vue", () => {
     VRChatUsedCacheSize.value = "5.2";
     VRChatTotalCacheSize.value = "30";
     VRChatCacheSizeLoading.value = false;
-    mocks.appApi.ReadConfigFileSafe.mockResolvedValue(null);
+    mocks.appApi.ReadConfigFileSafe.mockResolvedValue("");
     mocks.confirm.mockResolvedValue({ ok: false });
     vi.clearAllMocks();
   });

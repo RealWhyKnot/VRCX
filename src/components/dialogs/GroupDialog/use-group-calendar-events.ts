@@ -1,12 +1,19 @@
-import { computed } from "vue";
+import { computed, type Ref } from "vue";
+import type { GroupDialogState } from "../../../stores/group-types";
 
-export function useGroupCalendarEvents(groupDialog) {
+type CalendarEvent = GroupDialogState["calendar"][number];
+
+type CalendarSource = {
+  calendar?: GroupDialogState["calendar"] | null | undefined;
+};
+
+export function useGroupCalendarEvents(groupDialog: Ref<CalendarSource>) {
   const pastCalenderEvents = computed(() => {
     if (!groupDialog.value.calendar) {
       return [];
     }
     const now = Date.now();
-    const series = new Set();
+    const series = new Set<string>();
     const sortedEvents = [...groupDialog.value.calendar].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     return sortedEvents
       .filter((event) => {
@@ -29,7 +36,7 @@ export function useGroupCalendarEvents(groupDialog) {
       return [];
     }
     const now = Date.now();
-    const series = new Set();
+    const series = new Set<string>();
     const sortedEvents = [...groupDialog.value.calendar].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     return sortedEvents
       .filter((event) => {
@@ -47,12 +54,15 @@ export function useGroupCalendarEvents(groupDialog) {
       .reverse();
   });
 
-  function updateFollowingCalendarData(event) {
+  function updateFollowingCalendarData(event: Partial<CalendarEvent> & Pick<CalendarEvent, "id">) {
     const calendar = groupDialog.value.calendar;
-    for (let i = 0; i < calendar.length; i++) {
-      if (calendar[i].id === event.id) {
+    if (!calendar) {
+      return;
+    }
+    for (const [i, item] of calendar.entries()) {
+      if (item.id === event.id) {
         calendar[i] = {
-          ...calendar[i],
+          ...item,
           ...event,
         };
         break;

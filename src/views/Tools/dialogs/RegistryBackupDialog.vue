@@ -42,6 +42,7 @@ import { useI18n } from "vue-i18n";
 import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
 import { useModalStore } from "../../../stores/modal";
 import { useVrcxStore } from "../../../stores/vrcx";
+import { logError, type RegistryBackup } from "../../../stores/vrcx-messages";
 import { downloadAndSaveJson } from "../../../shared/utils/app-actions";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import Switch from "../../../components/ui/switch/Switch.vue";
@@ -58,14 +59,11 @@ const modalStore = useModalStore();
 
 const { t } = useI18n();
 
-const registryBackupTable = ref({
-  data: [],
-  layout: "table",
-});
+const registryBackups = ref<RegistryBackup[]>([]);
 
 const tableStyle = { maxHeight: "320px" };
 
-const rows = computed(() => (Array.isArray(registryBackupTable.value?.data) ? registryBackupTable.value.data.slice() : []));
+const rows = computed(() => registryBackups.value.slice());
 
 const columns = computed(() =>
   createColumns({
@@ -81,26 +79,45 @@ const { table } = useVrcxVueTable({
     return rows.value;
   },
   columns: columns.value,
-  getRowId: (row) => String(row?.name ?? ""),
+  getRowId: (row) => row.name,
   enablePagination: false,
   initialSorting: [{ id: "date", desc: true }],
 });
 
 watch(
   () => isRegistryBackupDialogVisible.value,
-  (newVal) => {
-    if (newVal) {
-      updateRegistryBackupDialog();
+  (isVisible) => {
+    if (isVisible) {
+      void updateRegistryBackupDialog().catch(logError);
     }
   }
 );
 
-async function updateRegistryBackupDialog() {
-  const backupsJson = await configRepository.getString("VRCX_VRChatRegistryBackups");
-  registryBackupTable.value.data = JSON.parse(backupsJson || "[]");
+function isRegistryBackup(value: unknown): value is RegistryBackup {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "date" in value &&
+    typeof value.date === "string" &&
+    "data" in value
+  );
 }
 
-function restoreVrcRegistryBackup(row) {
+function isRegistryEntry(value: unknown): value is { type: number; data: unknown } {
+  return (
+    typeof value === "object" && value !== null && "type" in value && typeof value.type === "number" && "data" in value && typeof value.data !== "undefined"
+  );
+}
+
+async function updateRegistryBackupDialog() {
+  const backupsJson = await configRepository.getString("VRCX_VRChatRegistryBackups");
+  const parsed: unknown = JSON.parse(backupsJson === null || backupsJson === "" ? "[]" : backupsJson);
+  registryBackups.value = Array.isArray(parsed) ? parsed.filter(isRegistryBackup) : [];
+}
+
+function restoreVrcRegistryBackup(row: RegistryBackup) {
   modalStore
     .confirm({
       description: t("confirm.restore_backup"),
@@ -111,27 +128,28 @@ function restoreVrcRegistryBackup(row) {
         return;
       }
       const data = JSON.stringify(row.data);
-      AppApi.SetVRChatRegistry(data)
+      window.AppApi.SetVRChatRegistry(data)
         .then(() => {
           toast.success(t("message.registry.restored"));
         })
-        .catch((e) => {
+        .catch((e: unknown) => {
           console.error(e);
-          toast.error(t("message.registry.restore_failed", { error: e }));
+          toast.error(t("message.registry.restore_failed", { error: String(e) }));
         });
     })
-    .catch(() => {});
+    .catch(logError);
 }
 
-function saveVrcRegistryBackupToFile(row) {
+function saveVrcRegistryBackupToFile(row: RegistryBackup) {
   downloadAndSaveJson(row.name, row.data);
 }
 
-async function deleteVrcRegistryBackup(row) {
-  const backups = registryBackupTable.value.data;
-  removeFromArray(backups, row);
-  await configRepository.setString("VRCX_VRChatRegistryBackups", JSON.stringify(backups));
-  await updateRegistryBackupDialog();
+function deleteVrcRegistryBackup(row: RegistryBackup) {
+  removeFromArray(registryBackups.value, row);
+  void configRepository
+    .setString("VRCX_VRChatRegistryBackups", JSON.stringify(registryBackups.value))
+    .then(() => updateRegistryBackupDialog())
+    .catch(logError);
 }
 
 function deleteVrcRegistry() {
@@ -144,14 +162,16 @@ function deleteVrcRegistry() {
       if (!ok) {
         return;
       }
-      AppApi.DeleteVRChatRegistryFolder().then(() => {
-        toast.success(t("message.registry.deleted"));
-      });
+      window.AppApi.DeleteVRChatRegistryFolder()
+        .then(() => {
+          toast.success(t("message.registry.deleted"));
+        })
+        .catch(logError);
     })
-    .catch(() => {});
+    .catch(logError);
 }
 
-async function handleBackupVrcRegistry(name) {
+async function handleBackupVrcRegistry(name: string) {
   await backupVrcRegistry(name);
   await updateRegistryBackupDialog();
 }
@@ -167,27 +187,26 @@ function promptVrcRegistryBackupName() {
     })
     .then(({ ok, value }) => {
       if (!ok) return;
-      handleBackupVrcRegistry(value);
+      void handleBackupVrcRegistry(value).catch(logError);
     })
-    .catch(() => {});
+    .catch(logError);
 }
 
-async function openJsonFileSelectorDialogElectron() {
-  return new Promise((resolve) => {
+function openJsonFileSelectorDialogElectron() {
+  return new Promise<string | null>((resolve) => {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".json";
     fileInput.style.display = "none";
     document.body.appendChild(fileInput);
 
-    fileInput.onchange = function (event) {
-      const target = event.target;
-      const file = target?.files?.[0];
+    fileInput.onchange = () => {
+      const file = fileInput.files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = function () {
+        reader.onload = () => {
           fileInput.remove();
-          resolve(reader.result);
+          resolve(typeof reader.result === "string" ? reader.result : null);
         };
         reader.readAsText(file);
       } else {
@@ -201,39 +220,37 @@ async function openJsonFileSelectorDialogElectron() {
 }
 
 async function restoreVrcRegistryFromFile() {
-  const filePath = await AppApi.OpenFileSelectorDialog(null, ".json", "JSON Files (*.json)|*.json");
+  const filePath = await window.AppApi.OpenFileSelectorDialog(null, ".json", "JSON Files (*.json)|*.json");
   if (isWindowsHost()) {
     if (filePath === "") {
       return;
     }
   }
 
-  let json;
-  if (isLinuxHost()) {
-    json = await openJsonFileSelectorDialogElectron();
-  } else {
-    json = await AppApi.ReadVrcRegJsonFile(filePath);
+  const json = isLinuxHost() ? await openJsonFileSelectorDialogElectron() : await window.AppApi.ReadVrcRegJsonFile(filePath);
+  if (json === null) {
+    toast.error(t("message.registry.invalid_json"));
+    return;
   }
 
   try {
-    const data = JSON.parse(json);
-    if (!data || typeof data !== "object") {
+    const data: unknown = JSON.parse(json);
+    if (typeof data !== "object" || data === null) {
       throw new Error("Invalid JSON");
     }
 
-    for (const key in data) {
-      const value = data[key];
-      if (typeof value !== "object" || typeof value.type !== "number" || typeof value.data === "undefined") {
+    for (const value of Object.values(data)) {
+      if (!isRegistryEntry(value)) {
         throw new Error("Invalid JSON");
       }
     }
-    AppApi.SetVRChatRegistry(json)
+    window.AppApi.SetVRChatRegistry(json)
       .then(() => {
         toast.success(t("message.registry.restored"));
       })
-      .catch((e) => {
+      .catch((e: unknown) => {
         console.error(e);
-        toast.error(t("message.registry.restore_failed", { error: e }));
+        toast.error(t("message.registry.restore_failed", { error: String(e) }));
       });
   } catch {
     toast.error(t("message.registry.invalid_json"));
@@ -241,7 +258,7 @@ async function restoreVrcRegistryFromFile() {
 }
 
 function clearVrcRegistryDialog() {
-  registryBackupTable.value.data = [];
+  registryBackups.value = [];
 }
 
 function closeAndClearDialog() {

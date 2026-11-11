@@ -1,23 +1,31 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { reactiveOmit } from "@vueuse/core";
 import { Check } from "lucide-vue-next";
 import { ContextMenuCheckboxItem, ContextMenuItemIndicator, useForwardPropsEmits } from "reka-ui";
+import type { ContextMenuCheckboxItemEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  modelValue: {
-    type: [Boolean, String],
-    required: false,
-  },
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["select", "update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    modelValue?: boolean | string | undefined;
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    modelValue: undefined,
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<ContextMenuCheckboxItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

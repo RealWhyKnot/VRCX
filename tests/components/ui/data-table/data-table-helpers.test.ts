@@ -9,10 +9,9 @@ import {
   resolveHeaderLabel,
 } from "../../../../src/components/ui/data-table/data-table-helpers";
 
-const mockCol = (id, meta = {}, overrides = {}) => ({
+const mockCol = (id: string, meta: Record<string, unknown> = {}) => ({
   id,
   columnDef: { meta },
-  ...overrides,
 });
 
 describe("isSpacer", () => {
@@ -76,7 +75,7 @@ describe("getToggleableColumns", () => {
   it("excludes spacer columns", () => {
     const cols = [mockCol("name", { label: "Name" }), { id: "__spacer", columnDef: { meta: { label: "Spacer" } } }];
     expect(getToggleableColumns(cols)).toHaveLength(1);
-    expect(getToggleableColumns(cols)[0].id).toBe("name");
+    expect(getToggleableColumns(cols)[0]?.id).toBe("name");
   });
 
   it("includes stretch columns", () => {
@@ -112,7 +111,7 @@ describe("getToggleableColumns", () => {
 
 describe("getColStyle", () => {
   it("returns width 0px for spacer column", () => {
-    expect(getColStyle({ id: "__spacer" })).toEqual({ width: "0px" });
+    expect(getColStyle({ id: "__spacer", columnDef: { meta: {} } })).toEqual({ width: "0px" });
   });
 
   it("returns null for stretch column", () => {

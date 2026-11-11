@@ -39,6 +39,7 @@ import { storeToRefs } from "pinia";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
+import type { GroupDialogState } from "../../../stores/group-types";
 import { AppDebug } from "@/services/app-config";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
 import { miscRequest } from "../../../api/misc";
@@ -48,7 +49,7 @@ const { showFullscreenImageDialog } = useGalleryStore();
 
 const isLoading = ref(false);
 
-function getListingImageUrl(listing) {
+function getListingImageUrl(listing: GroupDialogState["listings"][number]) {
   if (listing.imageUrl) {
     return listing.imageUrl;
   }

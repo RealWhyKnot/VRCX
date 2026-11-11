@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { AvatarRoot } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps<{ class?: unknown }>();
+defineOptions({ name: "UiAvatar" });
+
+const props = defineProps<{ class?: ClassValue }>();
 </script>
 
 <template>

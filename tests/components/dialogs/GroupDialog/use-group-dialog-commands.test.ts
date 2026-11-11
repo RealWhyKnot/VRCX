@@ -1,42 +1,49 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
 
 import { useGroupDialogCommands } from "../../../../src/components/dialogs/GroupDialog/use-group-dialog-commands";
+import type { GroupDialogState } from "../../../../src/stores/group-types";
 
 vi.mock("../../../../src/shared/utils/app-actions", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-function createGroupDialog(overrides = {}) {
-  return ref({
+type CommandDialogState = Pick<GroupDialogState, "visible" | "id" | "ref">;
+type CommandDeps = Parameters<typeof useGroupDialogCommands>[1];
+type ConfirmResult = { ok: boolean };
+
+function createGroupDialog(overrides: Partial<CommandDialogState> = {}): Ref<CommandDialogState> {
+  return ref<CommandDialogState>({
     visible: true,
     id: "grp_123",
-    ref: {
-      $url: "https://vrchat.com/home/group/grp_123",
-    },
+    ref: {},
     ...overrides,
   });
 }
 
-function createDeps(overrides = {}) {
+function createDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
   return {
-    t: vi.fn((key) => key),
+    t: vi.fn<(key: string) => string>((key) => key),
     modalStore: {
-      confirm: vi.fn().mockResolvedValue({ ok: true }),
+      confirm: vi.fn<(options: Parameters<CommandDeps["modalStore"]["confirm"]>[0]) => Promise<ConfirmResult>>().mockResolvedValue({ ok: true }),
     },
     currentUser: ref({ id: "usr_current" }),
-    showGroupDialog: vi.fn(),
-    leaveGroupPrompt: vi.fn(),
-    setGroupVisibility: vi.fn(),
-    setGroupSubscription: vi.fn(),
-    showGroupMemberModerationDialog: vi.fn(),
-    showInviteGroupDialog: vi.fn(),
-    showGroupPostEditDialog: vi.fn(),
+    showGroupDialog: vi.fn<CommandDeps["showGroupDialog"]>(),
+    leaveGroupPrompt: vi.fn<CommandDeps["leaveGroupPrompt"]>(),
+    setGroupVisibility: vi.fn<CommandDeps["setGroupVisibility"]>(() => Promise.resolve()),
+    setGroupSubscription: vi.fn<CommandDeps["setGroupSubscription"]>(() => Promise.resolve()),
+    setGroupEventAnnouncements: vi.fn<CommandDeps["setGroupEventAnnouncements"]>(() => Promise.resolve()),
+    showPreviousInstancesListDialog: vi.fn<CommandDeps["showPreviousInstancesListDialog"]>(),
+    showGroupMemberModerationDialog: vi.fn<CommandDeps["showGroupMemberModerationDialog"]>(),
+    showGroupRolesDialog: vi.fn<CommandDeps["showGroupRolesDialog"]>(),
+    showInviteGroupDialog: vi.fn<CommandDeps["showInviteGroupDialog"]>(),
+    showGroupTransferDialog: vi.fn<CommandDeps["showGroupTransferDialog"]>(),
+    showGroupPostEditDialog: vi.fn<CommandDeps["showGroupPostEditDialog"]>(),
     groupRequest: {
-      blockGroup: vi.fn().mockResolvedValue({
+      blockGroup: vi.fn<CommandDeps["groupRequest"]["blockGroup"]>().mockResolvedValue({
         params: { groupId: "grp_123" },
       }),
-      unblockGroup: vi.fn().mockResolvedValue({
+      unblockGroup: vi.fn<CommandDeps["groupRequest"]["unblockGroup"]>().mockResolvedValue({
         params: { groupId: "grp_123" },
       }),
     },
@@ -113,7 +120,7 @@ describe("useGroupDialogCommands", () => {
     const groupDialog = createGroupDialog();
     const deps = createDeps({
       modalStore: {
-        confirm: vi.fn().mockResolvedValue({ ok: false }),
+        confirm: vi.fn<CommandDeps["modalStore"]["confirm"]>().mockResolvedValue({ ok: false }),
       },
     });
     const { groupDialogCommand } = useGroupDialogCommands(groupDialog, deps);

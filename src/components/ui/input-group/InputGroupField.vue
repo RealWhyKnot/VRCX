@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { Eye, EyeOff, X } from "lucide-vue-next";
 import { computed, ref, useAttrs } from "vue";
 import { cn } from "@/lib/utils";
@@ -9,23 +10,35 @@ import InputGroupAddon from "./InputGroupAddon.vue";
 import InputGroupButton from "./InputGroupButton.vue";
 import InputGroupInput from "./InputGroupInput.vue";
 import InputGroupText from "./InputGroupText.vue";
+import { resolveWrapperStyle } from "./wrapper-style";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  class: { type: null, required: false },
-  inputClass: { type: null, required: false },
-  clearable: { type: Boolean, default: false },
-  showPassword: { type: Boolean, default: false },
-  showCount: { type: Boolean, default: false },
-  maxlength: { type: Number, required: false },
-  type: { type: String, required: false },
-  size: { type: String, default: "default" },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null | undefined;
+    class?: ClassValue | undefined;
+    inputClass?: ClassValue | undefined;
+    clearable?: boolean;
+    showPassword?: boolean;
+    showCount?: boolean;
+    maxlength?: number | undefined;
+    type?: string | undefined;
+    size?: string;
+  }>(),
+  {
+    modelValue: "",
+    class: undefined,
+    inputClass: undefined,
+    maxlength: undefined,
+    type: undefined,
+    size: "default",
+  }
+);
 
-const emit = defineEmits(["update:modelValue", "input", "change"]);
+const emit = defineEmits<{ "update:modelValue": [value: string]; input: [value: string]; change: [value: string] }>();
 const attrs = useAttrs();
+const DETACHED_ATTRS = ["style", "onInput", "onChange"];
 
 const modelValue = useVModel(props, "modelValue", emit, {
   passive: true,
@@ -34,68 +47,34 @@ const modelValue = useVModel(props, "modelValue", emit, {
 
 const reveal = ref(false);
 const valueLength = computed(() => String(modelValue.value ?? "").length);
-const maxLength = computed(() => props.maxlength ?? attrs.maxlength);
-const wrapperClass = computed(() => cn(props.class, attrs.class, props.size === "sm" && "h-8", "flex-nowrap"));
+const maxLength = computed(() => props.maxlength);
+const wrapperClass = computed(() => cn(props.class, props.size === "sm" && "h-8", "flex-nowrap"));
 
 const wrapperStyle = computed(() => {
-  const raw = attrs.style;
-  if (!raw) return undefined;
-  if (typeof raw === "string") {
-    const filtered = raw
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s && !s.toLowerCase().startsWith("display:"))
-      .join("; ");
-    return filtered || undefined;
-  }
-  if (Array.isArray(raw)) {
-    return raw.map((s) => {
-      if (typeof s === "string") {
-        return s
-          .split(";")
-          .map((p) => p.trim())
-          .filter((p) => p && !p.toLowerCase().startsWith("display:"))
-          .join("; ");
-      }
-      if (s && typeof s === "object") {
-        const next = { ...s };
-        delete next.display;
-        return next;
-      }
-      return s;
-    });
-  }
-  if (raw && typeof raw === "object") {
-    const next = { ...raw };
-    delete next.display;
-    return next;
-  }
-  return raw;
+  const { style } = attrs;
+  return resolveWrapperStyle(style);
 });
 
 const inputType = computed(() => {
-  const rawType = props.type ?? attrs.type;
+  const rawType = props.type;
   if (props.showPassword) {
-    return reveal.value ? "text" : rawType || "password";
+    if (reveal.value) return "text";
+    if (!rawType) return "password";
+    return rawType;
   }
   return rawType;
 });
-const inputClass = computed(() =>
-  cn(
+const inputClass = computed(() => {
+  const type = inputType.value ?? "";
+  return cn(
     props.inputClass,
-    ["date", "datetime-local", "month", "number", "time", "week"].includes(inputType.value) && "dark:[color-scheme:dark]",
-    ["date", "datetime-local", "month", "time", "week"].includes(inputType.value) && "[&::-webkit-calendar-picker-indicator]:cursor-pointer"
-  )
-);
+    ["date", "datetime-local", "month", "number", "time", "week"].includes(type) && "dark:[color-scheme:dark]",
+    ["date", "datetime-local", "month", "time", "week"].includes(type) && "[&::-webkit-calendar-picker-indicator]:cursor-pointer"
+  );
+});
 
 const inputAttrs = computed(() => {
-  const rest = { ...(attrs ?? {}) };
-  delete rest.class;
-  delete rest.style;
-  delete rest.type;
-  delete rest.maxlength;
-  delete rest.onInput;
-  delete rest.onChange;
+  const rest = Object.fromEntries(Object.entries(attrs).filter(([key]) => !DETACHED_ATTRS.includes(key)));
   return {
     ...rest,
     type: inputType.value,
@@ -103,8 +82,17 @@ const inputAttrs = computed(() => {
   };
 });
 
-const isDisabled = computed(() => Boolean(inputAttrs.value?.disabled));
+const isDisabled = computed(() => {
+  const { disabled } = attrs;
+  return Boolean(disabled);
+});
 const showCount = computed(() => Boolean(maxLength.value) && props.showCount);
+
+function readInputValue(event: Event) {
+  const target = event.target;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return target.value;
+  return "";
+}
 
 function clearValue() {
   if (isDisabled.value) return;
@@ -118,24 +106,22 @@ function toggleReveal() {
   reveal.value = !reveal.value;
 }
 
-function handleInput(event) {
-  const value = event?.target?.value ?? "";
-  emit("input", value);
+function handleInput(event: Event) {
+  emit("input", readInputValue(event));
 }
 
-function handleChange(event) {
-  const value = event?.target?.value ?? "";
-  emit("change", value);
+function handleChange(event: Event) {
+  emit("change", readInputValue(event));
 }
 </script>
 
 <template>
   <InputGroup :class="wrapperClass" :style="wrapperStyle" :data-disabled="isDisabled ? 'true' : undefined">
-    <InputGroupAddon v-if="$slots.leading" align="inline-start">
+    <InputGroupAddon v-if="$slots['leading']" align="inline-start">
       <slot name="leading" />
     </InputGroupAddon>
     <InputGroupInput v-model="modelValue" :class="inputClass" v-bind="inputAttrs" @input="handleInput" @change="handleChange" />
-    <InputGroupAddon v-if="$slots.trailing" align="inline-end">
+    <InputGroupAddon v-if="$slots['trailing']" align="inline-end">
       <slot name="trailing" />
     </InputGroupAddon>
     <InputGroupAddon v-if="props.showPassword" align="inline-end">

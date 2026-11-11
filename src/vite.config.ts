@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import fs from "node:fs";
 
 import { defineConfig, loadEnv } from "vite";
+import type { Plugin } from "vite";
 import { browserslistToTargets } from "lightningcss";
 
 import browserslist from "browserslist";
@@ -12,39 +13,42 @@ import vueJsx from "@vitejs/plugin-vue-jsx";
 
 import { languageCodes } from "./localization/locales";
 
-function remixiconWoff2Only() {
+const notoSuffixLanguages = new Map([
+  ["jp", "ja"],
+  ["sc", "zh-CN"],
+  ["tc", "zh-TW"],
+  ["kr", "ko"],
+]);
+
+function remixiconWoff2Only(): Plugin {
   return {
     name: "remixicon-woff2-only",
     generateBundle(_, bundle) {
       for (const key of Object.keys(bundle)) {
         if (/remixicon\.(eot|ttf|svg|woff)$/.test(key)) {
-          delete bundle[key];
+          Reflect.deleteProperty(bundle, key);
         }
       }
     },
   };
 }
 
-function getAssetLanguage(assetId) {
+function getAssetLanguage(assetId: string | undefined): string | null {
   if (!assetId) return null;
 
   if (assetId.endsWith(".json")) {
     const language = assetId.split(".json")[0];
 
-    if (languageCodes.includes(language)) return language;
+    if (language !== undefined && languageCodes.includes(language)) return language;
   }
 
-  const language = {
-    jp: "ja",
-    sc: "zh-CN",
-    tc: "zh-TW",
-    kr: "ko",
-  }[assetId.split("noto-sans-")[1]?.split("-")[0]];
+  const suffix = assetId.split("noto-sans-")[1]?.split("-")[0];
+  const language = suffix === undefined ? undefined : notoSuffixLanguages.get(suffix);
 
-  return language || null;
+  return language ?? null;
 }
 
-function getManualChunk(moduleId) {
+function getManualChunk(moduleId: string): string | undefined {
   const basename = moduleId.split("/").pop();
   const language = getAssetLanguage(basename);
   if (!language) return;
@@ -54,11 +58,11 @@ function getManualChunk(moduleId) {
 
 const defaultAssetName = "[name][extname]";
 
-function isFont(name) {
+function isFont(name: string): boolean {
   return /\.(woff2?|ttf|otf|eot)$/.test(name);
 }
 
-function getAssetFilename({ name }) {
+function getAssetFilename({ name }: { name?: string }): string {
   const language = getAssetLanguage(name);
   if (!name || !language) return `assets/${defaultAssetName}`;
 
@@ -69,11 +73,11 @@ function getAssetFilename({ name }) {
 export default defineConfig(({ mode }) => {
   const { SENTRY_AUTH_TOKEN: sentryAuthToken } = loadEnv(mode, process.cwd(), "");
 
-  const buildAndUploadSourceMaps = !!sentryAuthToken;
+  const shouldBuildAndUploadSourceMaps = !!sentryAuthToken;
 
   const version = fs.readFileSync(new URL("../Version", import.meta.url), "utf-8").trim();
 
-  const nightly = mode === "development" || version.split("-").at(-1)?.length === 7;
+  const isNightly = mode === "development" || version.split("-").at(-1)?.length === 7;
 
   return {
     base: "",
@@ -84,7 +88,7 @@ export default defineConfig(({ mode }) => {
         tsTransform: "built-in",
       }),
       tailwindcss(),
-      buildAndUploadSourceMaps &&
+      shouldBuildAndUploadSourceMaps &&
         import("@sentry/vite-plugin").then(({ sentryVitePlugin }) =>
           sentryVitePlugin({
             authToken: sentryAuthToken,
@@ -120,7 +124,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       VERSION: JSON.stringify(version),
-      isBuildNightly: JSON.stringify(nightly),
+      isBuildNightly: JSON.stringify(isNightly),
     },
     server: {
       port: 9000,
@@ -134,8 +138,8 @@ export default defineConfig(({ mode }) => {
       copyPublicDir: true,
       reportCompressedSize: false,
       chunkSizeWarningLimit: 5000,
-      sourcemap: buildAndUploadSourceMaps ? "hidden" : false,
-      assetsInlineLimit(filePath, content) {
+      sourcemap: shouldBuildAndUploadSourceMaps ? "hidden" : false,
+      assetsInlineLimit(filePath: string, content: Uint8Array) {
         if (isFont(filePath)) return false;
         if (filePath.endsWith(".json")) return false;
         return content.length <= 40960;

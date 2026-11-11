@@ -48,6 +48,8 @@ import SocialTab from "./components/Tabs/SocialTab.vue";
 import SystemTab from "./components/Tabs/SystemTab.vue";
 import VrTab from "./components/Tabs/VrTab.vue";
 
+defineOptions({ name: "SettingsView" });
+
 const { t } = useI18n();
 const settingsTabs = computed(() => [
   { value: "system", label: t("view.settings.category.system") },

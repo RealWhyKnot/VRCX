@@ -1,16 +1,19 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Button from "@/components/ui/button/Button.vue";
 import { PanelLeft } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 
 import { useSidebar } from "./utils";
 
-const props = defineProps({
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    class: undefined,
+  }
+);
 
 const { toggleSidebar } = useSidebar();
 </script>

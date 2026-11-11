@@ -30,7 +30,7 @@ import * as workerTimers from "worker-timers";
 
 const { t } = useI18n();
 const authStore = useAuthStore();
-const active = defineModel("active", { type: Boolean, default: false });
+const active = defineModel<boolean>("active", { default: false });
 const qrImage = ref("");
 let session = 0;
 
@@ -50,18 +50,20 @@ async function start() {
     qrImage.value = await QRCode.toDataURL(device.verificationUrlComplete, { width: 184 });
 
     while (current === session) {
-      await new Promise((resolve) => workerTimers.setTimeout(resolve, (device.interval || 5) * 1000));
+      await new Promise<void>((resolve) => {
+        workerTimers.setTimeout(resolve, (device.interval || 5) * 1000);
+      });
       if (current !== session) return;
       try {
         const { json } = await authRequest.getDeviceStatus({ deviceCode: device.deviceCode });
-        if (json?.user) {
+        if (json.user) {
           stop();
           authStore.queueSaveCredentials();
           await getCurrentUser();
           return;
         }
-      } catch (err) {
-        if (!/authorization_pending|slow_down/.test(err.message)) throw err;
+      } catch (err: unknown) {
+        if (!(err instanceof Error) || !/authorization_pending|slow_down/.test(err.message)) throw err;
       }
     }
   } catch {

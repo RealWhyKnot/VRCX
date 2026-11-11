@@ -1,20 +1,31 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { reactiveOmit } from "@vueuse/core";
 import { ContextMenuItem, useForwardPropsEmits } from "reka-ui";
+import type { ContextMenuItemEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  inset: { type: Boolean, required: false },
-  variant: { type: String, required: false, default: "default" },
-});
-const emits = defineEmits(["select"]);
+const props = withDefaults(
+  defineProps<{
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    inset?: boolean;
+    variant?: string;
+  }>(),
+  {
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+    variant: "default",
+  }
+);
+const emits = defineEmits<ContextMenuItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

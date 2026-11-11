@@ -1,15 +1,13 @@
 <script setup lang="ts">
+import type { AlertDialogTitleProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { AlertDialogTitle } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = defineProps<AlertDialogTitleProps & { class?: ClassValue }>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 </script>
 
 <template>

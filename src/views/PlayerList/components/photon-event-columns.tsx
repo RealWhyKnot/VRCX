@@ -5,10 +5,29 @@ import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { i18n } from "@/plugins/i18n";
 import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { statusClass } from "@/shared/utils/user";
+import type { PhotonEventEntry } from "@/stores/photon-types";
+import type { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
+
+type PhotonEventTableOptions = Parameters<typeof useVrcxVueTable<PhotonEventEntry>>[0];
+type PhotonEventColumn = Extract<PhotonEventTableOptions["columns"], unknown[]>[number];
+
+type PhotonEventColumnsOptions = {
+  isPrevious: boolean;
+  onShowUser: (row: PhotonEventEntry) => void;
+  onShowAvatar: (avatarId: string | undefined) => void;
+  onShowGroup: (groupId: string | undefined) => void;
+  onShowWorld: (location: string | undefined, shortName: string | undefined) => void;
+  onShowImage: (imageUrl: string) => void;
+};
+
+type DetailCellProps = Omit<PhotonEventColumnsOptions, "onShowUser" | "isPrevious"> & {
+  row: PhotonEventEntry | undefined;
+  isPrevious: boolean;
+};
 
 const { t } = i18n.global;
 
-const statusLabel = (key) => {
+const statusLabel = (key: string | undefined) => {
   if (key === "active") return t("dialog.user.status.active");
   if (key === "join me") return t("dialog.user.status.join_me");
   if (key === "ask me") return t("dialog.user.status.ask_me");
@@ -16,19 +35,19 @@ const statusLabel = (key) => {
   return t("dialog.user.status.offline");
 };
 
-const avatarStatusLabel = (status) => {
+const avatarStatusLabel = (status: string | undefined) => {
   if (status === "public") return t("dialog.avatar.labels.public");
   if (status === "private") return t("dialog.avatar.labels.private");
   return "";
 };
 
-const avatarStatusClass = (status) => {
+const avatarStatusClass = (status: string | undefined) => {
   if (status === "public") return "avatar-info-public";
   if (status === "private") return "avatar-info-own";
   return null;
 };
 
-function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, onShowImage }) {
+function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, onShowImage }: DetailCellProps) {
   const r = row;
   if (!r) return null;
 
@@ -39,7 +58,7 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
           class="cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            onShowAvatar?.(r.avatar?.id);
+            onShowAvatar(r.avatar?.id);
           }}
         >
           {r.avatar?.name}
@@ -52,7 +71,7 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
           </span>
         ) : null}
         {r.avatar?.releaseStatus ? <span class={avatarStatusClass(r.avatar.releaseStatus)}>{avatarStatusLabel(r.avatar.releaseStatus)}</span> : null}
-        {isPrevious && r.avatar?.description && r.avatar?.name !== r.avatar?.description ? (
+        {isPrevious && r.avatar?.description && r.avatar.name !== r.avatar.description ? (
           <>
             {" | - "}
             {r.avatar.description}
@@ -101,10 +120,10 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
           style="margin-right: 5px"
           onClick={(e) => {
             e.stopPropagation();
-            onShowGroup?.(r.previousGroupId);
+            onShowGroup(r.previousGroupId);
           }}
         >
-          {r.previousGroupName || r.previousGroupId}
+          {firstNonEmpty(r.previousGroupName, r.previousGroupId)}
         </span>
         <span>
           <ArrowRight />
@@ -114,10 +133,10 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
           style="margin-left: 5px"
           onClick={(e) => {
             e.stopPropagation();
-            onShowGroup?.(r.groupId);
+            onShowGroup(r.groupId);
           }}
         >
-          {r.groupName || r.groupId}
+          {firstNonEmpty(r.groupName, r.groupId)}
         </span>
       </>
     );
@@ -129,10 +148,10 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
         class="cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
-          onShowWorld?.(r.location, r.shortName);
+          onShowWorld(r.location, r.shortName);
         }}
       >
-        <Location location={r.location} hint={r.worldName} grouphint={r.groupName} link={false} />
+        <Location location={r.location ?? ""} hint={r.worldName ?? ""} grouphint={r.groupName ?? ""} link={false} />
       </span>
     );
   }
@@ -155,7 +174,7 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
           class="cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            onShowAvatar?.(r.avatar?.id);
+            onShowAvatar(r.avatar?.id);
           }}
         >
           {r.avatar?.name}
@@ -173,19 +192,20 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
   }
 
   if (r.type === "SpawnEmoji") {
-    return r.imageUrl ? (
+    const imageUrl = r.imageUrl;
+    return imageUrl ? (
       <TooltipWrapper
         side="right"
         v-slots={{
           content: () => (
             <img
-              src={r.imageUrl}
+              src={imageUrl}
               class="friends-list-avatar"
               style="height: 500px; cursor: pointer"
               loading="lazy"
               onClick={(e) => {
                 e.stopPropagation();
-                onShowImage?.(r.imageUrl);
+                onShowImage(imageUrl);
               }}
             />
           ),
@@ -205,20 +225,40 @@ function DetailCell({ row, isPrevious, onShowAvatar, onShowGroup, onShowWorld, o
   return <span>{r.text}</span>;
 }
 
-export const createColumns = ({ isPrevious, onShowUser, onShowAvatar, onShowGroup, onShowWorld, onShowImage }) => [
+function firstNonEmpty(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    if (value) return value;
+  }
+  return "";
+}
+
+function createdAtText(value: string | number | undefined): string | undefined {
+  if (typeof value !== "number") return value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+export const createColumns = ({
+  isPrevious,
+  onShowUser,
+  onShowAvatar,
+  onShowGroup,
+  onShowWorld,
+  onShowImage,
+}: PhotonEventColumnsOptions): PhotonEventColumn[] => [
   {
     id: "created_at",
-    accessorFn: (row) => (row?.created_at ? Date.parse(row.created_at) : 0),
+    accessorFn: (row) => (row.created_at ? Date.parse(String(row.created_at)) : 0),
     header: () => t("table.playerList.date"),
     size: 130,
     cell: ({ row }) => (
       <TooltipWrapper
         side="right"
         v-slots={{
-          content: () => <span>{formatDateFilter(row.original?.created_at, "long")}</span>,
+          content: () => <span>{formatDateFilter(createdAtText(row.original.created_at), "long")}</span>,
         }}
       >
-        <span>{formatDateFilter(row.original?.created_at, "short")}</span>
+        <span>{formatDateFilter(createdAtText(row.original.created_at), "short")}</span>
       </TooltipWrapper>
     ),
   },
@@ -233,10 +273,10 @@ export const createColumns = ({ isPrevious, onShowUser, onShowAvatar, onShowGrou
         style="padding-right: 10px"
         onClick={(e) => {
           e.stopPropagation();
-          onShowUser?.(row.original);
+          onShowUser(row.original);
         }}
       >
-        {row.original?.displayName}
+        {row.original.displayName}
       </span>
     ),
   },
@@ -257,7 +297,7 @@ export const createColumns = ({ isPrevious, onShowUser, onShowAvatar, onShowGrou
     cell: ({ row }) => (
       <DetailCell
         row={row.original}
-        isPrevious={!!isPrevious}
+        isPrevious={isPrevious}
         onShowAvatar={onShowAvatar}
         onShowGroup={onShowGroup}
         onShowWorld={onShowWorld}

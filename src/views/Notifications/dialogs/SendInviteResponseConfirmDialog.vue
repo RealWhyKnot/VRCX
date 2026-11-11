@@ -28,78 +28,64 @@ import { useI18n } from "vue-i18n";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { useNotificationStore } from "../../../stores/notification";
+import { logFailure } from "../../../stores/log-failure";
 import { notificationRequest } from "../../../api/notification";
+import type { InviteResponseSelection } from "./send-invite-response-columns.tsx";
 
 const { t } = useI18n();
 
 const galleryStore = useGalleryStore();
 const { uploadImage } = storeToRefs(galleryStore);
 
-const props = defineProps({
-  sendInviteResponseDialog: {
-    type: Object,
-    default: () => ({}),
-  },
-  sendInviteResponseConfirmDialog: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  sendInviteResponseDialog: InviteResponseSelection;
+  sendInviteResponseConfirmDialog: { visible: boolean };
+}>();
 
-const emit = defineEmits(["closeResponseConfirmDialog", "closeInviteDialog"]);
+const emit = defineEmits<{
+  closeResponseConfirmDialog: [];
+  closeInviteDialog: [];
+}>();
 
 function cancelInviteResponseConfirm() {
   emit("closeResponseConfirmDialog");
 }
 
-function sendInviteResponseConfirm() {
-  const D = props.sendInviteResponseDialog;
+async function sendInviteResponse(inviteId: string, slot: number) {
   const params = {
-    responseSlot: D.messageSlot.slot,
+    responseSlot: slot,
     rsvp: true,
   };
-  if (uploadImage.value) {
-    notificationRequest
-      .sendInviteResponsePhoto(params, D.invite.id)
-      .then((args) => {
-        notificationRequest
-          .hideNotification({
-            notificationId: D.invite.id,
-          })
-          .then(() => {
-            useNotificationStore().handleNotificationHide(D.invite.id);
-          });
-        toast.success(t("message.invite.response_photo_sent"));
-        return args;
+  const isPhoto = uploadImage.value;
+  try {
+    if (isPhoto) {
+      await notificationRequest.sendInviteResponsePhoto(params, inviteId);
+    } else {
+      await notificationRequest.sendInviteResponse(params, inviteId);
+    }
+    void notificationRequest
+      .hideNotification({
+        notificationId: inviteId,
       })
-      .catch((err) => {
-        console.error("Invite response photo failed", err);
-        toast.error(t("message.error"));
+      .then(() => {
+        useNotificationStore().handleNotificationHide(inviteId);
       })
-      .finally(() => {
-        emit("closeInviteDialog");
-      });
-  } else {
-    notificationRequest
-      .sendInviteResponse(params, D.invite.id)
-      .then((args) => {
-        notificationRequest
-          .hideNotification({
-            notificationId: D.invite.id,
-          })
-          .then(() => {
-            useNotificationStore().handleNotificationHide(D.invite.id);
-          });
-        toast.success(t("message.invite.response_sent"));
-        return args;
-      })
-      .catch((err) => {
-        console.error("Invite response failed", err);
-        toast.error(t("message.error"));
-      })
-      .finally(() => {
-        emit("closeInviteDialog");
-      });
+      .catch(logFailure("Hiding invite notification failed:"));
+    toast.success(t(isPhoto ? "message.invite.response_photo_sent" : "message.invite.response_sent"));
+  } catch (err: unknown) {
+    console.error(isPhoto ? "Invite response photo failed" : "Invite response failed", err);
+    toast.error(t("message.error"));
+  } finally {
+    emit("closeInviteDialog");
+  }
+}
+
+function sendInviteResponseConfirm() {
+  const { invite, messageSlot } = props.sendInviteResponseDialog;
+  const inviteId = invite.id;
+  const slot = messageSlot.slot;
+  if (inviteId !== undefined && slot !== undefined) {
+    void sendInviteResponse(inviteId, slot).catch(logFailure("Sending invite response failed:"));
   }
   cancelInviteResponseConfirm();
 }

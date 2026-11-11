@@ -1,12 +1,20 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { buttonGroupVariants } from ".";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  orientation: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    orientation?: VariantProps<typeof buttonGroupVariants>["orientation"] | undefined;
+  }>(),
+  {
+    class: undefined,
+    orientation: undefined,
+  }
+);
 </script>
 
 <template>

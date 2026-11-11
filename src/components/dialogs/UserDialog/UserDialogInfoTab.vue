@@ -12,13 +12,13 @@
               :show-buttons="true"
               :button-style="{ color: userDialog.theme.iconColor }"
               :show-instance-info="false"
-              :location="userDialog.$location.tag"
-              :shortname="userDialog.$location.shortName"
+              :location="userDialog.$location.tag ?? ''"
+              :shortname="userDialog.$location.shortName ?? ''"
               :currentlocation="lastLocation.location"
               :instance="userDialog.instance.ref"
               :friendcount="userDialog.instance.friendCount"
               :refresh-tooltip="t('dialog.user.info.refresh_instance_info')"
-              :on-refresh="() => refreshInstancePlayerCount(userDialog.$location.tag)"
+              :on-refresh="() => refreshInstancePlayerCount(userDialog.$location.tag ?? '')"
             />
           </span>
         </div>
@@ -34,7 +34,7 @@
               <span
                 class="text-md text-foreground cursor-pointer block truncate"
                 :title="userDialog.instance?.ref?.world?.name || userDialog.$location.worldId"
-                @click="showWorldDialog(userDialog.$location.tag)"
+                @click="showWorldDialog(userDialog.$location.tag ?? '')"
                 >{{ userDialog.instance?.ref?.world?.name || userDialog.$location.worldId }}</span
               >
               <div class="flex min-w-0 flex-wrap items-start gap-1.5">
@@ -47,13 +47,13 @@
                   class="text-sm inline-flex max-w-full shrink-0 border-muted-foreground/30"
                   :show-buttons="false"
                   :show-instance-info="true"
-                  :location="userDialog.$location.tag"
-                  :shortname="userDialog.$location.shortName"
+                  :location="userDialog.$location.tag ?? ''"
+                  :shortname="userDialog.$location.shortName ?? ''"
                   :currentlocation="lastLocation.location"
                   :instance="userDialog.instance.ref"
                   :friendcount="userDialog.instance.friendCount"
                   :refresh-tooltip="t('dialog.user.info.refresh_instance_info')"
-                  :on-refresh="() => refreshInstancePlayerCount(userDialog.$location.tag)"
+                  :on-refresh="() => refreshInstancePlayerCount(userDialog.$location.tag ?? '')"
                 />
               </div>
             </div>
@@ -63,7 +63,7 @@
               class="cursor-pointer"
               style="width: 80px; height: 60px; border-radius: var(--radius-xl)"
               loading="lazy"
-              @click="showFullscreenImageDialog(userDialog.instance?.ref?.world?.imageUrl)"
+              @click="showFullscreenImageDialog(userDialog.instance?.ref?.world?.imageUrl ?? '')"
             />
           </div>
           <div class="flex flex-wrap items-start" style="flex: 1; max-height: 150px; overflow: auto">
@@ -72,26 +72,7 @@
               class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-[167px] hover:rounded-[25px_5px_5px_25px]"
               @click="showUserDialog(userDialog.$location.userId)"
             >
-              <template v-if="userDialog.$location.user">
-                <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(userDialog.$location.user)">
-                  <Avatar class="size-9">
-                    <AvatarImage :src="userImage(userDialog.$location.user, true)" class="object-cover" />
-                    <AvatarFallback>
-                      <User class="size-4 text-muted-foreground" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <IconFrame :icon-frame="userDialog.$location.user.iconFrame" />
-                </div>
-                <div class="flex-1 overflow-hidden">
-                  <span
-                    class="block truncate font-medium leading-[18px]"
-                    :style="{ color: userDialog.$location.user.$userColour }"
-                    v-text="userDialog.$location.user.displayName || userDialog.$location.userId"
-                  ></span>
-                  <span class="block truncate text-xs">{{ t("dialog.user.info.instance_creator") }}</span>
-                </div>
-              </template>
-              <span v-else v-text="userDialog.$location.userId"></span>
+              <span v-text="userDialog.$location.userId"></span>
             </div>
             <div
               v-for="user in userDialog.users"
@@ -106,7 +87,7 @@
                     <User class="size-4 text-muted-foreground" />
                   </AvatarFallback>
                 </Avatar>
-                <IconFrame :icon-frame="user.iconFrame" />
+                <IconFrame :icon-frame="user.iconFrame ?? ''" />
               </div>
               <div class="flex-1 overflow-hidden">
                 <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName || user.id"></span>
@@ -234,8 +215,8 @@
                     {{ formatDateFilter(userDialog.dateFriended, "long") }}
                   </template>
                   <template v-else>
-                    <template v-for="ref in userDialog.dateFriendedInfo" :key="ref.type">
-                      <span>{{ ref.type }}: {{ formatDateFilter(ref.created_at, "long") }}</span
+                    <template v-for="friendedInfo in userDialog.dateFriendedInfo" :key="friendedInfo.type ?? ''">
+                      <span>{{ friendedInfo.type }}: {{ formatDateFilter(friendedInfo.created_at, "long") }}</span
                       ><br />
                     </template>
                   </template>
@@ -361,6 +342,7 @@
 </template>
 
 <script setup lang="ts">
+import Timer from "@/components/Timer.vue";
 import { Copy, Info, Languages, Pencil, Trash2, User } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
@@ -372,6 +354,7 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import { logError } from "../../../stores/notification/errors";
 
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
@@ -414,7 +397,7 @@ const { fullscreenImageDialog } = storeToRefs(useGalleryStore());
 const { lastLocation } = storeToRefs(useLocationStore());
 const { userImage, userStatusClass } = useUserDisplay();
 
-const bioCache = ref({
+const bioCache = ref<{ userId: string | null; translated: string | null }>({
   userId: null,
   translated: null,
 });
@@ -483,8 +466,8 @@ async function translateBio() {
   }
 }
 
-function showPreviousInstancesListDialog(userRef) {
-  instanceStore.showPreviousInstancesListDialog("user", userRef);
+function showPreviousInstancesListDialog(userRef: unknown) {
+  instanceStore.showPreviousInstancesListDialog("user", userRef).catch(logError);
 }
 
 function resetHome() {
@@ -496,8 +479,10 @@ function resetHome() {
       title: t("confirm.title"),
     })
     .then(({ ok }) => {
-      if (!ok) return;
-      userRequest
+      if (!ok) {
+        return;
+      }
+      return userRequest
         .saveCurrentUser({
           homeLocation: "",
         })
@@ -506,14 +491,17 @@ function resetHome() {
           return args;
         });
     })
-    .catch(() => {});
+    .catch(logError);
 }
 
 function getVRChatCredits() {
-  queryRequest.fetch("vrchatCredits").then((args) => (currentUserCredits.value = args.json?.balance));
+  queryRequest
+    .fetch("vrchatCredits")
+    .then((args) => (currentUserCredits.value = args.json.balance))
+    .catch(logError);
 }
 
-function showFullscreenImageDialog(imageUrl, fileName) {
+function showFullscreenImageDialog(imageUrl: string, fileName = "") {
   if (!imageUrl) {
     return;
   }

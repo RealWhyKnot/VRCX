@@ -18,7 +18,7 @@
               <User class="size-4 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
-          <IconFrame :icon-frame="favorite.ref.iconFrame" />
+          <IconFrame :icon-frame="favorite.ref.iconFrame ?? ''" />
         </ItemMedia>
         <ItemContent class="min-w-0">
           <ItemTitle class="truncate max-w-full" :style="displayNameStyle">{{ displayName }}</ItemTitle>
@@ -138,16 +138,39 @@ import { useUserDisplay } from "../../../composables/use-user-display";
 import Location from "../../../components/Location.vue";
 import UserContextMenu from "../../../components/UserContextMenu.vue";
 import IconFrame from "../../../components/IconFrame.vue";
+import type { VrcxUser } from "../../../types/vrcx";
+import { logFailure } from "../../../stores/log-failure";
 
 const { userImage } = useUserDisplay();
-const props = defineProps({
-  favorite: { type: Object, required: true },
-  group: { type: Object, default: null },
-  editMode: { type: Boolean, default: false },
-  selected: { type: Boolean, default: false },
-});
 
-const emit = defineEmits(["toggle-select"]);
+type FavoriteFriendEntry = {
+  id: string;
+  name?: string | undefined;
+  ref?: VrcxUser | undefined;
+};
+
+type FavoriteFriendGroup = {
+  key: string;
+  type: string;
+};
+
+const props = withDefaults(
+  defineProps<{
+    favorite: FavoriteFriendEntry;
+    group?: FavoriteFriendGroup | null | undefined;
+    editMode?: boolean;
+    selected?: boolean;
+  }>(),
+  {
+    group: null,
+    editMode: false,
+    selected: false,
+  }
+);
+
+const emit = defineEmits<{
+  "toggle-select": [value: boolean];
+}>();
 
 const { showFavoriteDialog } = useFavoriteStore();
 const launchStore = useLaunchStore();
@@ -160,13 +183,22 @@ const { lastLocation, lastLocationDestination } = storeToRefs(useLocationStore()
 
 const isSelected = computed({
   get: () => props.selected,
-  set: (value) => emit("toggle-select", value),
+  set: (isChecked: boolean) => emit("toggle-select", isChecked),
 });
 
-const displayName = computed(() => props.favorite?.ref?.displayName || props.favorite?.name || props.favorite?.id);
+const displayName = computed(() => {
+  const refName = props.favorite.ref?.displayName;
+  if (refName) {
+    return refName;
+  }
+  if (props.favorite.name) {
+    return props.favorite.name;
+  }
+  return props.favorite.id;
+});
 
 const displayNameStyle = computed(() => {
-  if (props.favorite?.ref?.$userColour) {
+  if (props.favorite.ref?.$userColour) {
     return {
       color: props.favorite.ref.$userColour,
     };
@@ -188,12 +220,12 @@ const deleteMenuLabel = computed(() => (props.group?.type === "local" ? t("view.
 const canInviteToMyLocation = computed(() => checkCanInvite(lastLocation.value.location));
 
 const hasFriendLocation = computed(() => {
-  const loc = props.favorite?.ref?.location;
+  const loc = props.favorite.ref?.location;
   return !!loc && isRealInstance(loc);
 });
 
 const canJoinFriend = computed(() => {
-  const loc = props.favorite?.ref?.location;
+  const loc = props.favorite.ref?.location;
   if (!loc || !isRealInstance(loc)) {
     return false;
   }
@@ -205,9 +237,12 @@ function handleOpenProfile() {
 }
 
 function friendRequestInvite() {
-  notificationRequest.sendRequestInvite({ platform: "standalonewindows" }, props.favorite.id).then(() => {
-    toast.success("Request invite sent");
-  });
+  void notificationRequest
+    .sendRequestInvite({ platform: "standalonewindows" }, props.favorite.id)
+    .then(() => {
+      toast.success("Request invite sent");
+    })
+    .catch(logFailure("Sending the invite request failed:"));
 }
 
 function friendInvite() {
@@ -216,20 +251,23 @@ function friendInvite() {
     currentLocation = lastLocationDestination.value;
   }
   const location = parseLocation(currentLocation);
-  queryRequest.fetch("world.location", { worldId: location.worldId }).then((args) => {
-    notificationRequest
-      .sendInvite(
-        {
-          instanceId: location.tag,
-          worldId: location.tag,
-          worldName: args.ref.name,
-        },
-        props.favorite.id
-      )
-      .then(() => {
-        toast.success(t("message.invite.sent"));
-      });
-  });
+  void queryRequest
+    .fetch("world.location", { worldId: location.worldId })
+    .then((args) =>
+      notificationRequest
+        .sendInvite(
+          {
+            instanceId: location.tag,
+            worldId: location.tag,
+            worldName: args.ref.name,
+          },
+          props.favorite.id
+        )
+        .then(() => {
+          toast.success(t("message.invite.sent"));
+        })
+    )
+    .catch(logFailure("Sending the invite failed:"));
 }
 
 function friendSendBoop() {
@@ -237,36 +275,39 @@ function friendSendBoop() {
 }
 
 function friendJoin() {
-  const loc = props.favorite?.ref?.location;
+  const loc = props.favorite.ref?.location;
   if (!loc) {
     return;
   }
-  launchStore.showLaunchDialog(loc);
+  void launchStore.showLaunchDialog(loc).catch(logFailure("Showing the launch dialog failed:"));
 }
 
 function friendInviteSelf() {
-  const loc = props.favorite?.ref?.location;
+  const loc = props.favorite.ref?.location;
   if (!loc) {
     return;
   }
   const location = parseLocation(loc);
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: location.instanceId,
       worldId: location.worldId,
     })
     .then(() => {
       toast.success(t("message.invite.self_sent"));
-    });
+    })
+    .catch(logFailure("Sending the self invite failed:"));
 }
 
 function handleDeleteFavorite() {
   if (props.group?.type === "local") {
     removeLocalFriendFavorite(props.favorite.id, props.group.key);
   } else {
-    favoriteRequest.deleteFavorite({
-      objectId: props.favorite.id,
-    });
+    void favoriteRequest
+      .deleteFavorite({
+        objectId: props.favorite.id,
+      })
+      .catch(logFailure("Removing the favorite failed:"));
   }
 }
 </script>

@@ -71,36 +71,47 @@ import Popover from "@/components/ui/popover/Popover.vue";
 import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
 import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { computed, ref, watch } from "vue";
-import { TAG_COLORS, getTagColor } from "@/shared/constants/tags";
+import { TAG_COLORS } from "@/shared/constants/tags";
 import Button from "@/components/ui/button/Button.vue";
 import { useI18n } from "vue-i18n";
+import { getAvatarTagColor, type AvatarTag, type AvatarTagSavePayload } from "./types";
 
-const props = defineProps({
-  open: { type: Boolean, default: false },
-  avatarName: { type: String, default: "" },
-  avatarId: { type: String, default: "" },
-  initialTags: {
-    type: Array,
-    default: () => [],
-  },
-});
+type TagColor = (typeof TAG_COLORS)[number];
 
-const emit = defineEmits(["update:open", "save"]);
+const props = withDefaults(
+  defineProps<{
+    open?: boolean;
+    avatarName?: string;
+    avatarId?: string;
+    initialTags?: AvatarTag[];
+  }>(),
+  {
+    open: false,
+    avatarName: "",
+    avatarId: "",
+    initialTags: () => [],
+  }
+);
+
+const emit = defineEmits<{
+  "update:open": [value: boolean];
+  save: [payload: AvatarTagSavePayload];
+}>();
 
 const { t } = useI18n();
 
 const dialogOpen = computed({
   get: () => props.open,
-  set: (val) => emit("update:open", val),
+  set: (isOpen: boolean) => emit("update:open", isOpen),
 });
 
-const tagEntries = ref([]);
+const tagEntries = ref<AvatarTag[]>([]);
 
 const tagNames = computed({
   get: () => tagEntries.value.map((e) => e.tag),
-  set: (names) => {
-    const existingMap = Object.fromEntries(tagEntries.value.map((e) => [e.tag, e]));
-    tagEntries.value = names.map((name) => existingMap[name] || { tag: name, color: null });
+  set: (names: string[]) => {
+    const existingMap = Object.fromEntries(tagEntries.value.map((e): [string, AvatarTag] => [e.tag, e]));
+    tagEntries.value = names.map((name) => existingMap[name] ?? { tag: name, color: null });
   },
 });
 
@@ -113,26 +124,26 @@ watch(
   }
 );
 
-function resolveColor(entry) {
+function resolveColor(entry: AvatarTag) {
   if (entry.color) {
     return {
       bg: entry.color,
-      text: typeof entry.color === "string" ? entry.color.replace(/\/ [\d.]+\)$/, ")") : entry.color,
+      text: entry.color.replace(/\/ [\d.]+\)$/, ")"),
     };
   }
-  return getTagColor(entry.tag);
+  return getAvatarTagColor(entry.tag);
 }
 
-function isColorSelected(entry, color) {
+function isColorSelected(entry: AvatarTag, color: TagColor) {
   if (entry.color) {
     return entry.color === color.bg;
   }
-  const hashColor = getTagColor(entry.tag);
+  const hashColor = getAvatarTagColor(entry.tag);
   return hashColor.name === color.name;
 }
 
-function setEntryColor(entry, color) {
-  const hashColor = getTagColor(entry.tag);
+function setEntryColor(entry: AvatarTag, color: TagColor) {
+  const hashColor = getAvatarTagColor(entry.tag);
   entry.color = hashColor.name === color.name ? null : color.bg;
 }
 

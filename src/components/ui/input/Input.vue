@@ -1,14 +1,24 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 import { useVModel } from "@vueuse/core";
 
-const props = defineProps({
-  defaultValue: { type: [String, Number], required: false },
-  modelValue: { type: [String, Number], required: false },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiInput" });
 
-const emits = defineEmits(["update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    defaultValue?: string | number | undefined;
+    modelValue?: string | number | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    defaultValue: undefined,
+    modelValue: undefined,
+    class: undefined,
+  }
+);
+
+const emits = defineEmits<{ "update:modelValue": [value: string | number] }>();
 
 const modelValue = useVModel(props, "modelValue", emits, {
   defaultValue: props.defaultValue,

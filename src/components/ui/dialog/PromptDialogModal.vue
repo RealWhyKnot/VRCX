@@ -32,16 +32,20 @@ const {
   promptErrorMessage,
 } = storeToRefs(modalStore);
 
-const { handleSubmit, resetForm, values } = useForm({
+const { handleSubmit, resetForm, values } = useForm<{ value: string }>({
   initialValues: {
     value: "",
   },
 });
 
-const validateValue = (value) => {
-  const pattern = promptPattern.value;
+function fieldBindings(field: object): Record<string, unknown> {
+  return { ...field };
+}
+
+const validateValue = (value: unknown) => {
+  const pattern: RegExp | string | null = promptPattern.value;
   if (!pattern) return true;
-  let regex = pattern;
+  let regex: RegExp | string = pattern;
   if (typeof regex === "string") {
     try {
       regex = new RegExp(regex);
@@ -52,48 +56,48 @@ const validateValue = (value) => {
   if (!(regex instanceof RegExp)) {
     return true;
   }
-  return regex.test(value ?? "") || promptErrorMessage.value;
+  return regex.test(typeof value === "string" ? value : "") || promptErrorMessage.value;
 };
 
 const onSubmit = handleSubmit((formValues) => {
-  modalStore.handlePromptOk(formValues.value ?? "");
+  modalStore.handlePromptOk(formValues.value);
 });
 
-function onEscapeKeyDown(event) {
+function onEscapeKeyDown(event: Event) {
   if (!promptDismissible.value) {
     event.preventDefault();
     return;
   }
-  modalStore.handlePromptDismiss(values.value ?? "");
+  modalStore.handlePromptDismiss(values.value);
 }
 
-function onPointerDownOutside(event) {
+function onPointerDownOutside(event: Event) {
   if (!promptDismissible.value) {
     event.preventDefault();
     return;
   }
-  modalStore.handlePromptDismiss(values.value ?? "");
+  modalStore.handlePromptDismiss(values.value);
 }
 
-function onInteractOutside(event) {
+function onInteractOutside(event: Event) {
   if (!promptDismissible.value) {
     event.preventDefault();
     return;
   }
-  modalStore.handlePromptDismiss(values.value ?? "");
+  modalStore.handlePromptDismiss(values.value);
 }
 
 function handleCancel() {
-  modalStore.handlePromptCancel(values.value ?? "");
+  modalStore.handlePromptCancel(values.value);
 }
 
 watch(
   [promptOpen, promptInputValue],
-  ([open, inputValue]) => {
-    if (open) {
+  ([isOpen, inputValue]) => {
+    if (isOpen) {
       resetForm({
         values: {
-          value: inputValue ?? "",
+          value: inputValue,
         },
       });
       return;
@@ -135,7 +139,7 @@ watch(
           <FormItem>
             <FormLabel class="sr-only">Input</FormLabel>
             <FormControl>
-              <Input v-bind="componentField" :type="promptInputType" />
+              <Input v-bind="fieldBindings(componentField)" :type="promptInputType" />
             </FormControl>
             <FormMessage />
           </FormItem>

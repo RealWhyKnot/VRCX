@@ -87,6 +87,7 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { computed, ref, watch } from "vue";
+import type { SubmitModerationReportRequest } from "vrchat";
 import Button from "@/components/ui/button/Button.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
 import { storeToRefs } from "pinia";
@@ -107,10 +108,10 @@ const reason = ref("");
 const description = ref("");
 const isSubmitting = ref(false);
 
-const reportOptions = computed(() => cachedConfig.value?.reportOptions?.[moderationReportDialog.value.type] ?? {});
+const reportOptions = computed(() => cachedConfig.value.reportOptions?.[moderationReportDialog.value.type] ?? {});
 
 const categoryOptions = computed(() => {
-  const categories = cachedConfig.value?.reportCategories ?? {};
+  const categories = cachedConfig.value.reportCategories ?? {};
   return Object.keys(reportOptions.value)
     .map((key) => ({
       value: key,
@@ -121,22 +122,22 @@ const categoryOptions = computed(() => {
 });
 
 const reasonOptions = computed(() => {
-  const reasons = cachedConfig.value?.reportReasons ?? {};
+  const reasons = cachedConfig.value.reportReasons ?? {};
   return (reportOptions.value[category.value] ?? []).map((key) => ({
     value: key,
     label: reasons[key]?.text ?? key,
   }));
 });
 
-const selectedCategory = computed(() => cachedConfig.value?.reportCategories?.[category.value]);
-const selectedReason = computed(() => cachedConfig.value?.reportReasons?.[reason.value]);
+const selectedCategory = computed(() => cachedConfig.value.reportCategories?.[category.value]);
+const selectedReason = computed(() => cachedConfig.value.reportReasons?.[reason.value]);
 
 const canSubmit = computed(() => Boolean(moderationReportDialog.value.contentId && category.value && reason.value) && !isSubmitting.value);
 
 watch(
   () => moderationReportDialog.value.visible,
-  (visible) => {
-    if (visible) {
+  (isVisible) => {
+    if (isVisible) {
       category.value = "";
       reason.value = "";
       description.value = "";
@@ -144,8 +145,8 @@ watch(
   }
 );
 
-function setCategory(value) {
-  category.value = value;
+function setCategory(nextCategory: unknown) {
+  category.value = typeof nextCategory === "string" ? nextCategory : "";
   reason.value = "";
 }
 
@@ -155,7 +156,7 @@ function closeDialog() {
 
 async function submitReport() {
   const D = moderationReportDialog.value;
-  const params = {
+  const params: SubmitModerationReportRequest = {
     type: D.type,
     category: category.value,
     reason: reason.value,

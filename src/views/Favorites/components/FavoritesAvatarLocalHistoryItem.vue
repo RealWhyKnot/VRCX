@@ -27,11 +27,11 @@
               <DropdownMenuItem @click="handleViewDetails">
                 {{ t("common.actions.view_details") }}
               </DropdownMenuItem>
-              <DropdownMenuItem :disabled="currentUser.currentAvatar === favorite.id" @click="selectAvatarWithConfirmation(favorite.id)">
+              <DropdownMenuItem :disabled="currentUser.currentAvatar === favorite.id" @click="handleSelectAvatar">
                 {{ t("view.favorite.select_avatar_tooltip") }}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem @click="showFavoriteDialog('avatar', favorite.id)">
+              <DropdownMenuItem @click="handleEditFavorite">
                 {{ t("view.favorite.edit_favorite_tooltip") }}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -41,11 +41,11 @@
     </ContextMenuTrigger>
     <ContextMenuContent>
       <ContextMenuItem @click="handleViewDetails">{{ t("common.actions.view_details") }}</ContextMenuItem>
-      <ContextMenuItem :disabled="currentUser.currentAvatar === favorite.id" @click="selectAvatarWithConfirmation(favorite.id)">
+      <ContextMenuItem :disabled="currentUser.currentAvatar === favorite.id" @click="handleSelectAvatar">
         {{ t("view.favorite.select_avatar_tooltip") }}
       </ContextMenuItem>
       <ContextMenuSeparator />
-      <ContextMenuItem @click="showFavoriteDialog('avatar', favorite.id)">
+      <ContextMenuItem @click="handleEditFavorite">
         {{ t("view.favorite.edit_favorite_tooltip") }}
       </ContextMenuItem>
     </ContextMenuContent>
@@ -78,6 +78,7 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
+import type { AvatarHistoryEntry } from "../../../stores/avatar";
 import { useFavoriteStore } from "../../../stores/favorite";
 import { useUserStore } from "../../../stores/user";
 import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
@@ -87,12 +88,9 @@ const { t } = useI18n();
 const { showFavoriteDialog } = useFavoriteStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  favorite: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  favorite: AvatarHistoryEntry;
+}>();
 
 const itemStyle = computed(() => ({
   padding: "var(--favorites-card-padding-y, 8px) var(--favorites-card-padding-x, 10px)",
@@ -111,7 +109,24 @@ const smallThumbnail = computed(() => {
 });
 
 function handleViewDetails() {
-  showAvatarDialog(props.favorite.id);
+  const avatarId = props.favorite.id;
+  if (avatarId !== null) {
+    showAvatarDialog(avatarId);
+  }
+}
+
+function handleSelectAvatar() {
+  const avatarId = props.favorite.id;
+  if (avatarId !== null) {
+    selectAvatarWithConfirmation(avatarId);
+  }
+}
+
+function handleEditFavorite() {
+  const avatarId = props.favorite.id;
+  if (avatarId !== null) {
+    showFavoriteDialog("avatar", avatarId);
+  }
 }
 </script>
 

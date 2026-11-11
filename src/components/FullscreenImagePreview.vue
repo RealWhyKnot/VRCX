@@ -96,15 +96,16 @@ import { useI18n } from "vue-i18n";
 
 import { extractFileId } from "../shared/utils/file-utils";
 import { useGalleryStore } from "../stores/gallery";
+import { webApiService } from "../services/webapi";
 
 const galleryStore = useGalleryStore();
 const { fullscreenImageDialog } = storeToRefs(galleryStore);
 const { disableGpuAcceleration } = storeToRefs(useGeneralSettingsStore());
 const { t } = useI18n();
 
-const viewerEl = ref(null);
+const viewerEl = ref<HTMLDivElement | null>(null);
 const portalLayer = acquireModalPortalLayer();
-const portalTo = portalLayer.element;
+const portalTo = portalLayer.element ?? "body";
 
 const scale = ref(1);
 const rotate = ref(0);
@@ -119,17 +120,17 @@ const startTy = ref(0);
 
 const imageUrl = computed(() => fullscreenImageDialog.value.imageUrl || "");
 
-const open = computed({
+const open = computed<boolean>({
   get: () => fullscreenImageDialog.value.visible,
-  set: (v) => {
-    fullscreenImageDialog.value.visible = v;
+  set: (isOpen: boolean) => {
+    fullscreenImageDialog.value.visible = isOpen;
   },
 });
 
-function clamp(n, min, max) {
+function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
-function degToRad(deg) {
+function degToRad(deg: number) {
   return (deg * Math.PI) / 180;
 }
 
@@ -144,7 +145,7 @@ function closeDialog() {
   open.value = false;
 }
 
-function zoomAtCenter(factor) {
+function zoomAtCenter(factor: number) {
   const el = viewerEl.value;
   if (!el) {
     scale.value = clamp(scale.value * factor, 0.1, 10);
@@ -168,7 +169,7 @@ function rotateCCW() {
   rotate.value = (rotate.value - 90 + 360) % 360;
 }
 
-function zoomAtPointer(e, factor) {
+function zoomAtPointer(e: MouseEvent, factor: number) {
   const el = viewerEl.value;
   if (!el) return;
 
@@ -201,23 +202,25 @@ function zoomAtPointer(e, factor) {
   scale.value = newScale;
 }
 
-function onWheel(e) {
+function onWheel(e: WheelEvent) {
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
   zoomAtPointer(e, factor);
 }
 
-function onPointerDown(e) {
+function onPointerDown(e: PointerEvent) {
   if (e.button !== 0) return;
   isDragging.value = true;
-  e.currentTarget.setPointerCapture?.(e.pointerId);
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
   dragStartX.value = e.clientX;
   dragStartY.value = e.clientY;
   startTx.value = tx.value;
   startTy.value = ty.value;
 }
 
-function onPointerMove(e) {
+function onPointerMove(e: PointerEvent) {
   if (!isDragging.value) return;
   const dx = e.clientX - dragStartX.value;
   const dy = e.clientY - dragStartY.value;
@@ -225,10 +228,12 @@ function onPointerMove(e) {
   ty.value = startTy.value + dy;
 }
 
-function onPointerUp(e) {
+function onPointerUp(e: PointerEvent) {
   if (!isDragging.value) return;
   isDragging.value = false;
-  e.currentTarget.releasePointerCapture?.(e.pointerId);
+  if (e.currentTarget instanceof HTMLElement) {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  }
 }
 
 const transformStyle = computed(() => ({
@@ -238,8 +243,8 @@ const transformStyle = computed(() => ({
 
 watch(
   () => open.value,
-  (v) => {
-    if (v) {
+  (isOpen) => {
+    if (isOpen) {
       portalLayer.bringToFront();
       resetTransform();
     }
@@ -258,7 +263,7 @@ watch(
   }
 );
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   if (!open.value) return;
   if (e.key === "+" || e.key === "=") zoomInCenter();
   else if (e.key === "-" || e.key === "_") zoomOutCenter();
@@ -267,15 +272,15 @@ function onKeydown(e) {
 }
 useEventListener(window, "keydown", onKeydown);
 
-async function copyImageToClipboard(url) {
+async function copyImageToClipboard(url: string) {
   if (!url) return;
   const msg = toast.info(t("message.image.downloading"));
   try {
     const response = await webApiService.execute({ url, method: "GET" });
-    if (response.status !== 200 || !String(response.data).startsWith("data:image/png")) {
+    if (response.status !== 200 || !response.data.startsWith("data:image/png")) {
       throw new Error(`Error: ${response.data}`);
     }
-    const blob = await (await fetch(response.data)).blob();
+    const blob = await (await fetch(response.data, { signal: AbortSignal.timeout(30_000) })).blob();
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     toast.success(t("message.image.copied_to_clipboard"));
   } catch (error) {
@@ -286,12 +291,12 @@ async function copyImageToClipboard(url) {
   }
 }
 
-async function downloadAndSaveImage(url, fileName) {
+async function downloadAndSaveImage(url: string, fileName: string) {
   if (!url) return;
   const msg = toast.info(t("message.image.downloading"));
   try {
     const response = await webApiService.execute({ url, method: "GET" });
-    if (response.status !== 200 || !String(response.data).startsWith("data:image/png")) {
+    if (response.status !== 200 || !response.data.startsWith("data:image/png")) {
       throw new Error(`Error: ${response.data}`);
     }
 

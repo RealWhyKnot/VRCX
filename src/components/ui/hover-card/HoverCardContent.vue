@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { HoverCardContentProps, PrimitiveProps } from "reka-ui";
 import { HoverCardContent, HoverCardPortal, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
@@ -7,40 +9,48 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  side: { type: null, required: false },
-  sideOffset: { type: Number, required: false, default: 4 },
-  sideFlip: { type: Boolean, required: false },
-  align: { type: null, required: false },
-  alignOffset: { type: Number, required: false },
-  alignFlip: { type: Boolean, required: false },
-  avoidCollisions: { type: Boolean, required: false },
-  collisionBoundary: { type: null, required: false },
-  collisionPadding: { type: [Number, Object], required: false },
-  arrowPadding: { type: Number, required: false },
-  sticky: {
-    type: String,
-    required: false,
-  },
-  hideWhenDetached: { type: Boolean, required: false },
-  positionStrategy: {
-    type: String,
-    required: false,
-  },
-  updatePositionStrategy: {
-    type: String,
-    required: false,
-  },
-  disableUpdateOnLayoutShift: { type: Boolean, required: false },
-  prioritizePosition: { type: Boolean, required: false },
-  reference: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    side?: HoverCardContentProps["side"] | undefined;
+    sideOffset?: number | undefined;
+    sideFlip?: boolean;
+    align?: HoverCardContentProps["align"] | undefined;
+    alignOffset?: number | undefined;
+    alignFlip?: boolean;
+    avoidCollisions?: boolean;
+    collisionBoundary?: HoverCardContentProps["collisionBoundary"] | undefined;
+    collisionPadding?: HoverCardContentProps["collisionPadding"] | undefined;
+    arrowPadding?: number | undefined;
+    sticky?: HoverCardContentProps["sticky"] | undefined;
+    hideWhenDetached?: boolean;
+    positionStrategy?: HoverCardContentProps["positionStrategy"] | undefined;
+    updatePositionStrategy?: HoverCardContentProps["updatePositionStrategy"] | undefined;
+    disableUpdateOnLayoutShift?: boolean;
+    prioritizePosition?: boolean;
+    reference?: HoverCardContentProps["reference"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    side: undefined,
+    sideOffset: 4,
+    align: undefined,
+    alignOffset: undefined,
+    collisionBoundary: undefined,
+    collisionPadding: undefined,
+    arrowPadding: undefined,
+    sticky: undefined,
+    positionStrategy: undefined,
+    updatePositionStrategy: undefined,
+    reference: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>

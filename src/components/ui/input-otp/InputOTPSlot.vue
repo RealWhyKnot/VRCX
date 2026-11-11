@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 import { computed } from "vue";
 import { reactiveOmit } from "@vueuse/core";
 import { useForwardProps } from "reka-ui";
 import { useVueOTPContext } from "vue-input-otp";
 
-const props = defineProps({
-  index: { type: Number, required: true },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    index: number;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    class: undefined,
+  }
+);
 
 const delegatedProps = reactiveOmit(props, "class");
 

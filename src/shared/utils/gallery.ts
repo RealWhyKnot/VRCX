@@ -13,12 +13,12 @@ type EmojiFileInfo = {
   loopStyle?: string | null;
 };
 
-function getPrintFileName(print: PrintFileInfo): string {
-  const authorName = print.authorName;
+function getPrintFileName(print: Partial<PrintFileInfo>): string {
+  const authorName = String(print.authorName);
 
   const createdAt = getPrintLocalDate(print);
   const fileNameDate = createdAt.toISOString().replace(/:/g, "-").replace(/T/g, "_").replace(/Z/g, "");
-  const fileName = `${authorName}_${fileNameDate}_${print.id}.png`;
+  const fileName = `${authorName}_${fileNameDate}_${String(print.id)}.png`;
   return fileName;
 }
 
@@ -39,12 +39,14 @@ function getPrintLocalDate(print: Pick<PrintFileInfo, "createdAt" | "timestamp">
   return createdAt;
 }
 
-function getEmojiFileName(emoji: EmojiFileInfo): string {
+function getEmojiFileName(emoji: Partial<EmojiFileInfo>): string {
+  const name = String(emoji.name);
+  const animationStyle = String(emoji.animationStyle);
   if (emoji.frames) {
     const loopStyle = emoji.loopStyle ?? "linear";
-    return `${emoji.name}_${emoji.animationStyle}animationStyle_${emoji.frames}frames_${emoji.framesOverTime}fps_${loopStyle}loopStyle.png`;
+    return `${name}_${animationStyle}animationStyle_${emoji.frames}frames_${emoji.framesOverTime}fps_${loopStyle}loopStyle.png`;
   } else {
-    return `${emoji.name}_${emoji.animationStyle}animationStyle.png`;
+    return `${name}_${animationStyle}animationStyle.png`;
   }
 }
 

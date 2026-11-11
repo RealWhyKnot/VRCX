@@ -437,7 +437,7 @@ export const useGalleryStore = defineStore("Gallery", () => {
     await refreshPrintTable();
   }
 
-  function showFullscreenImageDialog(imageUrl: string, fileName: string) {
+  function showFullscreenImageDialog(imageUrl: string, fileName = "") {
     if (!imageUrl) {
       return;
     }

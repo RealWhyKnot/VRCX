@@ -1,17 +1,30 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { TabsContent } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  value: { type: [String, Number], required: true },
-  forceMount: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: string | number;
+    forceMount?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  value: props.value,
+  forceMount: props.forceMount,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>

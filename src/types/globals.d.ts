@@ -73,7 +73,7 @@ type HostAppApi = {
   OpenShortcutFolder(): Promise<void>;
   OpenFolderAndSelectItem(path: string, isFolder?: boolean): Promise<void>;
   OpenFolderSelectorDialog(defaultPath?: string): Promise<string>;
-  OpenFileSelectorDialog(defaultPath?: string, defaultExt?: string, defaultFilter?: string): Promise<string>;
+  OpenFileSelectorDialog(defaultPath?: string | null, defaultExt?: string, defaultFilter?: string): Promise<string>;
 
   CheckGameRunning(): Promise<void>;
   IsGameRunning(): Promise<boolean>;

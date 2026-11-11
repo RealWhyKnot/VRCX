@@ -81,7 +81,7 @@ function gameLogSearchFilter(row: GameLogRow, searchQuery: string) {
   return true;
 }
 
-function getGameLogCreatedAtTs(row: GameLogRow | undefined) {
+function getGameLogCreatedAtTs(row: GameLogRow | null | undefined) {
   const createdAtRaw = row?.created_at ?? row?.createdAt ?? row?.dt;
   if (typeof createdAtRaw === "number") {
     const ts = createdAtRaw > 1_000_000_000_000 ? createdAtRaw : createdAtRaw * 1000;

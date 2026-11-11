@@ -4,6 +4,8 @@ import type { DialogRootEmits } from "reka-ui";
 
 import { DialogRoot, useForwardPropsEmits } from "reka-ui";
 
+defineOptions({ name: "UiSheet" });
+
 const props = defineProps<{
   open?: DialogRootProps["open"];
   defaultOpen?: DialogRootProps["defaultOpen"];

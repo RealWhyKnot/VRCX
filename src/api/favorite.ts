@@ -10,7 +10,6 @@ import type {
   GetFavorites,
   Success,
   UpdateFavoriteGroupRequest,
-  UpdateFavoriteGroupResponse,
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { useUserStore } from "../stores/user";
@@ -128,7 +127,7 @@ const favoriteRequest = {
   },
 
   saveFavoriteGroup(params: UpdateFavoriteGroupRequest & { type: string; group: string }): Promise<{
-    json: Json<UpdateFavoriteGroupResponse>;
+    json: Json<FavoriteGroup>;
     params: UpdateFavoriteGroupRequest & { type: string; group: string };
   }> {
     const endpoint = `favorite/group/${params.type}/${params.group}/${getCurrentUserId()}`;
@@ -136,7 +135,7 @@ const favoriteRequest = {
       method: "PUT",
       params,
     }).then((json) => {
-      if (!isObjectJson<UpdateFavoriteGroupResponse>(json)) {
+      if (!isObjectJson<FavoriteGroup>(json)) {
         throw unexpectedResponse(endpoint);
       }
       const args = {

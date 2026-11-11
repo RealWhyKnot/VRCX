@@ -4,6 +4,8 @@ import type { PopoverRootEmits } from "reka-ui";
 
 import { PopoverRoot, useForwardPropsEmits } from "reka-ui";
 
+defineOptions({ name: "UiPopover" });
+
 const props = defineProps<{
   defaultOpen?: PopoverRootProps["defaultOpen"];
   open?: PopoverRootProps["open"];

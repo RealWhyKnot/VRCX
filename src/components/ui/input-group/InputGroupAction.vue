@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { useAttrs } from "vue";
 import { useVModel } from "@vueuse/core";
 
@@ -6,18 +7,27 @@ import InputGroupField from "./InputGroupField.vue";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  class: { type: null, required: false },
-  inputClass: { type: null, required: false },
-  clearable: { type: Boolean, default: false },
-  showPassword: { type: Boolean, default: false },
-  showCount: { type: Boolean, default: false },
-  maxlength: { type: Number, required: false },
-  size: { type: String, default: "default" },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null | undefined;
+    class?: ClassValue | undefined;
+    inputClass?: ClassValue | undefined;
+    clearable?: boolean;
+    showPassword?: boolean;
+    showCount?: boolean;
+    maxlength?: number | undefined;
+    size?: string;
+  }>(),
+  {
+    modelValue: "",
+    class: undefined,
+    inputClass: undefined,
+    maxlength: undefined,
+    size: "default",
+  }
+);
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{ "update:modelValue": [value: string | number] }>();
 const attrs = useAttrs();
 
 const modelValue = useVModel(props, "modelValue", emit, {
@@ -38,10 +48,10 @@ const modelValue = useVModel(props, "modelValue", emit, {
     :size="props.size"
     v-bind="attrs"
   >
-    <template v-if="$slots.leading" #leading>
+    <template v-if="$slots['leading']" #leading>
       <slot name="leading" />
     </template>
-    <template v-if="$slots.actions" #trailing>
+    <template v-if="$slots['actions']" #trailing>
       <slot name="actions" />
     </template>
   </InputGroupField>

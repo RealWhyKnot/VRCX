@@ -1,43 +1,51 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { ContextMenuSubContentEmits, ContextMenuSubContentProps, PrimitiveProps } from "reka-ui";
 import { reactiveOmit } from "@vueuse/core";
 import { ContextMenuSubContent, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  loop: { type: Boolean, required: false },
-  sideOffset: { type: Number, required: false },
-  sideFlip: { type: Boolean, required: false },
-  alignOffset: { type: Number, required: false },
-  alignFlip: { type: Boolean, required: false },
-  avoidCollisions: { type: Boolean, required: false },
-  collisionBoundary: { type: null, required: false },
-  collisionPadding: { type: [Number, Object], required: false },
-  arrowPadding: { type: Number, required: false },
-  hideShiftedArrow: { type: Boolean, required: false },
-  sticky: {
-    type: String,
-    required: false,
-  },
-  hideWhenDetached: { type: Boolean, required: false },
-  positionStrategy: {
-    type: String,
-    required: false,
-  },
-  updatePositionStrategy: {
-    type: String,
-    required: false,
-  },
-  disableUpdateOnLayoutShift: { type: Boolean, required: false },
-  prioritizePosition: { type: Boolean, required: false },
-  reference: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "entryFocus", "openAutoFocus", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    loop?: boolean;
+    sideOffset?: number | undefined;
+    sideFlip?: boolean;
+    alignOffset?: number | undefined;
+    alignFlip?: boolean;
+    avoidCollisions?: boolean;
+    collisionBoundary?: ContextMenuSubContentProps["collisionBoundary"] | undefined;
+    collisionPadding?: ContextMenuSubContentProps["collisionPadding"] | undefined;
+    arrowPadding?: number | undefined;
+    hideShiftedArrow?: boolean;
+    sticky?: ContextMenuSubContentProps["sticky"] | undefined;
+    hideWhenDetached?: boolean;
+    positionStrategy?: ContextMenuSubContentProps["positionStrategy"] | undefined;
+    updatePositionStrategy?: ContextMenuSubContentProps["updatePositionStrategy"] | undefined;
+    disableUpdateOnLayoutShift?: boolean;
+    prioritizePosition?: boolean;
+    reference?: ContextMenuSubContentProps["reference"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    sideOffset: undefined,
+    alignOffset: undefined,
+    collisionBoundary: undefined,
+    collisionPadding: undefined,
+    arrowPadding: undefined,
+    sticky: undefined,
+    positionStrategy: undefined,
+    updatePositionStrategy: undefined,
+    reference: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<ContextMenuSubContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

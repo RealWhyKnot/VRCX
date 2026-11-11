@@ -9,7 +9,7 @@
         <Field>
           <FieldLabel>{{ t("dialog.launch.url") }}</FieldLabel>
           <FieldContent class="flex-row items-center gap-2">
-            <InputGroupField v-model="launchDialog.url" size="sm" @click="$event.target.tagName === 'INPUT' && $event.target.select()" />
+            <InputGroupField v-model="launchDialog.url" size="sm" @click="selectInputText" />
             <TooltipWrapper side="right" :content="t('dialog.launch.copy_tooltip')">
               <Button
                 class="rounded-full"
@@ -32,7 +32,7 @@
             </span>
           </FieldLabel>
           <FieldContent class="flex-row items-center gap-2">
-            <InputGroupField v-model="launchDialog.shortUrl" size="sm" @click="$event.target.tagName === 'INPUT' && $event.target.select()" />
+            <InputGroupField v-model="launchDialog.shortUrl" size="sm" @click="selectInputText" />
             <TooltipWrapper side="right" :content="t('dialog.launch.copy_tooltip')">
               <Button
                 class="rounded-full"
@@ -48,7 +48,7 @@
         <Field>
           <FieldLabel>{{ t("dialog.launch.location") }}</FieldLabel>
           <FieldContent class="flex-row items-center gap-2">
-            <InputGroupField v-model="launchDialog.location" size="sm" @click="$event.target.tagName === 'INPUT' && $event.target.select()" />
+            <InputGroupField v-model="launchDialog.location" size="sm" @click="selectInputText" />
             <TooltipWrapper side="right" :content="t('dialog.launch.copy_tooltip')">
               <Button
                 class="rounded-full"
@@ -136,6 +136,7 @@ import { useGameStore } from "../../stores/game";
 import { useInviteStore } from "../../stores/invite";
 import { useLaunchStore } from "../../stores/launch";
 import { useLocationStore } from "../../stores/location";
+import { logFailure } from "../../stores/log-failure";
 import { useModalStore } from "../../stores/modal";
 import { getLaunchURL, isRealInstance } from "../../shared/utils/instance";
 import { parseLocation } from "../../shared/utils/location-parser";
@@ -144,6 +145,7 @@ import { instanceRequest } from "../../api/instance";
 import { queryRequest } from "../../api/query-request";
 
 import InviteDialog from "./InviteDialog/InviteDialog.vue";
+import type { InviteDialogState } from "./InviteDialog/invite-dialog-types";
 import { configRepository } from "../../services/config";
 
 const { t } = useI18n();
@@ -161,7 +163,14 @@ const { checkCanInvite } = useInviteChecks();
 
 const launchModeLabel = computed(() => (launchDialog.value.desktop ? t("dialog.launch.start_as_desktop") : t("dialog.launch.launch")));
 
-let launchAsDesktopTimeoutId;
+let launchAsDesktopTimeoutId: ReturnType<typeof setTimeout> | undefined;
+
+function selectInputText(event: MouseEvent) {
+  const target = event.target;
+  if (target instanceof HTMLInputElement) {
+    target.select();
+  }
+}
 
 onBeforeUnmount(() => {
   clearTimeout(launchAsDesktopTimeoutId);
@@ -178,7 +187,7 @@ const launchDialog = ref({
   secureOrShortName: "",
 });
 
-const inviteDialog = ref({
+const inviteDialog = ref<InviteDialogState>({
   visible: false,
   loading: false,
   worldId: "",
@@ -191,17 +200,17 @@ const isVisible = computed({
   get() {
     return launchDialogData.value.visible;
   },
-  set(value) {
-    launchDialogData.value.visible = value;
+  set(isOpen: boolean) {
+    launchDialogData.value.visible = isOpen;
   },
 });
 
 watch(
   () => launchDialogData.value.loading,
-  (loading) => {
-    if (loading) {
+  (isLoading) => {
+    if (isLoading) {
       getConfig();
-      initLaunchDialog();
+      void initLaunchDialog().catch(logFailure("Preparing the launch dialog failed:"));
     }
   }
 );
@@ -212,12 +221,12 @@ function closeInviteDialog() {
   inviteDialog.value.visible = false;
 }
 
-function showInviteDialog(tag) {
+function showInviteDialog(tag: string) {
   if (!isRealInstance(tag)) {
     return;
   }
   const L = parseLocation(tag);
-  queryRequest
+  void queryRequest
     .fetch("world", {
       worldId: L.worldId,
     })
@@ -236,12 +245,13 @@ function showInviteDialog(tag) {
         D.friendsInInstance.push(ctx);
       }
       D.visible = true;
-    });
+    })
+    .catch(logFailure("Loading the world for the invite dialog failed:"));
 }
 
-function handleLaunchGame(location, shortName, desktop) {
+function handleLaunchGame(location: string, shortName: string, isDesktop: boolean) {
   if (isGameRunning.value) {
-    modalStore
+    void modalStore
       .confirm({
         description: t("dialog.launch.game_running_warning"),
         title: t("dialog.launch.header"),
@@ -250,41 +260,41 @@ function handleLaunchGame(location, shortName, desktop) {
       })
       .then(({ ok }) => {
         if (!ok) return;
-        launchGame(location, shortName, desktop);
+        void launchGame(location, shortName, isDesktop).catch(logFailure("Launching the game failed:"));
         isVisible.value = false;
       })
-      .catch(() => {});
+      .catch(logFailure("Confirming the game launch failed:"));
     return;
   }
-  launchGame(location, shortName, desktop);
+  void launchGame(location, shortName, isDesktop).catch(logFailure("Launching the game failed:"));
   isVisible.value = false;
 }
 
-function handleLaunchDefault(location, shortName) {
+function handleLaunchDefault(location: string, shortName: string) {
   handleLaunchGame(location, shortName, launchDialog.value.desktop);
 }
 
-function handleLaunchCommand(command, location, shortName) {
-  const desktop = command === "desktop";
-  configRepository.setBool("launchAsDesktop", desktop);
-  handleLaunchGame(location, shortName, desktop);
+function handleLaunchCommand(command: string, location: string, shortName: string) {
+  const isDesktop = command === "desktop";
+  void configRepository.setBool("launchAsDesktop", isDesktop).catch(logFailure("Saving the launch mode failed:"));
+  handleLaunchGame(location, shortName, isDesktop);
   clearTimeout(launchAsDesktopTimeoutId);
   launchAsDesktopTimeoutId = setTimeout(() => {
-    launchDialog.value.desktop = desktop;
+    launchDialog.value.desktop = isDesktop;
   }, 500);
 }
 
-function handleAttachGame(location, shortName) {
-  tryOpenInstanceInVrc(location, shortName);
+function handleAttachGame(location: string, shortName: string) {
+  void tryOpenInstanceInVrc(location, shortName).catch(logFailure("Opening the instance in VRChat failed:"));
   isVisible.value = false;
 }
 
-function selfInvite(location, shortName) {
+function selfInvite(location: string, shortName: string) {
   const L = parseLocation(location);
   if (!L.isRealInstance) {
     return;
   }
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: L.instanceId,
       worldId: L.worldId,
@@ -293,14 +303,19 @@ function selfInvite(location, shortName) {
     .then((args) => {
       toast.success(t("message.invite.self_sent"));
       return args;
-    });
+    })
+    .catch(logFailure("Sending the self invite failed:"));
 }
 
 function getConfig() {
-  configRepository.getBool("launchAsDesktop").then((value) => (launchDialog.value.desktop = value));
+  void configRepository
+    .getBool("launchAsDesktop")
+    .then((isDesktop) => (launchDialog.value.desktop = isDesktop ?? false))
+    .catch(logFailure("Loading the launch mode failed:"));
 }
 async function initLaunchDialog() {
-  const { tag, shortName } = launchDialogData.value;
+  const tag = launchDialogData.value.tag;
+  const shortName = launchDialogData.value.shortName ?? "";
   if (!isRealInstance(tag)) {
     return;
   }
@@ -325,13 +340,13 @@ async function initLaunchDialog() {
       worldId: L.worldId,
       instanceId: L.instanceId,
     });
-    if (!res.json) {
-      return;
-    }
     const resLocation = `${res.instance.worldId}:${res.instance.instanceId}`;
     if (resLocation === launchDialog.value.tag) {
-      const resShortName = res.json.shortName;
-      const secureOrShortName = res.json.shortName || res.json.secureName;
+      const resShortName = res.json.shortName ?? "";
+      let secureOrShortName = res.json.secureName;
+      if (res.json.shortName) {
+        secureOrShortName = res.json.shortName;
+      }
       const parsedL = parseLocation(resLocation);
       parsedL.shortName = resShortName;
       launchDialog.value.shortName = resShortName;
@@ -344,13 +359,13 @@ async function initLaunchDialog() {
   }
 }
 
-async function copyInstanceMessage(input) {
+async function copyInstanceMessage(input: string) {
   try {
     await navigator.clipboard.writeText(input);
     toast.success("Instance copied to clipboard");
-  } catch (error) {
+  } catch (error: unknown) {
     toast.error("Instance copied failed");
-    console.error(error.message);
+    console.error(error);
   }
 }
 </script>

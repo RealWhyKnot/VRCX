@@ -179,31 +179,35 @@ import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
 import { useImageCropper } from "../../composables/use-image-cropper";
 import { configRepository } from "../../services/config";
+import { logFailure } from "../../stores/log-failure";
 
 import "vue-advanced-cropper/dist/style.css";
 
+type CropChangeResult = {
+  visibleArea?: { width: number } | undefined;
+  image?: { width: number } | undefined;
+};
+
 const { t } = useI18n();
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    required: true,
-  },
-  title: {
-    type: String,
-    default: "",
-  },
-  aspectRatio: {
-    type: Number,
-    default: 4 / 3,
-  },
-  file: {
-    type: [File, null],
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    open: boolean;
+    title?: string;
+    aspectRatio?: number;
+    file?: File | null;
+  }>(),
+  {
+    title: "",
+    aspectRatio: 4 / 3,
+    file: null,
+  }
+);
 
-const emit = defineEmits(["update:open", "confirm"]);
+const emit = defineEmits<{
+  "update:open": [isOpen: boolean];
+  confirm: [file: File | Blob | null];
+}>();
 
 const loading = ref(false);
 const freeMode = ref(false);
@@ -224,8 +228,8 @@ onMounted(async () => {
   autoResize.value = await configRepository.getBool("VRCX_imageCropAutoResize", false);
 });
 
-watch(autoResize, (value) => {
-  configRepository.setBool("VRCX_imageCropAutoResize", value);
+watch(autoResize, (isAutoResize) => {
+  void configRepository.setBool("VRCX_imageCropAutoResize", isAutoResize).catch(logFailure("Saving the auto resize setting failed:"));
 });
 
 watch(
@@ -239,8 +243,8 @@ watch(
 
 watch(
   () => props.open,
-  (open) => {
-    if (!open) {
+  (isOpen) => {
+    if (!isOpen) {
       loading.value = false;
       freeMode.value = false;
       zoomSliderValue.value = [50];
@@ -254,13 +258,13 @@ watch(
   () => freeMode.value,
   (isFree, wasFree) => {
     if (!isFree && wasFree) {
-      scheduleFitCropper();
+      void scheduleFitCropper().catch(logFailure("Fitting the crop area failed:"));
     }
   },
   { flush: "post" }
 );
 
-function onCropperChange(result) {
+function onCropperChange(result: CropChangeResult) {
   if (!result.visibleArea || !result.image) return;
   const ratio = result.image.width / result.visibleArea.width;
   lastZoomRatio.value = ratio;
@@ -268,8 +272,8 @@ function onCropperChange(result) {
   zoomSliderValue.value = [Math.max(0, Math.min(100, Math.round(normalized)))];
 }
 
-function onZoomCommit(value) {
-  const target = value[0];
+function onZoomCommit(value: number[]) {
+  const target = Number(value[0]);
   const targetRatio = Math.exp(LOG_MIN + (target / 100) * (LOG_MAX - LOG_MIN));
   const factor = targetRatio / lastZoomRatio.value;
   cropperRef.value?.zoom(factor);
@@ -304,7 +308,7 @@ async function scheduleFitCropper() {
 
 function handleCropperReady() {
   if (!freeMode.value) {
-    scheduleFitCropper();
+    void scheduleFitCropper().catch(logFailure("Fitting the crop area failed:"));
   }
 }
 
@@ -314,7 +318,7 @@ function toggleMode() {
 
 function handleReset() {
   freeMode.value = false;
-  scheduleFitCropper();
+  void scheduleFitCropper().catch(logFailure("Fitting the crop area failed:"));
 }
 
 function cancelCrop() {

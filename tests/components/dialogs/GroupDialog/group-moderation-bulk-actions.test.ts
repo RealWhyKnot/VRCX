@@ -1,30 +1,33 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, type DOMWrapper, type VueWrapper } from "@vue/test-utils";
 
 vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
   return {
     useI18n: () => ({
-      t: (key) => key,
+      t: (key: string) => key,
       locale: vue.ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: vue.ref("en") },
+      global: { t: (key: string) => key, locale: vue.ref("en") },
       install: vi.fn(),
     }),
   };
 });
 
 vi.mock("../../../../src/shared/utils/group", () => ({
-  hasGroupPermission: vi.fn((_group, permission) => {
-    if (_group?._mockPermissions) {
-      return _group._mockPermissions.includes(permission);
-    }
-    return true;
-  }),
+  hasGroupPermission: vi.fn((group: { _mockPermissions?: string[] } | undefined, permission: string) => group?._mockPermissions?.includes(permission) ?? true),
 }));
 
 import GroupModerationBulkActions from "../../../../src/components/dialogs/GroupDialog/GroupModerationBulkActions.vue";
+
+function findButton(wrapper: VueWrapper, text: string): DOMWrapper<Element> {
+  const button = wrapper.findAll("button").find((b) => b.text().includes(text));
+  if (!button) {
+    throw new Error(`no button contains ${text}`);
+  }
+  return button;
+}
 
 function mountComponent(props = {}) {
   return mount(GroupModerationBulkActions, {
@@ -156,7 +159,7 @@ describe("GroupModerationBulkActions.vue", () => {
   describe("button disabled states", () => {
     test("add/remove roles disabled when no roles selected", () => {
       const wrapper = mountComponent({ selectedRoles: [] });
-      const addBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.add_roles"));
+      const addBtn = findButton(wrapper, "dialog.group_member_moderation.add_roles");
       expect(addBtn.attributes("disabled")).toBeDefined();
     });
 
@@ -166,7 +169,7 @@ describe("GroupModerationBulkActions.vue", () => {
         progressCurrent: 5,
         progressTotal: 10,
       });
-      const kickBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.kick"));
+      const kickBtn = findButton(wrapper, "dialog.group_member_moderation.kick");
       expect(kickBtn.attributes("disabled")).toBeDefined();
     });
   });
@@ -179,7 +182,7 @@ describe("GroupModerationBulkActions.vue", () => {
           _mockPermissions: ["group-bans-manage"],
         },
       });
-      const kickBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.kick"));
+      const kickBtn = findButton(wrapper, "dialog.group_member_moderation.kick");
       expect(kickBtn.attributes("disabled")).toBeDefined();
     });
 
@@ -190,8 +193,8 @@ describe("GroupModerationBulkActions.vue", () => {
           _mockPermissions: ["group-members-remove"],
         },
       });
-      const banBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.ban"));
-      const unbanBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.unban"));
+      const banBtn = findButton(wrapper, "dialog.group_member_moderation.ban");
+      const unbanBtn = findButton(wrapper, "dialog.group_member_moderation.unban");
       expect(banBtn.attributes("disabled")).toBeDefined();
       expect(unbanBtn.attributes("disabled")).toBeDefined();
     });
@@ -217,7 +220,7 @@ describe("GroupModerationBulkActions.vue", () => {
         progressCurrent: 3,
         progressTotal: 10,
       });
-      const cancelBtn = wrapper.findAll("button").find((b) => b.text().includes("dialog.group_member_moderation.cancel"));
+      const cancelBtn = findButton(wrapper, "dialog.group_member_moderation.cancel");
       await cancelBtn.trigger("click");
       expect(wrapper.emitted("cancel-progress")).toBeTruthy();
     });

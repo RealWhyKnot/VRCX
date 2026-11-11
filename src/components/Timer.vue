@@ -7,7 +7,9 @@ import { computed } from "vue";
 
 import { timeToText } from "../shared/utils/base/format";
 
-const props = defineProps<{ epoch: number }>();
+defineOptions({ name: "TimerText" });
+
+const props = withDefaults(defineProps<{ epoch?: number | undefined }>(), { epoch: undefined });
 
 const now = useNow({ scheduler: (cb) => useIntervalFn(cb, 15000) });
 const text = computed(() => {

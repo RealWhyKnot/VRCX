@@ -69,7 +69,7 @@
         <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
           <div
             v-if="item.row"
-            :ref="virtualizer.measureElement"
+            :ref="measureRow"
             class="friend-view__virtual-row"
             :class="`friend-view__virtual-row--${item.row.type}`"
             :data-index="item.virtualItem.index"
@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
 import { useResizeObserver } from "@vueuse/core";
 import { computed, nextTick, onBeforeMount, onMounted, reactive, ref, watch } from "vue";
 import { ChevronDown, Loader2, Settings } from "lucide-vue-next";
@@ -146,6 +147,7 @@ import PopoverTrigger from "../../components/ui/popover/PopoverTrigger.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFavoriteStore } from "../../stores/favorite";
 import { useFriendStore } from "../../stores/friend";
+import type { FriendContext } from "../../stores/friend-types";
 import { useLocationStore } from "../../stores/location";
 import Slider from "../../components/ui/slider/Slider.vue";
 import Switch from "../../components/ui/switch/Switch.vue";
@@ -155,6 +157,43 @@ import { getFriendsSortFunction } from "../../shared/utils/friend";
 
 import FriendLocationCard from "./components/FriendsLocationsCard.vue";
 import { configRepository } from "../../services/config.ts";
+
+type FriendEntry = {
+  id: string;
+  friend: FriendContext;
+  instanceId: string | undefined;
+  section?: "same-instance" | "online";
+};
+
+type SameInstanceGroup = {
+  instanceId: string;
+  friends: FriendContext[];
+};
+
+type CardItem = {
+  key: string;
+  friend: FriendContext;
+  displayInstanceInfo: boolean;
+};
+
+type CardsRow = {
+  type: "cards";
+  key: string;
+  items: CardItem[];
+};
+
+type VirtualRow =
+  | { type: "header"; key: string; instanceId: string; count: number }
+  | { type: "group-header"; key: string; label: string; count: number; groupKey: string; collapsed: boolean }
+  | { type: "divider"; key: string }
+  | CardsRow;
+
+type GridLayoutOptions = {
+  preferredColumns?: number;
+  shouldForceStretch?: boolean;
+  shouldDisableAutoStretch?: boolean;
+  shouldMatchMaxColumnWidth?: boolean;
+};
 
 const { t } = useI18n();
 
@@ -169,8 +208,12 @@ const { favoriteFriendGroups, groupedByGroupKeyFavoriteFriends, localFriendFavor
 
 const locationStore = useLocationStore();
 const { lastLocation } = storeToRefs(locationStore);
+const lastLocationSnapshot = computed(() => ({
+  location: lastLocation.value.location,
+  friendList: new Set(lastLocation.value.friendList.keys()),
+}));
 
-const collapsedGroups = reactive(new Set());
+const collapsedGroups = reactive(new Set<string>());
 
 const SEGMENTED_BASE_OPTIONS = [
   { label: t("view.friends_locations.online"), value: "online" },
@@ -187,17 +230,17 @@ const segmentedOptions = computed(() =>
 const cardScale = ref(1);
 const cardScaleSlider = ref(1);
 const cardSpacingBase = ref(1);
-const applyCardScale = debounce((value) => {
+const applyCardScale = debounce((value: number) => {
   cardScale.value = value;
-  configRepository.setString("VRCX_FriendLocationCardScale", value.toString());
+  configRepository.setString("VRCX_FriendLocationCardScale", value.toString()).catch(logFriendsLocationsError);
 }, 500);
-const persistCardSpacing = debounce((value) => {
-  configRepository.setString("VRCX_FriendLocationCardSpacing", value.toString());
+const persistCardSpacing = debounce((value: number) => {
+  configRepository.setString("VRCX_FriendLocationCardSpacing", value.toString()).catch(logFriendsLocationsError);
 }, 500);
 
 const cardSpacing = computed({
   get: () => cardSpacingBase.value,
-  set: (value) => {
+  set: (value: number) => {
     cardSpacingBase.value = value;
     persistCardSpacing(value);
   },
@@ -207,8 +250,8 @@ const cardScalePercentLabel = computed(() => `${Math.round(cardScaleSlider.value
 const cardSpacingPercentLabel = computed(() => `${Math.round(cardSpacing.value * 100)}%`);
 const cardScaleValue = computed({
   get: () => [cardScaleSlider.value],
-  set: (value) => {
-    const next = value?.[0];
+  set: (value: number[]) => {
+    const next = value[0];
     if (typeof next === "number") {
       cardScaleSlider.value = next;
       applyCardScale(next);
@@ -217,8 +260,8 @@ const cardScaleValue = computed({
 });
 const cardSpacingValue = computed({
   get: () => [cardSpacing.value],
-  set: (value) => {
-    const next = value?.[0];
+  set: (value: number[]) => {
+    const next = value[0];
     if (typeof next === "number") {
       cardSpacing.value = next;
     }
@@ -230,17 +273,17 @@ const showCosmeticsBase = ref(true);
 
 const showSameInstance = computed({
   get: () => showSameInstanceBase.value,
-  set: (value) => {
-    showSameInstanceBase.value = value;
-    configRepository.setBool("VRCX_FriendLocationShowSameInstance", value);
+  set: (isEnabled: boolean) => {
+    showSameInstanceBase.value = isEnabled;
+    configRepository.setBool("VRCX_FriendLocationShowSameInstance", isEnabled).catch(logFriendsLocationsError);
   },
 });
 
 const showCosmetics = computed({
   get: () => showCosmeticsBase.value,
-  set: (value) => {
-    showCosmeticsBase.value = value;
-    configRepository.setBool("VRCX_FriendLocationShowCosmetics", value);
+  set: (isEnabled: boolean) => {
+    showCosmeticsBase.value = isEnabled;
+    configRepository.setBool("VRCX_FriendLocationShowCosmetics", isEnabled).catch(logFriendsLocationsError);
   },
 });
 
@@ -249,10 +292,14 @@ const settingsReady = ref(false);
 const activeSegment = ref("online");
 const searchTerm = ref("");
 
-const scrollbarRef = ref();
+const scrollbarRef = ref<HTMLElement>();
 const gridWidth = ref(0);
-let measureScheduled = false;
-let pendingGridWidthUpdate = false;
+let isMeasureScheduled = false;
+let hasPendingGridWidthUpdate = false;
+
+function logFriendsLocationsError(error: unknown) {
+  console.error(error);
+}
 
 const updateGridWidth = () => {
   const wrap = scrollbarRef.value;
@@ -260,7 +307,7 @@ const updateGridWidth = () => {
     return;
   }
 
-  gridWidth.value = wrap.clientWidth ?? 0;
+  gridWidth.value = wrap.clientWidth;
 };
 
 const setupResizeHandling = () => {
@@ -274,64 +321,62 @@ const setupResizeHandling = () => {
 
 useResizeObserver(scrollbarRef, (entries) => {
   const [entry] = entries;
-  gridWidth.value = entry?.contentRect?.width ?? scrollbarRef.value?.clientWidth ?? 0;
+  gridWidth.value = entry?.contentRect.width ?? scrollbarRef.value?.clientWidth ?? 0;
 });
 
 const normalizedSearchTerm = computed(() => searchTerm.value.trim().toLowerCase());
 
-const toEntries = (list = [], instanceId) =>
+const toEntries = (list: FriendContext[] | undefined, instanceId?: string): FriendEntry[] =>
   Array.isArray(list)
     ? list.map((friend) => ({
-        id: friend.id ?? friend.userId ?? friend.displayName,
+        id: friend.id,
         friend,
         instanceId,
       }))
     : [];
 
-const getFriendIdentity = (friend) => friend?.id ?? friend?.userId ?? friend?.displayName ?? "unknown";
+const getFriendIdentity = (friend: FriendContext) => friend.id;
 
-const getEntryIdentity = (entry) => entry?.id ?? getFriendIdentity(entry?.friend);
+const getEntryIdentity = (entry: FriendEntry) => entry.id;
 
-const scheduleVirtualMeasure = ({ updateGridWidth: shouldUpdateGridWidth = false } = {}) => {
-  pendingGridWidthUpdate = pendingGridWidthUpdate || shouldUpdateGridWidth;
-  if (measureScheduled) {
+const scheduleVirtualMeasure = ({ updateGridWidth: shouldUpdateGridWidth = false }: { updateGridWidth?: boolean } = {}) => {
+  hasPendingGridWidthUpdate = hasPendingGridWidthUpdate || shouldUpdateGridWidth;
+  if (isMeasureScheduled) {
     return;
   }
 
-  measureScheduled = true;
-  nextTick(() => {
-    measureScheduled = false;
+  isMeasureScheduled = true;
+  nextTick().then(() => {
+    isMeasureScheduled = false;
 
-    if (pendingGridWidthUpdate) {
-      pendingGridWidthUpdate = false;
+    if (hasPendingGridWidthUpdate) {
+      hasPendingGridWidthUpdate = false;
       updateGridWidth();
     }
 
-    virtualizer.value?.measure?.();
-  });
+    virtualizer.value.measure();
+  }, logFriendsLocationsError);
 };
 
-const sameInstanceGroups = computed(() => {
-  const source = friendsInSameInstance?.value;
-  if (!Array.isArray(source) || source.length === 0) return [];
+const toLocationEntries = (friends: FriendContext[]) =>
+  friends.map((friend) => ({
+    id: friend.id,
+    ref: friend.ref ?? {},
+  }));
 
-  return source
-    .map((group, index) => {
-      if (!Array.isArray(group) || group.length === 0) return null;
-      const friends = group;
-      const instanceId = getFriendsLocations(friends, lastLocation.value) || `instance-${index + 1}`;
-      return {
-        instanceId: String(instanceId),
-        friends,
-      };
-    })
-    .filter(Boolean);
-});
+const sameInstanceGroups = computed<SameInstanceGroup[]>(() =>
+  friendsInSameInstance.value.flatMap((friends, index) => {
+    if (friends.length === 0) return [];
+    const location = getFriendsLocations(toLocationEntries(friends), lastLocationSnapshot.value);
+    const instanceId = location === undefined || location === "" ? `instance-${index + 1}` : location;
+    return [{ instanceId, friends }];
+  })
+);
 
 const sameInstanceEntries = computed(() => sameInstanceGroups.value.flatMap((group) => toEntries(group.friends, group.instanceId)));
 
-const uniqueEntries = (entries = []) => {
-  const seen = new Set();
+const uniqueEntries = (entries: FriendEntry[]) => {
+  const seen = new Set<string>();
   return entries.filter((entry) => {
     const key = entry.id;
     if (!key) {
@@ -350,12 +395,12 @@ const displayedVipIds = computed(() => {
   const hasFilter = selectedGroups.length > 0;
   if (!hasFilter) return allFavoriteFriendIds.value;
 
-  const ids = new Set();
+  const ids = new Set<string>();
   const remoteFriendsByGroup = groupedByGroupKeyFavoriteFriends.value;
   for (const key of selectedGroups) {
     if (key.startsWith("local:")) {
       const groupName = key.slice(6);
-      const userIds = localFriendFavorites.value?.[groupName];
+      const userIds = localFriendFavorites.value[groupName];
       if (userIds) {
         for (const id of userIds) ids.add(id);
       }
@@ -391,16 +436,16 @@ const vipFriendsDivideByGroup = computed(() => {
   const selectedGroups = sidebarFavoriteGroups.value;
   const hasFilter = selectedGroups.length > 0;
 
-  const groups = [];
+  const groups: { key: string; groupName: string; memberIds: Set<string> }[] = [];
   for (const key in remoteFriendsByGroup) {
     if (Object.hasOwn(remoteFriendsByGroup, key)) {
       if (hasFilter && !selectedGroups.includes(key)) continue;
-      const groupName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName || "";
-      const memberIds = new Set(remoteFriendsByGroup[key].map((f) => f.id));
+      const groupName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName ?? "";
+      const memberIds = new Set((remoteFriendsByGroup[key] ?? []).map((f) => f.id));
       groups.push({ key, groupName, memberIds });
     }
   }
-  for (const groupName in localFriendFavorites.value) {
+  for (const groupName of Object.keys(localFriendFavorites.value)) {
     const selectedKey = `local:${groupName}`;
     if (hasFilter && !selectedGroups.includes(selectedKey)) continue;
     const userIds = localFriendFavorites.value[groupName];
@@ -409,7 +454,7 @@ const vipFriendsDivideByGroup = computed(() => {
     }
   }
 
-  const result = [];
+  const result: { key: string; groupName: string; friends: FriendContext[] }[] = [];
   for (const { key, groupName, memberIds } of groups) {
     const filteredFriends = visibleFavoriteOnlineFriends.value.filter((friend) => memberIds.has(friend.id));
     if (filteredFriends.length > 0) {
@@ -424,7 +469,7 @@ const vipFriendsDivideByGroup = computed(() => {
     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
     if (idxA !== -1) return -1;
     if (idxB !== -1) return 1;
-    return (a.key ?? "").localeCompare(b.key ?? "");
+    return a.key.localeCompare(b.key);
   });
 });
 
@@ -437,7 +482,7 @@ const searchableEntries = computed(() =>
   ])
 );
 
-function toggleGroupCollapse(groupKey) {
+function toggleGroupCollapse(groupKey: string) {
   if (collapsedGroups.has(groupKey)) {
     collapsedGroups.delete(groupKey);
   } else {
@@ -445,32 +490,24 @@ function toggleGroupCollapse(groupKey) {
   }
 }
 
-const filteredFriends = computed(() => {
+const filteredFriends = computed<FriendEntry[]>(() => {
   if (normalizedSearchTerm.value) {
-    return searchableEntries.value.filter(({ friend }) => {
-      const haystack = `${friend.displayName ?? friend.name ?? ""} ${friend.signature ?? ""} ${friend.worldName ?? ""}`.toLowerCase();
-      return haystack.includes(normalizedSearchTerm.value);
-    });
+    return searchableEntries.value.filter(({ friend }) => friend.name.toLowerCase().includes(normalizedSearchTerm.value));
   }
 
   switch (activeSegment.value) {
     case "online": {
       if (!showSameInstance.value) {
-        const sameEntries = sameInstanceEntries.value.map((entry) => ({
+        const sameEntries = sameInstanceEntries.value.map((entry): FriendEntry => ({
           ...entry,
           section: "same-instance",
         }));
 
-        const seenIds = new Set(sameEntries.map((entry) => entry.id).filter((id) => typeof id === "string" || typeof id === "number"));
+        const seenIds = new Set(sameEntries.map((entry) => entry.id));
 
         const remainingOnline = toEntries(onlineFriendsByGroupStatus.value)
-          .filter((entry) => {
-            if (!entry?.id) {
-              return true;
-            }
-            return !seenIds.has(entry.id);
-          })
-          .map((entry) => ({
+          .filter((entry) => !entry.id || !seenIds.has(entry.id))
+          .map((entry): FriendEntry => ({
             ...entry,
             section: "online",
           }));
@@ -499,22 +536,20 @@ const shouldMergeSameInstance = computed(() => !showSameInstance.value && active
 
 const displayInstanceInfo = computed(() => activeSegment.value !== "active" && activeSegment.value !== "offline");
 
-const buildSameInstanceGroups = (entries = []) => {
-  if (!Array.isArray(entries) || entries.length === 0) {
-    return [];
-  }
-
-  const grouped = new Map();
+const buildSameInstanceGroups = (entries: FriendEntry[]): SameInstanceGroup[] => {
+  const grouped = new Map<string, FriendContext[]>();
 
   for (const entry of entries) {
-    const bucketId = entry.instanceId ?? entry.friend?.ref?.location ?? null;
+    const bucketId = entry.instanceId ?? entry.friend.ref?.location;
     if (!bucketId) {
       continue;
     }
-    if (!grouped.has(bucketId)) {
-      grouped.set(bucketId, []);
+    const bucket = grouped.get(bucketId);
+    if (bucket) {
+      bucket.push(entry.friend);
+    } else {
+      grouped.set(bucketId, [entry.friend]);
     }
-    grouped.get(bucketId).push(entry.friend);
   }
 
   return sameInstanceGroups.value
@@ -525,7 +560,7 @@ const buildSameInstanceGroups = (entries = []) => {
     }));
 };
 
-const sameInstanceGroupsForVirtual = computed(() => {
+const sameInstanceGroupsForVirtual = computed<SameInstanceGroup[]>(() => {
   if (!isSameInstanceView.value) {
     return [];
   }
@@ -533,15 +568,12 @@ const sameInstanceGroupsForVirtual = computed(() => {
 });
 
 const mergedEntriesBySection = computed(() => {
+  const sameInstance: FriendEntry[] = [];
+  const online: FriendEntry[] = [];
   if (!shouldMergeSameInstance.value) {
-    return {
-      sameInstance: [],
-      online: [],
-    };
+    return { sameInstance, online };
   }
 
-  const sameInstance = [];
-  const online = [];
   for (const entry of filteredFriends.value) {
     if (entry.section === "same-instance") {
       sameInstance.push(entry);
@@ -564,31 +596,28 @@ const mergedOnlineEntries = computed(() => {
   return mergedEntriesBySection.value.online;
 });
 
-const mergedSameInstanceGroups = computed(() => {
+const mergedSameInstanceGroups = computed<SameInstanceGroup[]>(() => {
   if (!shouldMergeSameInstance.value) {
     return [];
   }
   return buildSameInstanceGroups(mergedSameInstanceEntries.value);
 });
 
-const computeGridLayout = (count = 1, options = {}) => {
+const computeGridLayout = (count = 1, options: GridLayoutOptions = {}) => {
   const baseWidth = 220;
   const baseGap = 14;
   const scale = cardScale.value;
   const spacing = cardSpacing.value;
   const minWidth = baseWidth * scale;
   const gap = Math.max(6, (baseGap + (scale - 1) * 10) * spacing);
-  const containerWidth = Math.max(gridWidth.value ?? 0, 0);
-  const itemCount = Math.max(Number(count) || 0, 0);
+  const containerWidth = Math.max(gridWidth.value, 0);
+  const itemCount = Math.max(count, 0);
   const safeCount = itemCount > 0 ? itemCount : 1;
   const maxColumns = Math.max(1, Math.floor((containerWidth + gap) / (minWidth + gap)) || 1);
-  const preferredColumns = options?.preferredColumns;
+  const { preferredColumns, shouldForceStretch = false, shouldDisableAutoStretch = false, shouldMatchMaxColumnWidth = false } = options;
   const requestedColumns = preferredColumns ? Math.max(1, Math.min(Math.round(preferredColumns), maxColumns)) : maxColumns;
   const columns = Math.max(1, Math.min(safeCount, requestedColumns));
-  const forceStretch = Boolean(options?.forceStretch);
-  const disableAutoStretch = Boolean(options?.disableAutoStretch);
-  const matchMaxColumnWidth = Boolean(options?.matchMaxColumnWidth);
-  const shouldStretch = !disableAutoStretch && (forceStretch || itemCount >= maxColumns);
+  const shouldStretch = !shouldDisableAutoStretch && (shouldForceStretch || itemCount >= maxColumns);
 
   let cardWidth = minWidth;
   const maxColumnWidth = maxColumns > 0 ? (containerWidth - gap * (maxColumns - 1)) / maxColumns : minWidth;
@@ -600,7 +629,7 @@ const computeGridLayout = (count = 1, options = {}) => {
     if (Number.isFinite(rawWidth) && rawWidth > 0) {
       cardWidth = Math.max(minWidth, rawWidth);
     }
-  } else if (matchMaxColumnWidth && Number.isFinite(maxColumnWidth) && maxColumnWidth > 0) {
+  } else if (shouldMatchMaxColumnWidth && Number.isFinite(maxColumnWidth) && maxColumnWidth > 0) {
     cardWidth = Math.max(minWidth, maxColumnWidth);
   }
 
@@ -613,7 +642,7 @@ const computeGridLayout = (count = 1, options = {}) => {
 };
 
 const gridStyle = computed(() => {
-  return (count = 1, options = {}) => {
+  return (count = 1, options: GridLayoutOptions = {}) => {
     const { minWidth, gap, cardWidth, columns } = computeGridLayout(count, options);
     return {
       "--friend-card-min-width": `${Math.round(minWidth)}px`,
@@ -625,21 +654,20 @@ const gridStyle = computed(() => {
   };
 });
 
-const chunkCardItems = (items = [], keyPrefix = "row") => {
-  const safeItems = Array.isArray(items) ? items : [];
-  if (!safeItems.length) {
+const chunkCardItems = (items: CardItem[], keyPrefix = "row"): CardsRow[] => {
+  if (!items.length) {
     return [];
   }
-  const { columns } = computeGridLayout(safeItems.length, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns || 1);
+  const { columns } = computeGridLayout(items.length, { shouldMatchMaxColumnWidth: true });
+  const safeColumns = Math.max(1, columns);
 
-  const rows = [];
+  const rows: CardsRow[] = [];
 
-  for (let index = 0; index < safeItems.length; index += safeColumns) {
+  for (let index = 0; index < items.length; index += safeColumns) {
     rows.push({
       type: "cards",
       key: `${keyPrefix}:${index}`,
-      items: safeItems.slice(index, index + safeColumns),
+      items: items.slice(index, index + safeColumns),
     });
   }
 
@@ -649,7 +677,7 @@ const chunkCardItems = (items = [], keyPrefix = "row") => {
 const isFavoriteDivideByGroup = computed(() => isSidebarDivideByFriendGroup.value && activeSegment.value === "favorite" && !normalizedSearchTerm.value);
 
 const virtualRows = computed(() => {
-  const rows = [];
+  const rows: VirtualRow[] = [];
 
   if (isSameInstanceView.value) {
     for (const group of sameInstanceGroupsForVirtual.value) {
@@ -657,12 +685,11 @@ const virtualRows = computed(() => {
         type: "header",
         key: `h:${group.instanceId}`,
         instanceId: group.instanceId,
-        count: Array.isArray(group.friends) ? group.friends.length : 0,
+        count: group.friends.length,
       });
 
-      const friends = Array.isArray(group.friends) ? group.friends : [];
-      if (friends.length) {
-        const items = friends.map((friend) => ({
+      if (group.friends.length) {
+        const items = group.friends.map((friend): CardItem => ({
           key: `f:${getFriendIdentity(friend)}`,
           friend,
           displayInstanceInfo: displayInstanceInfo.value,
@@ -680,12 +707,11 @@ const virtualRows = computed(() => {
         type: "header",
         key: `h:${group.instanceId}`,
         instanceId: group.instanceId,
-        count: Array.isArray(group.friends) ? group.friends.length : 0,
+        count: group.friends.length,
       });
 
-      const friends = Array.isArray(group.friends) ? group.friends : [];
-      if (friends.length) {
-        const items = friends.map((friend) => ({
+      if (group.friends.length) {
+        const items = group.friends.map((friend): CardItem => ({
           key: `f:${getFriendIdentity(friend)}`,
           friend,
           displayInstanceInfo: displayInstanceInfo.value,
@@ -700,7 +726,7 @@ const virtualRows = computed(() => {
 
     const online = mergedOnlineEntries.value;
     if (online.length) {
-      const items = online.map((entry) => ({
+      const items = online.map((entry): CardItem => ({
         key: `e:${getEntryIdentity(entry)}`,
         friend: entry.friend,
         displayInstanceInfo: displayInstanceInfo.value,
@@ -723,7 +749,7 @@ const virtualRows = computed(() => {
         collapsed: isCollapsed,
       });
       if (!isCollapsed) {
-        const items = group.friends.map((friend) => ({
+        const items = group.friends.map((friend): CardItem => ({
           key: `fg:${group.key}:${getFriendIdentity(friend)}`,
           friend,
           displayInstanceInfo: displayInstanceInfo.value,
@@ -736,7 +762,7 @@ const virtualRows = computed(() => {
 
   const entries = filteredFriends.value;
   if (entries.length) {
-    const items = entries.map((entry) => ({
+    const items = entries.map((entry): CardItem => ({
       key: `e:${getEntryIdentity(entry)}`,
       friend: entry.friend,
       displayInstanceInfo: displayInstanceInfo.value,
@@ -750,13 +776,12 @@ const virtualListStyle = computed(() => {
   const styleFn = gridStyle.value;
   const total = filteredFriends.value.length;
 
-  const vars = typeof styleFn === "function" ? styleFn(total, { matchMaxColumnWidth: true }) : {};
   return {
-    ...vars,
+    ...styleFn(total, { shouldMatchMaxColumnWidth: true }),
   };
 });
 
-const estimateRowSize = (row) => {
+const estimateRowSize = (row: VirtualRow | undefined) => {
   if (!row) {
     return 48;
   }
@@ -770,9 +795,9 @@ const estimateRowSize = (row) => {
     return 36;
   }
 
-  const itemCount = Array.isArray(row.items) ? row.items.length : 0;
-  const { columns, gap } = computeGridLayout(itemCount, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns || 1);
+  const itemCount = row.items.length;
+  const { columns, gap } = computeGridLayout(itemCount, { shouldMatchMaxColumnWidth: true });
+  const safeColumns = Math.max(1, columns);
   const rows = Math.max(1, Math.ceil(itemCount / safeColumns));
   const scale = cardScale.value;
   const spacing = cardSpacing.value;
@@ -786,38 +811,43 @@ const estimateRowSize = (row) => {
 const virtualizer = useVirtualizer(
   computed(() => ({
     count: virtualRows.value.length,
-    getScrollElement: () => scrollbarRef.value,
-    estimateSize: (index) => estimateRowSize(virtualRows.value[index]),
+    getScrollElement: () => scrollbarRef.value ?? null,
+    estimateSize: (index: number) => estimateRowSize(virtualRows.value[index]),
     overscan: 5,
   }))
 );
 
-const virtualItems = computed(() => {
-  const items = virtualizer.value?.getVirtualItems?.() ?? [];
-  return items.map((virtualItem) => ({
+const measureRow = (node: unknown) => {
+  if (node instanceof Element) {
+    virtualizer.value.measureElement(node);
+  }
+};
+
+const virtualItems = computed(() =>
+  virtualizer.value.getVirtualItems().map((virtualItem) => ({
     virtualItem,
     row: virtualRows.value[virtualItem.index],
-  }));
-});
+  }))
+);
 
 const virtualContainerStyle = computed(() => ({
   ...virtualListStyle.value,
-  height: `${virtualizer.value?.getTotalSize?.() ?? 0}px`,
+  height: `${virtualizer.value.getTotalSize()}px`,
 }));
 
-const getRowItems = (row) => (row && Array.isArray(row.items) ? row.items : []);
-const getRowInstanceId = (row) => (row && row.type === "header" ? row.instanceId : "");
-const getRowCount = (row) => (row && row.type === "header" ? row.count : 0);
+const getRowItems = (row: VirtualRow) => (row.type === "cards" ? row.items : []);
+const getRowInstanceId = (row: VirtualRow) => (row.type === "header" ? row.instanceId : "");
+const getRowCount = (row: VirtualRow) => (row.type === "header" ? row.count : 0);
 
 watch([searchTerm, activeSegment], () => {
   scheduleVirtualMeasure({ updateGridWidth: true });
 });
 
-watch(showSameInstance, (value) => {
+watch(showSameInstance, (isEnabled) => {
   if (!settingsReady.value) {
     return;
   }
-  if (!value && activeSegment.value === "same-instance") {
+  if (!isEnabled && activeSegment.value === "same-instance") {
     activeSegment.value = "online";
   }
 
@@ -843,49 +873,49 @@ watch(virtualRows, () => {
 });
 
 onMounted(() => {
-  nextTick(() => {
+  nextTick().then(() => {
     setupResizeHandling();
     scheduleVirtualMeasure({ updateGridWidth: true });
-  });
+  }, logFriendsLocationsError);
 });
 
 async function loadInitialSettings() {
   try {
-    const [storedScale, storedSpacing, storedShowSameInstance, storedShowCosmetics] = await Promise.all([
+    const [storedScale, storedSpacing, isStoredShowSameInstance, isStoredShowCosmetics] = await Promise.all([
       configRepository.getString("VRCX_FriendLocationCardScale", "1"),
       configRepository.getString("VRCX_FriendLocationCardSpacing", "1"),
       configRepository.getBool("VRCX_FriendLocationShowSameInstance", null),
       configRepository.getBool("VRCX_FriendLocationShowCosmetics", true),
     ]);
 
-    const parsedScale = parseFloat(storedScale);
+    const parsedScale = Number(storedScale);
     if (!Number.isNaN(parsedScale) && parsedScale > 0) {
       cardScale.value = Math.max(0.6, parsedScale);
       cardScaleSlider.value = cardScale.value;
     }
 
-    const parsedSpacing = parseFloat(storedSpacing);
+    const parsedSpacing = Number(storedSpacing);
     if (!Number.isNaN(parsedSpacing) && parsedSpacing > 0) {
       cardSpacingBase.value = parsedSpacing;
     }
 
-    if (storedShowSameInstance !== null && storedShowSameInstance !== undefined) {
-      showSameInstanceBase.value = Boolean(storedShowSameInstance);
+    if (isStoredShowSameInstance !== null) {
+      showSameInstanceBase.value = isStoredShowSameInstance;
     }
-    showCosmeticsBase.value = Boolean(storedShowCosmetics);
+    showCosmeticsBase.value = isStoredShowCosmetics;
   } catch (error) {
     console.error("Failed to load Friend Location preferences", error);
   } finally {
     settingsReady.value = true;
-    nextTick(() => {
+    nextTick().then(() => {
       setupResizeHandling();
       scheduleVirtualMeasure({ updateGridWidth: true });
-    });
+    }, logFriendsLocationsError);
   }
 }
 
 onBeforeMount(() => {
-  loadInitialSettings();
+  loadInitialSettings().catch(logFriendsLocationsError);
 });
 </script>
 

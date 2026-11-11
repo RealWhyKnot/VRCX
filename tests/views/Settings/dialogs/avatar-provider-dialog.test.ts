@@ -1,32 +1,36 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { ref } from "vue";
 
-const mocks = vi.hoisted(() => ({
-  avatarRemoteDatabaseProviderList: require("vue").ref([]),
-  saveAvatarProviderList: vi.fn(),
-  removeAvatarProvider: vi.fn(),
-}));
+const mocks = await vi.hoisted(async () => {
+  const { ref: hoistedRef } = await import("vue");
+  return {
+    avatarRemoteDatabaseProviderList: hoistedRef<string[]>([]),
+    saveAvatarProviderList: vi.fn<(...args: unknown[]) => void>(),
+    removeAvatarProvider: vi.fn<(provider: string) => void>(),
+  };
+});
 
-vi.mock("pinia", async (importOriginal) => {
+vi.mock("pinia", async (importOriginal: () => Promise<Record<string, unknown>>) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: (store: unknown) => store,
   };
 });
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
+    t: (key: string) => key,
+    locale: ref("en"),
   }),
 }));
 
 vi.mock("../../../../src/stores/avatar-provider", () => ({
   useAvatarProviderStore: () => ({
     avatarRemoteDatabaseProviderList: mocks.avatarRemoteDatabaseProviderList,
-    saveAvatarProviderList: (...args) => mocks.saveAvatarProviderList(...args),
-    removeAvatarProvider: (...args) => mocks.removeAvatarProvider(...args),
+    saveAvatarProviderList: (...args: unknown[]) => mocks.saveAvatarProviderList(...args),
+    removeAvatarProvider: (provider: string) => mocks.removeAvatarProvider(provider),
   }),
 }));
 
@@ -79,7 +83,7 @@ vi.mock("lucide-vue-next", () => ({
 
 import AvatarProviderDialog from "../../../../src/views/Settings/dialogs/AvatarProviderDialog.vue";
 
-function mountComponent(props = {}) {
+function mountComponent(props: { isAvatarProviderDialogVisible?: boolean } = {}) {
   return mount(AvatarProviderDialog, {
     props: {
       isAvatarProviderDialogVisible: true,
@@ -122,6 +126,9 @@ describe("AvatarProviderDialog.vue", () => {
     const wrapper = mountComponent();
 
     const input = wrapper.findAll('[data-testid="provider-input"]')[0];
+    if (!input) {
+      throw new Error("provider input not found");
+    }
     await input.setValue("https://updated.example");
 
     expect(mocks.avatarRemoteDatabaseProviderList.value[0]).toBe("https://updated.example");
@@ -131,7 +138,11 @@ describe("AvatarProviderDialog.vue", () => {
   test("calls removeAvatarProvider with row provider when trash clicked", async () => {
     const wrapper = mountComponent();
 
-    await wrapper.findAll('[data-testid="trash"]')[1].trigger("click");
+    const trash = wrapper.findAll('[data-testid="trash"]')[1];
+    if (!trash) {
+      throw new Error("trash button not found");
+    }
+    await trash.trigger("click");
 
     expect(mocks.removeAvatarProvider).toHaveBeenCalledWith("https://b.example");
   });

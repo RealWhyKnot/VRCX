@@ -1,18 +1,26 @@
 <script setup lang="ts">
+import type { DateValue, PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { CalendarCellTrigger, useForwardProps } from "reka-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  day: { type: null, required: true },
-  month: { type: null, required: true },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false, default: "button" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    day: DateValue;
+    month: DateValue;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: "button",
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>

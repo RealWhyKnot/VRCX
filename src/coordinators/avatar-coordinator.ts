@@ -517,7 +517,7 @@ export async function checkAvatarCacheRemote(fileId: string, ownerUserId: string
   return null;
 }
 
-export async function showAvatarAuthorDialog(refUserId: string, ownerUserId: string, currentAvatarImageUrl: string) {
+export async function showAvatarAuthorDialog(refUserId: string | undefined, ownerUserId: string, currentAvatarImageUrl: string) {
   const userStore = useUserStore();
   const t = i18n.global.t;
 

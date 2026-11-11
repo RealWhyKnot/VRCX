@@ -210,7 +210,7 @@
         :label="t('view.settings.advanced.advanced.database_cleanup.auto_cleanup')"
         :description="t('view.settings.advanced.advanced.database_cleanup.auto_cleanup_description')"
       >
-        <Select :model-value="avatarAutoCleanup" @update:model-value="setAvatarAutoCleanup">
+        <Select :model-value="avatarAutoCleanup" @update:model-value="handleAvatarAutoCleanupChange">
           <SelectTrigger class="w-36">
             <SelectValue />
           </SelectTrigger>
@@ -377,6 +377,8 @@ import { queryRequest } from "@/api/query-request";
 import { disableGameLogDialog } from "@/coordinators/game-log-coordinator";
 import { clearVRCXCache } from "@/coordinators/vrcx-coordinator";
 import { openExternalLink } from "@/shared/utils/app-actions";
+import { logError } from "@/stores/notification/errors";
+import type { CachedConfig } from "@/stores/auth-types";
 
 import PhotonSettings from "../PhotonSettings.vue";
 import RegistryBackupDialog from "../../../Tools/dialogs/RegistryBackupDialog.vue";
@@ -438,9 +440,9 @@ const {
   setSentryErrorReporting,
 } = advancedSettingsStore;
 
-const configTreeData = ref({});
-const visits = ref(null);
-const instanceCount = ref(null);
+const configTreeData = ref<CachedConfig>({});
+const visits = ref<number | null>(null);
+const instanceCount = ref<number | null>(null);
 const selectedPurgePeriod = ref("180");
 const isPurgeDialogVisible = ref(false);
 
@@ -456,13 +458,13 @@ const cacheSize = reactive({
 const isLinux = computed(() => isLinuxHost());
 
 function handlePurge() {
-  const days = selectedPurgePeriod.value === "all" ? null : parseInt(selectedPurgePeriod.value, 10);
+  const days = selectedPurgePeriod.value === "all" ? null : Number(selectedPurgePeriod.value);
   isPurgeDialogVisible.value = false;
-  purgeAvatarFeedData(days);
+  void purgeAvatarFeedData(days).catch(logError);
 }
 
 function openShortcutFolder() {
-  AppApi.OpenShortcutFolder();
+  void window.AppApi.OpenShortcutFolder().catch(logError);
 }
 
 function refreshCacheSize() {
@@ -480,11 +482,23 @@ async function refreshConfigTreeData() {
 }
 
 function getVisits() {
-  queryRequest.fetch("visits").then((args) => {
-    visits.value = args.json;
-  });
-  queryRequest.fetch("instanceCount").then((args) => {
-    instanceCount.value = args.json.instances;
-  });
+  queryRequest
+    .fetch("visits")
+    .then((args) => {
+      visits.value = args.json;
+    })
+    .catch(logError);
+  queryRequest
+    .fetch("instanceCount")
+    .then((args) => {
+      instanceCount.value = args.json.instances;
+    })
+    .catch(logError);
+}
+
+function handleAvatarAutoCleanupChange(value: unknown) {
+  if (typeof value === "string") {
+    void setAvatarAutoCleanup(value).catch(logError);
+  }
 }
 </script>

@@ -1,0 +1,45 @@
+.favorites-content__scroll--local {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.favorites-content__scroll--local::-webkit-scrollbar {
+  width: 10px;
+}
+
+.favorites-content__scroll--local::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.favorites-content__scroll--local::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: var(--rounded-full);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.favorites-card-virtual {
+  width: 100%;
+  height: var(--favorites-virtual-height, 0px);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.favorites-card-virtual-row {
+  width: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translateY(var(--favorites-virtual-start, 0px));
+  box-sizing: border-box;
+  padding-bottom: var(--favorites-card-gap, 12px);
+}
+
+.favorites-card-virtual-row-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--favorites-grid-columns, 1), minmax(var(--favorites-card-min-width, 260px), var(--favorites-card-target-width, 1fr)));
+  gap: var(--favorites-card-gap, 12px);
+  justify-content: start;
+  padding: 4px 2px 0;
+  box-sizing: border-box;
+}

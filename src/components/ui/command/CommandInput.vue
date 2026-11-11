@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { ListboxFilter, useForwardProps } from "reka-ui";
 import { Search } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
@@ -10,16 +12,23 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  modelValue: { type: String, required: false },
-  autoFocus: { type: Boolean, required: false },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | undefined;
+    autoFocus?: boolean;
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    modelValue: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwardedProps = useForwardProps(delegatedProps);
 

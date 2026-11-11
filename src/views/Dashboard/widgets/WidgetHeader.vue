@@ -18,26 +18,25 @@
 import { ExternalLink } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
-const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  icon: {
-    type: String,
-    default: "",
-  },
-  routeName: {
-    type: String,
-    default: "",
-  },
-});
+import { logFailure } from "@/stores/log-failure";
+
+const props = withDefaults(
+  defineProps<{
+    title: string;
+    icon?: string;
+    routeName?: string;
+  }>(),
+  {
+    icon: "",
+    routeName: "",
+  }
+);
 
 const router = useRouter();
 
 function navigateToPage() {
   if (props.routeName) {
-    router.push({ name: props.routeName });
+    void router.push({ name: props.routeName }).catch(logFailure("Failed to open widget page"));
   }
 }
 </script>

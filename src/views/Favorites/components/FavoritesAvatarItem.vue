@@ -35,15 +35,11 @@
                 <DropdownMenuItem @click="handleViewDetails">
                   {{ t("common.actions.view_details") }}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  v-if="canSelectAvatar"
-                  :disabled="currentUser.currentAvatar === favorite.id"
-                  @click="selectAvatarWithConfirmation(favorite.id)"
-                >
+                <DropdownMenuItem v-if="canSelectAvatar" :disabled="currentUser.currentAvatar === favorite?.id" @click="handleSelectAvatar">
                   {{ t("view.favorite.select_avatar_tooltip") }}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator v-if="canSelectAvatar" />
-                <DropdownMenuItem @click="showFavoriteDialog('avatar', favorite.id)">
+                <DropdownMenuItem @click="handleEditFavorite">
                   {{ t("view.favorite.edit_favorite_tooltip") }}
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" @click="handleDeleteFavorite">
@@ -56,11 +52,11 @@
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem @click="handleViewDetails">{{ t("common.actions.view_details") }}</ContextMenuItem>
-        <ContextMenuItem v-if="canSelectAvatar" :disabled="currentUser.currentAvatar === favorite.id" @click="selectAvatarWithConfirmation(favorite.id)">
+        <ContextMenuItem v-if="canSelectAvatar" :disabled="currentUser.currentAvatar === favorite?.id" @click="handleSelectAvatar">
           {{ t("view.favorite.select_avatar_tooltip") }}
         </ContextMenuItem>
         <ContextMenuSeparator v-if="canSelectAvatar" />
-        <ContextMenuItem @click="showFavoriteDialog('avatar', favorite.id)">
+        <ContextMenuItem @click="handleEditFavorite">
           {{ t("view.favorite.edit_favorite_tooltip") }}
         </ContextMenuItem>
         <ContextMenuItem variant="destructive" @click="handleDeleteFavorite">
@@ -73,7 +69,7 @@
     <Item variant="outline" class="favorites-item hover:bg-muted x-hover-list" :style="itemStyle">
       <ItemMedia variant="image" />
       <ItemContent class="min-w-0">
-        <ItemTitle class="truncate max-w-full">{{ favorite.name || favorite.id }}</ItemTitle>
+        <ItemTitle class="truncate max-w-full">{{ favorite?.name || favorite?.id }}</ItemTitle>
       </ItemContent>
       <ItemActions>
         <Button class="rounded-full h-6 w-6" size="icon-sm" variant="ghost" @click.stop="handleDeleteFavorite">
@@ -117,14 +113,42 @@ import { removeLocalAvatarFavorite } from "../../../coordinators/favorite-coordi
 import { useFavoriteStore } from "../../../stores/favorite";
 import { useUserStore } from "../../../stores/user";
 
-const props = defineProps({
-  favorite: Object,
-  group: [Object, String],
-  isLocalFavorite: Boolean,
-  editMode: { type: Boolean, default: false },
-  selected: { type: Boolean, default: false },
-});
-const emit = defineEmits(["toggle-select"]);
+type FavoriteAvatarDetails = {
+  name?: string | null;
+  authorName?: string | null;
+  thumbnailImageUrl?: string | null;
+  releaseStatus?: string | null;
+};
+
+type FavoriteAvatarEntry = FavoriteAvatarDetails & {
+  id: string;
+  name?: string | null;
+  deleted?: boolean;
+  ref?: FavoriteAvatarDetails | null;
+};
+
+type FavoriteGroupEntry = {
+  key?: string;
+  name?: string;
+};
+
+const props = withDefaults(
+  defineProps<{
+    favorite: FavoriteAvatarEntry;
+    group?: string | FavoriteGroupEntry | null | undefined;
+    isLocalFavorite?: boolean;
+    editMode?: boolean;
+    selected?: boolean;
+  }>(),
+  {
+    group: undefined,
+    editMode: false,
+    selected: false,
+  }
+);
+const emit = defineEmits<{
+  "toggle-select": [value: boolean];
+}>();
 
 const { t } = useI18n();
 const { showFavoriteDialog } = useFavoriteStore();
@@ -132,14 +156,14 @@ const { currentUser } = storeToRefs(useUserStore());
 
 const isSelected = computed({
   get: () => props.selected,
-  set: (value) => emit("toggle-select", value),
+  set: (isChecked: boolean) => emit("toggle-select", isChecked),
 });
 
-const localFavFakeRef = computed(() => (props.isLocalFavorite ? props.favorite : props.favorite?.ref));
+const localFavFakeRef = computed(() => (props.isLocalFavorite ? props.favorite : props.favorite.ref));
 
-const showUnavailable = computed(() => !props.isLocalFavorite && props.favorite?.deleted);
+const showUnavailable = computed(() => !props.isLocalFavorite && props.favorite.deleted);
 
-const isPrivateAvatar = computed(() => !props.isLocalFavorite && props.favorite?.ref?.releaseStatus === "private");
+const isPrivateAvatar = computed(() => !props.isLocalFavorite && props.favorite.ref?.releaseStatus === "private");
 
 const deleteMenuLabel = computed(() => (props.isLocalFavorite ? t("view.favorite.delete_tooltip") : t("view.favorite.unfavorite_tooltip")));
 
@@ -153,10 +177,11 @@ const itemStyle = computed(() => ({
 }));
 
 const smallThumbnail = computed(() => {
-  if (!localFavFakeRef.value?.thumbnailImageUrl) {
+  const thumbnailImageUrl = localFavFakeRef.value?.thumbnailImageUrl;
+  if (!thumbnailImageUrl) {
     return "";
   }
-  return localFavFakeRef.value.thumbnailImageUrl.replace("256", "128");
+  return thumbnailImageUrl.replace("256", "128");
 });
 
 const favoriteGroupName = computed(() => {
@@ -170,22 +195,34 @@ const canSelectAvatar = computed(() => {
   if (props.isLocalFavorite) {
     return true;
   }
-  if (props.favorite?.deleted) {
+  if (props.favorite.deleted) {
     return false;
   }
-  return props.favorite?.ref?.releaseStatus !== "private";
+  return props.favorite.ref?.releaseStatus !== "private";
 });
 
 function handleViewDetails() {
   showAvatarDialog(props.favorite.id);
 }
 
+function handleSelectAvatar() {
+  selectAvatarWithConfirmation(props.favorite.id);
+}
+
+function handleEditFavorite() {
+  showFavoriteDialog("avatar", props.favorite.id);
+}
+
 function handleDeleteFavorite() {
+  const avatarId = props.favorite.id;
   if (props.isLocalFavorite) {
-    removeLocalAvatarFavorite(props.favorite.id, favoriteGroupName.value);
+    const groupName = favoriteGroupName.value;
+    if (groupName !== undefined) {
+      removeLocalAvatarFavorite(avatarId, groupName);
+    }
     return;
   }
-  favoriteRequest.deleteFavorite({ objectId: props.favorite.id });
+  void favoriteRequest.deleteFavorite({ objectId: avatarId }).catch((error: unknown) => console.error(error));
 }
 </script>
 

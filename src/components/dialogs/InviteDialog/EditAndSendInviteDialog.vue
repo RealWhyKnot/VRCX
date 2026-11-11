@@ -16,7 +16,15 @@
         <span>{{ t("dialog.edit_send_invite_message.description") }}</span>
       </div>
 
-      <InputGroupTextareaField v-model="editAndSendInviteDialog.newMessage" :maxlength="64" :rows="2" class="mt-2.5" placeholder="" show-count />
+      <InputGroupTextareaField
+        :model-value="editAndSendInviteDialog.newMessage"
+        :maxlength="64"
+        :rows="2"
+        class="mt-2.5"
+        placeholder=""
+        show-count
+        @update:model-value="setNewMessage"
+      />
 
       <DialogFooter>
         <Button variant="secondary" class="mr-2" @click="cancelEditAndSendInvite">
@@ -46,124 +54,136 @@ import { instanceRequest } from "../../../api/instance";
 import { inviteMessagesRequest } from "../../../api/invite-messages";
 import { notificationRequest } from "../../../api/notification";
 import { useGalleryStore } from "../../../stores/gallery";
+import { logFailure } from "../../../stores/log-failure";
 import { useUserStore } from "../../../stores/user";
 import { parseLocation } from "../../../shared/utils/location-parser";
+import type { SendInviteDialogState } from "../UserDialog/use-user-dialog-commands";
+import type { EditAndSendInviteDialogState, InviteDialogState } from "./invite-dialog-types";
 
 const { t } = useI18n();
 const { uploadImage } = storeToRefs(useGalleryStore());
 const { clearInviteImageUpload } = useGalleryStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  editAndSendInviteDialog: {
-    type: Object,
-    required: true,
-  },
-  sendInviteDialog: {
-    type: Object,
-    required: true,
-  },
-  inviteDialog: {
-    type: Object,
-    required: false,
-    default: () => ({}),
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    editAndSendInviteDialog: EditAndSendInviteDialogState;
+    sendInviteDialog: SendInviteDialogState;
+    inviteDialog?: Partial<InviteDialogState> | undefined;
+  }>(),
+  {
+    inviteDialog: () => ({}),
+  }
+);
 
-const emit = defineEmits(["update:editAndSendInviteDialog", "closeInviteDialog"]);
+const emit = defineEmits<{
+  "update:editAndSendInviteDialog": [value: EditAndSendInviteDialogState];
+  closeInviteDialog: [];
+}>();
 
 function cancelEditAndSendInvite() {
   emit("update:editAndSendInviteDialog", { ...props.editAndSendInviteDialog, visible: false });
+}
+
+function setNewMessage(value: string) {
+  emit("update:editAndSendInviteDialog", { ...props.editAndSendInviteDialog, newMessage: value });
 }
 
 async function saveEditAndSendInvite() {
   const D = props.editAndSendInviteDialog;
   const I = props.sendInviteDialog;
   D.visible = false;
-  const messageType = I.messageSlot.messageType;
-  const slot = I.messageSlot.slot;
-  if (I.messageSlot.message !== D.newMessage) {
-    const params = {
-      message: D.newMessage,
-    };
-    let args;
-    try {
-      args = await inviteMessagesRequest.editInviteMessage(params, messageType, slot);
-    } catch (err) {
+  const messageType = I.messageSlot?.messageType;
+  const slot = I.messageSlot?.slot;
+  if (messageType === undefined || slot === undefined) {
+    return;
+  }
+  const currentMessage = I.messageSlot?.message;
+  if (currentMessage !== D.newMessage) {
+    const updated = await inviteMessagesRequest.editInviteMessage({ message: D.newMessage }, messageType, slot).catch((err: unknown) => {
       console.error("Invite message update failed", err);
+      return undefined;
+    });
+    if (!updated) {
       return;
     }
-    if (args.json[slot].message === I.messageSlot.message) {
+    const updatedMessage = updated.json[slot]?.message;
+    if (updatedMessage === undefined || updatedMessage === currentMessage) {
       toast.error(t("message.invite.message_update_failed"));
       return;
     }
     toast("Invite message updated");
   }
   const J = props.inviteDialog;
-  if (J?.visible) {
+  const worldId = J.worldId ?? "";
+  const worldName = J.worldName ?? "";
+  const instanceId = I.params.instanceId;
+  if (J.visible) {
+    const pendingUserIds = J.userIds ?? [];
     const inviteLoop = () => {
-      if (J.userIds.length > 0) {
-        const receiverUserId = J.userIds.shift();
-        if (receiverUserId === currentUser.value.id) {
-          const L = parseLocation(J.worldId);
-          instanceRequest
-            .selfInvite({
-              instanceId: L.instanceId,
-              worldId: L.worldId,
-            })
-            .finally(inviteLoop);
-        } else if (uploadImage.value) {
-          notificationRequest
-            .sendInvitePhoto(
-              {
-                instanceId: J.worldId,
-                worldId: J.worldId,
-                worldName: J.worldName,
-                messageSlot: slot,
-              },
-              receiverUserId
-            )
-            .finally(inviteLoop);
-        } else {
-          notificationRequest
-            .sendInvite(
-              {
-                instanceId: J.worldId,
-                worldId: J.worldId,
-                worldName: J.worldName,
-                messageSlot: slot,
-              },
-              receiverUserId
-            )
-            .finally(inviteLoop);
-        }
-      } else {
+      const receiverUserId = pendingUserIds.shift();
+      if (receiverUserId === undefined) {
         J.loading = false;
         J.visible = false;
         toast.success(t("message.invite.sent"));
+        return;
+      }
+      if (receiverUserId === currentUser.value.id) {
+        const L = parseLocation(worldId);
+        void instanceRequest
+          .selfInvite({
+            instanceId: L.instanceId,
+            worldId: L.worldId,
+          })
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the self invite failed:"));
+      } else if (uploadImage.value) {
+        void notificationRequest
+          .sendInvitePhoto(
+            {
+              instanceId: worldId,
+              worldId,
+              worldName,
+              messageSlot: slot,
+            },
+            receiverUserId
+          )
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the invite photo failed:"));
+      } else {
+        void notificationRequest
+          .sendInvite(
+            {
+              instanceId: worldId,
+              worldId,
+              worldName,
+              messageSlot: slot,
+            },
+            receiverUserId
+          )
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the invite failed:"));
       }
     };
     inviteLoop();
-  } else if (messageType === "invite") {
+  } else if (messageType === "message" && instanceId !== undefined) {
     I.params.messageSlot = slot;
     if (uploadImage.value) {
       notificationRequest
-        .sendInvitePhoto(I.params, I.userId)
-        .then((args) => {
+        .sendInvitePhoto({ ...I.params, instanceId }, I.userId)
+        .then(() => {
           toast.success("Invite photo message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     } else {
       notificationRequest
-        .sendInvite(I.params, I.userId)
-        .then((args) => {
+        .sendInvite({ ...I.params, instanceId }, I.userId)
+        .then(() => {
           toast.success("Invite message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     }
@@ -172,22 +192,20 @@ async function saveEditAndSendInvite() {
     if (uploadImage.value) {
       notificationRequest
         .sendRequestInvitePhoto(I.params, I.userId)
-        .then((args) => {
+        .then(() => {
           toast.success("Request invite photo message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           clearInviteImageUpload();
           console.error(err);
         });
     } else {
       notificationRequest
         .sendRequestInvite(I.params, I.userId)
-        .then((args) => {
+        .then(() => {
           toast.success("Request invite message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     }

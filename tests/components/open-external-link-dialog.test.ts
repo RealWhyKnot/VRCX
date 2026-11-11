@@ -5,7 +5,7 @@ import { nextTick } from "vue";
 
 const mocks = vi.hoisted(() => ({
   copyToClipboard: vi.fn(),
-  openLink: vi.fn(),
+  openLink: vi.fn((_link: string) => Promise.resolve()),
 }));
 
 vi.mock("@/stores/external-link", async () => {
@@ -16,13 +16,13 @@ vi.mock("@/stores/external-link", async () => {
 });
 
 vi.mock("@/shared/utils/app-actions", () => ({
-  copyToClipboard: (...args) => mocks.copyToClipboard(...args),
+  copyToClipboard: mocks.copyToClipboard,
 }));
 
 import OpenExternalLinkDialog from "../../src/components/dialogs/OpenExternalLinkDialog.vue";
 import { useExternalLinkStore } from "../../src/stores/external-link";
 
-let wrapper;
+let wrapper: { unmount: () => void } | undefined;
 
 async function showDialog(link = "https://example.com") {
   const pinia = createPinia();
@@ -37,14 +37,16 @@ async function showDialog(link = "https://example.com") {
   return store;
 }
 
-function findButton(label) {
-  return [...document.body.querySelectorAll("button")].find((button) => button.textContent === label);
+function findButton(label: string) {
+  const button = [...document.body.querySelectorAll("button")].find((candidate) => candidate.textContent === label);
+  if (!button) throw new Error(`no button labelled ${label}`);
+  return button;
 }
 
 describe("OpenExternalLinkDialog.vue", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.AppApi = { OpenLink: mocks.openLink };
+    Object.assign(globalThis, { AppApi: { OpenLink: mocks.openLink } });
   });
 
   afterEach(() => {

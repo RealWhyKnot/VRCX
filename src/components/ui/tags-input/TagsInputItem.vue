@@ -1,24 +1,35 @@
 <script setup lang="ts">
-import { TagsInputItem, useForwardProps } from "reka-ui";
+import type { PrimitiveProps, TagsInputItemProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import { TagsInputItem } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  value: { type: null, required: true },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: TagsInputItemProps["value"];
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  value: props.value,
+  disabled: props.disabled,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
   <TagsInputItem
-    v-bind="forwardedProps"
+    v-bind="delegatedProps"
     :value="props.value"
     :class="
       cn(

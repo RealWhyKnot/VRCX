@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
+import type { PrimitiveProps } from "reka-ui";
+
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
@@ -6,14 +10,23 @@ import { useAttrs } from "vue";
 
 import { badgeVariants } from ".";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  variant: { type: null, required: false },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiBadge" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = withDefaults(
+  defineProps<{
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    variant?: VariantProps<typeof badgeVariants>["variant"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    variant: undefined,
+    class: undefined,
+  }
+);
+
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 const attrs = useAttrs();
 </script>
 

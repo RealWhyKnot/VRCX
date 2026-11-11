@@ -16,7 +16,7 @@
         <label v-for="option in checkGroupsLogsExportLogsOptions" :key="option.label" class="inline-flex items-center gap-2">
           <Checkbox
             :model-value="checkedGroupLogsExportLogsOptions.includes(option.label)"
-            @update:model-value="(val) => toggleGroupLogsExportOption(option.label, val)"
+            @update:model-value="(val) => toggleGroupLogsExportOption(option.label, val === true)"
           />
           <span>{{ t(option.text) }}</span>
         </label>
@@ -39,25 +39,30 @@ import { useI18n } from "vue-i18n";
 
 import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { formatCsvField } from "../../../shared/utils/csv";
+import type { ModerationLogRow } from "./group-moderation-types";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
+
+type LogExportKey = "created_at" | "eventType" | "actorDisplayName" | "description" | "data";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  isGroupLogsExportDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-  groupLogsModerationTable: {
-    type: Object,
-    default: () => {},
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isGroupLogsExportDialogVisible?: boolean;
+    groupLogsModerationTable: GroupMemberModerationTable<ModerationLogRow>;
+  }>(),
+  {
+    isGroupLogsExportDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["update:isGroupLogsExportDialogVisible"]);
+const emit = defineEmits<{
+  "update:isGroupLogsExportDialogVisible": [value: boolean];
+}>();
 watch(
   () => props.isGroupLogsExportDialogVisible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       updateGroupLogsExportContent();
     }
   }
@@ -65,24 +70,29 @@ watch(
 
 const groupLogsExportContent = ref("");
 
-const checkGroupsLogsExportLogsOptions = [
+const checkGroupsLogsExportLogsOptions: { label: LogExportKey; text: string }[] = [
   { label: "created_at", text: "dialog.group_member_moderation.created_at" },
   { label: "eventType", text: "dialog.group_member_moderation.type" },
   { label: "actorDisplayName", text: "dialog.group_member_moderation.display_name" },
   { label: "description", text: "dialog.group_member_moderation.description" },
   { label: "data", text: "dialog.group_member_moderation.data" },
 ];
-const checkedGroupLogsExportLogsOptions = ref(["created_at", "eventType", "actorDisplayName", "description", "data"]);
+const checkedGroupLogsExportLogsOptions = ref<LogExportKey[]>(["created_at", "eventType", "actorDisplayName", "description", "data"]);
 
-function toggleGroupLogsExportOption(label, checked) {
+function toggleGroupLogsExportOption(label: LogExportKey, isChecked: boolean) {
   const selection = checkedGroupLogsExportLogsOptions.value;
   const index = selection.indexOf(label);
-  if (checked && index === -1) {
+  if (isChecked && index === -1) {
     selection.push(label);
-  } else if (!checked && index !== -1) {
+  } else if (!isChecked && index !== -1) {
     selection.splice(index, 1);
   }
   updateGroupLogsExportContent();
+}
+
+function getLogValue(item: ModerationLogRow, key: LogExportKey): unknown {
+  const value: unknown = Reflect.get(item, key);
+  return key === "data" ? JSON.stringify(value) : value;
 }
 
 function updateGroupLogsExportContent() {
@@ -93,7 +103,7 @@ function updateGroupLogsExportContent() {
   const header = `${sortedCheckedOptions.join(",")}\n`;
 
   const content = props.groupLogsModerationTable.data
-    .map((item) => sortedCheckedOptions.map((key) => formatCsvField(key === "data" ? JSON.stringify(item[key]) : item[key])).join(","))
+    .map((item) => sortedCheckedOptions.map((key) => formatCsvField(getLogValue(item, key))).join(","))
     .join("\n");
 
   groupLogsExportContent.value = header + content;

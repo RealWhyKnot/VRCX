@@ -2,31 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const mocks = vi.hoisted(() => ({
-  showFavoriteDialog: vi.fn(),
-  showAvatarDialog: vi.fn(),
-  selectAvatarWithConfirmation: vi.fn(),
-  deleteFavorite: vi.fn(),
-  removeLocalAvatarFavorite: vi.fn(),
+  showFavoriteDialog: vi.fn<(type: string, objectId: string) => void>(),
+  showAvatarDialog: vi.fn<(avatarId: string) => void>(),
+  selectAvatarWithConfirmation: vi.fn<(id: string) => void>(),
+  deleteFavorite: vi.fn<(params: { objectId: string }) => Promise<unknown>>(() => Promise.resolve()),
+  removeLocalAvatarFavorite: vi.fn<(avatarId: string, group: string) => void>(),
   currentUser: { currentAvatar: "" },
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("pinia")>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: <T>(store: T) => store,
   };
 });
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
 vi.mock("../../../../src/stores/favorite", () => ({
   useFavoriteStore: () => ({
-    showFavoriteDialog: (...args) => mocks.showFavoriteDialog(...args),
+    showFavoriteDialog: (...args: Parameters<typeof mocks.showFavoriteDialog>) => mocks.showFavoriteDialog(...args),
   }),
 }));
 vi.mock("../../../../src/stores/user", () => ({
@@ -36,17 +36,17 @@ vi.mock("../../../../src/stores/user", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
-  showAvatarDialog: (...args) => mocks.showAvatarDialog(...args),
-  selectAvatarWithConfirmation: (...args) => mocks.selectAvatarWithConfirmation(...args),
+  showAvatarDialog: (...args: Parameters<typeof mocks.showAvatarDialog>) => mocks.showAvatarDialog(...args),
+  selectAvatarWithConfirmation: (...args: Parameters<typeof mocks.selectAvatarWithConfirmation>) => mocks.selectAvatarWithConfirmation(...args),
 }));
 
 vi.mock("../../../../src/coordinators/favorite-coordinator", () => ({
-  removeLocalAvatarFavorite: (...args) => mocks.removeLocalAvatarFavorite(...args),
+  removeLocalAvatarFavorite: (...args: Parameters<typeof mocks.removeLocalAvatarFavorite>) => mocks.removeLocalAvatarFavorite(...args),
 }));
 
 vi.mock("../../../../src/api/favorite", () => ({
   favoriteRequest: {
-    deleteFavorite: (...args) => mocks.deleteFavorite(...args),
+    deleteFavorite: (...args: Parameters<typeof mocks.deleteFavorite>) => mocks.deleteFavorite(...args),
   },
 }));
 
@@ -150,7 +150,25 @@ vi.mock("lucide-vue-next", () => ({
 
 import FavoritesAvatarItem from "../../../../src/views/Favorites/components/FavoritesAvatarItem.vue";
 
-function mountItem(props = {}) {
+type AvatarItemTestProps = {
+  favorite?: {
+    id: string;
+    name?: string;
+    deleted?: boolean;
+    ref?: {
+      name?: string;
+      authorName?: string;
+      thumbnailImageUrl?: string;
+      releaseStatus?: string;
+    };
+  };
+  group?: string | { name?: string; key?: string };
+  isLocalFavorite?: boolean;
+  editMode?: boolean;
+  selected?: boolean;
+};
+
+function mountItem(props: AvatarItemTestProps = {}) {
   return mount(FavoritesAvatarItem, {
     props: {
       favorite: {
@@ -171,11 +189,11 @@ function mountItem(props = {}) {
   });
 }
 
-async function clickMenuItem(wrapper, text) {
+async function clickMenuItem(wrapper: ReturnType<typeof mountItem>, text: string) {
   const buttons = wrapper.findAll("button");
   const target = buttons.find((btn) => btn.text().includes(text));
   expect(target, `menu item not found: ${text}`).toBeTruthy();
-  await target.trigger("click");
+  await target?.trigger("click");
 }
 
 describe("FavoritesAvatarItem.vue", () => {
@@ -184,6 +202,7 @@ describe("FavoritesAvatarItem.vue", () => {
     mocks.showAvatarDialog.mockReset();
     mocks.selectAvatarWithConfirmation.mockReset();
     mocks.deleteFavorite.mockReset();
+    mocks.deleteFavorite.mockImplementation(() => Promise.resolve());
     mocks.removeLocalAvatarFavorite.mockReset();
     mocks.currentUser.currentAvatar = "";
   });
@@ -234,7 +253,9 @@ describe("FavoritesAvatarItem.vue", () => {
       favorite: {
         id: "avtr_local",
         name: "Local Avatar",
-        thumbnailImageUrl: "",
+        ref: {
+          thumbnailImageUrl: "",
+        },
       },
     });
 

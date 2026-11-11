@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 import { useForwardProps } from "reka-ui";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 
 const delegatedProps = reactiveOmit(props, "class");
 

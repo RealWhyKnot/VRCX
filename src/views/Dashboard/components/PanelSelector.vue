@@ -67,6 +67,8 @@ import { DASHBOARD_BLOCKED_PANEL_KEYS } from "@/shared/constants/dashboard";
 import { isToolNavKey } from "@/shared/constants/tools";
 import { navDefinitions } from "@/shared/constants/ui";
 
+import type { DashboardPanelValue } from "../types";
+
 const widgetDefinitions = [
   {
     key: "widget:feed",
@@ -88,31 +90,35 @@ const widgetDefinitions = [
   },
 ];
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-  currentKey: {
-    type: [String, Object],
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    open?: boolean;
+    currentKey?: DashboardPanelValue | null;
+  }>(),
+  {
+    open: false,
+    currentKey: null,
+  }
+);
 
-const emit = defineEmits(["select", "close"]);
+const emit = defineEmits<{
+  select: [value: DashboardPanelValue | null];
+  close: [];
+}>();
 const { t } = useI18n();
 
-const currentPanelKey = computed(() => {
-  if (!props.currentKey) return null;
-  if (typeof props.currentKey === "string") return props.currentKey;
-  return props.currentKey.key || null;
+const currentPanelKey = computed<string | null>(() => {
+  const current = props.currentKey;
+  if (!current) return null;
+  if (typeof current === "string") return current;
+  return current.key || null;
 });
 
 const widgetOptions = computed(() => widgetDefinitions);
 
 const panelOptions = computed(() => navDefinitions.filter((def) => def.routeName && !DASHBOARD_BLOCKED_PANEL_KEYS.has(def.key) && !isToolNavKey(def.key)));
 
-function handleSelectWidget(option) {
+function handleSelectWidget(option: (typeof widgetDefinitions)[number]) {
   emit("select", {
     key: option.key,
     config: { ...option.defaultConfig },

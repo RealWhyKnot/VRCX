@@ -35,7 +35,7 @@ const {
 const { selectResult } = quickSearchStore;
 const { t } = useI18n();
 
-function handleSelect(item) {
+function handleSelect(item: Parameters<typeof selectResult>[0]) {
   selectResult(item);
 }
 </script>

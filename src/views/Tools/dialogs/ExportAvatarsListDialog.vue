@@ -8,13 +8,7 @@
         <span class="name mr-6">{{ t("dialog.export_own_avatars.public_only") }}</span>
         <Switch v-model="publicOnly" />
       </div>
-      <InputGroupTextareaField
-        :model-value="exportAvatarsListCsv"
-        :rows="15"
-        readonly
-        input-class="resize-none mt-2"
-        @click="$event.target.tagName === 'TEXTAREA' && $event.target.select()"
-      />
+      <InputGroupTextareaField :model-value="exportAvatarsListCsv" :rows="15" readonly input-class="resize-none mt-2" @click="selectTextareaOnClick" />
     </DialogContent>
   </Dialog>
 </template>
@@ -33,7 +27,9 @@ import { useAvatarStore } from "../../../stores/avatar";
 import { useUserStore } from "../../../stores/user";
 import { applyAvatar, removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
 import { avatarRequest } from "../../../api/avatar";
+import { escapeCsvField } from "./csv-field";
 import { processBulk } from "../../../services/request";
+import { logError } from "../../../stores/vrcx-messages";
 import Switch from "../../../components/ui/switch/Switch.vue";
 
 const { t } = useI18n();
@@ -41,22 +37,21 @@ const { t } = useI18n();
 const { cachedAvatars } = useAvatarStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  isExportAvatarsListDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = defineProps<{
+  isExportAvatarsListDialogVisible: boolean;
+}>();
 
-const avatars = ref([]);
+type AvatarRow = ReturnType<typeof applyAvatar>;
+
+const avatars = ref<AvatarRow[]>([]);
 const publicOnly = ref(false);
 const loading = ref(false);
 
-function escapeCsv(str) {
-  if (/[\x00-\x1f,"]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
+function selectTextareaOnClick(event: MouseEvent) {
+  const target = event.target;
+  if (target instanceof HTMLTextAreaElement) {
+    target.select();
   }
-  return str;
 }
 
 const exportAvatarsListCsv = computed(() => {
@@ -65,7 +60,7 @@ const exportAvatarsListCsv = computed(() => {
     if (publicOnly.value && avatar.releaseStatus !== "public") {
       continue;
     }
-    lines.push(`${escapeCsv(avatar.id)},${escapeCsv(avatar.name)}`);
+    lines.push(`${escapeCsvField(avatar.id)},${escapeCsvField(avatar.name)}`);
   }
   return lines.join("\n");
 });
@@ -74,17 +69,19 @@ const isVisible = computed({
   get() {
     return props.isExportAvatarsListDialogVisible;
   },
-  set(value) {
-    emit("update:isExportAvatarsListDialogVisible", value);
+  set(isOpen: boolean) {
+    emit("update:isExportAvatarsListDialogVisible", isOpen);
   },
 });
 
-const emit = defineEmits(["update:isExportAvatarsListDialogVisible"]);
+const emit = defineEmits<{
+  "update:isExportAvatarsListDialogVisible": [value: boolean];
+}>();
 
 watch(
   () => props.isExportAvatarsListDialogVisible,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       initExportAvatarsListDialog();
     }
   }
@@ -104,10 +101,10 @@ function initExportAvatarsListDialog() {
     order: "descending",
     releaseStatus: "all",
     user: "me",
-  };
-  const map = new Map();
-  processBulk({
-    fn: avatarRequest.getAvatars,
+  } satisfies Parameters<typeof avatarRequest.getAvatars>[0];
+  const map = new Map<string, AvatarRow>();
+  void processBulk({
+    fn: (bulkParams) => avatarRequest.getAvatars(bulkParams),
     N: -1,
     params,
     handle: (args) => {
@@ -120,6 +117,6 @@ function initExportAvatarsListDialog() {
       avatars.value = Array.from(map.values());
       loading.value = false;
     },
-  });
+  }).catch(logError);
 }
 </script>

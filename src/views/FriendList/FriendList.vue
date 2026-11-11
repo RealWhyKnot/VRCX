@@ -1,5 +1,5 @@
 <template>
-  <div ref="friendsListRef" class="x-container x-container--auto-height">
+  <div class="x-container x-container--auto-height">
     <div class="flex-1 min-h-0 flex flex-col">
       <DataTableLayout
         class="min-w-0 w-full"
@@ -132,16 +132,16 @@ import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import Progress from "@/components/ui/progress/Progress.vue";
-import { Star } from "lucide-vue-next";
+import { Loader2, Star } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-import { Loader2 } from "lucide-vue-next";
 
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useChartsStore } from "../../stores/charts";
 import { useFriendStore } from "../../stores/friend";
+import type { FriendContext } from "../../stores/friend-types";
 import { useModalStore } from "../../stores/modal";
 import { useSearchStore } from "../../stores/search";
 import { useUserStore } from "../../stores/user";
@@ -159,32 +159,51 @@ import { showUserDialog } from "../../coordinators/user-coordinator";
 import { confirmDeleteFriend, handleFriendDelete } from "../../coordinators/friend-relationship-coordinator";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { database } from "../../services/database";
+import type { VrcxUser } from "../../types/vrcx";
+
+type FriendProfile = {
+  bio: string | null;
+  bioLinks: string[];
+};
+
+type FriendSearchEntry = {
+  signature: string;
+  bio: string;
+  displayName: string;
+  memo: string;
+  normalizedDisplayName: string;
+  note: string;
+  rank: string;
+  status: string;
+};
 
 const { t } = useI18n();
 
-const emit = defineEmits(["lookup-user"]);
+const emit = defineEmits<{
+  "lookup-user": [value: VrcxUser];
+}>();
 
 const { friends, allFavoriteFriendIds } = storeToRefs(useFriendStore());
 const modalStore = useModalStore();
 const { getAllUserStats, getAllUserMutualCount, getAllUserMutualOptedOut } = useFriendStore();
 const chartsStore = useChartsStore();
 const isMutualFetching = computed(() => chartsStore.mutualGraphStatus.isFetching);
-const isMutualOptOut = computed(() => Boolean(useUserStore().currentUser?.hasSharedConnectionsOptOut));
+const isMutualOptOut = computed(() => useUserStore().currentUser.hasSharedConnectionsOptOut);
 const appearanceSettingsStore = useAppearanceSettingsStore();
 const { randomUserColours } = storeToRefs(appearanceSettingsStore);
 const { userImage } = useUserDisplay();
 
 const { stringComparer, friendsListSearch } = storeToRefs(useSearchStore());
 
-const friendsListSearchFilters = ref([]);
+const friendsListSearchFilters = ref<string[]>([]);
 const friendsListBulkUnfriendMode = ref(false);
 const friendsListLoading = ref(false);
 const friendsListLoadingCurrent = ref(0);
 const friendsListLoadingTotal = ref(0);
 const friendsListLoadDialogVisible = ref(false);
 const friendsListSearchFilterVIP = ref(false);
-const selectedFriends = ref(new Set());
-const friendsListDisplayData = ref([]);
+const selectedFriends = ref(new Set<string>());
+const friendsListDisplayData = ref<VrcxUser[]>([]);
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 const defaultSorting = [{ id: "friendNumber", desc: true }];
 
@@ -193,13 +212,12 @@ const friendsListLoadingPercent = computed(() => {
   return Math.min(100, Math.round((friendsListLoadingCurrent.value / friendsListLoadingTotal.value) * 100));
 });
 
-const friendsListRef = ref(null);
-const friendSearchCache = new Map();
-const friendProfiles = shallowRef(new Map());
+const friendSearchCache = new Map<string, FriendSearchEntry>();
+const friendProfiles = shallowRef(new Map<string | null, FriendProfile>());
 const FRIEND_LIST_SEARCH_DEBOUNCE_MS = 150;
 const FRIEND_STATS_REFRESH_INTERVAL_MS = 30000;
-let friendsListSearchTimer = null;
-let friendStatsRefreshInFlight = null;
+let friendsListSearchTimer: ReturnType<typeof setTimeout> | null = null;
+let friendStatsRefreshInFlight: Promise<PromiseSettledResult<void>[]> | null = null;
 let lastFriendStatsRefreshAt = 0;
 let lastFriendStatsRefreshKey = "";
 
@@ -220,7 +238,7 @@ const { table, sorting, pagination } = useVrcxVueTable({
     return friendsListDisplayData.value;
   },
   columns: friendsListColumns.value,
-  getRowId: (row) => row?.id ?? row?.displayName ?? "",
+  getRowId: (row) => row.id,
   enablePinning: true,
 
   initialSorting: defaultSorting,
@@ -234,7 +252,7 @@ const totalItems = computed(() => {
   return table.getFilteredRowModel().rows.length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,
@@ -242,8 +260,8 @@ const handlePageSizeChange = (size) => {
   };
 };
 
-const handleRowClick = (row) => {
-  selectFriendsListRow(row?.original ?? null);
+const handleRowClick = (row: { original: VrcxUser | null | undefined }) => {
+  selectFriendsListRow(row.original);
 };
 
 watch(
@@ -259,12 +277,12 @@ watch(
 
 watch(
   friendsListBulkUnfriendMode,
-  (enabled) => {
-    const column = table?.getColumn?.("bulkSelect");
+  (isEnabled) => {
+    const column = table.getColumn("bulkSelect");
     if (!column) {
       return;
     }
-    column.toggleVisibility(Boolean(enabled));
+    column.toggleVisibility(isEnabled);
   },
   { immediate: true }
 );
@@ -274,9 +292,9 @@ const route = useRoute();
 watch(
   () => route.path,
   () => {
-    refreshFriendStats();
-    loadFriendProfiles();
-    nextTick(() => applyFriendsListSearchChange());
+    refreshFriendStats().catch(logFriendListError);
+    loadFriendProfiles().catch(logFriendListError);
+    nextTick().then(applyFriendsListSearchChange, logFriendListError);
   },
   { immediate: true }
 );
@@ -285,8 +303,8 @@ watch(
   () => friends.value.size,
   () => {
     friendSearchCache.clear();
-    refreshFriendStats({ force: true });
-    loadFriendProfiles();
+    refreshFriendStats({ force: true }).catch(logFriendListError);
+    loadFriendProfiles().catch(logFriendListError);
     applyFriendsListSearchChange();
   }
 );
@@ -297,9 +315,13 @@ onBeforeUnmount(() => {
   }
 });
 
+function logFriendListError(error: unknown) {
+  console.error(error);
+}
+
 async function loadFriendProfiles() {
   const profiles = await database.getAllUserProfiles();
-  friendProfiles.value = new Map(profiles.map((profile) => [profile.userId, profile]));
+  friendProfiles.value = new Map(profiles.map((profile): [string | null, FriendProfile] => [profile.userId, profile]));
   friendSearchCache.clear();
   if (friendsListSearch.value) {
     applyFriendsListSearchChange();
@@ -310,7 +332,7 @@ function getFriendStatsRefreshKey() {
   return Array.from(friends.value.keys()).sort().join("\u0000");
 }
 
-async function refreshFriendStats({ force = false } = {}) {
+async function refreshFriendStats({ force = false }: { force?: boolean } = {}) {
   const friendStatsRefreshKey = getFriendStatsRefreshKey();
   if (!friendStatsRefreshKey) {
     return;
@@ -352,31 +374,32 @@ function friendsListSearchChange() {
   applyFriendsListSearchChange();
 }
 
-function getFriendSearchEntry(ctx) {
-  if (!ctx?.ref?.id) {
+function getFriendSearchEntry(ctx: FriendContext) {
+  if (!ctx.ref?.id) {
     return null;
   }
+  const friendRef: Partial<VrcxUser> = ctx.ref;
   const signature = [
-    ctx.ref.$memo ?? "",
-    ctx.ref.displayName ?? "",
-    ctx.ref.note ?? "",
+    friendRef.$memo ?? "",
+    friendRef.displayName ?? "",
+    friendRef.note ?? "",
     friendProfiles.value.get(ctx.id)?.bio ?? "",
-    ctx.ref.statusDescription ?? "",
-    ctx.ref.$trustLevel ?? "",
+    friendRef.statusDescription ?? "",
+    friendRef.$trustLevel ?? "",
   ].join("\u0000");
   const cached = friendSearchCache.get(ctx.id);
   if (cached?.signature === signature) {
     return cached;
   }
-  const entry = {
+  const entry: FriendSearchEntry = {
     signature,
     bio: replaceBioSymbols(friendProfiles.value.get(ctx.id)?.bio),
-    displayName: ctx.ref.displayName ?? "",
-    memo: ctx.ref.$memo ?? "",
-    normalizedDisplayName: removeConfusables(ctx.ref.displayName ?? ""),
-    note: ctx.ref.note ?? "",
-    rank: String(ctx.ref.$trustLevel ?? "").toUpperCase(),
-    status: ctx.ref.statusDescription ?? "",
+    displayName: friendRef.displayName ?? "",
+    memo: friendRef.$memo ?? "",
+    normalizedDisplayName: removeConfusables(friendRef.displayName ?? ""),
+    note: friendRef.note ?? "",
+    rank: (friendRef.$trustLevel ?? "").toUpperCase(),
+    status: friendRef.statusDescription ?? "",
   };
   friendSearchCache.set(ctx.id, entry);
   return entry;
@@ -389,40 +412,29 @@ function applyFriendsListSearchChange() {
   let upperQuery = "";
   friendsListDisplayData.value = [];
   const filters = friendsListSearchFilters.value.length ? [...friendsListSearchFilters.value] : ["Display Name", "Rank", "Status", "Bio", "Note", "Memo"];
-  const results = [];
+  const results: VrcxUser[] = [];
   if (friendsListSearch.value) {
     query = friendsListSearch.value;
     cleanedQuery = removeWhitespace(query);
     upperQuery = query.toUpperCase();
   }
+  const isEntryMatchingQuery = (entry: FriendSearchEntry) => {
+    if (filters.includes("Display Name") && entry.displayName) {
+      if (localeIncludes(entry.displayName, cleanedQuery, stringComparer.value)) return true;
+      if (localeIncludes(entry.normalizedDisplayName, cleanedQuery, stringComparer.value)) return true;
+    }
+    if (filters.includes("Memo") && entry.memo && localeIncludes(entry.memo, query, stringComparer.value)) return true;
+    if (filters.includes("Note") && entry.note && localeIncludes(entry.note, query, stringComparer.value)) return true;
+    if (filters.includes("Bio") && entry.bio && localeIncludes(entry.bio, query, stringComparer.value)) return true;
+    if (filters.includes("Status") && entry.status && localeIncludes(entry.status, query, stringComparer.value)) return true;
+    return filters.includes("Rank") && entry.rank.includes(upperQuery);
+  };
   for (const ctx of friends.value.values()) {
     if (!ctx.ref) continue;
     if (friendsListSearchFilterVIP.value && !allFavoriteFriendIds.value.has(ctx.id)) continue;
     if (query) {
-      let match = false;
       const searchEntry = getFriendSearchEntry(ctx);
-      if (!searchEntry) continue;
-      if (!match && filters.includes("Display Name") && searchEntry.displayName) {
-        match =
-          localeIncludes(searchEntry.displayName, cleanedQuery, stringComparer.value) ||
-          localeIncludes(searchEntry.normalizedDisplayName, cleanedQuery, stringComparer.value);
-      }
-      if (!match && filters.includes("Memo") && searchEntry.memo) {
-        match = localeIncludes(searchEntry.memo, query, stringComparer.value);
-      }
-      if (!match && filters.includes("Note") && searchEntry.note) {
-        match = localeIncludes(searchEntry.note, query, stringComparer.value);
-      }
-      if (!match && filters.includes("Bio") && searchEntry.bio) {
-        match = localeIncludes(searchEntry.bio, query, stringComparer.value);
-      }
-      if (!match && filters.includes("Status") && searchEntry.status) {
-        match = localeIncludes(searchEntry.status, query, stringComparer.value);
-      }
-      if (!match && filters.includes("Rank")) {
-        match = searchEntry.rank.includes(upperQuery);
-      }
-      if (!match) continue;
+      if (!searchEntry || !isEntryMatchingQuery(searchEntry)) continue;
     }
     results.push(ctx.ref);
   }
@@ -430,12 +442,12 @@ function applyFriendsListSearchChange() {
   table.setPageIndex(0);
   table.setSorting([...defaultSorting]);
   sorting.value = [...defaultSorting];
-  nextTick(() => {
+  nextTick().then(() => {
     friendsListLoading.value = false;
-  });
+  }, logFriendListError);
 }
 
-function toggleFriendSelection(id) {
+function toggleFriendSelection(id: string) {
   if (selectedFriends.value.has(id)) {
     selectedFriends.value.delete(id);
   } else {
@@ -463,8 +475,8 @@ function showBulkUnfriendSelectionConfirm() {
       description,
       title: `Delete ${pending.length} friends?`,
     })
-    .then(({ ok }) => ok && bulkUnfriendSelection())
-    .catch(() => {});
+    .then(({ ok }) => (ok ? bulkUnfriendSelection() : undefined))
+    .catch(logFriendListError);
 }
 
 async function bulkUnfriendSelection() {
@@ -477,22 +489,19 @@ async function bulkUnfriendSelection() {
       selectedFriends.value.delete(item.id);
     }
   }
-  modalStore.alert({
-    description: `Unfriended ${selectedFriendsCount} friends.`,
-    title: "Bulk Unfriend Complete",
-  });
+  modalStore
+    .alert({
+      description: `Unfriended ${selectedFriendsCount} friends.`,
+      title: "Bulk Unfriend Complete",
+    })
+    .catch(logFriendListError);
   selectedFriends.value.clear();
 }
 
 async function friendsListLoadUsers() {
   await loadFriendProfiles();
   const toFetch = Array.from(friends.value.values())
-    .filter((ctx) => ctx.ref)
-    .map((ctx) => ({
-      userId: ctx.id,
-      needsUser: !ctx.ref.date_joined,
-      needsProfile: !friendProfiles.value.has(ctx.id),
-    }))
+    .flatMap((ctx) => (ctx.ref ? [{ userId: ctx.id, needsUser: !ctx.ref.date_joined, needsProfile: !friendProfiles.value.has(ctx.id) }] : []))
     .filter((item) => item.needsUser || item.needsProfile);
   const total = toFetch.length;
   friendsListLoadingTotal.value = total;
@@ -503,10 +512,10 @@ async function friendsListLoadUsers() {
   }
   friendsListLoading.value = true;
   friendsListLoadDialogVisible.value = true;
-  let cancelled = false;
+  let isCancelled = false;
   for (const { userId, needsUser, needsProfile } of toFetch) {
-    if (!friendsListLoading.value) {
-      cancelled = true;
+    if (isFriendsListLoadStopped()) {
+      isCancelled = true;
       break;
     }
     friendsListLoadingCurrent.value += 1;
@@ -522,13 +531,17 @@ async function friendsListLoadUsers() {
     }
   }
   friendsListLoading.value = false;
-  loadFriendProfiles();
+  loadFriendProfiles().catch(logFriendListError);
   friendsListLoadDialogVisible.value = false;
   friendsListLoadingCurrent.value = 0;
   friendsListLoadingTotal.value = 0;
-  if (!cancelled) {
+  if (!isCancelled) {
     toast.success(t("view.friend_list.load_complete"));
   }
+}
+
+function isFriendsListLoadStopped() {
+  return !friendsListLoading.value;
 }
 
 function cancelFriendsListLoad() {
@@ -536,7 +549,7 @@ function cancelFriendsListLoad() {
   friendsListLoadDialogVisible.value = false;
 }
 
-function selectFriendsListRow(val) {
+function selectFriendsListRow(val: VrcxUser | null | undefined) {
   if (!val) return;
   if (!val.id) emit("lookup-user", val);
   else showUserDialog(val.id);
@@ -548,8 +561,8 @@ async function loadMutualFriends() {
   await Promise.allSettled([getAllUserMutualCount(), getAllUserMutualOptedOut()]);
 }
 
-function handleFriendListFilterChange(value) {
-  friendsListSearchFilters.value = Array.isArray(value) ? value : [];
+function handleFriendListFilterChange(value: unknown) {
+  friendsListSearchFilters.value = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
   friendsListSearchChange();
 }
 </script>

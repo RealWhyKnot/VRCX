@@ -1,19 +1,30 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { MoreHorizontal } from "lucide-vue-next";
 import { PaginationEllipsis } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
 
 const { t } = useI18n();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>

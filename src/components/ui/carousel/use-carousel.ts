@@ -1,9 +1,18 @@
+import type { EmblaCarouselType, EmblaOptionsType, EmblaPluginType } from "embla-carousel";
 import { onMounted, ref } from "vue";
 import { createInjectionState } from "@vueuse/core";
 
 import emblaCarouselVue from "embla-carousel-vue";
 
-const [useProvideCarousel, useInjectCarousel] = createInjectionState((props, emits) => {
+export type CarouselProps = {
+  opts?: EmblaOptionsType | undefined;
+  plugins?: EmblaPluginType[] | undefined;
+  orientation: "horizontal" | "vertical";
+};
+
+export type CarouselEmits = (event: "init-api", api: EmblaCarouselType) => void;
+
+const [useProvideCarousel, useInjectCarousel] = createInjectionState((props: CarouselProps, emits: CarouselEmits) => {
   const { opts, orientation, plugins } = props;
   const [emblaNode, emblaApi] = emblaCarouselVue(
     {
@@ -23,17 +32,17 @@ const [useProvideCarousel, useInjectCarousel] = createInjectionState((props, emi
   const canScrollNext = ref(false);
   const canScrollPrev = ref(false);
 
-  function onSelect(api) {
-    canScrollNext.value = api?.canScrollNext() || false;
-    canScrollPrev.value = api?.canScrollPrev() || false;
+  function onSelect(api: EmblaCarouselType) {
+    canScrollNext.value = api.canScrollNext();
+    canScrollPrev.value = api.canScrollPrev();
   }
 
   onMounted(() => {
     if (!emblaApi.value) return;
 
-    emblaApi.value?.on("init", onSelect);
-    emblaApi.value?.on("reInit", onSelect);
-    emblaApi.value?.on("select", onSelect);
+    emblaApi.value.on("init", onSelect);
+    emblaApi.value.on("reInit", onSelect);
+    emblaApi.value.on("select", onSelect);
 
     emits("init-api", emblaApi.value);
   });

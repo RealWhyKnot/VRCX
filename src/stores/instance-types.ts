@@ -41,9 +41,23 @@ export type PlayerRef = {
   displayName: string;
   isFriend?: boolean;
   ageVerificationStatus?: string;
+  iconFrame?: string;
+  iconUrl?: string;
+  thumbnailUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  currentAvatarImageUrl?: string;
+  profilePicOverride?: string;
+  location?: string;
+  $userColour?: string;
+  $travelingToTime?: number;
   $location_at?: number;
   $online_for?: number | null;
   $trustSortNum?: number;
+  $trustClass?: string | undefined;
+  $trustLevel?: string | undefined;
+  $platform?: string | undefined;
+  $languages?: { key: string; value: string }[] | undefined;
+  status?: string | undefined;
   $moderations?: Moderations;
 };
 

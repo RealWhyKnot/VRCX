@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, useForwardPropsEmits, VisuallyHidden } from "reka-ui";
+import type { DialogContentEmits } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
@@ -12,20 +15,27 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  disableOutsidePointerEvents: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "openAutoFocus", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    disableOutsidePointerEvents?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
-function handlePointerDownOutside(event) {
+function handlePointerDownOutside(event: CustomEvent<{ originalEvent: PointerEvent }>) {
   const originalEvent = event.detail.originalEvent;
   const target = originalEvent.target;
+  if (!(target instanceof HTMLElement)) return;
   if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
     event.preventDefault();
   }
@@ -55,7 +65,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <DialogPortal :to="portalTo">
+  <DialogPortal v-bind="portalTo ? { to: portalTo } : {}">
     <DialogOverlay
       class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     >

@@ -41,24 +41,21 @@ import { useModalStore } from "../../../stores/modal";
 import { useSearchStore } from "../../../stores/search";
 import { useUiStore } from "../../../stores/ui";
 import { useUserStore } from "../../../stores/user";
-import { useVrcxStore } from "../../../stores/vrcx";
 import { compareByCreatedAt } from "../../../shared/utils/compare";
 import { localeIncludes } from "../../../shared/utils/base/string";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { timeToText } from "../../../shared/utils/base/format";
 import DataTableLayout from "../../ui/data-table/DataTableLayout.vue";
-import { createPreviousInstancesColumns } from "./previous-instances-columns.tsx";
+import type { PreviousInstancesTableState, PreviousInstancesVariant } from "../../../stores/instance-types";
+import { createPreviousInstancesColumns, type PreviousInstanceRow } from "./previous-instances-columns.tsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
+import { logError } from "../../../stores/vrcx-messages";
 
-const props = defineProps({
-  variant: {
-    type: String,
-    required: true,
-    validator: (value) => ["user", "world", "group"].includes(String(value)),
-  },
-});
+const props = defineProps<{
+  variant: PreviousInstancesVariant;
+}>();
 
 const instanceStore = useInstanceStore();
 const { showPreviousInstancesInfoDialog } = instanceStore;
@@ -68,29 +65,16 @@ const { stringComparer } = storeToRefs(useSearchStore());
 const { currentUser } = storeToRefs(useUserStore());
 const { showLaunchDialog } = useLaunchStore();
 const modalStore = useModalStore();
-const vrcxStore = useVrcxStore();
 const { t } = useI18n();
 
 const dialogState = computed(() => {
   return previousInstancesListDialog.value;
 });
 
-const getListState = () => {
-  const state = previousInstancesListState.value[props.variant];
-  if (state) {
-    return state;
-  }
-  previousInstancesListState.value[props.variant] = {
-    sortBy: [{ id: "created_at", desc: true }],
-    search: "",
-    pageSize: 10,
-    pageIndex: 0,
-  };
-  return previousInstancesListState.value[props.variant];
-};
+const getListState = () => previousInstancesListState.value[props.variant];
 
 const loading = ref(false);
-const rawRows = ref([]);
+const rawRows = ref<PreviousInstanceRow[]>([]);
 const pageSizes = [10, 25, 50, 100];
 const pageSize = computed({
   get: () => getListState().pageSize,
@@ -114,15 +98,15 @@ const sortBy = computed({
 
 const headerText = computed(() => {
   const state = dialogState.value;
-  if (props.variant === "user") return state?.userRef?.displayName ?? "";
-  if (props.variant === "world") return state?.worldRef?.name ?? "";
-  return state?.groupRef?.name ?? "";
+  if (props.variant === "user") return state.userRef.displayName;
+  if (props.variant === "world") return state.worldRef.name;
+  return state.groupRef.name;
 });
 
 const currentId = computed(() => {
-  if (props.variant === "user") return dialogState.value?.userRef?.id ?? "";
-  if (props.variant === "world") return dialogState.value?.worldRef?.id ?? "";
-  return dialogState.value?.groupRef?.id ?? "";
+  if (props.variant === "user") return dialogState.value.userRef.id;
+  if (props.variant === "world") return dialogState.value.worldRef.id;
+  return dialogState.value.groupRef.id;
 });
 
 const persistKey = computed(() => {
@@ -139,27 +123,25 @@ const pageIndex = computed({
 });
 
 const displayRows = computed(() => {
-  const q = String(search.value ?? "")
-    .trim()
-    .toLowerCase();
+  const q = search.value.trim().toLowerCase();
   const rows = Array.isArray(rawRows.value) ? rawRows.value : [];
   if (!q) return rows;
   return rows.filter((row) => {
     return (
-      localeIncludes(row?.worldName ?? "", q, stringComparer.value) ||
-      localeIncludes(row?.groupName ?? "", q, stringComparer.value) ||
-      localeIncludes(row?.location ?? "", q, stringComparer.value)
+      localeIncludes(row.worldName ?? "", q, stringComparer.value) ||
+      localeIncludes(row.groupName ?? "", q, stringComparer.value) ||
+      localeIncludes(row.location ?? "", q, stringComparer.value)
     );
   });
 });
 
-function deleteGameLogInstance(row) {
+function deleteGameLogInstance(row: PreviousInstanceRow) {
   if (props.variant === "user") {
     database.deleteGameLogInstance({
       id: previousInstancesListDialog.value.userRef.id,
       displayName: previousInstancesListDialog.value.userRef.displayName,
       location: row.location,
-      events: row.events,
+      events: row.events ?? [],
     });
   } else {
     database.deleteGameLogInstanceByInstanceId({ location: row.location });
@@ -167,7 +149,7 @@ function deleteGameLogInstance(row) {
   removeFromArray(rawRows.value, row);
 }
 
-function deleteGameLogInstancePrompt(row) {
+function deleteGameLogInstancePrompt(row: PreviousInstanceRow) {
   const description = props.variant === "user" ? "Continue? Delete User From GameLog Instance" : "Continue? Delete GameLog Instance";
   modalStore
     .confirm({
@@ -178,19 +160,24 @@ function deleteGameLogInstancePrompt(row) {
       if (!ok) return;
       deleteGameLogInstance(row);
     })
-    .catch(() => {});
+    .catch(logError);
 }
 
-const handleShowInfo = (location) => {
-  const instanceId = location ?? "";
-  showPreviousInstancesInfoDialog(instanceId);
+const handleShowInfo = (location: string) => {
+  showPreviousInstancesInfoDialog(location);
+};
+
+const handleLaunch = (location: string | null) => {
+  if (location) {
+    void showLaunchDialog(location).catch(logError);
+  }
 };
 
 const columns = computed(() =>
   createPreviousInstancesColumns(props.variant, {
     shiftHeld,
-    currentUserId: currentUser.value?.id,
-    onLaunch: showLaunchDialog,
+    currentUserId: currentUser.value.id,
+    onLaunch: handleLaunch,
     onShowInfo: handleShowInfo,
     onDelete: deleteGameLogInstance,
     onDeletePrompt: deleteGameLogInstancePrompt,
@@ -203,7 +190,7 @@ const { table } = useVrcxVueTable({
     return displayRows.value;
   },
   columns: columns.value,
-  getRowId: (row) => `${row?.location ?? ""}:${row?.created_at ?? ""}`,
+  getRowId: (row) => `${row.location ?? ""}:${row.created_at ?? ""}`,
   initialSorting: sortBy.value,
   initialPagination: {
     pageIndex: pageIndex.value,
@@ -229,21 +216,29 @@ const totalItems = computed(() => {
   return table.getFilteredRowModel().rows.length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pageSize.value = size;
 };
 
-const handlePageChange = (page) => {
+const handlePageChange = (page: number) => {
   pageIndex.value = Math.max(0, page - 1);
 };
 
-const handleSortChange = (sorting) => {
+const handleSortChange = (sorting: PreviousInstancesTableState["sortBy"]) => {
   sortBy.value = sorting;
 };
 
+function toPreviousInstanceRow(item: Omit<PreviousInstanceRow, "$location" | "timer">): PreviousInstanceRow {
+  return {
+    ...item,
+    $location: parseLocation(item.location),
+    timer: item.time > 0 ? timeToText(item.time) : "",
+  };
+}
+
 const refreshTable = async () => {
   loading.value = true;
-  const array = [];
+  const array: PreviousInstanceRow[] = [];
   try {
     const D = previousInstancesListDialog.value;
     if (currentId.value !== D.lastId) {
@@ -254,23 +249,17 @@ const refreshTable = async () => {
     if (props.variant === "user") {
       const data = await database.getPreviousInstancesByUserId(D.userRef);
       for (const item of data.values()) {
-        item.$location = parseLocation(item.location);
-        item.timer = item.time > 0 ? timeToText(item.time) : "";
-        array.push(item);
+        array.push(toPreviousInstanceRow(item));
       }
     } else if (props.variant === "world") {
-      const data = await database.getPreviousInstancesByWorldId(D.worldRef);
-      for (const ref of data.values()) {
-        ref.$location = parseLocation(ref.location);
-        ref.timer = ref.time > 0 ? timeToText(ref.time) : "";
-        array.push(ref);
+      const data = await database.getPreviousInstancesByWorldId(D.worldRef.id);
+      for (const item of data.values()) {
+        array.push(toPreviousInstanceRow(item));
       }
     } else {
       const data = await database.getPreviousInstancesByGroupId(D.groupRef.id);
-      for (const ref of data.values()) {
-        ref.$location = parseLocation(ref.location);
-        ref.timer = ref.time > 0 ? timeToText(ref.time) : "";
-        array.push(ref);
+      for (const item of data.values()) {
+        array.push(toPreviousInstanceRow(item));
       }
     }
     array.sort(compareByCreatedAt);
@@ -281,10 +270,10 @@ const refreshTable = async () => {
 };
 
 watch(
-  () => dialogState.value?.visible,
-  (visible) => {
-    if (visible) {
-      refreshTable();
+  () => dialogState.value.visible,
+  (isVisible) => {
+    if (isVisible) {
+      void refreshTable().catch(logError);
     }
   },
   { immediate: true }

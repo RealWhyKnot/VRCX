@@ -15,9 +15,12 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
-  label: { type: String, required: true },
-  description: { type: String, default: "" },
-  toggle: { type: Boolean, default: false },
-});
+withDefaults(
+  defineProps<{
+    label: string;
+    description?: string;
+    toggle?: boolean;
+  }>(),
+  { description: "", toggle: false }
+);
 </script>

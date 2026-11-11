@@ -1,44 +1,47 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
-const mocks = vi.hoisted(() => ({
-  generalStore: {
-    autoStateChangeEnabled: { __v_isRef: true, value: true },
-    autoStateChangeAloneStatus: { __v_isRef: true, value: "active" },
-    autoStateChangeCompanyStatus: { __v_isRef: true, value: "busy" },
-    autoStateChangeInstanceTypes: { __v_isRef: true, value: ["invite"] },
-    autoStateChangeNoFriends: { __v_isRef: true, value: false },
-    autoStateChangeAloneDescEnabled: { __v_isRef: true, value: false },
-    autoStateChangeAloneDesc: { __v_isRef: true, value: "" },
-    autoStateChangeCompanyDescEnabled: { __v_isRef: true, value: false },
-    autoStateChangeCompanyDesc: { __v_isRef: true, value: "" },
-    autoStateChangeGroups: { __v_isRef: true, value: [] },
-    autoAcceptInviteRequests: { __v_isRef: true, value: "Off" },
-    autoAcceptInviteGroups: { __v_isRef: true, value: [] },
-    setAutoStateChangeEnabled: vi.fn(),
-    setAutoStateChangeAloneStatus: vi.fn(),
-    setAutoStateChangeCompanyStatus: vi.fn(),
-    setAutoStateChangeInstanceTypes: vi.fn(),
-    setAutoStateChangeNoFriends: vi.fn(),
-    setAutoStateChangeAloneDescEnabled: vi.fn(),
-    setAutoStateChangeAloneDesc: vi.fn(),
-    setAutoStateChangeCompanyDescEnabled: vi.fn(),
-    setAutoStateChangeCompanyDesc: vi.fn(),
-    setAutoStateChangeGroups: vi.fn(),
-    setAutoAcceptInviteRequests: vi.fn(),
-    setAutoAcceptInviteGroups: vi.fn(),
-  },
-  favoriteStore: {
-    favoriteFriendGroups: {
-      __v_isRef: true,
-      value: [{ key: "grp_a", displayName: "Group A" }],
-    },
-    localFriendFavoriteGroups: { __v_isRef: true, value: ["Local A"] },
-  },
-}));
+const mocks = vi.hoisted(() => {
+  function fakeRef<T>(value: T): { __v_isRef: true; value: T } {
+    return { __v_isRef: true, value };
+  }
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+  return {
+    generalStore: {
+      autoStateChangeEnabled: fakeRef(true),
+      autoStateChangeAloneStatus: fakeRef("active"),
+      autoStateChangeCompanyStatus: fakeRef("busy"),
+      autoStateChangeInstanceTypes: fakeRef(["invite"]),
+      autoStateChangeNoFriends: fakeRef(false),
+      autoStateChangeAloneDescEnabled: fakeRef(false),
+      autoStateChangeAloneDesc: fakeRef(""),
+      autoStateChangeCompanyDescEnabled: fakeRef(false),
+      autoStateChangeCompanyDesc: fakeRef(""),
+      autoStateChangeGroups: fakeRef<string[]>([]),
+      autoAcceptInviteRequests: fakeRef("Off"),
+      autoAcceptInviteGroups: fakeRef<string[]>([]),
+      setAutoStateChangeEnabled: vi.fn(),
+      setAutoStateChangeAloneStatus: vi.fn(),
+      setAutoStateChangeCompanyStatus: vi.fn(),
+      setAutoStateChangeInstanceTypes: vi.fn(),
+      setAutoStateChangeNoFriends: vi.fn(),
+      setAutoStateChangeAloneDescEnabled: vi.fn(),
+      setAutoStateChangeAloneDesc: vi.fn(),
+      setAutoStateChangeCompanyDescEnabled: vi.fn(),
+      setAutoStateChangeCompanyDesc: vi.fn(),
+      setAutoStateChangeGroups: vi.fn(),
+      setAutoAcceptInviteRequests: vi.fn(),
+      setAutoAcceptInviteGroups: vi.fn(),
+    },
+    favoriteStore: {
+      favoriteFriendGroups: fakeRef([{ key: "grp_a", displayName: "Group A" }]),
+      localFriendFavoriteGroups: fakeRef(["Local A"]),
+    },
+  };
+});
+
+vi.mock("pinia", async (importOriginal) => ({ ...(await importOriginal<object>()), storeToRefs: (store: unknown) => store }));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 
 vi.mock("../../../../src/stores/settings/general", () => ({
   useGeneralSettingsStore: () => mocks.generalStore,
@@ -141,6 +144,13 @@ vi.mock("../../../../src/views/Settings/components/SimpleSwitch.vue", () => ({
 
 import AutoChangeStatusDialog from "../../../../src/views/Tools/dialogs/AutoChangeStatusDialog.vue";
 
+function requireNode<T>(node: T | undefined, description: string): T {
+  if (node === undefined) {
+    throw new Error(`not rendered: ${description}`);
+  }
+  return node;
+}
+
 describe("AutoChangeStatusDialog.vue", () => {
   beforeEach(() => {
     mocks.generalStore.autoStateChangeNoFriends.value = false;
@@ -164,9 +174,12 @@ describe("AutoChangeStatusDialog.vue", () => {
       props: { isAutoChangeStatusDialogVisible: true },
     });
 
-    const autoAcceptSwitch = wrapper
-      .findAll('[data-testid="simple-switch"]')
-      .find((node) => node.attributes("data-label")?.includes("view.settings.general.automation.auto_invite_request_accept"));
+    const autoAcceptSwitch = requireNode(
+      wrapper
+        .findAll('[data-testid="simple-switch"]')
+        .find((node) => node.attributes("data-label")?.includes("view.settings.general.automation.auto_invite_request_accept")),
+      "auto accept switch"
+    );
 
     await autoAcceptSwitch.find(".emit-false").trigger("click");
     expect(mocks.generalStore.setAutoAcceptInviteRequests).toHaveBeenCalledWith("Off");
@@ -174,7 +187,7 @@ describe("AutoChangeStatusDialog.vue", () => {
     await autoAcceptSwitch.find(".emit-true").trigger("click");
     expect(mocks.generalStore.setAutoAcceptInviteRequests).toHaveBeenCalledWith("All Favorites");
 
-    const noFriendsRadio = wrapper.findAll('[data-testid="radio-group"]')[0];
+    const noFriendsRadio = requireNode(wrapper.findAll('[data-testid="radio-group"]')[0], "alone-condition radio group");
     await noFriendsRadio.find(".emit-false").trigger("click");
     expect(mocks.generalStore.setAutoStateChangeNoFriends).not.toHaveBeenCalled();
 

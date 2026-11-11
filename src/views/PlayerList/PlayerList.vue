@@ -8,7 +8,7 @@
           class="cursor-pointer"
           style="flex: none; width: 160px; height: 120px; border-radius: var(--radius-md)"
           loading="lazy"
-          @click="showFullscreenImageDialog(currentInstanceWorld.ref.imageUrl)"
+          @click="showCurrentWorldImage"
           @error="worldImageError = true"
         />
         <div v-else class="flex items-center justify-center bg-muted" style="flex: none; width: 160px; height: 120px; border-radius: var(--radius-md)">
@@ -19,7 +19,7 @@
             <span
               class="cursor-pointer"
               style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; line-clamp: 1"
-              @click="showWorldDialog(currentInstanceWorld.ref.id)"
+              @click="showCurrentWorldDialog"
             >
               <Home v-if="currentUser.$homeLocation && currentUser.$homeLocation.worldId === currentInstanceWorld.ref.id" class="inline-block" />
               {{ currentInstanceWorld.ref.name || currentInstanceWorld.ref.id }}
@@ -45,31 +45,25 @@
             <TooltipWrapper v-if="currentInstanceWorld.isPC" side="top" content="PC">
               <Badge class="text-platform-pc border-platform-pc! mr-1.5" variant="outline"
                 ><Monitor class="h-4 w-4" />
-                <span
-                  v-if="currentInstanceWorld.fileAnalysis.standalonewindows?._fileSize"
-                  class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px"
-                  >{{ currentInstanceWorld.fileAnalysis.standalonewindows._fileSize }}</span
-                >
+                <span v-if="readFileSize('standalonewindows')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">{{
+                  readFileSize("standalonewindows")
+                }}</span>
               </Badge>
             </TooltipWrapper>
             <TooltipWrapper v-if="currentInstanceWorld.isQuest" side="top" content="Android">
               <Badge class="text-platform-quest border-platform-quest! mr-1.5" variant="outline"
                 ><Smartphone class="h-4 w-4" />
-                <span
-                  v-if="currentInstanceWorld.fileAnalysis.android?._fileSize"
-                  class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px"
-                  >{{ currentInstanceWorld.fileAnalysis.android._fileSize }}</span
-                >
+                <span v-if="readFileSize('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">{{
+                  readFileSize("android")
+                }}</span>
               </Badge>
             </TooltipWrapper>
             <TooltipWrapper v-if="currentInstanceWorld.isIos" side="top" content="iOS">
               <Badge class="text-platform-ios border-platform-ios mr-1.5" variant="outline"
                 ><Apple class="h-4 w-4 text-platform-ios" />
-                <span
-                  v-if="currentInstanceWorld.fileAnalysis.ios?._fileSize"
-                  class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px"
-                  >{{ currentInstanceWorld.fileAnalysis.ios._fileSize }}</span
-                >
+                <span v-if="readFileSize('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">{{
+                  readFileSize("ios")
+                }}</span>
               </Badge>
             </TooltipWrapper>
             <Badge v-if="currentInstanceWorld.avatarScalingDisabled" class="mr-1.5 mt-1.5" variant="outline">
@@ -107,7 +101,7 @@
           <div class="box-border flex items-center p-1.5 text-[13px] cursor-default">
             <div class="flex-1 overflow-hidden">
               <span class="block truncate font-medium leading-[18px]">{{ t("dialog.world.info.last_updated") }}</span>
-              <span class="block truncate text-xs">{{ formatDateFilter(currentInstanceWorld.fileAnalysis.standalonewindows?.created_at, "long") }}</span>
+              <span class="block truncate text-xs">{{ formatDateFilter(readFileCreatedAt("standalonewindows"), "long") }}</span>
             </div>
           </div>
           <div class="box-border flex items-center p-1.5 text-[13px] cursor-default">
@@ -134,7 +128,11 @@
         />
       </div>
     </div>
-    <ChatboxBlacklistDialog :chatbox-blacklist-dialog="chatboxBlacklistDialog" @delete-chatbox-user-blacklist="deleteChatboxUserBlacklist" />
+    <ChatboxBlacklistDialog
+      :chatbox-blacklist-dialog="chatboxBlacklistDialog"
+      @delete-chatbox-user-blacklist="deleteChatboxUserBlacklist"
+      @update-open="setChatboxBlacklistOpen"
+    />
   </div>
 </template>
 
@@ -154,13 +152,16 @@ import { commaNumber } from "../../shared/utils/base/string";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import Badge from "../../components/ui/badge/Badge.vue";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
-import { createColumns } from "./columns.tsx";
+import { createColumns, type PlayerListRow } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+import { logFailure } from "../../stores/log-failure";
+import type { InstanceUserEntry } from "../../stores/instance-types";
 
 import ChatboxBlacklistDialog from "./dialogs/ChatboxBlacklistDialog.vue";
 import Timer from "../../components/Timer.vue";
 import { showUserDialog, lookupUser } from "../../coordinators/user-coordinator";
 import { showWorldDialog } from "../../coordinators/world-coordinator";
+import { toUserRef } from "../GameLog/columns.tsx";
 
 import PhotonEventTable from "./components/PhotonEventTable.vue";
 import { useUserDisplay } from "../../composables/use-user-display";
@@ -177,7 +178,7 @@ const { currentInstanceLocation, currentInstanceWorld, currentInstanceUsersData 
 const worldImageError = ref(false);
 
 watch(
-  () => currentInstanceWorld.value?.ref?.id,
+  () => currentInstanceWorld.value.ref.id,
   () => {
     worldImageError.value = false;
   }
@@ -186,10 +187,6 @@ const { getCurrentInstanceUserList } = useInstanceStore();
 const { showFullscreenImageDialog } = useGalleryStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const playerListRef = ref(null);
-const playerListHeaderRef = ref(null);
-const playerListPhotonRef = ref(null);
-
 const { t } = useI18n();
 
 const chatboxBlacklistDialog = ref({
@@ -197,38 +194,72 @@ const chatboxBlacklistDialog = ref({
   loading: false,
 });
 
+function readFileAnalysisEntry(platform: string): object | undefined {
+  const entry: unknown = currentInstanceWorld.value.fileAnalysis[platform];
+  if (typeof entry !== "object" || entry === null) return undefined;
+  return entry;
+}
+
+function readFileSize(platform: string): unknown {
+  const entry = readFileAnalysisEntry(platform);
+  if (!entry || !("_fileSize" in entry)) return undefined;
+  return entry._fileSize;
+}
+
+function readFileCreatedAt(platform: string): string | undefined {
+  const entry = readFileAnalysisEntry(platform);
+  if (!entry || !("created_at" in entry)) return undefined;
+  return typeof entry.created_at === "string" ? entry.created_at : undefined;
+}
+
+function showCurrentWorldImage() {
+  const imageUrl = currentInstanceWorld.value.ref.imageUrl;
+  if (imageUrl) showFullscreenImageDialog(imageUrl, "");
+}
+
+function showCurrentWorldDialog() {
+  const worldId = currentInstanceWorld.value.ref.id;
+  if (worldId) showWorldDialog(worldId);
+}
+
+function setChatboxBlacklistOpen(isOpen: boolean) {
+  chatboxBlacklistDialog.value.visible = isOpen;
+}
+
 function showChatboxBlacklistDialog() {
   const D = chatboxBlacklistDialog.value;
   D.visible = true;
 }
 
-function selectCurrentInstanceRow(val) {
-  if (val === null) {
+function selectCurrentInstanceRow(row: InstanceUserEntry | null) {
+  if (row === null) {
     return;
   }
-  const ref = val.ref;
-  if (ref.id) {
-    showUserDialog(ref.id);
+  const userRef = row.ref;
+  if (userRef.id) {
+    showUserDialog(userRef.id);
   } else {
-    lookupUser(ref);
+    void lookupUser(toUserRef({ userId: userRef.id, displayName: userRef.displayName })).catch(logFailure("Failed to look up user:"));
   }
 }
 
-async function deleteChatboxUserBlacklist(userId) {
+function deleteChatboxUserBlacklist(userId: string) {
   chatboxUserBlacklist.value.delete(userId);
-  await saveChatboxUserBlacklist();
-  getCurrentInstanceUserList();
+  void saveChatboxUserBlacklist()
+    .then(() => getCurrentInstanceUserList())
+    .catch(logFailure("Failed to save chatbox user blacklist:"));
 }
 
-async function addChatboxUserBlacklist(user) {
-  chatboxUserBlacklist.value.set(user.id, user.displayName);
-  await saveChatboxUserBlacklist();
-  getCurrentInstanceUserList();
+function addChatboxUserBlacklist(userId: string, displayName: string) {
+  chatboxUserBlacklist.value.set(userId, displayName);
+  void saveChatboxUserBlacklist()
+    .then(() => getCurrentInstanceUserList())
+    .catch(logFailure("Failed to save chatbox user blacklist:"));
 }
 
-function sortAlphabetically(a, b, field) {
-  if (!a[field] || !b[field]) return 0;
-  return a[field].toLowerCase().localeCompare(b[field].toLowerCase());
+function sortAlphabetically(a: string | undefined, b: string | undefined) {
+  if (!a || !b) return 0;
+  return a.toLowerCase().localeCompare(b.toLowerCase());
 }
 
 const playerListColumns = computed(() =>
@@ -242,14 +273,14 @@ const playerListColumns = computed(() =>
   })
 );
 
-const { table: playerListTable } = useVrcxVueTable({
+const { table: playerListTable } = useVrcxVueTable<PlayerListRow>({
   persistKey: "playerList",
   get data() {
     return currentInstanceUsersData.value;
   },
   columns: playerListColumns,
   enablePagination: false,
-  getRowId: (row) => `${row?.ref?.id ?? ""}:${row?.displayName ?? ""}`,
+  getRowId: (row) => `${row.ref.id ?? ""}:${row.displayName}`,
 });
 
 watch(
@@ -265,19 +296,17 @@ watch(
 
 watch(
   photonLoggingEnabled,
-  (enabled) => {
-    const column = playerListTable?.getColumn?.("photonId");
+  (isEnabled) => {
+    const column = playerListTable.getColumn("photonId");
     if (!column) {
       return;
     }
-    column.toggleVisibility(Boolean(enabled));
+    column.toggleVisibility(isEnabled);
   },
   { immediate: true }
 );
 
-const playerListTotalItems = computed(() => playerListTable.getRowModel().rows.length);
-
-const handlePlayerListRowClick = (row) => {
+const handlePlayerListRowClick = (row: { original: PlayerListRow } | undefined) => {
   selectCurrentInstanceRow(row?.original ?? null);
 };
 

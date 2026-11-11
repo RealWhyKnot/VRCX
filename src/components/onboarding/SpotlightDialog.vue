@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { markRaw, onMounted, ref } from "vue";
-import { LayoutDashboard, MousePointerClick, Search, Sparkles, UserSearch } from "lucide-vue-next";
+import { LayoutDashboard, MousePointerClick, Search, UserSearch } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
 import Dialog from "@/components/ui/dialog/Dialog.vue";
@@ -72,8 +72,8 @@ const features = [
 ];
 
 onMounted(async () => {
-  const seen = await configRepository.getBool("VRCX_onboarding_welcome_seen", false);
-  if (!seen) {
+  const hasSeenWelcome = await configRepository.getBool("VRCX_onboarding_welcome_seen", false);
+  if (!hasSeenWelcome) {
     setTimeout(() => {
       isOpen.value = true;
     }, 800);

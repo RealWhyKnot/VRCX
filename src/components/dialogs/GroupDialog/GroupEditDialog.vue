@@ -12,7 +12,7 @@
           <Field>
             <FieldLabel>{{ t("dialog.group_edit.name") }}</FieldLabel>
             <FieldContent>
-              <InputGroupField v-model="groupEditDialog.name" size="sm" :maxlength="64" :disabled="groupEditDialog.loading" show-count />
+              <InputGroupField v-model="nameText" size="sm" :maxlength="64" :disabled="groupEditDialog.loading" show-count />
             </FieldContent>
           </Field>
 
@@ -20,7 +20,7 @@
             <FieldLabel>{{ t("dialog.group_edit.short_code") }}</FieldLabel>
             <FieldContent>
               <InputGroupField
-                :model-value="groupEditDialog.shortCode"
+                :model-value="groupEditDialog.shortCode ?? ''"
                 size="sm"
                 :maxlength="6"
                 :disabled="groupEditDialog.loading"
@@ -33,7 +33,7 @@
           <Field>
             <FieldLabel>{{ t("dialog.group_edit.description") }}</FieldLabel>
             <FieldContent>
-              <InputGroupTextareaField v-model="groupEditDialog.description" :rows="4" :maxlength="250" :disabled="groupEditDialog.loading" show-count />
+              <InputGroupTextareaField v-model="descriptionText" :rows="4" :maxlength="250" :disabled="groupEditDialog.loading" show-count />
             </FieldContent>
           </Field>
 
@@ -124,7 +124,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.group_edit.rules") }}</FieldLabel>
               <FieldContent>
-                <InputGroupTextareaField v-model="groupEditDialog.rules" :rows="4" :maxlength="2048" :disabled="groupEditDialog.loading" show-count />
+                <InputGroupTextareaField v-model="rulesText" :rows="4" :maxlength="2048" :disabled="groupEditDialog.loading" show-count />
               </FieldContent>
             </Field>
 
@@ -134,10 +134,11 @@
                 <InputGroupAction
                   v-for="(link, index) in groupEditDialog.links"
                   :key="index"
-                  v-model="groupEditDialog.links[index]"
+                  :model-value="link"
                   :maxlength="1000"
                   size="sm"
                   :disabled="groupEditDialog.loading"
+                  @update:model-value="updateLink(index, $event)"
                 >
                   <template #leading>
                     <img v-if="link" :src="getFaviconUrl(link)" style="width: 16px; height: 16px; vertical-align: middle" />
@@ -245,6 +246,7 @@ import { storeToRefs } from "pinia";
 import { Trash2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import type { AcceptableValue } from "reka-ui";
 
 import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
@@ -274,17 +276,16 @@ import { getFaviconUrl } from "../../../shared/utils/url-utils";
 import { useGroupStore } from "../../../stores/group";
 import { useUserStore } from "../../../stores/user";
 import GallerySelectDialog from "./GallerySelectDialog.vue";
+import type { GallerySelectDialogState, GallerySelectionPayload } from "./group-dialog-types";
 
 const { t } = useI18n();
 const { groupEditDialog } = storeToRefs(useGroupStore());
 const { subsetOfLanguages } = storeToRefs(useUserStore());
 
-const galleryImages = {
-  banner: { id: "bannerId", url: "bannerUrl", isIcon: false },
-  icon: { id: "iconId", url: "iconUrl", isIcon: true },
-};
-let galleryTarget = "banner";
-const gallerySelectDialog = ref({
+type GalleryTarget = "banner" | "icon";
+
+let galleryTarget: GalleryTarget = "banner";
+const gallerySelectDialog = ref<GallerySelectDialogState>({
   visible: false,
   selectedFileId: "",
   selectedImageUrl: "",
@@ -297,8 +298,8 @@ const canSubmit = computed(() => {
   return (
     !D.loading &&
     !D.roleTemplatesLoading &&
-    D.name.trim().length >= 3 &&
-    /^[A-Z0-9]{3,6}$/.test(D.shortCode) &&
+    (D.name ?? "").trim().length >= 3 &&
+    /^[A-Z0-9]{3,6}$/.test(D.shortCode ?? "") &&
     isJoinState(D.joinState) &&
     (isEditMode.value || (isPrivacy(D.privacy) && isRoleTemplate(D.roleTemplate)))
   );
@@ -311,69 +312,103 @@ const joinStateOptions = computed(() =>
   }))
 );
 
+const nameText = computed({
+  get: () => groupEditDialog.value.name ?? "",
+  set: (value: string) => {
+    groupEditDialog.value.name = value;
+  },
+});
+const descriptionText = computed({
+  get: () => groupEditDialog.value.description ?? "",
+  set: (value: string) => {
+    groupEditDialog.value.description = value;
+  },
+});
+const rulesText = computed({
+  get: () => groupEditDialog.value.rules ?? "",
+  set: (value: string) => {
+    groupEditDialog.value.rules = value;
+  },
+});
+
 const roleTemplateOptions = computed(() =>
   groupEditDialog.value.roleTemplates.map((template) => {
     return {
-      value: template.value,
+      value: template.value ?? "",
       label: template.name,
     };
   })
 );
 
 const languageOptions = computed(() =>
-  Object.entries(subsetOfLanguages.value ?? {}).map(([value, label]) => ({
+  Object.entries(subsetOfLanguages.value).map(([value, label]) => ({
     value,
     label,
   }))
 );
 
-const selectedLanguageSummary = computed(() => groupEditDialog.value.languages.map((language) => subsetOfLanguages.value?.[language] ?? language).join(", "));
+const selectedLanguageSummary = computed(() => groupEditDialog.value.languages.map((language) => subsetOfLanguages.value[language] ?? language).join(", "));
 
-function updateShortCode(value) {
+function updateShortCode(value: string) {
   groupEditDialog.value.shortCode = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-function isJoinState(value) {
+function updateLink(index: number, value: string | number) {
+  groupEditDialog.value.links[index] = String(value);
+}
+
+function isJoinState(value: string): value is "open" | "request" | "invite" | "closed" {
   return value === "open" || value === "request" || value === "invite" || value === "closed";
 }
 
-function isPrivacy(value) {
+function isPrivacy(value: string): value is "default" | "private" {
   return value === "default" || value === "private";
 }
 
-function isRoleTemplate(value) {
+function isRoleTemplate(value: string): value is "default" | "managedFree" | "managedInvite" | "managedRequest" {
   return value === "default" || value === "managedFree" || value === "managedInvite" || value === "managedRequest";
 }
 
-function handleLanguagesChange(value) {
-  groupEditDialog.value.languages = Array.isArray(value) ? value.slice(0, 3) : [];
+function handleLanguagesChange(value: AcceptableValue | AcceptableValue[]) {
+  const languages: string[] = [];
+  if (Array.isArray(value)) {
+    for (const language of value) {
+      if (typeof language === "string") {
+        languages.push(language);
+      }
+    }
+  }
+  groupEditDialog.value.languages = languages.slice(0, 3);
 }
 
-function showGallerySelectDialog(target) {
+function showGallerySelectDialog(target: GalleryTarget) {
   galleryTarget = target;
-  const image = galleryImages[target];
   const group = groupEditDialog.value;
 
   gallerySelectDialog.value = {
-    selectedFileId: group[image.id],
-    selectedImageUrl: group[image.url],
-    isIconGallerySelectDialog: image.isIcon,
+    selectedFileId: (target === "banner" ? group.bannerId : group.iconId) ?? "",
+    selectedImageUrl: (target === "banner" ? group.bannerUrl : group.iconUrl) ?? "",
+    isIconGallerySelectDialog: target === "icon",
     visible: true,
   };
 }
 
-function setGroupImage(target, { fileId, imageUrl }) {
-  const image = galleryImages[target];
+function setGroupImage(target: GalleryTarget, { fileId, imageUrl }: { fileId: string; imageUrl: string }) {
   const group = groupEditDialog.value;
-  group[image.id] = fileId;
-  group[image.url] = imageUrl;
+  if (target === "banner") {
+    group.bannerId = fileId;
+    group.bannerUrl = imageUrl;
+  } else {
+    group.iconId = fileId;
+    group.iconUrl = imageUrl;
+  }
 }
 
-function handleGalleryImageSelect(image) {
+function handleGalleryImageSelect(image: GallerySelectionPayload) {
   setGroupImage(galleryTarget, image);
 }
 
-function clearImage(target) {
+function clearImage(target: GalleryTarget) {
   setGroupImage(target, { fileId: "", imageUrl: "" });
 }
 
@@ -383,8 +418,8 @@ function closeDialog() {
   }
 }
 
-function handleOpenChange(open) {
-  if (!open) {
+function handleOpenChange(isOpen: boolean) {
+  if (!isOpen) {
     closeDialog();
   }
 }
@@ -402,40 +437,44 @@ async function saveGroup() {
   D.loading = true;
   try {
     const commonParams = {
-      name: D.name.trim(),
-      shortCode: D.shortCode,
-      description: D.description.trim(),
+      name: (D.name ?? "").trim(),
+      shortCode: D.shortCode ?? "",
+      description: (D.description ?? "").trim(),
       joinState,
-      bannerId: D.bannerId || undefined,
-      iconId: D.iconId || undefined,
+      ...(D.bannerId ? { bannerId: D.bannerId } : {}),
+      ...(D.iconId ? { iconId: D.iconId } : {}),
     };
-    let args;
+    let json: Awaited<ReturnType<typeof groupRequest.createGroup>>["json"];
     if (isEditMode.value) {
-      args = await groupRequest.editGroup({
+      const args = await groupRequest.editGroup({
         id: D.groupId,
         ...commonParams,
         languages: D.languages.slice(0, 3),
-        rules: D.rules.trim(),
+        rules: (D.rules ?? "").trim(),
         links: D.links.map((link) => link.trim()).filter(Boolean),
         allowGroupJoinPrompt: D.allowGroupJoinPrompt,
       });
+      json = args.json;
     } else {
       const privacy = D.privacy;
       const roleTemplate = D.roleTemplate;
       if (!isPrivacy(privacy) || !isRoleTemplate(roleTemplate)) {
         return;
       }
-      args = await groupRequest.createGroup({
+      const args = await groupRequest.createGroup({
         ...commonParams,
         privacy,
         roleTemplate,
       });
+      json = args.json;
     }
 
-    const group = applyGroup(args.json);
+    const group = applyGroup(json);
     D.visible = false;
     toast.success(t(isEditMode.value ? "dialog.group_edit.edit_success" : "dialog.group_edit.create_success"));
-    showGroupDialog(group.id, { forceRefresh: true });
+    if (group.id) {
+      showGroupDialog(group.id, { forceRefresh: true });
+    }
   } catch (error) {
     console.error("Failed to save group:", error);
   } finally {

@@ -1,48 +1,56 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { SliderRootEmits, SliderRootProps } from "reka-ui";
 import { SliderRange, SliderRoot, SliderThumb, SliderTrack, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  defaultValue: {
-    type: Array,
-    required: false,
-  },
-  modelValue: {
-    type: [Array, null],
-    required: false,
-  },
-  disabled: { type: Boolean, required: false },
-  orientation: {
-    type: String,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  inverted: { type: Boolean, required: false },
-  min: { type: Number, required: false },
-  max: { type: Number, required: false },
-  step: { type: Number, required: false },
-  minStepsBetweenThumbs: { type: Number, required: false },
-  thumbAlignment: {
-    type: String,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:modelValue", "valueCommit"]);
+defineOptions({ name: "UiSlider" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = defineProps<{
+  defaultValue?: SliderRootProps["defaultValue"];
+  modelValue?: SliderRootProps["modelValue"];
+  disabled?: boolean;
+  orientation?: SliderRootProps["orientation"];
+  dir?: SliderRootProps["dir"];
+  inverted?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  minStepsBetweenThumbs?: number;
+  thumbAlignment?: SliderRootProps["thumbAlignment"];
+  asChild?: boolean;
+  as?: SliderRootProps["as"];
+  name?: string;
+  required?: boolean;
+  class?: ClassValue;
+}>();
+const emits = defineEmits<SliderRootEmits>();
+
+const delegatedProps = computed(() => ({
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  disabled: props.disabled,
+  ...(props.orientation === undefined ? {} : { orientation: props.orientation }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  inverted: props.inverted,
+  ...(props.min === undefined ? {} : { min: props.min }),
+  ...(props.max === undefined ? {} : { max: props.max }),
+  ...(props.step === undefined ? {} : { step: props.step }),
+  ...(props.minStepsBetweenThumbs === undefined ? {} : { minStepsBetweenThumbs: props.minStepsBetweenThumbs }),
+  ...(props.thumbAlignment === undefined ? {} : { thumbAlignment: props.thumbAlignment }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>
   <SliderRoot
-    v-slot="{ modelValue }"
+    v-slot="slotProps"
     data-slot="slider"
     :class="
       cn(
@@ -60,7 +68,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
     </SliderTrack>
 
     <SliderThumb
-      v-for="(_, key) in modelValue"
+      v-for="(_, key) in slotProps.modelValue"
       :key="key"
       data-slot="slider-thumb"
       class="bg-white border-primary ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"

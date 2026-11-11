@@ -93,6 +93,7 @@ import { useInstanceStore } from "@/stores/instance";
 import { useLocationStore } from "@/stores/location";
 import { languageClass, statusClass } from "@/shared/utils/user";
 import { showUserDialog, lookupUser } from "@/coordinators/user-coordinator";
+import { logFailure } from "@/stores/log-failure";
 import { displayLocation } from "@/shared/utils/location-parser";
 
 import Button from "@/components/ui/button/Button.vue";
@@ -106,41 +107,47 @@ import Table from "@/components/ui/table/Table.vue";
 import TableBody from "@/components/ui/table/TableBody.vue";
 import TableRow from "@/components/ui/table/TableRow.vue";
 import TableCell from "@/components/ui/table/TableCell.vue";
+import type { InstanceUserEntry } from "@/stores/instance-types";
+
+type InstanceWidgetConfig = {
+  columns?: string[];
+};
 
 const ALL_COLUMNS = ["icon", "displayName", "rank", "timer", "platform", "language", "status"];
 const DEFAULT_COLUMNS = ["icon", "displayName", "timer"];
 
-const props = defineProps({
-  config: {
-    type: Object,
-    default: () => ({}),
-  },
-  configUpdater: {
-    type: Function,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    config?: InstanceWidgetConfig;
+    configUpdater?: ((config: InstanceWidgetConfig) => void) | null;
+  }>(),
+  {
+    config: () => ({}),
+    configUpdater: null,
+  }
+);
 
 const { t } = useI18n();
 const instanceStore = useInstanceStore();
-const { currentInstanceUsersData, currentInstanceWorld } = storeToRefs(instanceStore);
+const { currentInstanceUsersData } = storeToRefs(instanceStore);
 const { lastLocation } = storeToRefs(useLocationStore());
 
 const activeColumns = computed(() => {
-  if (props.config.columns && Array.isArray(props.config.columns) && props.config.columns.length > 0) {
-    return props.config.columns;
+  const columns = props.config.columns;
+  if (columns && Array.isArray(columns) && columns.length > 0) {
+    return columns;
   }
   return DEFAULT_COLUMNS;
 });
 
-function isColumnVisible(col) {
+function isColumnVisible(col: string) {
   return activeColumns.value.includes(col);
 }
 
-function toggleColumn(col) {
+function toggleColumn(col: string) {
   if (!props.configUpdater || col === "displayName") return;
-  const currentColumns = props.config.columns || DEFAULT_COLUMNS;
-  let columns;
+  const currentColumns = props.config.columns ?? DEFAULT_COLUMNS;
+  let columns: string[];
   if (currentColumns.includes(col)) {
     columns = currentColumns.filter((c) => c !== col);
   } else {
@@ -150,11 +157,11 @@ function toggleColumn(col) {
 }
 
 const hasPlayers = computed(() => {
-  return lastLocation.value.playerList && lastLocation.value.playerList.size > 0;
+  return lastLocation.value.playerList.size > 0;
 });
 
-const playersData = computed(() => {
-  return currentInstanceUsersData.value || [];
+const playersData = computed<InstanceUserEntry[]>(() => {
+  return currentInstanceUsersData.value;
 });
 
 const worldName = computed(() => {
@@ -168,15 +175,15 @@ const locationInfo = computed(() => {
 });
 
 const playerCount = computed(() => {
-  return lastLocation.value.playerList?.size || 0;
+  return lastLocation.value.playerList.size;
 });
 
-function openUser(player) {
-  const ref = player?.ref;
-  if (ref?.id) {
+function openUser(player: InstanceUserEntry) {
+  const ref = player.ref;
+  if (ref.id) {
     showUserDialog(ref.id);
-  } else if (ref) {
-    lookupUser(ref);
+  } else {
+    void lookupUser(ref).catch(logFailure("Failed to look up user:"));
   }
 }
 

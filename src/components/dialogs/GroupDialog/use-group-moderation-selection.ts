@@ -1,34 +1,34 @@
-export function useGroupModerationSelection(groupMemberModeration) {
-  function setSelectedUsers(userId, user) {
+import type { ModerationRow, ModerationSelection, SelectedRow } from "./group-moderation-types";
+
+export function useGroupModerationSelection(groupMemberModeration: ModerationSelection) {
+  function setSelectedUsers(userId: string, user: SelectedRow | null | undefined) {
     if (!user) return;
     groupMemberModeration.selectedUsers[userId] = user;
     groupMemberModeration.selectedUsersArray = Object.values(groupMemberModeration.selectedUsers);
   }
 
-  function deselectedUsers(userId, isAll = false) {
+  function deselectedUsers(userId: string | null | undefined, isAll = false) {
     if (isAll) {
-      for (const id in groupMemberModeration.selectedUsers) {
-        if (Object.prototype.hasOwnProperty.call(groupMemberModeration.selectedUsers, id)) {
-          delete groupMemberModeration.selectedUsers[id];
-        }
+      for (const id of Object.keys(groupMemberModeration.selectedUsers)) {
+        Reflect.deleteProperty(groupMemberModeration.selectedUsers, id);
       }
-    } else {
-      if (Object.prototype.hasOwnProperty.call(groupMemberModeration.selectedUsers, userId)) {
-        delete groupMemberModeration.selectedUsers[userId];
-      }
+    } else if (typeof userId === "string" && Object.hasOwn(groupMemberModeration.selectedUsers, userId)) {
+      Reflect.deleteProperty(groupMemberModeration.selectedUsers, userId);
     }
     groupMemberModeration.selectedUsersArray = Object.values(groupMemberModeration.selectedUsers);
   }
 
-  function onSelectionChange(row) {
-    if (row.$selected && !groupMemberModeration.selectedUsers[row.userId]) {
-      setSelectedUsers(row.userId, row);
-    } else if (!row.$selected && groupMemberModeration.selectedUsers[row.userId]) {
-      deselectedUsers(row.userId);
+  function onSelectionChange(row: ModerationRow) {
+    const userId = row.userId;
+    if (!userId) return;
+    if (row.$selected && !groupMemberModeration.selectedUsers[userId]) {
+      setSelectedUsers(userId, row);
+    } else if (!row.$selected && groupMemberModeration.selectedUsers[userId]) {
+      deselectedUsers(userId);
     }
   }
 
-  function deselectInTables(userId) {
+  function deselectInTables(userId?: string | null) {
     const allTables = [
       groupMemberModeration.tables.members,
       groupMemberModeration.tables.bans,
@@ -37,7 +37,6 @@ export function useGroupModerationSelection(groupMemberModeration) {
       groupMemberModeration.tables.blocked,
     ];
     for (const table of allTables) {
-      if (!table?.data) continue;
       if (userId) {
         const row = table.data.find((item) => item.userId === userId);
         if (row) {
@@ -53,7 +52,7 @@ export function useGroupModerationSelection(groupMemberModeration) {
     }
   }
 
-  function deleteSelectedUser(user) {
+  function deleteSelectedUser(user: SelectedRow) {
     deselectedUsers(user.userId);
     deselectInTables(user.userId);
   }
@@ -63,10 +62,12 @@ export function useGroupModerationSelection(groupMemberModeration) {
     deselectInTables();
   }
 
-  function selectAll(tableData) {
+  function selectAll(tableData: ModerationRow[]) {
     tableData.forEach((row) => {
       row.$selected = true;
-      setSelectedUsers(row.userId, row);
+      if (row.userId) {
+        setSelectedUsers(row.userId, row);
+      }
     });
   }
 

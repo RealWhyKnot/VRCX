@@ -20,23 +20,28 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
+import type { DataZoomComponentOption, EChartsOption, EChartsType, LineSeriesOption, TooltipComponentFormatterCallbackParams } from "echarts";
 
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { formatTimestampKey } from "@/shared/utils/activity-engine";
+import type { ActivityDailyTotal, ActivitySession } from "@/types/activity";
 
-const props = defineProps({
-  sessions: {
-    type: Array,
-    default: () => [],
-  },
-  rangeDays: { type: Number, default: 30 },
-});
+const props = withDefaults(
+  defineProps<{
+    sessions?: ActivitySession[] | null;
+    rangeDays?: number;
+  }>(),
+  {
+    sessions: () => [],
+    rangeDays: 30,
+  }
+);
 
 const { t } = useI18n();
 const { isDarkMode } = storeToRefs(useAppearanceSettingsStore());
 
-const chartRef = ref(null);
-const dailySummary = ref([]);
+const chartRef = ref<HTMLElement | null>(null);
+const dailySummary = ref<ActivityDailyTotal[]>([]);
 
 const hasData = computed(() => dailySummary.value.length > 0);
 
@@ -47,7 +52,7 @@ const avgDailyMs = computed(() => {
   return totalMs.value / dailySummary.value.length;
 });
 
-function formatHours(ms) {
+function formatHours(ms: number) {
   const hours = ms / 3600000;
   if (hours < 1) {
     return `${Math.round(ms / 60000)}m`;
@@ -55,8 +60,8 @@ function formatHours(ms) {
   return `${hours.toFixed(1)}h`;
 }
 
-let echartsInstance = null;
-let resizeObserver = null;
+let echartsInstance: EChartsType | null = null;
+let resizeObserver: ResizeObserver | null = null;
 
 onMounted(() => {
   buildSummary();
@@ -101,9 +106,9 @@ function buildSummary() {
 
   const now = Date.now();
   const rangeDays = props.rangeDays;
-  const rangeStart = rangeDays > 0 ? now - rangeDays * 86400000 : sessions[0].start;
-  const dayMap = new Map();
-  let lastDayStart;
+  const rangeStart = rangeDays > 0 ? now - rangeDays * 86400000 : (sessions[0]?.start ?? 0);
+  const dayMap = new Map<string, number>();
+  let lastDayStart = Number.NEGATIVE_INFINITY;
   let lastDayKey = "";
 
   for (const session of sessions) {
@@ -113,7 +118,7 @@ function buildSummary() {
 
     let cursor = clippedStart;
     while (cursor < clippedEnd) {
-      let dayKey;
+      let dayKey: string;
       if (cursor < lastDayStart) {
         dayKey = lastDayKey;
       } else {
@@ -126,12 +131,12 @@ function buildSummary() {
       }
       const nextDayStart = lastDayStart;
       const segmentEnd = Math.min(clippedEnd, nextDayStart);
-      dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + (segmentEnd - cursor));
+      dayMap.set(dayKey, (dayMap.get(dayKey) ?? 0) + (segmentEnd - cursor));
       cursor = nextDayStart;
     }
   }
 
-  const result = [];
+  const result: ActivityDailyTotal[] = [];
   for (const [date, totalMs] of dayMap) {
     result.push({ date, totalMs });
   }
@@ -168,15 +173,43 @@ function initChart() {
   const dates = dailySummary.value.map((d) => d.date);
   const hours = dailySummary.value.map((d) => +(d.totalMs / 3600000).toFixed(2));
 
-  const option = {
+  const playtimeSeries: LineSeriesOption = {
+    name: "Playtime",
+    type: "line",
+    data: hours,
+    smooth: true,
+    symbol: "none",
+    lineStyle: { width: 2 },
+    areaStyle: { opacity: 0.3 },
+    emphasis: { focus: "series" },
+  };
+
+  const dataZoom: DataZoomComponentOption[] = [
+    {
+      type: "slider",
+      start: 0,
+      end: 100,
+      height: 20,
+      bottom: 5,
+    },
+    {
+      type: "inside",
+      start: 0,
+      end: 100,
+    },
+  ];
+
+  const option: EChartsOption = {
     tooltip: {
       trigger: "axis",
-      formatter(params) {
-        const p = params[0];
-        const h = p.value;
+      formatter(params: TooltipComponentFormatterCallbackParams) {
+        const p = Array.isArray(params) ? params[0] : params;
+        if (!p) return "";
+        const h = Number(p.value);
         const hrs = Math.floor(h);
         const mins = Math.round((h - hrs) * 60);
-        return `<strong>${p.axisValue}</strong><br/>${hrs}h ${mins}m`;
+        const axisValue = "axisValue" in p ? p.axisValue : undefined;
+        return `<strong>${String(axisValue)}</strong><br/>${hrs}h ${mins}m`;
       },
     },
     grid: {
@@ -207,35 +240,8 @@ function initChart() {
         lineStyle: { type: "dashed" },
       },
     },
-    dataZoom:
-      dates.length > 60
-        ? [
-            {
-              type: "slider",
-              start: 0,
-              end: 100,
-              height: 20,
-              bottom: 5,
-            },
-            {
-              type: "inside",
-              start: 0,
-              end: 100,
-            },
-          ]
-        : undefined,
-    series: [
-      {
-        name: "Playtime",
-        type: "line",
-        data: hours,
-        smooth: true,
-        symbol: "none",
-        lineStyle: { width: 2 },
-        areaStyle: { opacity: 0.3 },
-        emphasis: { focus: "series" },
-      },
-    ],
+    ...(dates.length > 60 ? { dataZoom } : {}),
+    series: [playtimeSeries],
     backgroundColor: "transparent",
   };
 

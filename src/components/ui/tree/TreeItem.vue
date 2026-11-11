@@ -1,13 +1,21 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { TreeItem as RekaTreeItem } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  value: { type: Object, required: true },
-  level: { type: Number, required: false, default: 0 },
-  asChild: { type: Boolean, required: false, default: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: object;
+    level?: number;
+    asChild?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    level: 0,
+    asChild: false,
+    class: undefined,
+  }
+);
 </script>
 
 <template>
@@ -18,14 +26,14 @@ const props = defineProps({
     :as-child="props.asChild"
     :class="
       cn(
-        'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none select-none',
+        'flex items-center gap-2 rounded-md pl-[calc(var(--tree-level)*16px_+_8px)] pr-2 py-1.5 text-sm outline-none select-none',
         'hover:bg-accent hover:text-accent-foreground',
         'focus-visible:ring-ring focus-visible:ring-1',
         'data-selected:bg-accent data-selected:text-accent-foreground',
         props.class
       )
     "
-    :style="{ paddingLeft: `${props.level * 16 + 8}px` }"
+    :style="{ '--tree-level': props.level }"
   >
     <slot v-bind="slotProps" />
   </RekaTreeItem>

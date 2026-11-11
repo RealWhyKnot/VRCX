@@ -1,4 +1,5 @@
 import { ArrowUpDown, Info, LogIn, Trash2 } from "lucide-vue-next";
+import { unref, type MaybeRef } from "vue";
 
 import DisplayName from "../../DisplayName.vue";
 import Location from "../../Location.vue";
@@ -6,10 +7,43 @@ import LocationWorld from "../../LocationWorld.vue";
 import Button from "../../ui/button/Button.vue";
 import { i18n } from "../../../plugins/i18n";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import type { VrcxColumn } from "../../../lib/table/use-vrcx-vue-table";
+import type { PreviousInstancesVariant } from "../../../stores/instance-types";
+import type { ParsedLocation } from "../../../types/vrcx";
 
 const { t } = i18n.global;
 
-const sortButton = ({ column, label, descFirst = false }) => (
+export type PreviousInstanceRow = {
+  created_at: string | null;
+  location: string | null;
+  time: number;
+  worldName: string | null;
+  groupName: string | null;
+  events?: (number | null)[] | undefined;
+  $location: ParsedLocation;
+  timer: string;
+};
+
+type SortableColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+type ActionsColumnOptions = {
+  shiftHeld: MaybeRef<boolean>;
+  onShowInfo: (location: string) => void;
+  onDelete?: ((row: PreviousInstanceRow) => void) | undefined;
+  onDeletePrompt?: ((row: PreviousInstanceRow) => void) | undefined;
+  onLaunch?: ((location: string | null) => void) | undefined;
+};
+
+type PreviousInstancesColumnConfig = Omit<ActionsColumnOptions, "onLaunch"> & {
+  currentUserId?: string | undefined;
+  forceUpdateKey?: number | undefined;
+  onLaunch?: ((location: string | null) => void) | undefined;
+};
+
+const sortButton = ({ column, label, descFirst = false }: { column: SortableColumn; label: string; descFirst?: boolean }) => (
   <Button
     variant="ghost"
     size="sm"
@@ -28,16 +62,11 @@ const sortButton = ({ column, label, descFirst = false }) => (
   </Button>
 );
 
-const resolveBool = (maybeRef) => {
-  if (maybeRef && typeof maybeRef === "object" && "value" in maybeRef) {
-    return !!maybeRef.value;
-  }
-  return !!maybeRef;
-};
+const resolveBool = (value: MaybeRef<boolean>): boolean => unref(value);
 
-const baseDateColumn = () => ({
+const baseDateColumn = (): VrcxColumn<PreviousInstanceRow> => ({
   id: "created_at",
-  accessorFn: (row) => (row?.created_at ? Date.parse(row.created_at) : 0),
+  accessorFn: (row) => (row.created_at ? Date.parse(row.created_at) : 0),
   size: 170,
   header: ({ column }) =>
     sortButton({
@@ -45,18 +74,18 @@ const baseDateColumn = () => ({
       label: t("table.previous_instances.date"),
       descFirst: true,
     }),
-  cell: ({ row }) => <span>{formatDateFilter(row.original?.created_at, "long")}</span>,
+  cell: ({ row }) => <span>{formatDateFilter(row.original.created_at, "long")}</span>,
 });
 
-const timeColumn = () => ({
+const timeColumn = (): VrcxColumn<PreviousInstanceRow> => ({
   id: "time",
-  accessorFn: (row) => row?.time ?? 0,
+  accessorFn: (row) => row.time,
   size: 100,
   header: ({ column }) => sortButton({ column, label: t("table.previous_instances.time") }),
-  cell: ({ row }) => <span>{row.original?.timer ?? ""}</span>,
+  cell: ({ row }) => <span>{row.original.timer}</span>,
 });
 
-const actionsColumn = ({ shiftHeld, onShowInfo, onDelete, onDeletePrompt, onLaunch = null }) => ({
+const actionsColumn = ({ shiftHeld, onShowInfo, onDelete, onDeletePrompt, onLaunch }: ActionsColumnOptions): VrcxColumn<PreviousInstanceRow> => ({
   id: "actions",
   enableSorting: false,
   size: onLaunch ? 140 : 120,
@@ -78,7 +107,7 @@ const actionsColumn = ({ shiftHeld, onShowInfo, onDelete, onDeletePrompt, onLaun
             class="w-6 h-6 text-xs"
             onClick={(event) => {
               event.stopPropagation();
-              onLaunch?.(original?.location);
+              onLaunch(original.location);
             }}
           >
             <LogIn class="h-4 w-4" />
@@ -91,7 +120,7 @@ const actionsColumn = ({ shiftHeld, onShowInfo, onDelete, onDeletePrompt, onLaun
           class="w-6 h-6 text-xs"
           onClick={(event) => {
             event.stopPropagation();
-            onShowInfo?.(original?.$location?.tag);
+            onShowInfo(original.$location.tag);
           }}
         >
           <Info class="h-4 w-4" />
@@ -118,13 +147,13 @@ const actionsColumn = ({ shiftHeld, onShowInfo, onDelete, onDeletePrompt, onLaun
   },
 });
 
-export const createPreviousInstancesColumns = (variant, config) => {
+export const createPreviousInstancesColumns = (variant: PreviousInstancesVariant, config: PreviousInstancesColumnConfig): VrcxColumn<PreviousInstanceRow>[] => {
   if (variant === "user") {
     return [
       baseDateColumn(),
       {
         id: "world",
-        accessorFn: (row) => row?.worldName ?? row?.name ?? "",
+        accessorFn: (row) => row.worldName ?? "",
         header: ({ column }) =>
           sortButton({
             column,
@@ -133,14 +162,16 @@ export const createPreviousInstancesColumns = (variant, config) => {
         meta: {
           stretch: true,
         },
-        cell: ({ row }) => <Location location={row.original?.location} hint={row.original?.worldName} grouphint={row.original?.groupName} />,
+        cell: ({ row }) => (
+          <Location location={row.original.location ?? undefined} hint={row.original.worldName ?? ""} grouphint={row.original.groupName ?? ""} />
+        ),
       },
       {
         id: "creator",
-        accessorFn: (row) => row?.$location?.userId ?? "",
+        accessorFn: (row) => row.$location.userId ?? "",
         size: 170,
         header: () => t("table.previous_instances.instance_creator"),
-        cell: ({ row }) => <DisplayName userid={row.original?.$location?.userId} location={row.original?.$location?.tag} />,
+        cell: ({ row }) => <DisplayName userid={row.original.$location.userId ?? undefined} location={row.original.$location.tag} />,
       },
       timeColumn(),
       actionsColumn({
@@ -158,22 +189,27 @@ export const createPreviousInstancesColumns = (variant, config) => {
       baseDateColumn(),
       {
         id: "instance",
-        accessorFn: (row) => row?.$location?.tag ?? row?.location ?? "",
+        accessorFn: (row) => row.$location.tag,
         header: () => t("table.previous_instances.instance_name"),
         meta: {
           stretch: true,
         },
         cell: ({ row }) => (
-          <LocationWorld class="w-fit" locationobject={row.original?.$location} grouphint={row.original?.groupName} currentuserid={config.currentUserId} />
+          <LocationWorld
+            class="w-fit"
+            locationobject={row.original.$location}
+            grouphint={row.original.groupName ?? ""}
+            currentuserid={config.currentUserId ?? ""}
+          />
         ),
       },
       {
         id: "creator",
-        accessorFn: (row) => row?.$location?.userId ?? "",
+        accessorFn: (row) => row.$location.userId ?? "",
         size: 170,
         header: () => t("table.previous_instances.instance_creator"),
         cell: ({ row }) => (
-          <DisplayName userid={row.original?.$location?.userId} location={row.original?.$location?.tag} forceUpdateKey={config.forceUpdateKey} />
+          <DisplayName userid={row.original.$location.userId ?? undefined} location={row.original.$location.tag} forceUpdateKey={config.forceUpdateKey} />
         ),
       },
       timeColumn(),
@@ -190,14 +226,12 @@ export const createPreviousInstancesColumns = (variant, config) => {
     baseDateColumn(),
     {
       id: "instance",
-      accessorFn: (row) => row?.worldName ?? row?.name ?? "",
+      accessorFn: (row) => row.worldName ?? "",
       header: () => t("table.previous_instances.instance_name"),
       meta: {
         stretch: true,
       },
-      cell: ({ row }) => (
-        <Location location={row.original?.$location?.tag ?? row.original?.location} grouphint={row.original?.groupName} hint={row.original?.worldName} />
-      ),
+      cell: ({ row }) => <Location location={row.original.$location.tag} grouphint={row.original.groupName ?? ""} hint={row.original.worldName ?? ""} />,
     },
     timeColumn(),
     actionsColumn({

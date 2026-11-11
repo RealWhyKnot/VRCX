@@ -34,6 +34,8 @@ import { formatDateFilter } from "../coordinators/date-coordinator";
 import { getGroupName } from "../shared/utils/group";
 import { parseLocation } from "../shared/utils/location-parser";
 import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
+import { logFailure } from "../stores/log-failure";
+import type { ParsedLocation } from "../types/vrcx";
 import { cn } from "@/lib/utils";
 
 const { t } = useI18n();
@@ -42,16 +44,21 @@ const { lastInstanceApplied } = storeToRefs(useInstanceStore());
 
 const launchStore = useLaunchStore();
 
-const props = defineProps({
-  locationobject: Object,
-  currentuserid: String,
-  worlddialogshortname: String,
-  grouphint: {
-    type: String,
-    default: "",
-  },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    locationobject: ParsedLocation | undefined;
+    currentuserid?: string;
+    worlddialogshortname?: string;
+    grouphint?: string;
+    class?: string;
+  }>(),
+  {
+    currentuserid: "",
+    worlddialogshortname: "",
+    grouphint: "",
+    class: "",
+  }
+);
 
 const location = ref("");
 const instanceName = ref("");
@@ -65,6 +72,9 @@ const closedAt = ref("");
 
 function parse() {
   const locObj = props.locationobject;
+  if (!locObj) {
+    return;
+  }
   location.value = locObj.tag;
   accessTypeName.value = translateAccessType(locObj.accessTypeName);
   strict.value = locObj.strict;
@@ -97,18 +107,24 @@ function parse() {
     groupName.value = props.grouphint;
   } else if (locObj.groupId) {
     groupName.value = locObj.groupId;
-    getGroupName(locObj.groupId).then((name) => {
-      if (name && props.locationobject.tag === locObj.tag) {
-        groupName.value = name;
-      }
-    });
+    void getGroupName(locObj.groupId)
+      .then((name) => {
+        if (name && props.locationobject?.tag === locObj.tag) {
+          groupName.value = name;
+        }
+      })
+      .catch(logFailure("Loading group name failed:"));
   } else {
     groupName.value = "";
   }
 }
 
-function translateAccessType(accessTypeNameRaw) {
-  const key = accessTypeLocaleKeyMap[accessTypeNameRaw];
+function isAccessTypeKey(value: string): value is keyof typeof accessTypeLocaleKeyMap {
+  return Object.hasOwn(accessTypeLocaleKeyMap, value);
+}
+
+function translateAccessType(accessTypeNameRaw: string) {
+  const key = isAccessTypeKey(accessTypeNameRaw) ? accessTypeLocaleKeyMap[accessTypeNameRaw] : undefined;
   if (!key) {
     return accessTypeNameRaw;
   }
@@ -132,7 +148,7 @@ watch(
 );
 
 function showLaunchDialog() {
-  launchStore.showLaunchDialog(location.value, shortName.value);
+  void launchStore.showLaunchDialog(location.value, shortName.value).catch(logFailure("Opening the launch dialog failed:"));
 }
 
 function openLocationGroupDialog() {

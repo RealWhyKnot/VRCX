@@ -1,4 +1,4 @@
-import { getTagColor } from "../../shared/constants/tags";
+import { getAvatarTagColor, type AvatarContextAction, type MyAvatar } from "./types";
 import Badge from "../../components/ui/badge/Badge.vue";
 import Button from "../../components/ui/button/Button.vue";
 import DropdownMenu from "../../components/ui/dropdown-menu/DropdownMenu.vue";
@@ -12,32 +12,49 @@ import { getAvailablePlatforms } from "../../shared/utils/platform-utils";
 import { getPlatformInfo } from "../../shared/utils/avatar";
 import { timeToText } from "../../shared/utils/base/format";
 import { i18n } from "../../plugins/i18n";
+import type { ComputedRef } from "vue";
+import type { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 const { t } = i18n.global;
 
-const sortButton = ({ column, label, descFirst = false }) => {
-  const resolvedLabel = typeof label === "function" ? label() : label;
+type MyAvatarTableOptions = Parameters<typeof useVrcxVueTable<MyAvatar>>[0];
+type MyAvatarColumn = Extract<MyAvatarTableOptions["columns"], unknown[]>[number];
+
+type SortableColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+type MyAvatarColumnsContext = {
+  onShowAvatarDialog: (avatarId: string) => void;
+  onContextMenuAction: (action: AvatarContextAction, avatar: MyAvatar) => void;
+  currentAvatarId: ComputedRef<string | undefined>;
+};
+
+const onClickProps = (onClick: () => void) => ({ onClick });
+
+const sortButton = ({ column, label, descFirst = false }: { column: SortableColumn; label: () => string; descFirst?: boolean }) => {
   return (
     <Button
       variant="ghost"
       size="sm"
       class="-ml-2 h-8 px-2"
-      onClick={() => {
+      {...onClickProps(() => {
         const sorted = column.getIsSorted();
         if (!sorted && descFirst) {
           column.toggleSorting(true);
           return;
         }
         column.toggleSorting(sorted === "asc");
-      }}
+      })}
     >
-      {resolvedLabel}
+      {label()}
       <ArrowUpDown class="ml-1 h-4 w-4" />
     </Button>
   );
 };
 
-export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAvatarId }) {
+export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAvatarId }: MyAvatarColumnsContext): MyAvatarColumn[] {
   return [
     {
       id: "active",
@@ -46,8 +63,8 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       enableSorting: false,
       enableResizing: false,
       cell: ({ row }) => {
-        const ref = row.original;
-        const isActive = ref.id === currentAvatarId.value;
+        const avatar = row.original;
+        const isActive = avatar.id === currentAvatarId.value;
         return (
           <div class="flex items-center justify-center">
             <Check class={["h-4 w-4", isActive ? "text-primary" : "text-muted-foreground/0"]} />
@@ -62,25 +79,27 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       enableSorting: false,
       enableResizing: false,
       cell: ({ row }) => {
-        const ref = row.original;
+        const avatar = row.original;
         return (
           <div class="flex items-center">
             <img
-              src={ref.thumbnailImageUrl}
+              src={avatar.thumbnailImageUrl}
               class="avatar-table-thumbnail cursor-pointer rounded-sm object-cover"
               style="width: 34px; height: 22px;"
               loading="lazy"
-              onClick={() => onShowAvatarDialog(ref.id)}
-              onError={(e) => {
-                const img = e.target;
+              onClick={() => onShowAvatarDialog(avatar.id)}
+              onError={(event: Event) => {
+                const img = event.target;
+                if (!(img instanceof HTMLImageElement)) return;
                 img.style.display = "none";
-                img.nextElementSibling.style.display = "";
+                const fallback = img.nextElementSibling;
+                if (fallback instanceof HTMLElement) fallback.style.display = "";
               }}
             />
             <div
               class="rounded-sm bg-muted flex items-center justify-center cursor-pointer"
               style="width: 34px; height: 22px; display: none"
-              onClick={() => onShowAvatarDialog(ref.id)}
+              onClick={() => onShowAvatarDialog(avatar.id)}
             >
               <Image class="h-3 w-3 text-muted-foreground" />
             </div>
@@ -99,37 +118,38 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 200,
       meta: { label: () => t("dialog.avatar.info.name") },
       cell: ({ row }) => {
-        const ref = row.original;
+        const avatar = row.original;
         return (
           <span
             class="cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              onShowAvatarDialog(ref.id);
+            onClick={(event: MouseEvent) => {
+              event.stopPropagation();
+              onShowAvatarDialog(avatar.id);
             }}
           >
-            {ref.name}
+            {avatar.name}
           </span>
         );
       },
     },
     {
       id: "customTags",
-      accessorFn: (row) => (row.$tags || []).map((t) => t.tag).join(", "),
+      accessorFn: (row) => (row.$tags ?? []).map((entry) => entry.tag).join(", "),
       header: () => t("dialog.avatar.info.tags"),
       size: 150,
       enableSorting: false,
       meta: { label: () => t("dialog.avatar.info.tags") },
       cell: ({ row }) => {
-        const tags = row.original.$tags || [];
+        const tags = row.original.$tags ?? [];
         if (!tags.length) return null;
         return (
           <div class="flex flex-nowrap gap-1 overflow-hidden">
             {tags.map((entry) => {
-              const hashColor = getTagColor(entry.tag);
-              const storedColor = typeof entry.color === "string" ? entry.color : null;
-              const bg = storedColor || hashColor.bg;
-              const text = storedColor ? storedColor.replace(/\/ [\d.]+\)$/, ")") : hashColor.text;
+              const hashColor = getAvatarTagColor(entry.tag);
+              const storedColor = entry.color;
+              const hasStoredColor = storedColor !== null && storedColor !== "";
+              const bg = hasStoredColor ? storedColor : hashColor.bg;
+              const text = hasStoredColor ? storedColor.replace(/\/ [\d.]+\)$/, ")") : hashColor.text;
               return (
                 <Badge
                   key={entry.tag}
@@ -155,8 +175,8 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       enableSorting: false,
       meta: { label: () => t("dialog.avatar.info.platform") },
       cell: ({ row }) => {
-        const ref = row.original;
-        const platforms = getAvailablePlatforms(ref.unityPackages);
+        const avatar = row.original;
+        const platforms = getAvailablePlatforms(avatar.unityPackages);
         return (
           <div class="flex items-center gap-1">
             {platforms.isPC && (
@@ -185,13 +205,13 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 120,
       meta: { label: () => t("dialog.avatar.info.visibility") },
       cell: ({ row }) => {
-        const ref = row.original;
-        return <Badge variant="outline">{ref.releaseStatus === "public" ? t("dialog.avatar.tags.public") : t("dialog.avatar.tags.private")}</Badge>;
+        const avatar = row.original;
+        return <Badge variant="outline">{avatar.releaseStatus === "public" ? t("dialog.avatar.tags.public") : t("dialog.avatar.tags.private")}</Badge>;
       },
     },
     {
       id: "timeSpent",
-      accessorFn: (row) => row?.$timeSpent ?? 0,
+      accessorFn: (row) => row.$timeSpent ?? 0,
       header: ({ column }) =>
         sortButton({
           column,
@@ -204,7 +224,7 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
         label: () => t("dialog.avatar.info.time_spent"),
       },
       cell: ({ row }) => {
-        const time = row.original?.$timeSpent;
+        const time = row.original.$timeSpent;
         return time ? <span>{timeToText(time)}</span> : <span>-</span>;
       },
     },
@@ -222,7 +242,7 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
         class: "text-right",
         label: () => t("dialog.avatar.info.version"),
       },
-      cell: ({ row }) => <span>{row.original.version ?? "-"}</span>,
+      cell: ({ row }) => <span>{row.original.version}</span>,
     },
     {
       id: "impostor",
@@ -233,7 +253,7 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
 
         for (let i = row.unityPackages.length - 1; i > -1; i--) {
           const unityPackage = row.unityPackages[i];
-          if (unityPackage.variant === "impostor") {
+          if (unityPackage?.variant === "impostor") {
             return unityPackage.impostorizerVersion ?? "";
           }
         }
@@ -251,13 +271,13 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
         label: () => t("dialog.avatar.tags.impostor"),
       },
       cell: ({ row }) => {
-        const version = row.getValue("impostor");
+        const version = row.getValue<string>("impostor");
         return <span>{version ? `v${version}` : "-"}</span>;
       },
     },
     {
       id: "pcPerf",
-      accessorFn: (row) => getPlatformInfo(row.unityPackages)?.pc?.performanceRating ?? "",
+      accessorFn: (row) => getPlatformInfo(row.unityPackages).pc.performanceRating ?? "",
       header: ({ column }) =>
         sortButton({
           column,
@@ -266,13 +286,13 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 140,
       meta: { label: () => t("dialog.avatar.info.pc_performance") },
       cell: ({ row }) => {
-        const perf = getPlatformInfo(row.original.unityPackages)?.pc?.performanceRating;
+        const perf = getPlatformInfo(row.original.unityPackages).pc.performanceRating;
         return perf ? <span>{perf}</span> : <span class="text-muted-foreground">-</span>;
       },
     },
     {
       id: "androidPerf",
-      accessorFn: (row) => getPlatformInfo(row.unityPackages)?.android?.performanceRating ?? "",
+      accessorFn: (row) => getPlatformInfo(row.unityPackages).android.performanceRating ?? "",
       header: ({ column }) =>
         sortButton({
           column,
@@ -281,13 +301,13 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 140,
       meta: { label: () => t("dialog.avatar.info.android_performance") },
       cell: ({ row }) => {
-        const perf = getPlatformInfo(row.original.unityPackages)?.android?.performanceRating;
+        const perf = getPlatformInfo(row.original.unityPackages).android.performanceRating;
         return perf ? <span>{perf}</span> : <span class="text-muted-foreground">-</span>;
       },
     },
     {
       id: "iosPerf",
-      accessorFn: (row) => getPlatformInfo(row.unityPackages)?.ios?.performanceRating ?? "",
+      accessorFn: (row) => getPlatformInfo(row.unityPackages).ios.performanceRating ?? "",
       header: ({ column }) =>
         sortButton({
           column,
@@ -296,7 +316,7 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 140,
       meta: { label: () => t("dialog.avatar.info.ios_performance") },
       cell: ({ row }) => {
-        const perf = getPlatformInfo(row.original.unityPackages)?.ios?.performanceRating;
+        const perf = getPlatformInfo(row.original.unityPackages).ios.performanceRating;
         return perf ? <span>{perf}</span> : <span class="text-muted-foreground">-</span>;
       },
     },
@@ -312,8 +332,8 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 160,
       meta: { label: () => t("dialog.avatar.info.last_updated") },
       cell: ({ row }) => {
-        const ref = row.original;
-        return <span>{formatDateFilter(ref.updated_at, "long")}</span>;
+        const avatar = row.original;
+        return <span>{formatDateFilter(avatar.updated_at, "long")}</span>;
       },
     },
     {
@@ -328,8 +348,8 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       size: 160,
       meta: { label: () => t("dialog.avatar.info.created_at") },
       cell: ({ row }) => {
-        const ref = row.original;
-        return <span>{formatDateFilter(ref.created_at, "long")}</span>;
+        const avatar = row.original;
+        return <span>{formatDateFilter(avatar.created_at, "long")}</span>;
       },
     },
     {
@@ -339,9 +359,9 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
       enableSorting: false,
       enableResizing: false,
       cell: ({ row }) => {
-        const ref = row.original;
+        const avatar = row.original;
         return (
-          <div class="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div class="flex items-center gap-1" onClick={(event: MouseEvent) => event.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button class="rounded-full h-6 w-6" size="icon" variant="ghost">
@@ -349,48 +369,48 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => onShowAvatarDialog(ref.id)}>
+                <DropdownMenuItem {...onClickProps(() => onShowAvatarDialog(avatar.id))}>
                   <Eye class="size-4" />
                   {t("dialog.avatar.actions.view_details")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onContextMenuAction("manageTags", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("manageTags", avatar))}>
                   <Tag class="size-4" />
                   {t("dialog.avatar.actions.manage_tags")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {ref.releaseStatus === "public" ? (
-                  <DropdownMenuItem onClick={() => onContextMenuAction("makePrivate", ref)}>
+                {avatar.releaseStatus === "public" ? (
+                  <DropdownMenuItem {...onClickProps(() => onContextMenuAction("makePrivate", avatar))}>
                     <User class="size-4" />
                     {t("dialog.avatar.actions.make_private")}
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem onClick={() => onContextMenuAction("makePublic", ref)}>
+                  <DropdownMenuItem {...onClickProps(() => onContextMenuAction("makePublic", avatar))}>
                     <User class="size-4" />
                     {t("dialog.avatar.actions.make_public")}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => onContextMenuAction("rename", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("rename", avatar))}>
                   <Pencil class="size-4" />
                   {t("dialog.avatar.actions.rename")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onContextMenuAction("changeDescription", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("changeDescription", avatar))}>
                   <Pencil class="size-4" />
                   {t("dialog.avatar.actions.change_description")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onContextMenuAction("changeTags", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("changeTags", avatar))}>
                   <Pencil class="size-4" />
                   {t("dialog.avatar.actions.change_content_tags")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onContextMenuAction("changeStyles", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("changeStyles", avatar))}>
                   <Pencil class="size-4" />
                   {t("dialog.avatar.actions.change_styles_author_tags")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onContextMenuAction("changeImage", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("changeImage", avatar))}>
                   <Image class="size-4" />
                   {t("dialog.avatar.actions.change_image")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onContextMenuAction("createImpostor", ref)}>
+                <DropdownMenuItem {...onClickProps(() => onContextMenuAction("createImpostor", avatar))}>
                   <RefreshCw class="size-4" />
                   {t("dialog.avatar.actions.create_impostor")}
                 </DropdownMenuItem>

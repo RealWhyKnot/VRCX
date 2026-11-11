@@ -87,18 +87,21 @@ import * as workerTimers from "worker-timers";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  isGroupBansImportDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-  groupId: {
-    type: String,
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isGroupBansImportDialogVisible?: boolean;
+    groupId?: string;
+  }>(),
+  {
+    isGroupBansImportDialogVisible: false,
+    groupId: "",
+  }
+);
 
-const emit = defineEmits(["update:isGroupBansImportDialogVisible", "imported"]);
+const emit = defineEmits<{
+  "update:isGroupBansImportDialogVisible": [value: boolean];
+  imported: [];
+}>();
 
 const csvInput = ref("");
 const importing = ref(false);
@@ -110,7 +113,7 @@ const resultMessage = ref("");
 
 const progressPercent = computed(() => (progressTotal.value ? Math.min(100, Math.round((progressCurrent.value / progressTotal.value) * 100)) : 0));
 
-function extractUserIds(input) {
+function extractUserIds(input: string): string[] {
   const lines = input
     .split("\n")
     .map((l) => l.trim())
@@ -120,16 +123,16 @@ function extractUserIds(input) {
 
   const userIdRegex = /usr_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
 
-  const firstLine = lines[0];
+  const firstLine = lines[0] ?? "";
   const headers = firstLine.split(",").map((h) => h.trim());
   const userIdColIndex = headers.findIndex((h) => h.toLowerCase() === "userid");
 
   if (userIdColIndex !== -1 && lines.length > 1) {
-    const ids = new Set();
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(",");
+    const ids = new Set<string>();
+    for (const line of lines.slice(1)) {
+      const cols = line.split(",");
       if (cols.length > userIdColIndex) {
-        const val = cols[userIdColIndex].trim().replace(/^"|"$/g, "");
+        const val = (cols[userIdColIndex] ?? "").trim().replace(/^"|"$/g, "");
         if (val.startsWith("usr_")) {
           ids.add(val);
         }
@@ -138,8 +141,8 @@ function extractUserIds(input) {
     return [...ids];
   }
 
-  const ids = new Set();
-  let match;
+  const ids = new Set<string>();
+  let match: RegExpExecArray | null;
   while ((match = userIdRegex.exec(input)) !== null) {
     ids.add(match[0]);
   }
@@ -160,12 +163,12 @@ async function parseAndImport() {
   errors.value = "";
   resultMessage.value = "";
   let successCount = 0;
+  const isCancelled = () => cancelled.value;
 
-  for (let i = 0; i < userIds.length; i++) {
-    if (cancelled.value) break;
+  for (const [index, userId] of userIds.entries()) {
+    if (isCancelled()) break;
 
-    const userId = userIds[i];
-    progressCurrent.value = i + 1;
+    progressCurrent.value = index + 1;
 
     try {
       await groupRequest.banGroupMember({
@@ -174,17 +177,17 @@ async function parseAndImport() {
       });
       successCount++;
     } catch (err) {
-      errors.value += `${userId}: ${err}\n`;
+      errors.value += `${userId}: ${String(err)}\n`;
     }
 
-    if (i < userIds.length - 1 && !cancelled.value) {
+    if (index < userIds.length - 1 && !isCancelled()) {
       await new Promise((resolve) => {
         workerTimers.setTimeout(resolve, 1000);
       });
     }
   }
 
-  resultMessage.value = cancelled.value
+  resultMessage.value = isCancelled()
     ? `Cancelled. Banned ${successCount}/${progressCurrent.value} users.`
     : `Done. Banned ${successCount}/${userIds.length} users.`;
 

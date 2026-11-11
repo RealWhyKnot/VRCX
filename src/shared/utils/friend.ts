@@ -11,8 +11,8 @@ import {
 type CompareFn = (a: unknown, b: unknown) => number;
 
 type FriendLike = {
-  state?: string;
-  ref?: { location?: string };
+  state?: string | undefined;
+  ref?: { location?: string | undefined } | undefined;
 };
 
 function getFriendsSortFunction(sortMethods: readonly string[]): CompareFn {

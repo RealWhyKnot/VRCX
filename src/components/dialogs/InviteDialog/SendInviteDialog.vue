@@ -67,10 +67,16 @@ import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useInviteStore } from "../../../stores/invite";
 import { useUserStore } from "../../../stores/user";
+import type { InviteMessage } from "vrchat";
+import type { Json } from "../../../types/vrcx";
+import type { SendInviteDialogState } from "../UserDialog/use-user-dialog-commands";
 import { createColumns } from "./send-invite-columns.tsx";
+import type { EditAndSendInviteDialogState, InviteDialogState } from "./invite-dialog-types";
 
 import EditAndSendInviteDialog from "./EditAndSendInviteDialog.vue";
 import SendInviteConfirmDialog from "./SendInviteConfirmDialog.vue";
+
+type InviteMessageRow = { original: Json<InviteMessage> };
 
 const { t } = useI18n();
 
@@ -79,32 +85,32 @@ const { inviteMessageTable } = storeToRefs(useInviteStore());
 const { inviteImageUpload } = useGalleryStore();
 const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  sendInviteDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-  sendInviteDialog: {
-    type: Object,
-    required: true,
-  },
-  inviteDialog: {
-    type: Object,
-    required: false,
-    default: () => ({}),
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    sendInviteDialogVisible?: boolean;
+    sendInviteDialog: SendInviteDialogState;
+    inviteDialog?: Partial<InviteDialogState> | undefined;
+  }>(),
+  {
+    sendInviteDialogVisible: false,
+    inviteDialog: () => ({}),
+  }
+);
 
-const emit = defineEmits(["closeInviteDialog", "update:sendInviteDialogVisible", "update:sendInviteDialog"]);
+const emit = defineEmits<{
+  closeInviteDialog: [];
+  "update:sendInviteDialogVisible": [value: boolean];
+  "update:sendInviteDialog": [value: SendInviteDialogState];
+}>();
 
 const isSendInviteConfirmDialogVisible = ref(false);
 
-const editAndSendInviteDialog = ref({
+const editAndSendInviteDialog = ref<EditAndSendInviteDialogState>({
   visible: false,
   newMessage: "",
 });
 
-const inviteMessageRows = computed(() => inviteMessageTable.value?.data ?? []);
+const inviteMessageRows = computed(() => inviteMessageTable.value.data);
 const inviteMessageColumns = computed(() =>
   createColumns({
     onEdit: showEditAndSendInviteDialog,
@@ -117,21 +123,21 @@ const { table: inviteMessageTanstackTable } = useVrcxVueTable({
     return inviteMessageRows.value;
   },
   columns: inviteMessageColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
 
-function handleInviteMessageRowClick(row) {
-  showSendInviteConfirmDialog(row?.original);
+function handleInviteMessageRowClick(row: InviteMessageRow) {
+  showSendInviteConfirmDialog(row.original);
 }
 
-function showSendInviteConfirmDialog(row) {
+function showSendInviteConfirmDialog(row: Json<InviteMessage>) {
   emit("update:sendInviteDialog", { ...props.sendInviteDialog, messageSlot: row });
   isSendInviteConfirmDialogVisible.value = true;
 }
 
-function showEditAndSendInviteDialog(row) {
+function showEditAndSendInviteDialog(row: Json<InviteMessage>) {
   emit("update:sendInviteDialog", { ...props.sendInviteDialog, messageSlot: row });
   editAndSendInviteDialog.value = {
     newMessage: row.message,

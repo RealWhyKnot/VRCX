@@ -1,21 +1,29 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { inputGroupAddonVariants } from ".";
 
-const props = defineProps({
-  align: { type: null, required: false, default: "inline-start" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    align?: VariantProps<typeof inputGroupAddonVariants>["align"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    align: "inline-start",
+    class: undefined,
+  }
+);
 
-function handleInputGroupAddonClick(e) {
-  const currentTarget = e.currentTarget;
-  const target = e.target;
-  if (target?.closest("button")) {
+function handleInputGroupAddonClick(event: MouseEvent) {
+  const currentTarget = event.currentTarget;
+  const target = event.target;
+  if (target instanceof Element && target.closest("button")) {
     return;
   }
-  if (currentTarget?.parentElement) {
-    currentTarget.parentElement?.querySelector("input")?.focus();
+  if (currentTarget instanceof HTMLElement && currentTarget.parentElement) {
+    currentTarget.parentElement.querySelector("input")?.focus();
   }
 }
 </script>

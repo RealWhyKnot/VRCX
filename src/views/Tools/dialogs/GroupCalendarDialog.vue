@@ -24,12 +24,12 @@
                     v-for="value in timeGroup.events"
                     :key="value.id"
                     :event="value"
-                    :group-ref="groupRefsCache.get(value.ownerId)"
+                    :group-ref="groupRefsCache.get(ownerIdOf(value))"
                     mode="timeline"
                     :is-following="isEventFollowing(value.id)"
                     :card-class="{ 'grouped-card': timeGroup.events.length > 1 }"
                     @update-following-calendar-data="updateFollowingCalendarData"
-                    @click-action="showGroupDialog(value.ownerId)"
+                    @click-action="showGroupDialog(ownerIdOf(value))"
                   />
                 </div>
               </div>
@@ -58,12 +58,12 @@
                     v-for="event in group.events"
                     :key="event.id"
                     :event="event"
-                    :group-ref="groupRefsCache.get(event.ownerId)"
+                    :group-ref="groupRefsCache.get(ownerIdOf(event))"
                     mode="grid"
                     :is-following="isEventFollowing(event.id)"
                     card-class="grid-card"
                     @update-following-calendar-data="updateFollowingCalendarData"
-                    @click-action="showGroupDialog(event.ownerId)"
+                    @click-action="showGroupDialog(ownerIdOf(event))"
                   />
                 </div>
               </div>
@@ -99,11 +99,16 @@ import { groupRequest } from "../../../api/group";
 import { queryRequest } from "../../../api/query-request";
 import { processBulk } from "../../../services/request";
 import { useGroupStore } from "../../../stores/group";
+import { logError } from "../../../stores/vrcx-messages";
 import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";
 import { configRepository } from "../../../services/config";
+import type { CalendarEvent } from "vrchat";
+import type { Json, VrcxGroup } from "../../../types/vrcx";
+
+type CalendarEventEntry = Json<CalendarEvent>;
 
 const groupStore = useGroupStore();
 const { applyGroupEvent } = groupStore;
@@ -111,55 +116,73 @@ const { groupEventRevision } = storeToRefs(groupStore);
 
 const { t } = useI18n();
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = defineProps<{
+  visible: boolean;
+}>();
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
-const calendar = ref([]);
-const followingCalendar = ref([]);
-const featuredCalendar = ref([]);
+const calendar = ref<CalendarEventEntry[]>([]);
+const followingCalendar = ref<CalendarEventEntry[]>([]);
+const featuredCalendar = ref<CalendarEventEntry[]>([]);
 const selectedDay = ref(new Date());
 const isLoading = ref(false);
-const viewMode = ref("timeline");
+const viewMode = ref<"timeline" | "grid">("timeline");
 const searchQuery = ref("");
-const groupCollapsed = ref({});
+const groupCollapsed = ref<Record<string, boolean>>({});
 const showFeaturedEvents = ref(false);
-const groupNamesCache = new Map();
-const groupRefsCache = new Map();
+const groupNamesCache = new Map<string, string>();
+const groupRefsCache = new Map<string, VrcxGroup>();
 
-onMounted(async () => {
-  showFeaturedEvents.value = await configRepository.getBool("VRCX_groupCalendarShowFeaturedEvents", false);
+function ownerIdOf(event: CalendarEventEntry): string {
+  return event.ownerId ?? "";
+}
+
+function addToDateGroup<T>(groups: Map<string, T[]>, dateKey: string, item: T) {
+  const bucket = groups.get(dateKey) ?? [];
+  bucket.push(item);
+  groups.set(dateKey, bucket);
+}
+
+function formatDateKey(date: dayjs.ConfigType) {
+  return dayjs(date).format("YYYY-MM-DD");
+}
+
+onMounted(() => {
+  void configRepository
+    .getBool("VRCX_groupCalendarShowFeaturedEvents", false)
+    .then((isFeatured) => {
+      showFeaturedEvents.value = isFeatured;
+    })
+    .catch(logError);
 });
 
 function toggleFeaturedEvents() {
-  configRepository.setBool("VRCX_groupCalendarShowFeaturedEvents", showFeaturedEvents.value);
-  updateCalenderData();
+  void configRepository.setBool("VRCX_groupCalendarShowFeaturedEvents", showFeaturedEvents.value).catch(logError);
+  void updateCalenderData().catch(logError);
 }
 
 watch(
   () => props.visible,
-  async (newVisible) => {
-    if (newVisible) {
+  (isVisible) => {
+    if (isVisible) {
       selectedDay.value = new Date();
-      updateCalenderData();
+      void updateCalenderData().catch(logError);
     }
   }
 );
 
 watch(
   () => selectedDay.value,
-  async (newDate, oldDate) => {
+  (newDate: Date, oldDate: Date | undefined) => {
     if (props.visible && oldDate) {
       const newMonth = dayjs(newDate).format("YYYY-MM");
       const oldMonth = dayjs(oldDate).format("YYYY-MM");
 
       if (newMonth !== oldMonth) {
-        updateCalenderData();
+        void updateCalenderData().catch(logError);
       }
     }
   }
@@ -167,18 +190,18 @@ watch(
 
 watch(groupEventRevision, () => {
   if (props.visible) {
-    updateCalenderData();
+    void updateCalenderData().catch(logError);
   }
 });
 
 async function updateCalenderData() {
   isLoading.value = true;
-  const fetchPromises = [getCalendarData(), getFollowingCalendarData()];
+  const fetchPromises: Promise<void>[] = [getCalendarData(), getFollowingCalendarData()];
   if (showFeaturedEvents.value) {
     fetchPromises.push(getFeaturedCalendarData());
   }
   await Promise.all(fetchPromises)
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error("Error fetching calendar data:", error);
     })
     .finally(() => {
@@ -202,13 +225,12 @@ const groupedByGroupEvents = computed(() => {
     currentMonthEvents = currentMonthEvents.concat(featuredMonthEvents);
   }
 
-  const groupMap = new Map();
+  const groupMap = new Map<string, CalendarEventEntry[]>();
   currentMonthEvents.forEach((event) => {
-    const groupId = event.ownerId;
-    if (!groupMap.has(groupId)) {
-      groupMap.set(groupId, []);
-    }
-    groupMap.get(groupId).push(event);
+    const groupId = ownerIdOf(event);
+    const bucket = groupMap.get(groupId) ?? [];
+    bucket.push(event);
+    groupMap.set(groupId, bucket);
   });
 
   Array.from(groupMap.values()).forEach((events) => {
@@ -227,11 +249,11 @@ const filteredGroupEvents = computed(() => {
   return !hasSearch
     ? groupedByGroupEvents.value
     : groupedByGroupEvents.value.filter((group) => {
-        if (group.groupName.toLowerCase().includes(searchQuery.value.toLowerCase())) return true;
+        if ((group.groupName ?? "").toLowerCase().includes(searchQuery.value.toLowerCase())) return true;
 
         return group.events.some(
           (event) =>
-            event.title?.toLowerCase().includes(searchQuery.value.toLowerCase()) || event.description?.toLowerCase().includes(searchQuery.value.toLowerCase())
+            event.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || event.description.toLowerCase().includes(searchQuery.value.toLowerCase())
         );
       });
 });
@@ -243,7 +265,7 @@ watch(
     let hasChanged = false;
     const hasSearch = search.trim();
 
-    groups.forEach((group) => {
+    for (const group of groups) {
       if (!(group.groupId in newCollapsed)) {
         newCollapsed[group.groupId] = false;
         hasChanged = true;
@@ -251,7 +273,7 @@ watch(
         newCollapsed[group.groupId] = false;
         hasChanged = true;
       }
-    });
+    }
 
     if (hasChanged) {
       groupCollapsed.value = newCollapsed;
@@ -261,42 +283,30 @@ watch(
 );
 
 const filteredCalendar = computed(() => {
-  const result = {};
+  const result = new Map<string, CalendarEventEntry[]>();
   calendar.value.forEach((item) => {
-    const currentDate = formatDateKey(item.startsAt);
-    if (!Array.isArray(result[currentDate])) {
-      result[currentDate] = [];
-    }
-    result[currentDate].push(item);
+    addToDateGroup(result, formatDateKey(item.startsAt), item);
   });
   if (showFeaturedEvents.value) {
     featuredCalendar.value.forEach((item) => {
-      const currentDate = formatDateKey(item.startsAt);
-      if (!Array.isArray(result[currentDate])) {
-        result[currentDate] = [];
-      }
-      result[currentDate].push(item);
+      addToDateGroup(result, formatDateKey(item.startsAt), item);
     });
   }
 
-  Object.values(result).forEach((events) => {
+  result.forEach((events) => {
     events.sort((a, b) => dayjs(a.startsAt).diff(dayjs(b.startsAt)));
   });
   return result;
 });
 
 const followingCalendarDate = computed(() => {
-  const result = {};
+  const result = new Map<string, string[]>();
 
   const followingIds = new Set(followingCalendar.value.map((item) => item.id));
 
   calendar.value.forEach((event) => {
     if (followingIds.has(event.id)) {
-      const dateKey = formatDateKey(event.startsAt);
-      if (!result[dateKey]) {
-        result[dateKey] = [];
-      }
-      result[dateKey].push(event.id);
+      addToDateGroup(result, formatDateKey(event.startsAt), event.id);
     }
   });
   return result;
@@ -307,40 +317,65 @@ const formattedSelectedDay = computed(() => {
 });
 
 const groupedTimelineEvents = computed(() => {
-  const eventsForDay = filteredCalendar.value[formattedSelectedDay.value] || [];
-  const timeGroups = {};
+  const eventsForDay = filteredCalendar.value.get(formattedSelectedDay.value) ?? [];
+  const timeGroups = new Map<string, CalendarEventEntry[]>();
 
   eventsForDay.forEach((event) => {
-    const startTimeKey = formatDateFilter(event.startsAt, "time");
-    if (!timeGroups[startTimeKey]) {
-      timeGroups[startTimeKey] = [];
-    }
-    timeGroups[startTimeKey].push(event);
+    addToDateGroup(timeGroups, formatDateFilter(event.startsAt, "time"), event);
   });
 
-  return Object.entries(timeGroups)
+  return Array.from(timeGroups.entries())
     .map(([startTime, events]) => ({
       startTime,
       events,
-      startsAt: events[0].startsAt,
+      startsAt: events[0]?.startsAt ?? "",
       hasFollowing: events.some((event) => isEventFollowing(event.id)),
     }))
     .sort((a, b) => dayjs(a.startsAt).diff(dayjs(b.startsAt)));
 });
 
-const formatDateKey = (date) => dayjs(date).format("YYYY-MM-DD");
-
-async function getGroupNameFromCache(groupId) {
+async function getGroupNameFromCache(groupId: string) {
   if (!groupNamesCache.has(groupId)) {
     try {
       const args = await queryRequest.fetch("group.dialog", { groupId, includeRoles: true });
-      groupNamesCache.set(groupId, args.ref.name);
+      groupNamesCache.set(groupId, args.ref.name ?? "");
       groupRefsCache.set(groupId, args.ref);
     } catch (error) {
       console.error("Failed to load calendar event group:", error);
       groupNamesCache.set(groupId, "");
     }
   }
+}
+
+type CalendarPage = Awaited<ReturnType<typeof groupRequest.getGroupCalendars>>;
+
+async function appendCalendarPage(args: CalendarPage) {
+  const results = args.results ?? [];
+  for (const event of results) {
+    event.title = replaceBioSymbols(event.title);
+    event.description = replaceBioSymbols(event.description);
+    applyGroupEvent(event);
+    await getGroupNameFromCache(ownerIdOf(event));
+  }
+  calendar.value.push(...results);
+}
+
+async function appendFollowingCalendarPage(args: CalendarPage) {
+  const results = args.results ?? [];
+  for (const event of results) {
+    applyGroupEvent(event);
+    await getGroupNameFromCache(ownerIdOf(event));
+  }
+  followingCalendar.value.push(...results);
+}
+
+async function appendFeaturedCalendarPage(args: CalendarPage) {
+  const results = args.results ?? [];
+  for (const event of results) {
+    applyGroupEvent(event);
+    await getGroupNameFromCache(ownerIdOf(event));
+  }
+  featuredCalendar.value.push(...results);
 }
 
 async function getCalendarData() {
@@ -354,14 +389,8 @@ async function getCalendarData() {
         offset: 0,
         date: dayjs(selectedDay.value).format("YYYY-MM-DDTHH:mm:ss[Z]"),
       },
-      async handle(args) {
-        for (const event of args.results) {
-          event.title = replaceBioSymbols(event.title);
-          event.description = replaceBioSymbols(event.description);
-          applyGroupEvent(event);
-          await getGroupNameFromCache(event.ownerId);
-        }
-        calendar.value.push(...args.results);
+      handle: (args) => {
+        void appendCalendarPage(args).catch(logError);
       },
     });
   } catch (error) {
@@ -380,12 +409,8 @@ async function getFollowingCalendarData() {
         offset: 0,
         date: dayjs(selectedDay.value).format("YYYY-MM-DDTHH:mm:ss[Z]"),
       },
-      async handle(args) {
-        for (const event of args.results) {
-          applyGroupEvent(event);
-          await getGroupNameFromCache(event.ownerId);
-        }
-        followingCalendar.value.push(...args.results);
+      handle: (args) => {
+        void appendFollowingCalendarPage(args).catch(logError);
       },
     });
   } catch (error) {
@@ -404,12 +429,8 @@ async function getFeaturedCalendarData() {
         offset: 0,
         date: dayjs(selectedDay.value).format("YYYY-MM-DDTHH:mm:ss[Z]"),
       },
-      async handle(args) {
-        for (const event of args.results) {
-          applyGroupEvent(event);
-          await getGroupNameFromCache(event.ownerId);
-        }
-        featuredCalendar.value.push(...args.results);
+      handle: (args) => {
+        void appendFeaturedCalendarPage(args).catch(logError);
       },
     });
   } catch (error) {
@@ -417,7 +438,7 @@ async function getFeaturedCalendarData() {
   }
 }
 
-function updateFollowingCalendarData(updatedEvent) {
+function updateFollowingCalendarData(updatedEvent: CalendarEventEntry) {
   const index = followingCalendar.value.findIndex((item) => item.id === updatedEvent.id);
   if (index !== -1) {
     followingCalendar.value.splice(index, 1);
@@ -427,7 +448,7 @@ function updateFollowingCalendarData(updatedEvent) {
   }
 }
 
-function isEventFollowing(eventId) {
+function isEventFollowing(eventId: string) {
   return followingCalendar.value.some((item) => item.id === eventId);
 }
 
@@ -435,7 +456,7 @@ function toggleViewMode() {
   viewMode.value = viewMode.value === "timeline" ? "grid" : "timeline";
 }
 
-function toggleGroup(groupId) {
+function toggleGroup(groupId: string) {
   groupCollapsed.value = {
     ...groupCollapsed.value,
     [groupId]: !groupCollapsed.value[groupId],

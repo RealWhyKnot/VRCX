@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:open="gallerySelectDialog.visible">
+  <Dialog :open="gallerySelectDialog.visible" @update:open="setDialogOpen">
     <DialogContent class="x-dialog w-full sm:max-w-none">
       <DialogHeader>
         <DialogTitle>{{ t("dialog.gallery_select.header") }}</DialogTitle>
@@ -26,13 +26,13 @@
         </ButtonGroup>
         <br />
         <div v-for="image in imageTable" :key="image.id" class="box-border inline-block mt-2.5 cursor-default">
-          <template v-if="image.versions && image.versions.length > 0">
+          <template v-if="latestVersion(image)">
             <div
-              v-if="image.versions[image.versions.length - 1].file.url"
+              v-if="latestVersion(image)?.file?.url"
               class="h-[200px] w-[200px] rounded-[20px] cursor-pointer overflow-hidden mr-5"
-              @click="selectImageGallerySelect(image.versions[image.versions.length - 1].file.url, image.id, image.versions[image.versions.length - 1].version)"
+              @click="selectImageGallerySelect(latestVersion(image)?.file?.url ?? '', image.id, latestVersion(image)?.version)"
             >
-              <img :src="image.versions[image.versions.length - 1].file.url" class="h-full w-full rounded-[15px] object-cover" loading="lazy" />
+              <img :src="latestVersion(image)?.file?.url" class="h-full w-full rounded-[15px] object-cover" loading="lazy" />
             </div>
           </template>
         </div>
@@ -59,6 +59,8 @@ import { useUserStore } from "../../../stores/user";
 import { vrcPlusIconRequest } from "../../../api/vrc-plus-icon";
 import { vrcPlusImageRequest } from "../../../api/vrc-plus-image";
 import { computed, watch } from "vue";
+import type { GalleryFile } from "../../../stores/gallery-types";
+import type { GallerySelectDialogState, GallerySelectionPayload } from "./group-dialog-types";
 
 const { t } = useI18n();
 
@@ -67,18 +69,17 @@ const { refreshGalleryTable, refreshVRCPlusIconsTable, handleGalleryImageAdd } =
 const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 const { cachedPermissions } = storeToRefs(useAuthStore());
 
-const props = defineProps({
-  gallerySelectDialog: {
-    type: Object,
-    required: true,
-  },
-});
-const emit = defineEmits(["select-image"]);
+const props = defineProps<{
+  gallerySelectDialog: GallerySelectDialogState;
+}>();
+const emit = defineEmits<{
+  "select-image": [payload: GallerySelectionPayload];
+}>();
 
 watch(
   () => props.gallerySelectDialog.visible,
-  (newValue) => {
-    if (newValue) {
+  (isVisible) => {
+    if (isVisible) {
       refreshTable();
     }
   }
@@ -104,7 +105,16 @@ const imageLimit = computed(() => {
   return cachedPermissions.value.maxUserGallery;
 });
 
-function selectImageGallerySelect(imageUrl, fileId, fileVersion) {
+function setDialogOpen(isOpen: boolean) {
+  const D = props.gallerySelectDialog;
+  D.visible = isOpen;
+}
+
+function latestVersion(image: GalleryFile) {
+  return image.versions.at(-1);
+}
+
+function selectImageGallerySelect(imageUrl: string, fileId: string, fileVersion?: number) {
   const D = props.gallerySelectDialog;
   D.selectedFileId = fileId;
   D.selectedImageUrl = imageUrl;
@@ -114,54 +124,65 @@ function selectImageGallerySelect(imageUrl, fileId, fileVersion) {
 }
 
 function displayGalleryUpload() {
-  document.getElementById("GalleryUploadButton").click();
+  document.getElementById("GalleryUploadButton")?.click();
 }
 
-function onFileChangeGallery(e) {
+function onFileChangeGallery(e: Event) {
   const clearFile = function () {
     const fileInput = document.querySelector("#GalleryUploadButton");
-    if (fileInput) {
+    if (fileInput instanceof HTMLInputElement) {
       fileInput.value = "";
     }
   };
-  const files = e.target.files || e.dataTransfer.files;
-  if (!files.length) {
+  const input = e.target;
+  if (!(input instanceof HTMLInputElement) || !input.files) {
     return;
   }
-  if (files[0].size >= 100000000) {
+  const file = input.files[0];
+  if (!file) {
+    return;
+  }
+  if (file.size >= 100000000) {
     toast.error(t("message.file.too_large"));
     clearFile();
     return;
   }
-  if (!files[0].type.match(/image.*/)) {
+  if (!/image.*/.test(file.type)) {
     toast.error(t("message.file.not_image"));
     clearFile();
     return;
   }
   const r = new FileReader();
   r.onload = function () {
-    const base64Body = btoa(r.result.toString());
-    if (props.gallerySelectDialog.isIconGallerySelectDialog) {
-      vrcPlusIconRequest.uploadVRCPlusIcon(base64Body).then((args) => {
-        handleGalleryImageAdd(args);
-        toast.success(t("message.gallery.uploaded"));
-        if (Object.keys(VRCPlusIconsTable.value).length !== 0) {
-          VRCPlusIconsTable.value.unshift(args.json);
-        }
-        return args;
-      });
+    if (typeof r.result !== "string") {
       return;
     }
-    vrcPlusImageRequest.uploadGalleryImage(base64Body).then((args) => {
-      handleGalleryImageAdd(args);
-      toast.success(t("message.gallery.uploaded"));
-      if (Object.keys(galleryTable.value).length !== 0) {
-        galleryTable.value.unshift(args.json);
-      }
-      return args;
-    });
+    const base64Body = r.result.slice(r.result.indexOf(",") + 1);
+    if (props.gallerySelectDialog.isIconGallerySelectDialog) {
+      vrcPlusIconRequest
+        .uploadVRCPlusIcon(base64Body)
+        .then((args) => {
+          handleGalleryImageAdd(args);
+          toast.success(t("message.gallery.uploaded"));
+          if (Object.keys(VRCPlusIconsTable.value).length !== 0) {
+            VRCPlusIconsTable.value.unshift(args.json);
+          }
+        })
+        .catch((err: unknown) => console.error(err));
+      return;
+    }
+    vrcPlusImageRequest
+      .uploadGalleryImage(base64Body)
+      .then((args) => {
+        handleGalleryImageAdd(args);
+        toast.success(t("message.gallery.uploaded"));
+        if (Object.keys(galleryTable.value).length !== 0) {
+          galleryTable.value.unshift(args.json);
+        }
+      })
+      .catch((err: unknown) => console.error(err));
   };
-  r.readAsBinaryString(files[0]);
+  r.readAsDataURL(file);
   clearFile();
 }
 </script>

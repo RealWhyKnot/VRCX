@@ -1,14 +1,17 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
-import { ref } from "vue";
+import { ref, type Ref } from "vue";
+
+const mockGetGroupMembersSearch = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+const mockQueryFetch = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 
 vi.mock("../../../../src/api/group", () => ({
   groupRequest: {
-    getGroupMembersSearch: vi.fn(),
+    getGroupMembersSearch: (...args: unknown[]) => mockGetGroupMembersSearch(...args),
   },
 }));
 vi.mock("../../../../src/api/query-request", () => ({
   queryRequest: {
-    fetch: vi.fn(),
+    fetch: (...args: unknown[]) => mockQueryFetch(...args),
   },
 }));
 vi.mock("../../../../src/api/user", () => ({
@@ -32,7 +35,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref } = vue;
   return {
     ...actual,
@@ -58,13 +61,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_k: string, d?: string) => d ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_k: string, isDefault?: boolean) => isDefault ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_k: string, d?: number) => d ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_k: string, d?: number) => d ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -90,46 +93,79 @@ vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
   return {
     useI18n: () => ({
-      t: (key) => key,
+      t: (key: string) => key,
       locale: vue.ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: vue.ref("en") },
+      global: { t: (key: string) => key, locale: vue.ref("en") },
       install: vi.fn(),
     }),
   };
 });
 vi.mock("worker-timers", () => ({
-  setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
-  clearTimeout: (id) => globalThis.clearTimeout(id),
+  get setTimeout() {
+    return globalThis.setTimeout;
+  },
+  get clearTimeout() {
+    return globalThis.clearTimeout;
+  },
 }));
 
-import { useGroupMembers } from "../../../../src/components/dialogs/GroupDialog/use-group-members";
-import { groupRequest } from "../../../../src/api/group";
-import { queryRequest } from "../../../../src/api/query-request";
+import { useGroupMembers, type GroupMembersSource } from "../../../../src/components/dialogs/GroupDialog/use-group-members";
 import { FILTER_EVERYONE } from "../../../../src/shared/constants/group";
 
-function createGroupDialog(overrides = {}) {
-  return ref({
-    id: "grp_1",
+type MembersDeps = Parameters<typeof useGroupMembers>[1];
+
+function createGroupDialog(overrides: Partial<GroupMembersSource> = {}): Ref<GroupMembersSource> {
+  return ref<GroupMembersSource>({
     visible: true,
+    loading: false,
+    activeTab: "",
+    lastActiveTab: "",
+    isGetGroupDialogGroupLoading: false,
+    id: "grp_1",
     inGroup: false,
+    ownerDisplayName: "",
+    ref: { roles: [], memberCount: 0 },
+    announcement: {},
+    posts: [],
+    postsFiltered: [],
+    calendar: [],
     members: [],
     memberSearch: "",
     memberSearchResults: [],
+    instances: [],
+    memberRoles: [],
+    lastVisit: "",
+    joinCount: 0,
     memberSortOrder: { value: "" },
     memberFilter: { id: null, name: "Everyone" },
-    ref: { roles: [], memberCount: 0 },
+    postsSearch: "",
+    galleries: {},
+    listings: [],
     ...overrides,
   });
 }
 
-function createDeps(overrides = {}) {
+type MemberEntry = GroupMembersSource["members"][number];
+
+function createMember(overrides: Partial<MemberEntry> & Pick<MemberEntry, "userId">): MemberEntry {
+  return {
+    groupId: "grp_1",
+    id: "gm_1",
+    isRepresenting: false,
+    mRoleIds: [],
+    roleIds: [],
+    ...overrides,
+  };
+}
+
+function createDeps(overrides: Partial<MembersDeps> = {}): MembersDeps {
   return {
     currentUser: ref({ id: "usr_me" }),
-    applyGroupMember: vi.fn((json) => json),
-    handleGroupMember: vi.fn(),
-    t: (key) => key,
+    applyGroupMember: vi.fn<MembersDeps["applyGroupMember"]>((json) => json),
+    handleGroupMember: vi.fn<MembersDeps["handleGroupMember"]>(),
+    t: (key: string) => key,
     ...overrides,
   };
 }
@@ -137,7 +173,7 @@ function createDeps(overrides = {}) {
 describe("useGroupMembers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    queryRequest.fetch.mockReset();
+    mockQueryFetch.mockReset();
   });
 
   describe("groupDialogMemberSortValue", () => {
@@ -161,21 +197,21 @@ describe("useGroupMembers", () => {
   describe("groupDialogMemberFilterKey", () => {
     test("returns everyone when filter id is null", () => {
       const groupDialog = createGroupDialog({
-        memberFilter: { id: null },
+        memberFilter: { id: null, name: "Everyone" },
       });
       const { groupDialogMemberFilterKey } = useGroupMembers(groupDialog, createDeps());
       expect(groupDialogMemberFilterKey.value).toBe("everyone");
     });
 
     test("returns usersWithNoRole when filter id is empty string", () => {
-      const groupDialog = createGroupDialog({ memberFilter: { id: "" } });
+      const groupDialog = createGroupDialog({ memberFilter: { id: "", name: "No role" } });
       const { groupDialogMemberFilterKey } = useGroupMembers(groupDialog, createDeps());
       expect(groupDialogMemberFilterKey.value).toBe("usersWithNoRole");
     });
 
     test("returns role:id for role-based filters", () => {
       const groupDialog = createGroupDialog({
-        memberFilter: { id: "role_123" },
+        memberFilter: { id: "role_123", name: "Admin" },
       });
       const { groupDialogMemberFilterKey } = useGroupMembers(groupDialog, createDeps());
       expect(groupDialogMemberFilterKey.value).toBe("role:role_123");
@@ -206,7 +242,7 @@ describe("useGroupMembers", () => {
 
       const filtersGroup = groups.find((g) => g.key === "filters");
       expect(filtersGroup).toBeDefined();
-      expect(filtersGroup.items.length).toBeGreaterThan(0);
+      expect(filtersGroup?.items.length).toBeGreaterThan(0);
     });
 
     test("excludes default roles from role items", () => {
@@ -224,7 +260,7 @@ describe("useGroupMembers", () => {
 
       if (rolesGroup) {
         expect(rolesGroup.items).toHaveLength(1);
-        expect(rolesGroup.items[0].label).toBe("Admin");
+        expect(rolesGroup.items[0]?.label).toBe("Admin");
       }
     });
 
@@ -258,7 +294,7 @@ describe("useGroupMembers", () => {
 
     test("calls API when search is 3 or more characters", async () => {
       const groupDialog = createGroupDialog({ memberSearch: "abc" });
-      groupRequest.getGroupMembersSearch.mockResolvedValue({
+      mockGetGroupMembersSearch.mockResolvedValue({
         json: { results: [{ userId: "usr_1" }] },
         params: { groupId: "grp_1" },
       });
@@ -268,7 +304,7 @@ describe("useGroupMembers", () => {
       groupMembersSearch();
 
       await vi.waitFor(() => {
-        expect(groupRequest.getGroupMembersSearch).toHaveBeenCalledWith({
+        expect(mockGetGroupMembersSearch).toHaveBeenCalledWith({
           groupId: "grp_1",
           query: "abc",
           n: 100,
@@ -280,7 +316,7 @@ describe("useGroupMembers", () => {
     test("collapses rapid input into a single API call with the latest query", async () => {
       vi.useFakeTimers();
       const groupDialog = createGroupDialog({ memberSearch: "joh" });
-      groupRequest.getGroupMembersSearch.mockResolvedValue({
+      mockGetGroupMembersSearch.mockResolvedValue({
         json: { results: [] },
         params: { groupId: "grp_1" },
       });
@@ -292,11 +328,11 @@ describe("useGroupMembers", () => {
       groupDialog.value.memberSearch = "johnny";
       groupMembersSearch();
 
-      expect(groupRequest.getGroupMembersSearch).not.toHaveBeenCalled();
+      expect(mockGetGroupMembersSearch).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(200);
 
-      expect(groupRequest.getGroupMembersSearch).toHaveBeenCalledTimes(1);
-      expect(groupRequest.getGroupMembersSearch).toHaveBeenCalledWith({
+      expect(mockGetGroupMembersSearch).toHaveBeenCalledTimes(1);
+      expect(mockGetGroupMembersSearch).toHaveBeenCalledWith({
         groupId: "grp_1",
         query: "johnny",
         n: 100,
@@ -307,8 +343,8 @@ describe("useGroupMembers", () => {
     test("ignores stale responses after the query changed", async () => {
       vi.useFakeTimers();
       const groupDialog = createGroupDialog({ memberSearch: "john" });
-      let resolveFirst;
-      groupRequest.getGroupMembersSearch
+      let resolveFirst: ((value: unknown) => void) | undefined;
+      mockGetGroupMembersSearch
         .mockImplementationOnce(
           () =>
             new Promise((resolve) => {
@@ -330,7 +366,8 @@ describe("useGroupMembers", () => {
 
       expect(groupDialog.value.memberSearchResults).toEqual([{ userId: "usr_new" }]);
 
-      resolveFirst({
+      expect(resolveFirst).toBeDefined();
+      resolveFirst?.({
         json: { results: [{ userId: "usr_stale" }] },
         params: { groupId: "grp_1" },
       });
@@ -343,13 +380,13 @@ describe("useGroupMembers", () => {
       vi.useFakeTimers();
       const groupDialog = createGroupDialog({
         memberSearch: "jam",
-        members: [{ userId: "usr_2", user: { displayName: "Other User" } }],
+        members: [createMember({ userId: "usr_2", user: { displayName: "Other User" } })],
       });
-      groupRequest.getGroupMembersSearch.mockResolvedValue({
+      mockGetGroupMembersSearch.mockResolvedValue({
         json: { results: [] },
         params: { groupId: "grp_1" },
       });
-      queryRequest.fetch.mockResolvedValue({
+      mockQueryFetch.mockResolvedValue({
         json: [{ userId: "usr_1", user: { displayName: "Jamie Doe" } }],
         params: { groupId: "grp_1", n: 100, offset: 0 },
       });
@@ -369,7 +406,7 @@ describe("useGroupMembers", () => {
 
       expect(groupDialog.value.memberSearchResults).toEqual([{ userId: "usr_1", user: { displayName: "Jamie Doe" } }]);
       expect(groupDialog.value.memberSearch).toBe("jam");
-      expect(queryRequest.fetch).toHaveBeenCalledTimes(1);
+      expect(mockQueryFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -381,7 +418,7 @@ describe("useGroupMembers", () => {
 
       await loadMoreGroupMembers();
 
-      expect(queryRequest.fetch).not.toHaveBeenCalled();
+      expect(mockQueryFetch).not.toHaveBeenCalled();
     });
 
     test("does not load when already loading", async () => {
@@ -391,12 +428,12 @@ describe("useGroupMembers", () => {
 
       await loadMoreGroupMembers();
 
-      expect(queryRequest.fetch).not.toHaveBeenCalled();
+      expect(mockQueryFetch).not.toHaveBeenCalled();
     });
 
     test("marks done when fewer than n results returned", async () => {
       const groupDialog = createGroupDialog();
-      queryRequest.fetch.mockResolvedValue({
+      mockQueryFetch.mockResolvedValue({
         json: [{ userId: "usr_1" }],
         params: { groupId: "grp_1", n: 100, offset: 0 },
       });
@@ -417,9 +454,9 @@ describe("useGroupMembers", () => {
 
     test("appends members to groupDialog.members", async () => {
       const groupDialog = createGroupDialog({
-        members: [{ userId: "existing" }],
+        members: [createMember({ userId: "existing" })],
       });
-      queryRequest.fetch.mockResolvedValue({
+      mockQueryFetch.mockResolvedValue({
         json: [{ userId: "usr_new" }],
         params: { groupId: "grp_1", n: 100, offset: 0 },
       });
@@ -441,9 +478,9 @@ describe("useGroupMembers", () => {
     test("removes duplicate current user from first position", async () => {
       const deps = createDeps();
       const groupDialog = createGroupDialog({
-        members: [{ userId: "usr_me" }],
+        members: [createMember({ userId: "usr_me" })],
       });
-      queryRequest.fetch.mockResolvedValue({
+      mockQueryFetch.mockResolvedValue({
         json: [{ userId: "usr_me" }, { userId: "usr_2" }],
         params: { groupId: "grp_1", n: 100, offset: 0 },
       });
@@ -465,7 +502,7 @@ describe("useGroupMembers", () => {
 
     test("marks done on error", async () => {
       const groupDialog = createGroupDialog();
-      queryRequest.fetch.mockRejectedValue(new Error("fail"));
+      mockQueryFetch.mockRejectedValue(new Error("fail"));
 
       const { loadMoreGroupMembers, isGroupMembersDone, loadMoreGroupMembersParams } = useGroupMembers(groupDialog, createDeps());
 
@@ -488,9 +525,9 @@ describe("useGroupMembers", () => {
       });
       const { setGroupMemberSortOrder } = useGroupMembers(groupDialog, createDeps());
 
-      await setGroupMemberSortOrder({ value: "joinedAt:desc" });
+      await setGroupMemberSortOrder({ name: "sort.joined", value: "joinedAt:desc" });
 
-      expect(queryRequest.fetch).not.toHaveBeenCalled();
+      expect(mockQueryFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -505,7 +542,7 @@ describe("useGroupMembers", () => {
 
       await setGroupMemberFilter(filter);
 
-      expect(queryRequest.fetch).not.toHaveBeenCalled();
+      expect(mockQueryFetch).not.toHaveBeenCalled();
     });
   });
 });

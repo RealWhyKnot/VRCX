@@ -47,75 +47,88 @@ import { navDefinitions } from "@/shared/constants/ui";
 
 import PanelSelector from "./PanelSelector.vue";
 import { panelComponentMap } from "./panel-registry";
+import type { DashboardPanelValue } from "../types";
 
-const props = defineProps({
-  panelData: {
-    type: [String, Object],
-    default: null,
-  },
-  isEditing: {
-    type: Boolean,
-    default: false,
-  },
-  showRemove: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    panelData?: DashboardPanelValue | null;
+    isEditing?: boolean;
+    showRemove?: boolean;
+  }>(),
+  {
+    panelData: null,
+    isEditing: false,
+    showRemove: false,
+  }
+);
 
-const emit = defineEmits(["select", "remove"]);
+const emit = defineEmits<{
+  select: [value: DashboardPanelValue | null];
+  remove: [];
+}>();
 const { t } = useI18n();
 const selectorOpen = ref(false);
 
-const panelKey = computed(() => {
-  if (!props.panelData) return null;
-  if (typeof props.panelData === "string") return props.panelData;
-  return props.panelData.key || null;
+const panelKey = computed<string | null>(() => {
+  const panel = props.panelData;
+  if (!panel) return null;
+  if (typeof panel === "string") return panel;
+  if (!panel.key) return null;
+  return panel.key;
 });
 
-const panelConfig = computed(() => {
-  if (!props.panelData || typeof props.panelData === "string") return {};
-  return props.panelData.config || {};
+const panelConfig = computed<unknown>(() => {
+  const panel = props.panelData;
+  if (!panel || typeof panel === "string") return {};
+  return panel.config ?? {};
 });
 
 const isWidget = computed(() => {
   return panelKey.value?.startsWith("widget:");
 });
 
+function isPanelComponentKey(key: string): key is keyof typeof panelComponentMap {
+  return key in panelComponentMap;
+}
+
 const panelComponent = computed(() => {
-  if (!panelKey.value) return null;
-  return panelComponentMap[panelKey.value] || null;
+  const key = panelKey.value;
+  if (!key || !isPanelComponentKey(key)) return null;
+  return panelComponentMap[key];
 });
 
 const widgetProps = computed(() => {
   if (!isWidget.value) return {};
   return {
     config: panelConfig.value,
-    configUpdater: (newConfig) => emitConfigUpdate(newConfig),
+    configUpdater: (newConfig: unknown) => emitConfigUpdate(newConfig),
   };
 });
 
-const widgetDefs = {
-  "widget:feed": { icon: "ri-rss-line", labelKey: "dashboard.widget.feed" },
-  "widget:game-log": { icon: "ri-history-line", labelKey: "dashboard.widget.game_log" },
-  "widget:instance": { icon: "ri-group-3-line", labelKey: "dashboard.widget.instance" },
-};
+const widgetDefs = new Map<string, { icon: string; labelKey: string }>([
+  ["widget:feed", { icon: "ri-rss-line", labelKey: "dashboard.widget.feed" }],
+  ["widget:game-log", { icon: "ri-history-line", labelKey: "dashboard.widget.game_log" }],
+  ["widget:instance", { icon: "ri-group-3-line", labelKey: "dashboard.widget.instance" }],
+]);
 
 const panelOption = computed(() => {
   if (!panelKey.value) return null;
-  if (widgetDefs[panelKey.value]) return widgetDefs[panelKey.value];
-  return navDefinitions.find((def) => def.key === panelKey.value) || null;
+  const widgetDef = widgetDefs.get(panelKey.value);
+  if (widgetDef) return widgetDef;
+  return navDefinitions.find((def) => def.key === panelKey.value) ?? null;
 });
 
 const panelLabel = computed(() => {
-  if (!panelOption.value?.labelKey) return panelKey.value || "";
+  if (!panelOption.value?.labelKey) return panelKey.value ?? "";
   return t(panelOption.value.labelKey);
 });
 
-const panelIcon = computed(() => panelOption.value?.icon || "");
+const panelIcon = computed(() => panelOption.value?.icon ?? "");
 
-function emitConfigUpdate(newConfig) {
-  emit("select", { key: panelKey.value, config: newConfig });
+function emitConfigUpdate(newConfig: unknown) {
+  const key = panelKey.value;
+  if (!key) return;
+  emit("select", { key, config: newConfig });
 }
 
 const openSelector = () => {
@@ -126,7 +139,7 @@ const clearPanel = () => {
   emit("select", null);
 };
 
-const handleSelect = (value) => {
+const handleSelect = (value: DashboardPanelValue | null) => {
   emit("select", value);
   selectorOpen.value = false;
 };

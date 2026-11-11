@@ -2,15 +2,55 @@ import Timer from "../../components/Timer.vue";
 import Button from "../../components/ui/button/Button.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { Apple, ArrowUpDown, IdCard, User, Monitor, Smartphone } from "lucide-vue-next";
+import type { Ref } from "vue";
 
 import { getFaviconUrl } from "../../shared/utils/url-utils";
 import { languageClass, statusClass } from "../../shared/utils/user";
 import { openExternalLink } from "../../shared/utils/app-actions";
 import { i18n } from "../../plugins/i18n";
+import type { InstanceUserEntry, PlayerRef } from "../../stores/instance-types";
+import type { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+
+export type PlayerListRef = PlayerRef & {
+  iconUrl?: string;
+  thumbnailUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  currentAvatarImageUrl?: string;
+  profilePicOverride?: string;
+  status?: string | undefined;
+  statusDescription?: string | undefined;
+  note?: string | undefined;
+  $memo?: string | undefined;
+  $userColour?: string | undefined;
+  $trustLevel?: string | undefined;
+  $trustClass?: string | undefined;
+  $platform?: string | undefined;
+  last_platform?: string | undefined;
+  $languages?: { key: string; value: string }[] | undefined;
+};
+
+export type PlayerListRow = Omit<InstanceUserEntry, "ref"> & { ref: PlayerListRef };
+
+type PlayerListTableOptions = Parameters<typeof useVrcxVueTable<PlayerListRow>>[0];
+type PlayerListColumn = Extract<PlayerListTableOptions["columns"], unknown[]>[number];
+
+type SortableColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+type PlayerListColumnsOptions = {
+  randomUserColours: Ref<boolean>;
+  chatboxUserBlacklist: Ref<Map<string, string>>;
+  onBlockChatbox: (userId: string, displayName: string) => void;
+  onUnblockChatbox: (userId: string) => void;
+  sortAlphabetically: (a: string | undefined, b: string | undefined) => number;
+  userImage: (user: PlayerListRef) => string;
+};
 
 const { t } = i18n.global;
 
-const sortButton = ({ column, label, descFirst = false }) => {
+const sortButton = ({ column, label, descFirst = false }: { column: SortableColumn; label: string | (() => string); descFirst?: boolean }) => {
   const resolvedLabel = typeof label === "function" ? label() : label;
   return (
     <Button
@@ -32,8 +72,14 @@ const sortButton = ({ column, label, descFirst = false }) => {
   );
 };
 
-const getInstanceIconWeight = (item) => {
-  if (!item) return 0;
+function readBioLinks(profileRef: unknown): string[] {
+  if (typeof profileRef !== "object" || profileRef === null || !("bioLinks" in profileRef)) return [];
+  const { bioLinks } = profileRef;
+  if (!Array.isArray(bioLinks)) return [];
+  return bioLinks.filter((link): link is string => typeof link === "string" && link.length > 0);
+}
+
+const getInstanceIconWeight = (item: InstanceUserEntry) => {
   let value = 0;
   if (item.isMaster) value += 1000;
   if (item.isModerator) value += 500;
@@ -46,20 +92,25 @@ const getInstanceIconWeight = (item) => {
   return value;
 };
 
-const sortInstanceIcon = (a, b) => getInstanceIconWeight(b) - getInstanceIconWeight(a);
+const sortInstanceIcon = (a: InstanceUserEntry, b: InstanceUserEntry) => getInstanceIconWeight(b) - getInstanceIconWeight(a);
 
-export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlockChatbox, onUnblockChatbox, sortAlphabetically, userImage }) => {
-  const cols = [
+export const createColumns = ({
+  randomUserColours,
+  chatboxUserBlacklist,
+  onBlockChatbox,
+  onUnblockChatbox,
+  sortAlphabetically,
+  userImage,
+}: PlayerListColumnsOptions): PlayerListColumn[] => {
+  const cols: PlayerListColumn[] = [
     {
       id: "avatar",
-      accessorFn: (row) => row?.photo,
       header: () => t("table.playerList.avatar"),
       size: 70,
       enableSorting: false,
       meta: { label: () => t("table.playerList.avatar") },
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const src = userImage(userRef);
+        const src = userImage(row.original.ref);
         if (!src) return null;
         return (
           <div class="flex items-center pl-2">
@@ -67,10 +118,13 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
               src={src}
               class="h-4 w-4 rounded-sm object-cover"
               loading="lazy"
-              onError={(e) => {
-                const img = e.target;
+              onError={(event) => {
+                const img = event.currentTarget;
+                if (!(img instanceof HTMLImageElement)) return;
+                const fallback = img.nextElementSibling;
+                if (!(fallback instanceof HTMLElement)) return;
                 img.style.display = "none";
-                img.nextElementSibling.style.display = "";
+                fallback.style.display = "";
               }}
             />
             <div class="h-4 w-4 rounded-sm bg-muted flex items-center justify-center" style="display: none">
@@ -82,7 +136,7 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
     },
     {
       id: "timer",
-      accessorFn: (row) => row?.timer,
+      accessorFn: (row) => row.timer,
       header: ({ column }) =>
         sortButton({
           column,
@@ -90,12 +144,12 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         }),
       size: 90,
       meta: { label: () => t("table.playerList.timer") },
-      sortFn: (rowA, rowB) => (rowA.original?.timer ?? 0) - (rowB.original?.timer ?? 0),
-      cell: ({ row }) => <Timer epoch={row.original?.timer} />,
+      sortFn: (rowA, rowB) => (rowA.original.timer ?? 0) - (rowB.original.timer ?? 0),
+      cell: ({ row }) => <Timer epoch={row.original.timer ?? 0} />,
     },
     {
       id: "displayName",
-      accessorFn: (row) => row?.displayName,
+      accessorFn: (row) => row.displayName,
       header: ({ column }) =>
         sortButton({
           column,
@@ -103,28 +157,28 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         }),
       size: 200,
       meta: { label: () => t("table.playerList.displayName") },
-      sortFn: (rowA, rowB) => sortAlphabetically(rowA.original, rowB.original, "displayName"),
+      sortFn: (rowA, rowB) => sortAlphabetically(rowA.original.displayName, rowB.original.displayName),
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const style = randomUserColours?.value ? { color: userRef?.$userColour } : null;
-        return <span style={style}>{userRef?.displayName || userRef?.id || ""}</span>;
+        const userRef = row.original.ref;
+        const style = randomUserColours.value ? { color: userRef.$userColour } : null;
+        return <span style={style}>{[userRef.displayName, userRef.id].find((value) => value) ?? ""}</span>;
       },
     },
     {
       id: "rank",
-      accessorFn: (row) => row?.ref?.$trustSortNum,
+      accessorFn: (row) => row.ref.$trustSortNum,
       header: ({ column }) => sortButton({ column, label: () => t("table.playerList.rank") }),
       size: 110,
       meta: { label: () => t("table.playerList.rank") },
-      sortFn: (rowA, rowB) => (rowA.original?.ref?.$trustSortNum ?? 0) - (rowB.original?.ref?.$trustSortNum ?? 0),
+      sortFn: (rowA, rowB) => (rowA.original.ref.$trustSortNum ?? 0) - (rowB.original.ref.$trustSortNum ?? 0),
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        return <span class={["name", userRef?.$trustClass].filter(Boolean).join(" ")}>{userRef?.$trustLevel ?? ""}</span>;
+        const userRef = row.original.ref;
+        return <span class={["name", userRef.$trustClass].filter(Boolean).join(" ")}>{userRef.$trustLevel ?? ""}</span>;
       },
     },
     {
       id: "status",
-      accessorFn: (row) => row?.ref?.statusDescription,
+      accessorFn: (row) => row.ref.statusDescription,
       header: () => t("table.playerList.status"),
       size: 200,
       minSize: 100,
@@ -134,19 +188,19 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
       },
       enableSorting: false,
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const status = userRef?.status;
+        const userRef = row.original.ref;
+        const status = userRef.status;
         return (
           <span class="flex w-full min-w-0 items-center gap-2">
             <i class={["x-user-status", "shrink-0", "mr-1", status ? statusClass(status) : null]}></i>
-            <span class="min-w-0 truncate">{userRef?.statusDescription ?? ""}</span>
+            <span class="min-w-0 truncate">{userRef.statusDescription ?? ""}</span>
           </span>
         );
       },
     },
     {
       id: "photonId",
-      accessorFn: (row) => row?.photonId,
+      accessorFn: (row) => row.photonId,
       header: ({ column }) =>
         sortButton({
           column,
@@ -159,11 +213,11 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         disableVisibilityToggle: true,
         defaultHidden: true,
       },
-      sortFn: (rowA, rowB) => (rowA.original?.photonId ?? 0) - (rowB.original?.photonId ?? 0),
+      sortFn: (rowA, rowB) => rowA.original.photonId - rowB.original.photonId,
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const userId = userRef?.id;
-        const isBlocked = userId && chatboxUserBlacklist?.value?.has?.(userId);
+        const userRef = row.original.ref;
+        const userId = userRef.id;
+        const isBlocked = userId !== undefined && chatboxUserBlacklist.value.has(userId);
 
         return (
           <div class="flex items-center">
@@ -175,14 +229,14 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
                   if (isBlocked) {
                     onUnblockChatbox(userId);
                   } else {
-                    onBlockChatbox(userRef);
+                    onBlockChatbox(userId, userRef.displayName);
                   }
                 }}
               >
                 {isBlocked ? "Unblock" : "Block"}
               </button>
             ) : null}
-            <span>{String(row.original?.photonId ?? "")}</span>
+            <span>{String(row.original.photonId)}</span>
           </div>
         );
       },
@@ -201,56 +255,52 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         class: "text-center",
         label: () => t("table.playerList.icon"),
       },
-      sortFn: (rowA, rowB, _columnId) => {
-        const a = rowA.original;
-        const b = rowB.original;
-        return -sortInstanceIcon(a, b);
-      },
+      sortFn: (rowA, rowB) => -sortInstanceIcon(rowA.original, rowB.original),
       cell: ({ row }) => {
         const r = row.original;
         return (
           <div class="flex items-center justify-center gap-1">
-            {r?.isMaster ? (
+            {r.isMaster ? (
               <TooltipWrapper side="left" content="Instance Master">
                 <span>👑</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isModerator ? (
+            {r.isModerator ? (
               <TooltipWrapper side="left" content="Moderator">
                 <span>⚔️</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isFriend ? (
+            {r.isFriend ? (
               <TooltipWrapper side="left" content="Friend">
                 <span>💚</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isBlocked ? (
+            {r.isBlocked ? (
               <TooltipWrapper side="left" content="Blocked">
                 <span class="text-destructive">⛔</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isMuted ? (
+            {r.isMuted ? (
               <TooltipWrapper side="left" content="Muted">
                 <span class="text-muted-foreground">🔇</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isAvatarInteractionDisabled ? (
+            {r.isAvatarInteractionDisabled ? (
               <TooltipWrapper side="left" content="Avatar Interaction Disabled">
                 <span class="text-muted-foreground">🚫</span>
               </TooltipWrapper>
             ) : null}
-            {r?.isChatBoxMuted ? (
+            {r.isChatBoxMuted ? (
               <TooltipWrapper side="left" content="Chatbox Muted">
                 <span class="text-muted-foreground">💬</span>
               </TooltipWrapper>
             ) : null}
-            {r?.timeoutTime ? (
+            {r.timeoutTime ? (
               <TooltipWrapper side="left" content="Timeout">
                 <span class="text-destructive">🔴{r.timeoutTime}s</span>
               </TooltipWrapper>
             ) : null}
-            {r?.ageVerified ? (
+            {r.ageVerified ? (
               <TooltipWrapper side="left" content="18+ Verified">
                 <IdCard class="h-4 w-4 x-tag-age-verification" />
               </TooltipWrapper>
@@ -266,9 +316,9 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
       enableSorting: false,
       meta: { label: () => t("table.playerList.platform") },
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const platform = userRef?.$platform;
-        const inVRMode = row.original?.inVRMode;
+        const userRef = row.original.ref;
+        const platform = userRef.$platform;
+        const isInVrMode = row.original.inVRMode;
 
         const platformIcon =
           platform === "standalonewindows" ? (
@@ -278,17 +328,10 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
           ) : platform === "ios" ? (
             <Apple class="h-4 w-4 shrink-0 x-tag-platform-ios" />
           ) : platform ? (
-            <span>{String(platform)}</span>
+            <span>{platform}</span>
           ) : null;
 
-        const mode =
-          inVRMode === null || inVRMode === undefined
-            ? null
-            : inVRMode
-              ? "VR"
-              : userRef?.last_platform === "android" || userRef?.last_platform === "ios"
-                ? "M"
-                : "D";
+        const mode = isInVrMode == null ? null : isInVrMode ? "VR" : userRef.last_platform === "android" || userRef.last_platform === "ios" ? "M" : "D";
 
         return (
           <div class="flex items-center gap-1">
@@ -305,8 +348,7 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
       enableSorting: false,
       meta: { label: () => t("table.playerList.language") },
       cell: ({ row }) => {
-        const userRef = row.original?.ref;
-        const langs = userRef?.$languages ?? [];
+        const langs = row.original.ref.$languages ?? [];
         return (
           <div class="flex items-center gap-0.5">
             {langs.map((item) => (
@@ -335,14 +377,14 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
       enableSorting: false,
       meta: { label: () => t("table.playerList.bioLink") },
       cell: ({ row }) => {
-        const links = row.original?.profileRef?.bioLinks?.filter(Boolean) ?? [];
+        const links = readBioLinks(row.original.profileRef);
         return (
           <div class="flex items-center">
             {links.map((link, index) => (
               <TooltipWrapper
                 key={index}
                 v-slots={{
-                  content: () => <span>{String(link ?? "")}</span>,
+                  content: () => <span>{link}</span>,
                 }}
               >
                 <img
@@ -351,7 +393,7 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
                   loading="lazy"
                   onClick={(e) => {
                     e.stopPropagation();
-                    openExternalLink(String(link));
+                    openExternalLink(link);
                   }}
                 />
               </TooltipWrapper>
@@ -362,7 +404,7 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
     },
     {
       id: "note",
-      accessorFn: (row) => row?.ref?.note,
+      accessorFn: (row) => row.ref.note,
       header: () => t("table.playerList.note"),
       size: 150,
       minSize: 20,
@@ -371,15 +413,11 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         label: () => t("table.playerList.note"),
       },
       enableSorting: false,
-      cell: ({ row }) => {
-        const note = row.original?.ref?.note;
-        const text = typeof note === "string" || typeof note === "number" ? String(note) : "";
-        return <span>{text}</span>;
-      },
+      cell: ({ row }) => <span>{row.original.ref.note ?? ""}</span>,
     },
     {
       id: "memo",
-      accessorFn: (row) => row?.ref?.$memo,
+      accessorFn: (row) => row.ref.$memo,
       header: () => t("table.playerList.memo"),
       size: 150,
       minSize: 20,
@@ -388,11 +426,7 @@ export const createColumns = ({ randomUserColours, chatboxUserBlacklist, onBlock
         label: () => t("table.playerList.memo"),
       },
       enableSorting: false,
-      cell: ({ row }) => {
-        const memo = row.original?.ref?.$memo;
-        const text = typeof memo === "string" || typeof memo === "number" ? String(memo) : "";
-        return <span>{text}</span>;
-      },
+      cell: ({ row }) => <span>{row.original.ref.$memo ?? ""}</span>,
     },
   ];
 

@@ -1,21 +1,24 @@
 <script setup lang="ts">
+import type { PrimitiveProps, RangeCalendarRootProps } from "reka-ui";
 import { RangeCalendarPrev, useForwardProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { ChevronLeft } from "lucide-vue-next";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  prevPage: {
-    type: Function,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = defineProps<{
+  prevPage?: RangeCalendarRootProps["prevPage"] | undefined;
+  asChild?: boolean;
+  as?: PrimitiveProps["as"] | undefined;
+  class?: ClassValue | undefined;
+}>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.prevPage === undefined ? {} : { prevPage: props.prevPage }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>

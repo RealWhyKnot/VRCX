@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  variant: { type: String, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    variant?: string | undefined;
+  }>(),
+  {
+    class: undefined,
+    variant: undefined,
+  }
+);
 </script>
 
 <template>

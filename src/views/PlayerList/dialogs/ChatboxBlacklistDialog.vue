@@ -1,5 +1,5 @@
 <template>
-  <Dialog v-model:open="chatboxBlacklistDialog.visible">
+  <Dialog :open="chatboxBlacklistDialog.visible" @update:open="emit('updateOpen', $event)">
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{{ t("dialog.chatbox_blacklist.header") }}</DialogTitle>
@@ -9,9 +9,10 @@
         <InputGroupAction
           v-for="(item, index) in chatboxBlacklist"
           :key="index"
-          v-model="chatboxBlacklist[index]"
+          :model-value="item"
           class="mt-1.5"
           size="sm"
+          @update:model-value="updateChatboxBlacklistItem(index, $event)"
           @change="saveChatboxBlacklist"
         >
           <template #actions>
@@ -74,16 +75,20 @@ const photonStore = usePhotonStore();
 const { chatboxUserBlacklist, chatboxBlacklist } = storeToRefs(photonStore);
 const { saveChatboxBlacklist } = photonStore;
 
-defineProps({
-  chatboxBlacklistDialog: {
-    type: Object,
-    required: true,
-  },
-});
+defineProps<{
+  chatboxBlacklistDialog: { visible: boolean; loading: boolean };
+}>();
 
-const emit = defineEmits(["deleteChatboxUserBlacklist"]);
+const emit = defineEmits<{
+  deleteChatboxUserBlacklist: [userId: string];
+  updateOpen: [open: boolean];
+}>();
 
-function deleteChatboxUserBlacklist(userId) {
+function updateChatboxBlacklistItem(index: number, value: string | number) {
+  chatboxBlacklist.value[index] = String(value);
+}
+
+function deleteChatboxUserBlacklist(userId: string) {
   emit("deleteChatboxUserBlacklist", userId);
 }
 </script>

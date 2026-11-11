@@ -2,12 +2,32 @@ import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import type { ProductListing, StoreShelf } from "vrchat";
 
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
+import { logError } from "../../../stores/vrcx-messages";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
 import { marketplaceRequest } from "../../../api/marketplace";
 import { VRCHAT_STORE_IDS } from "../../../shared/constants/marketplace";
+import type { Json } from "../../../types/vrcx";
+
+export type StoreListing = Json<ProductListing>;
+
+export type StoreShelfEntry = Json<StoreShelf> & {
+  bannerImageId: string;
+  logoImageId: string;
+  listings: StoreListing[];
+};
+
+function firstTruthy(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
 
 export function useStoreShelves() {
   const { t } = useI18n();
@@ -16,7 +36,7 @@ export function useStoreShelves() {
   const { currentUserCredits, isLocalUserVrcPlusSupporter, ownedListingIds, ownedProductIds } = storeToRefs(userStore);
   const modalStore = useModalStore();
 
-  const storeShelves = ref([]);
+  const storeShelves = ref<StoreShelfEntry[]>([]);
   const isStoreShelvesLoading = ref(false);
   const purchasingListingId = ref("");
 
@@ -33,29 +53,29 @@ export function useStoreShelves() {
       .filter((shelf) => shelf.listings.length > 0);
   });
 
-  function isListingOwned(listing) {
+  function isListingOwned(listing: StoreListing): boolean {
     if (ownedListingIds.value.has(listing.id)) {
       return true;
     }
-    const productIds = listing.productIds ?? [];
+    const productIds = listing.productIds;
     return productIds.length > 0 && productIds.every((id) => ownedProductIds.value.has(id));
   }
 
-  function getListingPrice(listing) {
+  function getListingPrice(listing: StoreListing): number {
     if (isLocalUserVrcPlusSupporter.value && listing.vrcPlusDiscountPrice != null) {
       return listing.vrcPlusDiscountPrice;
     }
     return listing.priceTokens;
   }
 
-  function canPurchaseListing(listing) {
+  function canPurchaseListing(listing: StoreListing): boolean {
     return !purchasingListingId.value && currentUserCredits.value !== null && currentUserCredits.value >= getListingPrice(listing);
   }
 
   async function refreshCredits() {
     try {
       const args = await marketplaceRequest.getVRChatCredits();
-      userStore.setCurrentUserCredits(args.json?.balance ?? null);
+      userStore.setCurrentUserCredits(args.json.balance);
     } catch (err) {
       console.error(err);
     }
@@ -77,11 +97,11 @@ export function useStoreShelves() {
         userStore.getAllProductPurchases(),
       ]);
       storeShelves.value = results
-        .flatMap((args) => args.json ?? [])
+        .flatMap((args) => args.json)
         .map((shelf) => ({
           ...shelf,
-          bannerImageId: shelf.shelfClientBannerImageId || shelf.shelfBackgroundImageId || "",
-          logoImageId: shelf.shelfClientBannerImageId ? "" : shelf.shelfMobileLogoImageId || shelf.shelfMobileHeroBannerImageId || "",
+          bannerImageId: firstTruthy(shelf.shelfClientBannerImageId, shelf.shelfBackgroundImageId, ""),
+          logoImageId: shelf.shelfClientBannerImageId ? "" : firstTruthy(shelf.shelfMobileLogoImageId, shelf.shelfMobileHeroBannerImageId, ""),
           listings: (shelf.listings ?? [])
             .filter((listing) => listing.active)
             .map((listing) => ({
@@ -97,7 +117,7 @@ export function useStoreShelves() {
     }
   }
 
-  async function purchaseListing(listing) {
+  async function purchaseListing(listing: StoreListing) {
     const price = getListingPrice(listing);
     const { ok } = await modalStore.confirm({
       title: t("confirm.title"),
@@ -122,7 +142,7 @@ export function useStoreShelves() {
       console.error("Failed to purchase listing", err);
     } finally {
       purchasingListingId.value = "";
-      userStore.getAllProductPurchases();
+      void userStore.getAllProductPurchases().catch(logError);
     }
   }
 

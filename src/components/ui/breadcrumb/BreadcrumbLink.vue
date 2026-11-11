@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import type { PrimitiveProps } from "reka-ui";
 
 import { Primitive } from "reka-ui";
@@ -8,10 +9,11 @@ const props = withDefaults(
   defineProps<{
     asChild?: PrimitiveProps["asChild"];
     as?: PrimitiveProps["as"];
-    class?: unknown;
+    class?: ClassValue | undefined;
   }>(),
   {
     as: "a",
+    class: undefined,
   }
 );
 </script>

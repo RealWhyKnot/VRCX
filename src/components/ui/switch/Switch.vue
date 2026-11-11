@@ -1,26 +1,52 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { SwitchRoot, SwitchThumb, useForwardPropsEmits } from "reka-ui";
+import type { SwitchRootEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
 import { computed } from "vue";
 
-const props = defineProps({
-  defaultValue: { type: Boolean, required: false },
-  modelValue: { type: [Boolean, null], required: false },
-  disabled: { type: Boolean, required: false },
-  id: { type: String, required: false },
-  value: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-  ariaLabel: { type: String, required: false },
-});
+defineOptions({ name: "UiSwitch" });
 
-const emits = defineEmits(["update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    defaultValue?: boolean;
+    modelValue?: boolean | null | undefined;
+    disabled?: boolean;
+    id?: string | undefined;
+    value?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    name?: string | undefined;
+    required?: boolean;
+    class?: ClassValue | undefined;
+    ariaLabel?: string | undefined;
+  }>(),
+  {
+    modelValue: undefined,
+    id: undefined,
+    value: undefined,
+    as: undefined,
+    name: undefined,
+    class: undefined,
+    ariaLabel: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const emits = defineEmits<SwitchRootEmits>();
+
+const delegatedProps = computed(() => ({
+  defaultValue: props.defaultValue,
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  disabled: props.disabled,
+  ...(props.id === undefined ? {} : { id: props.id }),
+  ...(props.value === undefined ? {} : { value: props.value }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+  ...(props.ariaLabel === undefined ? {} : { ariaLabel: props.ariaLabel }),
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 

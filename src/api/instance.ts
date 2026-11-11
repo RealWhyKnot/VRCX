@@ -154,9 +154,15 @@ const instanceRequest = {
     });
   },
 
-  instanceAnnouncement(params: { location: string; title: string; message: string; imageId?: string; imageVersion?: string }): Promise<{
+  instanceAnnouncement(params: {
+    location: string;
+    title: string;
+    message: string;
+    imageId?: string | undefined;
+    imageVersion?: string | number | undefined;
+  }): Promise<{
     json: unknown;
-    params: { location: string; title: string; message: string; imageId?: string; imageVersion?: string };
+    params: { location: string; title: string; message: string; imageId?: string | undefined; imageVersion?: string | number | undefined };
   }> {
     return request(`instances/${params.location}/announce`, {
       method: "POST",

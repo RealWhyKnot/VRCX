@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
+import type { FriendContext } from "../../../../src/stores/friend-types";
+import { createDefaultUserRef } from "../../../../src/shared/utils/user-transforms";
+
 const mocks = vi.hoisted(() => ({
   appearanceStore: {
     hideNicknames: false,
@@ -10,15 +13,15 @@ const mocks = vi.hoisted(() => ({
     allFavoriteFriendIds: new Set(),
   },
   userStore: {},
-  showUserDialog: vi.fn(),
-  confirmDeleteFriend: vi.fn(),
+  showUserDialog: vi.fn<(userId: string) => void>(),
+  confirmDeleteFriend: vi.fn<(friendId: string) => void>(),
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("pinia")>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: (store: unknown) => store,
   };
 });
 
@@ -33,11 +36,11 @@ vi.mock("../../../../src/stores/user", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mocks.showUserDialog(...args),
+  showUserDialog: (userId: string) => mocks.showUserDialog(userId),
 }));
 
 vi.mock("../../../../src/coordinators/friend-relationship-coordinator", () => ({
-  confirmDeleteFriend: (...args) => mocks.confirmDeleteFriend(...args),
+  confirmDeleteFriend: (friendId: string) => mocks.confirmDeleteFriend(friendId),
 }));
 
 vi.mock("../../../../src/shared/utils/user", () => ({
@@ -45,12 +48,15 @@ vi.mock("../../../../src/shared/utils/user", () => ({
   userStatusClass: vi.fn(() => "status-online"),
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("@/components/ui/avatar/Avatar.vue", () => ({
   default: {
@@ -107,31 +113,32 @@ vi.mock("lucide-vue-next", () => ({
 
 import FriendItem from "../../../../src/views/Sidebar/components/FriendItem.vue";
 
-function makeFriend(overrides = {}) {
+function makeFriend(overrides: Partial<FriendContext> = {}): FriendContext {
   return {
     id: "usr_1",
     name: "Alice",
     state: "active",
+    isVIP: false,
     pendingOffline: false,
     $nickName: "Ali",
-    ref: {
+    ref: createDefaultUserRef({
+      id: "usr_1",
       displayName: "Alice",
       $userColour: "#fff",
       statusDescription: "Online",
       location: "wrld_abc:123",
       travelingToLocation: "",
       $location_at: 123,
-    },
+    }),
     ...overrides,
   };
 }
 
-function mountItem(props = {}) {
+function mountItem(friend: FriendContext) {
   return mount(FriendItem, {
     props: {
-      friend: makeFriend(),
+      friend,
       isGroupByInstance: false,
-      ...props,
     },
   });
 }
@@ -146,13 +153,13 @@ describe("FriendItem.vue", () => {
   });
 
   test("renders delete action for orphan friend and triggers confirmDeleteFriend", async () => {
-    const wrapper = mountItem({
-      friend: makeFriend({
+    const wrapper = mountItem(
+      makeFriend({
         id: "usr_orphan",
         name: "Ghost",
-        ref: null,
-      }),
-    });
+        ref: undefined,
+      })
+    );
 
     expect(wrapper.text()).toContain("Ghost");
     const button = wrapper.get('[data-testid="delete-button"]');

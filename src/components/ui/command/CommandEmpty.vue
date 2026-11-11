@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { computed } from "vue";
@@ -6,13 +8,19 @@ import { reactiveOmit } from "@vueuse/core";
 
 import { useCommand } from ".";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const { filterState } = useCommand();
 const isRender = computed(() => !!filterState.search && filterState.filtered.count === 0);

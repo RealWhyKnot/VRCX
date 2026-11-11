@@ -97,27 +97,42 @@ import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 import { createColumns as createInvitesColumns } from "./group-member-moderation-invites-columns.tsx";
 import { createColumns as createJoinRequestsColumns } from "./group-member-moderation-join-requests-columns.tsx";
 import { createColumns as createBlockedColumns } from "./group-member-moderation-blocked-columns.tsx";
+import type { ModerationRow, ModerationUserColumnContext } from "./group-moderation-types";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
+import type { VrcxGroup } from "../../../types/vrcx";
 import { storeToRefs } from "pinia";
 import { useGroupStore } from "@/stores/group.ts";
 
 const { groupMemberModeration } = storeToRefs(useGroupStore());
 
-const props = defineProps({
-  loading: { type: Boolean, default: false },
-  invitesTable: { type: Object, required: true },
-  joinRequestsTable: { type: Object, required: true },
-  blockedTable: { type: Object, required: true },
-  groupRef: { type: Object, default: () => ({}) },
-  progressCurrent: { type: Number, default: 0 },
-  pageSizes: { type: Array, required: true },
-  columnContext: {
-    type: Object,
-    required: true,
-  },
-  handlePageChange: { type: Function, required: true },
-});
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean;
+    invitesTable: GroupMemberModerationTable<ModerationRow>;
+    joinRequestsTable: GroupMemberModerationTable<ModerationRow>;
+    blockedTable: GroupMemberModerationTable<ModerationRow>;
+    groupRef?: Partial<VrcxGroup>;
+    progressCurrent?: number;
+    pageSizes: number[];
+    columnContext: ModerationUserColumnContext;
+    handlePageChange: (page: number) => void;
+  }>(),
+  {
+    loading: false,
+    groupRef: () => ({}),
+    progressCurrent: 0,
+  }
+);
 
-defineEmits(["refresh", "select-all", "delete-sent-invite", "accept-invite-request", "reject-invite-request", "block-join-request", "delete-blocked-request"]);
+defineEmits<{
+  refresh: [];
+  "select-all": [rows: ModerationRow[]];
+  "delete-sent-invite": [];
+  "accept-invite-request": [];
+  "reject-invite-request": [];
+  "block-join-request": [];
+  "delete-blocked-request": [];
+}>();
 
 const { t } = useI18n();
 
@@ -136,10 +151,10 @@ const { table: invitesTanstackTable } = useVrcxVueTable({
     return computed(() => props.invitesTable.data).value;
   },
   columns: invitesColumns,
-  getRowId: (row) => String(row?.userId ?? row?.id ?? ""),
+  getRowId: (row) => String(row.userId),
   initialPagination: {
-    pageIndex: props.invitesTable.pageIndex ?? 0,
-    pageSize: props.invitesTable.pageSize ?? 15,
+    pageIndex: props.invitesTable.pageIndex,
+    pageSize: props.invitesTable.pageSize,
   },
   tableOptions: {
     autoResetPageIndex: false,
@@ -154,10 +169,10 @@ const { table: joinRequestsTanstackTable } = useVrcxVueTable({
     return computed(() => props.joinRequestsTable.data).value;
   },
   columns: joinRequestsColumns,
-  getRowId: (row) => String(row?.userId ?? row?.id ?? ""),
+  getRowId: (row) => String(row.userId),
   initialPagination: {
-    pageIndex: props.joinRequestsTable.pageIndex ?? 0,
-    pageSize: props.joinRequestsTable.pageSize ?? 15,
+    pageIndex: props.joinRequestsTable.pageIndex,
+    pageSize: props.joinRequestsTable.pageSize,
   },
   tableOptions: {
     autoResetPageIndex: false,
@@ -172,10 +187,10 @@ const { table: blockedTanstackTable } = useVrcxVueTable({
     return computed(() => props.blockedTable.data).value;
   },
   columns: blockedColumns,
-  getRowId: (row) => String(row?.userId ?? row?.id ?? ""),
+  getRowId: (row) => String(row.userId),
   initialPagination: {
-    pageIndex: props.blockedTable.pageIndex ?? 0,
-    pageSize: props.blockedTable.pageSize ?? 15,
+    pageIndex: props.blockedTable.pageIndex,
+    pageSize: props.blockedTable.pageSize,
   },
   tableOptions: {
     autoResetPageIndex: false,
@@ -183,7 +198,7 @@ const { table: blockedTanstackTable } = useVrcxVueTable({
 });
 const blockedTotalItems = computed(() => blockedTanstackTable.getFilteredRowModel().rows.length);
 
-function tabClick(newTab) {
-  groupMemberModeration.value.activeInviteTab = newTab;
+function tabClick(newTab: string | number) {
+  groupMemberModeration.value.activeInviteTab = String(newTab);
 }
 </script>

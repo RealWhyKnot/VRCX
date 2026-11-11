@@ -44,6 +44,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useAuthStore } from "../../../stores/auth";
+import { logError } from "../../../stores/notification/errors";
 
 const { t } = useI18n();
 
@@ -52,7 +53,7 @@ const { enablePrimaryPasswordDialog } = storeToRefs(authStore);
 const { setPrimaryPassword } = authStore;
 
 function handleSetPrimaryPassword() {
-  setPrimaryPassword();
+  void setPrimaryPassword().catch(logError);
   enablePrimaryPasswordDialog.value.visible = false;
 }
 </script>

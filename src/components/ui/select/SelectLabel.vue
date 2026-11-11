@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import type { SelectLabelProps } from "reka-ui";
 
 import { SelectLabel } from "reka-ui";
@@ -8,7 +9,7 @@ const props = defineProps<{
   for?: SelectLabelProps["for"];
   asChild?: SelectLabelProps["asChild"];
   as?: SelectLabelProps["as"];
-  class?: unknown;
+  class?: ClassValue;
 }>();
 </script>
 

@@ -1,4 +1,4 @@
-function getVRChatResolution(res: string) {
+function getVRChatResolution(res: string | undefined) {
   switch (res) {
     case "1280x720":
       return "1280x720 (720p)";
@@ -10,8 +10,10 @@ function getVRChatResolution(res: string) {
       return "3840x2160 (4K)";
     case "7680x4320":
       return "7680x4320 (8K)";
+    case undefined:
+    default:
+      return `${String(res)} (Custom)`;
   }
-  return `${res} (Custom)`;
 }
 
 export { getVRChatResolution };

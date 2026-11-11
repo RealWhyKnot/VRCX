@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from "reka-ui";
+import type { DialogContentEmits } from "reka-ui";
 import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
 import SheetOverlay from "./SheetOverlay.vue";
 
@@ -10,17 +13,29 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  class: { type: null, required: false },
-  side: { type: String, required: false, default: "right" },
-  forceMount: { type: Boolean, required: false },
-  disableOutsidePointerEvents: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "openAutoFocus", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    side?: string;
+    forceMount?: boolean;
+    disableOutsidePointerEvents?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+  }>(),
+  {
+    class: undefined,
+    side: "right",
+    as: undefined,
+  }
+);
+const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class", "side");
+const delegatedProps = computed(() => ({
+  forceMount: props.forceMount,
+  disableOutsidePointerEvents: props.disableOutsidePointerEvents,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

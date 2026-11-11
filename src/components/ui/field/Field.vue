@@ -1,12 +1,22 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { fieldVariants } from ".";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  orientation: { type: null, required: false },
-});
+defineOptions({ name: "UiField" });
+
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    orientation?: VariantProps<typeof fieldVariants>["orientation"] | undefined;
+  }>(),
+  {
+    class: undefined,
+    orientation: undefined,
+  }
+);
 </script>
 
 <template>

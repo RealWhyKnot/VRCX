@@ -1,20 +1,29 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { AcceptableValue, ContextMenuRadioItemEmits, PrimitiveProps } from "reka-ui";
 import { reactiveOmit } from "@vueuse/core";
 import { Circle } from "lucide-vue-next";
 import { ContextMenuItemIndicator, ContextMenuRadioItem, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  value: { type: null, required: true },
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["select"]);
+const props = withDefaults(
+  defineProps<{
+    value: AcceptableValue;
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<ContextMenuRadioItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

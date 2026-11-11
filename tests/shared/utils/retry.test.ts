@@ -41,10 +41,10 @@ describe("executeWithBackoff", () => {
   });
 
   test("uses exponential backoff delays", async () => {
-    const delays = [];
+    const delays: number[] = [];
     const originalSetTimeout = globalThis.setTimeout;
     vi.spyOn(globalThis, "setTimeout").mockImplementation((fn, delay) => {
-      delays.push(delay);
+      delays.push(delay ?? 0);
       return originalSetTimeout(fn, 0);
     });
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { ListboxItemEmits, ListboxItemProps, PrimitiveProps } from "reka-ui";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ListboxItem, useForwardPropsEmits, useId } from "reka-ui";
 import { reactiveOmit, useCurrentElement } from "@vueuse/core";
@@ -6,16 +8,22 @@ import { cn } from "@/lib/utils";
 
 import { useCommand, useCommandGroup } from ".";
 
-const props = defineProps({
-  value: { type: null, required: true },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["select"]);
+const props = withDefaults(
+  defineProps<{
+    value: ListboxItemProps["value"];
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<ListboxItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
@@ -42,7 +50,7 @@ const currentElement = useCurrentElement(itemRef);
 onMounted(() => {
   if (!(currentElement.value instanceof HTMLElement)) return;
 
-  allItems.value.set(id, currentElement.value.textContent ?? props.value?.toString() ?? "");
+  allItems.value.set(id, currentElement.value.textContent);
 
   const groupId = groupContext?.id;
   if (groupId) {

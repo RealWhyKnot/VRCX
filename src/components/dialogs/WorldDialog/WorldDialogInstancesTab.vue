@@ -32,18 +32,18 @@
               />
               <InstanceActionBar
                 class="text-sm"
-                :location="room.$location.tag"
+                :location="room.$location.tag ?? ''"
                 :launch-location="room.tag"
                 :instance-location="room.tag"
-                :shortname="room.$location.shortName"
+                :shortname="room.$location.shortName ?? ''"
                 :currentlocation="lastLocation.location"
                 :instance="room.ref"
                 :friendcount="room.friendCount"
                 :refresh-tooltip="t('dialog.world.instances.refresh_instance_info')"
-                :show-history="!!instanceJoinHistory.get(room.$location.tag)"
+                :show-history="isInstanceHistoryShown(room.$location.tag)"
                 :history-tooltip="t('dialog.previous_instances.info')"
                 :on-refresh="() => refreshInstancePlayerCount(room.tag)"
-                :on-history="() => showPreviousInstancesInfoDialog(room.location)"
+                :on-history="() => showPreviousInstancesInfoDialog(room.location ?? '')"
               />
             </div>
             <div v-if="room.$location.userId || room.users.length" class="flex flex-wrap items-start" style="margin: 8px 0; max-height: unset">
@@ -60,12 +60,12 @@
                         <User class="size-4 text-muted-foreground" />
                       </AvatarFallback>
                     </Avatar>
-                    <IconFrame :icon-frame="room.$location.user.iconFrame" />
+                    <IconFrame :icon-frame="room.$location.user.iconFrame ?? ''" />
                   </div>
                   <div class="flex-1 overflow-hidden">
                     <span
-                      class="block truncate font-medium leading-[18px]"
-                      :style="{ color: room.$location.user.$userColour }"
+                      class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+                      :style="{ '--user-colour': room.$location.user.$userColour }"
                       v-text="room.$location.user.displayName || room.$location.userId"
                     />
                     <span class="block truncate text-xs">
@@ -88,10 +88,14 @@
                       <User class="size-4 text-muted-foreground" />
                     </AvatarFallback>
                   </Avatar>
-                  <IconFrame :icon-frame="user.iconFrame" />
+                  <IconFrame :icon-frame="user.iconFrame ?? ''" />
                 </div>
                 <div class="flex-1 overflow-hidden">
-                  <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName || user.id" />
+                  <span
+                    class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+                    :style="{ '--user-colour': user.$userColour }"
+                    v-text="user.displayName || user.id"
+                  />
                   <span v-if="user.location === 'traveling'" class="block truncate text-xs">
                     <Spinner class="inline-block mr-1" />
                     <Timer :epoch="user.$travelingToTime" />
@@ -140,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import Timer from "@/components/Timer.vue";
 import { Globe2, Languages, LockKeyhole, User } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
@@ -163,6 +168,7 @@ import { useWorldStore } from "../../../stores/world";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
+import type { InstanceRoom } from "../../../stores/instance-types";
 import { useWorldMemo } from "./use-world-dialog-info";
 
 const { t } = useI18n();
@@ -170,10 +176,10 @@ const { userImage, userStatusClass } = useUserDisplay();
 
 const { isAgeGatedInstancesVisible, isClosedInstancesVisible } = storeToRefs(useAppearanceSettingsStore());
 
-function isRoomVisible(room) {
-  const isAgeGated = room.ageGate || room.location?.includes("~ageGate");
+function isRoomVisible(room: InstanceRoom) {
+  const isAgeGated = room.location?.includes("~ageGate");
   if (!isAgeGatedInstancesVisible.value && isAgeGated) return false;
-  if (!isClosedInstancesVisible.value && room.ref?.closedAt) return false;
+  if (!isClosedInstancesVisible.value && room.ref.closedAt) return false;
   return true;
 }
 
@@ -185,6 +191,10 @@ const { memo, onWorldMemoChange } = useWorldMemo(worldDialog);
 const { lastLocation } = storeToRefs(useLocationStore());
 const { showPreviousInstancesInfoDialog } = useInstanceStore();
 const { instanceJoinHistory } = storeToRefs(useInstanceStore());
+
+function isInstanceHistoryShown(tag: string | undefined) {
+  return tag !== undefined && !!instanceJoinHistory.value.get(tag);
+}
 
 const translatedDescription = ref("");
 const isTranslating = ref(false);
@@ -216,7 +226,7 @@ async function translateDescription() {
 }
 
 watch(
-  () => [worldDialog.value.id, worldDialog.value.ref?.description],
+  () => [worldDialog.value.id, worldDialog.value.ref.description],
   () => {
     translatedDescription.value = "";
   }

@@ -3,13 +3,13 @@ import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  confirm: vi.fn(async () => ({ ok: true })),
-  sendGroupInvite: vi.fn(async () => ({})),
-  getGroup: vi.fn(async () => ({ json: { id: "grp_1" } })),
-  fetch: vi.fn(async () => ({ ref: { name: "Group One" } })),
-  setString: vi.fn(),
-  getString: vi.fn(async () => ""),
-  applyGroup: vi.fn((g) => g),
+  confirm: vi.fn((...args: unknown[]) => Promise.resolve({ ok: true, args })),
+  sendGroupInvite: vi.fn((...args: unknown[]) => Promise.resolve({ json: undefined, args })),
+  getGroup: vi.fn((...args: unknown[]) => Promise.resolve({ json: { id: "grp_1" }, args })),
+  fetch: vi.fn((...args: unknown[]) => Promise.resolve({ ref: { name: "Group One" }, args })),
+  setString: vi.fn<(...args: unknown[]) => void>(),
+  getString: vi.fn((...args: unknown[]) => Promise.resolve(typeof args[1] === "string" ? args[1] : "")),
+  applyGroup: vi.fn((...args: unknown[]) => args[0]),
   inviteDialog: {
     __v_isRef: true,
     value: {
@@ -19,13 +19,13 @@ const mocks = vi.hoisted(() => ({
       userId: "",
       userIds: ["usr_1"],
       groupName: "",
-      userObject: null,
+      userObject: {},
     },
   },
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({ ...(await importOriginal()), storeToRefs: (s: unknown) => s }));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("vue-sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("../../../src/shared/utils/group", () => ({
   hasGroupPermission: () => true,
@@ -45,25 +45,25 @@ vi.mock("../../../src/stores/group", () => ({
   useGroupStore: () => ({
     currentUserGroups: ref(new Map()),
     inviteGroupDialog: mocks.inviteDialog,
-    applyGroup: (...a) => mocks.applyGroup(...a),
+    applyGroup: (...args: unknown[]) => mocks.applyGroup(...args),
   }),
 }));
 vi.mock("../../../src/stores/modal", () => ({
-  useModalStore: () => ({ confirm: (...a) => mocks.confirm(...a) }),
+  useModalStore: () => ({ confirm: (...args: unknown[]) => mocks.confirm(...args) }),
 }));
 vi.mock("../../../src/api/group", () => ({
   groupRequest: {
-    sendGroupInvite: (...a) => mocks.sendGroupInvite(...a),
-    getGroup: (...a) => mocks.getGroup(...a),
+    sendGroupInvite: (...args: unknown[]) => mocks.sendGroupInvite(...args),
+    getGroup: (...args: unknown[]) => mocks.getGroup(...args),
   },
 }));
 vi.mock("../../../src/api/query-request", () => ({
-  queryRequest: { fetch: (...a) => mocks.fetch(...a) },
+  queryRequest: { fetch: (...args: unknown[]) => mocks.fetch(...args) },
 }));
 vi.mock("../../../src/services/config", () => ({
   configRepository: {
-    getString: (...a) => mocks.getString(...a),
-    setString: (...a) => mocks.setString(...a),
+    getString: (...args: unknown[]) => mocks.getString(...args),
+    setString: (...args: unknown[]) => mocks.setString(...args),
   },
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
@@ -95,7 +95,7 @@ vi.mock("lucide-vue-next", () => ({ Check: { template: "<i />" } }));
 import InviteGroupDialog from "../../../src/components/dialogs/InviteGroupDialog.vue";
 
 describe("InviteGroupDialog.vue", () => {
-  it("renders invite dialog", async () => {
+  it("renders invite dialog", () => {
     const wrapper = mount(InviteGroupDialog);
     expect(wrapper.text()).toContain("dialog.invite_to_group.header");
   });

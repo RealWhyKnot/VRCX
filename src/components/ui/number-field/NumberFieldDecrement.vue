@@ -1,25 +1,29 @@
 <script setup lang="ts">
-import { NumberFieldDecrement, useForwardProps } from "reka-ui";
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import { NumberFieldDecrement } from "reka-ui";
 import { Minus } from "lucide-vue-next";
+import { computed } from "vue";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = defineProps<{
+  disabled?: boolean;
+  asChild?: boolean;
+  as?: PrimitiveProps["as"];
+  class?: ClassValue;
+}>();
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwarded = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  disabled: props.disabled,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
   <NumberFieldDecrement
     data-slot="decrement"
-    v-bind="forwarded"
+    v-bind="delegatedProps"
     :class="cn('absolute top-1/2 -translate-y-1/2 left-0 p-3 disabled:cursor-not-allowed disabled:opacity-20', props.class)"
   >
     <slot>

@@ -24,8 +24,8 @@ export type TableDensity = "standard" | "compact" | "comfortable";
 
 export type TableLimitsDialogState = {
   visible: boolean;
-  maxTableSize: number;
-  searchLimit: number;
+  maxTableSize: number | string;
+  searchLimit: number | string;
 };
 
 export function isString(value: unknown): value is string {

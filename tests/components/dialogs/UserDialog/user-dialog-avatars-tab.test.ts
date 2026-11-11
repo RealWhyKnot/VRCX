@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 
 vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
@@ -8,11 +10,11 @@ vi.mock("vue-i18n", async () => {
   const { ref } = vue;
   return {
     useI18n: () => ({
-      t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+      t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key),
       locale: ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: ref("en") },
+      global: { t: (key: string) => key, locale: ref("en") },
       install: vi.fn(),
     }),
   };
@@ -36,7 +38,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref } = vue;
   return {
     ...actual,
@@ -62,13 +64,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn().mockImplementation((_k: string, fallback?: string) => fallback ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_k: string, isFallback?: boolean) => isFallback ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -109,26 +111,28 @@ const MOCK_AVATARS = [
   },
 ];
 
-function mountComponent(overrides = {}) {
+type MountOverrides = Partial<UserDialogState> & { currentUser?: Partial<CurrentUserState> };
+
+function mountComponent({ currentUser: currentUserOverrides, ...overrides }: MountOverrides = {}) {
   const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false });
 
   const userStore = useUserStore(pinia);
-  userStore.$patch({
-    userDialog: {
-      id: "usr_me",
-      ref: { id: "usr_me" },
-      avatars: [...MOCK_AVATARS],
-      avatarSorting: "name",
-      avatarReleaseStatus: "all",
-      isAvatarsLoading: false,
-      isWorldsLoading: false,
-      ...overrides,
-    },
-    currentUser: {
-      id: "usr_me",
-      ...overrides.currentUser,
-    },
-  });
+  const userDialog: Partial<UserDialogState> = {
+    id: "usr_me",
+    ref: { id: "usr_me" },
+    avatars: [...MOCK_AVATARS],
+    avatarSorting: "name",
+    avatarReleaseStatus: "all",
+    isAvatarsLoading: false,
+    isWorldsLoading: false,
+    ...overrides,
+  };
+  const currentUser: Partial<CurrentUserState> = {
+    id: "usr_me",
+    ...currentUserOverrides,
+  };
+  userStore.userDialog = { ...createUserDialogState(), ...userDialog };
+  userStore.currentUser = { ...createCurrentUserState(), ...currentUser };
 
   return mount(UserDialogAvatarsTab, {
     global: {
@@ -162,7 +166,7 @@ describe("UserDialogAvatarsTab.vue", () => {
       const wrapper = mountComponent();
       const images = wrapper.findAll("img");
       expect(images).toHaveLength(3);
-      expect(images[0].attributes("src")).toBe("https://img/1.png");
+      expect(images[0]?.attributes("src")).toBe("https://img/1.png");
     });
 
     test("shows empty state when no avatars and not loading", () => {

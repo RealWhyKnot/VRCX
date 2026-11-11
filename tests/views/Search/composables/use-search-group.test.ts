@@ -1,27 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({
-  searchText: require("vue").ref(""),
-  replaceBioSymbols: vi.fn((text) => text),
-  groupSearch: vi.fn(),
-}));
+import { ref } from "vue";
+import type { SearchGroups } from "vrchat";
+
+type SearchGroupParams = NonNullable<SearchGroups["query"]>;
+
+const mockSearchText = ref("");
+const mockReplaceBioSymbols = vi.fn<(text: string) => string>((text) => text);
+const mockGroupSearch = vi.fn<(params: SearchGroupParams) => Promise<{ json: never[] }>>();
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: (store: unknown) => store,
 }));
 
 vi.mock("../../../../src/stores/search", () => ({
   useSearchStore: () => ({
-    searchText: mocks.searchText,
+    searchText: mockSearchText,
   }),
 }));
 
 vi.mock("../../../../src/shared/utils/base/string", () => ({
-  replaceBioSymbols: (...args) => mocks.replaceBioSymbols(...args),
+  replaceBioSymbols: (text: string) => mockReplaceBioSymbols(text),
 }));
 
 vi.mock("../../../../src/api/group", () => ({
   groupRequest: {
-    groupSearch: (...args) => mocks.groupSearch(...args),
+    groupSearch: (params: SearchGroupParams) => mockGroupSearch(params),
   },
 }));
 
@@ -29,20 +32,20 @@ import { useSearchGroup } from "../../../../src/views/Search/composables/use-sea
 
 describe("useSearchGroup", () => {
   beforeEach(() => {
-    mocks.searchText.value = "";
-    mocks.replaceBioSymbols.mockReset();
-    mocks.replaceBioSymbols.mockImplementation((text) => text);
-    mocks.groupSearch.mockReset();
+    mockSearchText.value = "";
+    mockReplaceBioSymbols.mockReset();
+    mockReplaceBioSymbols.mockImplementation((text) => text);
+    mockGroupSearch.mockReset();
   });
 
   it("moves backward paging offset without going below zero", async () => {
-    mocks.groupSearch.mockResolvedValue({ json: [] });
+    mockGroupSearch.mockResolvedValue({ json: [] });
     const api = useSearchGroup();
     api.searchGroupParams.value = { n: 10, offset: 5, query: "abc" };
 
     await api.moreSearchGroup(-1);
 
-    expect(mocks.groupSearch).toHaveBeenCalledWith({
+    expect(mockGroupSearch).toHaveBeenCalledWith({
       n: 10,
       offset: 0,
       query: "abc",

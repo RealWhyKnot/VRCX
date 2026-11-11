@@ -2,10 +2,19 @@ import { Trash2 } from "lucide-vue-next";
 
 import Button from "../../../components/ui/button/Button.vue";
 import { i18n } from "../../../plugins/i18n";
+import type { WorldRef } from "../../../shared/utils/world-transforms";
+import type { VrcxColumn } from "../../FriendList/vrcx-column";
 
 const { t } = i18n.global;
 
-export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscreenImage }) => [
+type WorldImportColumnHandlers = {
+  onShowWorld: (worldId: string) => void;
+  onShowUser: (userId: string) => void;
+  onDelete: (world: WorldRef) => void;
+  onShowFullscreenImage: (imageUrl: string) => void;
+};
+
+export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscreenImage }: WorldImportColumnHandlers): VrcxColumn<WorldRef>[] => [
   {
     id: "image",
     header: () => t("table.import.image"),
@@ -13,18 +22,18 @@ export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscr
     size: 70,
     cell: ({ row }) => {
       const original = row.original;
-      const thumb = original?.thumbnailImageUrl;
-      const full = original?.imageUrl;
+      const thumb = original.thumbnailImageUrl;
+      const full = original.imageUrl;
 
       return (
         <img
           src={thumb}
           class="friends-list-avatar"
           loading="lazy"
-          onClick={(e) => {
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
             if (full) {
-              onShowFullscreenImage?.(full);
+              onShowFullscreenImage(full);
             }
           }}
         />
@@ -43,13 +52,13 @@ export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscr
       return (
         <span
           class="cursor-pointer"
-          title={original?.name}
-          onClick={(e) => {
+          title={original.name}
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
-            onShowWorld?.(original?.id);
+            onShowWorld(original.id);
           }}
         >
-          {original?.name}
+          {original.name}
         </span>
       );
     },
@@ -64,13 +73,13 @@ export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscr
       return (
         <span
           class="cursor-pointer"
-          title={original?.authorName}
-          onClick={(e) => {
+          title={original.authorName}
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
-            onShowUser?.(original?.authorId);
+            onShowUser(original.authorId);
           }}
         >
-          {original?.authorName}
+          {original.authorName}
         </span>
       );
     },
@@ -81,7 +90,7 @@ export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscr
     size: 70,
     enableSorting: false,
     cell: ({ row }) => {
-      const status = String(row.original?.releaseStatus ?? "");
+      const status = row.original.releaseStatus;
       const label = status ? status.charAt(0).toUpperCase() + status.slice(1) : "";
       const colorClass = status === "public" ? "text-status-online" : status === "private" ? "text-destructive" : "";
       return <span class={colorClass}>{label}</span>;
@@ -102,9 +111,9 @@ export const createColumns = ({ onShowWorld, onShowUser, onDelete, onShowFullscr
           size="icon-sm"
           variant="ghost"
           class="w-6 h-6"
-          onClick={(e) => {
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
-            onDelete?.(original);
+            onDelete(original);
           }}
         >
           <Trash2 />

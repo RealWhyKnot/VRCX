@@ -1,28 +1,52 @@
 <script setup lang="ts">
+import type { PrimitiveProps, ToggleEmits } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
 import { Toggle, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
 import { computed } from "vue";
 
 import { toggleVariants } from ".";
 
-const props = defineProps({
-  defaultValue: { type: Boolean, required: false },
-  modelValue: { type: [Boolean, null], required: false },
-  disabled: { type: Boolean, required: false, default: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-  variant: { type: null, required: false, default: "default" },
-  size: { type: null, required: false, default: "default" },
-  ariaLabel: { type: String, required: false },
-});
+defineOptions({ name: "UiToggle" });
 
-const emits = defineEmits(["update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    defaultValue?: boolean;
+    modelValue?: boolean | null;
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    name?: string | undefined;
+    required?: boolean;
+    class?: ClassValue | undefined;
+    variant?: VariantProps<typeof toggleVariants>["variant"] | undefined;
+    size?: VariantProps<typeof toggleVariants>["size"] | undefined;
+    ariaLabel?: string | undefined;
+  }>(),
+  {
+    modelValue: false,
+    as: undefined,
+    name: undefined,
+    class: undefined,
+    variant: "default",
+    size: "default",
+    ariaLabel: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class", "size", "variant");
+const emits = defineEmits<ToggleEmits>();
+
+const delegatedProps = computed(() => ({
+  defaultValue: props.defaultValue,
+  modelValue: props.modelValue,
+  disabled: props.disabled,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+  ...(props.ariaLabel === undefined ? {} : { ariaLabel: props.ariaLabel }),
+}));
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
 const computedAriaLabel = computed(() => {

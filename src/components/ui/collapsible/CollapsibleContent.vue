@@ -1,15 +1,13 @@
 <script setup lang="ts">
+import type { CollapsibleContentProps } from "reka-ui";
 import { CollapsibleContent } from "reka-ui";
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
+const props = defineProps<CollapsibleContentProps>();
+const delegatedProps: Record<string, unknown> = props;
 </script>
 
 <template>
-  <CollapsibleContent data-slot="collapsible-content" v-bind="props">
+  <CollapsibleContent data-slot="collapsible-content" v-bind="delegatedProps">
     <slot />
   </CollapsibleContent>
 </template>

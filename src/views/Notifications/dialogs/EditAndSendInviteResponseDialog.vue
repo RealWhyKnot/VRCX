@@ -1,5 +1,5 @@
 <template>
-  <Dialog :open="editAndSendInviteResponseDialog.visible" @update:open="(open) => (open ? null : cancelEditAndSendInviteResponse())">
+  <Dialog :open="editState.visible" @update:open="(open) => (open ? null : cancelEditAndSendInviteResponse())">
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{{ t("dialog.edit_send_invite_response_message.header") }}</DialogTitle>
@@ -7,12 +7,10 @@
       <div class="text-xs">
         <span>{{ t("dialog.edit_send_invite_response_message.description") }}</span>
       </div>
-      <InputGroupTextareaField v-model="editAndSendInviteResponseDialog.newMessage" :maxlength="64" :rows="2" class="mt-2.5" placeholder="" show-count />
+      <InputGroupTextareaField v-model="editState.newMessage" :maxlength="64" :rows="2" class="mt-2.5" placeholder="" show-count />
       <DialogFooter>
         <Button variant="secondary" class="mr-2" @click="cancelEditAndSendInviteResponse">{{ t("dialog.edit_send_invite_response_message.cancel") }}</Button>
-        <Button :disabled="!editAndSendInviteResponseDialog.newMessage" @click="saveEditAndSendInviteResponse">{{
-          t("dialog.edit_send_invite_response_message.send")
-        }}</Button>
+        <Button :disabled="!editState.newMessage" @click="saveEditAndSendInviteResponse">{{ t("dialog.edit_send_invite_response_message.send") }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -34,98 +32,87 @@ import { inviteMessagesRequest } from "../../../api/invite-messages";
 import { notificationRequest } from "../../../api/notification";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useNotificationStore } from "../../../stores/notification";
+import { logFailure } from "../../../stores/log-failure";
+import type { InviteResponseSelection } from "./send-invite-response-columns.tsx";
 
 const { t } = useI18n();
 const galleryStore = useGalleryStore();
 const { uploadImage } = storeToRefs(galleryStore);
 
-const props = defineProps({
-  editAndSendInviteResponseDialog: {
-    type: Object,
-    required: true,
-  },
-  sendInviteResponseDialog: {
-    type: Object,
-    default: () => ({}),
-  },
-});
+const props = defineProps<{
+  sendInviteResponseDialog: InviteResponseSelection;
+}>();
 
-const emit = defineEmits(["closeInviteDialog", "closeResponseConfirmDialog"]);
+const editState = defineModel<{ visible: boolean; newMessage: string }>("editAndSendInviteResponseDialog", { required: true });
+
+const emit = defineEmits<{
+  closeInviteDialog: [];
+  closeResponseConfirmDialog: [];
+}>();
 
 function cancelEditAndSendInviteResponse() {
   emit("closeResponseConfirmDialog");
 }
 
+async function sendInviteResponse(inviteId: string, slot: number) {
+  const params = {
+    responseSlot: slot,
+    rsvp: true,
+  };
+  const isPhoto = uploadImage.value;
+  try {
+    if (isPhoto) {
+      await notificationRequest.sendInviteResponsePhoto(params, inviteId);
+    } else {
+      await notificationRequest.sendInviteResponse(params, inviteId);
+    }
+    void notificationRequest
+      .hideNotification({
+        notificationId: inviteId,
+      })
+      .then(() => {
+        useNotificationStore().handleNotificationHide(inviteId);
+      })
+      .catch(logFailure("Hiding invite notification failed:"));
+    toast.success(t("message.invite.response_sent"));
+  } catch (err: unknown) {
+    console.error(isPhoto ? "Invite response photo failed" : "Invite response failed", err);
+    toast.error(t("message.error"));
+  } finally {
+    emit("closeInviteDialog");
+  }
+}
+
 async function saveEditAndSendInviteResponse() {
-  const I = props.sendInviteResponseDialog;
-  const D = props.editAndSendInviteResponseDialog;
-  D.visible = false;
-  const messageType = I.messageSlot.messageType;
-  const slot = I.messageSlot.slot;
-  if (I.messageSlot.message !== D.newMessage) {
-    const params = {
-      message: D.newMessage,
-    };
-    let args;
-    try {
-      args = await inviteMessagesRequest.editInviteMessage(params, messageType, slot);
-    } catch (err) {
+  editState.value.visible = false;
+  const { invite, messageSlot } = props.sendInviteResponseDialog;
+  const inviteId = invite.id;
+  const { messageType, slot, message: originalMessage } = messageSlot;
+  const newMessage = editState.value.newMessage;
+  if (inviteId === undefined || messageType === undefined || slot === undefined) {
+    return;
+  }
+  if (originalMessage !== newMessage) {
+    const args = await inviteMessagesRequest.editInviteMessage({ message: newMessage }, messageType, slot).catch((err: unknown) => {
       console.error("Invite response message update failed", err);
       toast.error(t("message.error"));
+      return undefined;
+    });
+    if (args === undefined) {
       return;
     }
-    if (args.json[slot].message === I.messageSlot.message) {
+    const updated = args.json[slot];
+    if (updated === undefined) {
+      toast.error(t("message.invite.message_update_failed"));
+      return;
+    }
+    const { message: savedMessage } = updated;
+    if (savedMessage === originalMessage) {
       toast.error(t("message.invite.message_update_failed"));
       return;
     }
     toast(t("message.invite.message_updated"));
   }
-  const params = {
-    responseSlot: slot,
-    rsvp: true,
-  };
-  if (uploadImage.value) {
-    notificationRequest
-      .sendInviteResponsePhoto(params, I.invite.id)
-      .then((args) => {
-        notificationRequest
-          .hideNotification({
-            notificationId: I.invite.id,
-          })
-          .then(() => {
-            useNotificationStore().handleNotificationHide(I.invite.id);
-          });
-        toast.success(t("message.invite.response_sent"));
-        return args;
-      })
-      .catch((err) => {
-        console.error("Invite response photo failed", err);
-        toast.error(t("message.error"));
-      })
-      .finally(() => {
-        emit("closeInviteDialog");
-      });
-  } else {
-    notificationRequest
-      .sendInviteResponse(params, I.invite.id)
-      .then((args) => {
-        notificationRequest
-          .hideNotification({
-            notificationId: I.invite.id,
-          })
-          .then(() => {
-            useNotificationStore().handleNotificationHide(I.invite.id);
-          });
-        toast.success(t("message.invite.response_sent"));
-        return args;
-      })
-      .catch((err) => {
-        console.error("Invite response failed", err);
-        toast.error(t("message.error"));
-      })
-      .finally(() => {
-        emit("closeInviteDialog");
-      });
-  }
+  await sendInviteResponse(inviteId, slot);
 }
 </script>

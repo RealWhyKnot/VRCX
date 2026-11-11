@@ -1,6 +1,6 @@
 <template>
   <div class="simple-switch">
-    <div class="name" :style="{ width: longLabel ? '300px' : undefined }">
+    <div class="name" :style="{ '--simple-switch-name-width': longLabel ? '300px' : undefined }">
       {{ label }}
       <TooltipWrapper v-if="tooltip" side="top" :content="tooltip">
         <Info class="tooltip" />
@@ -15,18 +15,18 @@
 import { Info } from "lucide-vue-next";
 
 import Switch from "../../../components/ui/switch/Switch.vue";
-defineProps({
-  label: String,
-  value: Boolean,
-  tooltip: String,
-  disabled: Boolean,
-  longLabel: Boolean,
-});
+defineProps<{
+  label?: string;
+  value?: boolean;
+  tooltip?: string;
+  disabled?: boolean;
+  longLabel?: boolean;
+}>();
 
-const emit = defineEmits(["change"]);
+const emit = defineEmits<{ change: [event: boolean] }>();
 
-function change(event) {
-  emit("change", event);
+function change(isEnabled: boolean) {
+  emit("change", isEnabled);
 }
 </script>
 
@@ -38,7 +38,7 @@ function change(event) {
 }
 
 .simple-switch > .name {
-  width: 225px;
+  width: var(--simple-switch-name-width, 225px);
   min-width: 225px;
   overflow-wrap: break-word;
   padding-top: 7px;

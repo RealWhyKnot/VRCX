@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({
-  searchText: require("vue").ref(""),
-  moreSearchUser: vi.fn(() => Promise.resolve()),
-}));
+import { ref } from "vue";
+import type { SearchUsers } from "vrchat";
+
+type SearchUserParams = NonNullable<SearchUsers["query"]> & { n: number; offset: number };
+
+const mockSearchText = ref("");
+const mockMoreSearchUser = vi.fn<(go: number | null, params: SearchUserParams) => Promise<void>>(() => Promise.resolve());
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: (store: unknown) => store,
 }));
 
 vi.mock("../../../../src/stores/search", () => ({
   useSearchStore: () => ({
-    searchText: mocks.searchText,
-    moreSearchUser: (...args) => mocks.moreSearchUser(...args),
+    searchText: mockSearchText,
+    moreSearchUser: mockMoreSearchUser,
   }),
 }));
 
@@ -19,9 +22,9 @@ import { useSearchUser } from "../../../../src/views/Search/composables/use-sear
 
 describe("useSearchUser", () => {
   beforeEach(() => {
-    mocks.searchText.value = "";
-    mocks.moreSearchUser.mockReset();
-    mocks.moreSearchUser.mockResolvedValue(undefined);
+    mockSearchText.value = "";
+    mockMoreSearchUser.mockReset();
+    mockMoreSearchUser.mockResolvedValue(undefined);
   });
 
   it("passes page direction into handleMoreSearchUser", async () => {
@@ -36,6 +39,6 @@ describe("useSearchUser", () => {
 
     await api.handleMoreSearchUser(-1);
 
-    expect(mocks.moreSearchUser).toHaveBeenCalledWith(-1, api.searchUserParams.value);
+    expect(mockMoreSearchUser).toHaveBeenCalledWith(-1, api.searchUserParams.value);
   });
 });

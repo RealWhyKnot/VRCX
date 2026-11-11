@@ -65,12 +65,15 @@ import { useI18n } from "vue-i18n";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
+import { logError } from "../../../stores/vrcx-messages";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { groupRequest } from "../../../api/group";
 import { queryRequest } from "../../../api/query-request";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import GroupCalendarEventDetails from "./GroupCalendarEventDetails.vue";
+import type { CalendarEvent } from "vrchat";
+import type { Json, VrcxGroup } from "../../../types/vrcx";
 
 const { showFullscreenImageDialog } = useGalleryStore();
 
@@ -78,57 +81,51 @@ const { t } = useI18n();
 const groupStore = useGroupStore();
 const { cachedGroups } = groupStore;
 
-const props = defineProps({
-  event: {
-    type: Object,
-    required: true,
-  },
-  groupRef: {
-    type: Object,
-    default: null,
-  },
-  mode: {
-    type: String,
-    required: true,
+type CalendarEventEntry = Json<CalendarEvent>;
 
-    validator: (value) => ["timeline", "grid"].includes(value),
-  },
-  isFollowing: {
-    type: Boolean,
-    default: false,
-  },
-  cardClass: {
-    type: [String, Object, Array],
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    event: CalendarEventEntry;
+    groupRef?: VrcxGroup | null | undefined;
+    mode: "timeline" | "grid";
+    isFollowing?: boolean | undefined;
+    cardClass?: string | Record<string, boolean> | undefined;
+  }>(),
+  {
+    groupRef: null,
+    isFollowing: false,
+    cardClass: "",
+  }
+);
 
-const emit = defineEmits(["update-following-calendar-data", "click-action"]);
+const emit = defineEmits<{
+  "update-following-calendar-data": [event: CalendarEventEntry];
+  "click-action": [];
+}>();
 
 const showGroupName = computed(() => props.mode === "timeline");
-const canManageEvent = computed(() => hasGroupPermission(props.groupRef ?? cachedGroups.get(props.event.ownerId), "group-calendar-manage"));
+const canManageEvent = computed(() => hasGroupPermission(props.groupRef ?? cachedGroups.get(props.event.ownerId ?? ""), "group-calendar-manage"));
 
 const timeClass = computed(() => (props.mode === "grid" ? "event-time" : ""));
 const eventPopoverOpen = ref(false);
-let eventPopoverCloseTimer = null;
+let eventPopoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 const bannerUrl = computed(() => {
-  if (!props.event) return "";
   if (props.event.imageUrl) {
     return props.event.imageUrl;
   } else {
-    return cachedGroups.get(props.event.ownerId)?.bannerUrl || "";
+    return cachedGroups.get(props.event.ownerId ?? "")?.bannerUrl ?? "";
   }
 });
 
 const bannerError = ref(false);
 
-async function editEvent(event) {
+async function editEvent(event: CalendarEventEntry) {
   let group = props.groupRef;
   if (!group) {
     try {
       const args = await queryRequest.fetch("group.dialog", {
-        groupId: event.ownerId,
+        groupId: event.ownerId ?? "",
       });
       group = args.ref;
     } catch (error) {
@@ -140,10 +137,7 @@ async function editEvent(event) {
   groupStore.showEditGroupEventDialog(event, group);
 }
 
-const groupName = computed(() => {
-  if (!props.event) return "";
-  return cachedGroups.get(props.event.ownerId)?.name || "";
-});
+const groupName = computed(() => cachedGroups.get(props.event.ownerId ?? "")?.name ?? "");
 
 const formattedTime = computed(() => {
   if (props.mode === "timeline") {
@@ -153,24 +147,24 @@ const formattedTime = computed(() => {
   }
 });
 
-async function toggleEventFollow(event) {
+async function toggleEventFollow(event: CalendarEventEntry) {
   const args = await groupRequest.followGroupEvent({
-    groupId: event.ownerId,
+    groupId: event.ownerId ?? "",
     eventId: event.id,
     isFollowing: !props.isFollowing,
   });
   emit("update-following-calendar-data", args.json);
 }
 
-function copyEventLink(event) {
+function copyEventLink(event: CalendarEventEntry) {
   const eventLink = `https://vrchat.com/home/group/${event.ownerId}/calendar/${event.id}`;
-  navigator.clipboard.writeText(eventLink);
+  void navigator.clipboard.writeText(eventLink).catch(logError);
   toast.success(t("dialog.group_calendar.event_card.copied_event_link"));
 }
 
-const formatTimeRange = (startsAt, endsAt) => `${formatDateFilter(startsAt, "time")} - ${formatDateFilter(endsAt, "time")}`;
+const formatTimeRange = (startsAt: string, endsAt: string) => `${formatDateFilter(startsAt, "time")} - ${formatDateFilter(endsAt, "time")}`;
 
-const capitalizeFirst = (str) => str?.charAt(0).toUpperCase() + str?.slice(1);
+const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
 const onGroupClick = () => {
   emit("click-action");

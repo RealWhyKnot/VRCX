@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { useAttrs } from "vue";
 import { useVModel } from "@vueuse/core";
 import { Search } from "lucide-vue-next";
@@ -7,15 +8,24 @@ import InputGroupField from "./InputGroupField.vue";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  class: { type: null, required: false },
-  inputClass: { type: null, required: false },
-  clearable: { type: Boolean, default: true },
-  size: { type: String, default: "default" },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null | undefined;
+    class?: ClassValue | undefined;
+    inputClass?: ClassValue | undefined;
+    clearable?: boolean;
+    size?: string;
+  }>(),
+  {
+    modelValue: "",
+    class: undefined,
+    inputClass: undefined,
+    clearable: true,
+    size: "default",
+  }
+);
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{ "update:modelValue": [value: string | number] }>();
 const attrs = useAttrs();
 
 const modelValue = useVModel(props, "modelValue", emit, {
@@ -29,7 +39,7 @@ const modelValue = useVModel(props, "modelValue", emit, {
     <template #leading>
       <Search class="size-4" />
     </template>
-    <template v-if="$slots.trailing" #trailing>
+    <template v-if="$slots['trailing']" #trailing>
       <slot name="trailing" />
     </template>
   </InputGroupField>

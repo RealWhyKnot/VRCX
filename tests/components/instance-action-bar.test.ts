@@ -16,10 +16,10 @@ const mocks = vi.hoisted(() => ({
   showUserDialog: vi.fn(),
   toastSuccess: vi.fn(),
   applyInstance: vi.fn(),
-  showLaunchDialog: vi.fn(),
-  tryOpenInstanceInVrc: vi.fn(),
+  showLaunchDialog: vi.fn(() => Promise.resolve()),
+  tryOpenInstanceInVrc: vi.fn(() => Promise.resolve()),
   modalConfirm: vi.fn(() => Promise.resolve({ ok: true })),
-  instanceJoinHistory: { value: new Map() },
+  instanceJoinHistory: { value: new Map<string, number>() },
   canOpenInstanceInGame: false,
   isOpeningInstance: false,
   lastLocation: {
@@ -27,27 +27,32 @@ const mocks = vi.hoisted(() => ({
     playerList: new Set(["u1", "u2"]),
   },
   currentUser: { id: "usr_me" },
-  cachedGroups: new Map(),
+  cachedGroups: new Map<string, unknown>(),
 }));
 
+function unwrapStoreValue(key: string, value: unknown) {
+  if (key === "instanceJoinHistory") return value;
+  if (typeof value === "object" && value !== null && "value" in value) return value.value;
+  return value;
+}
+
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("pinia")>();
   return {
     ...actual,
-    storeToRefs: (store) =>
-      Object.fromEntries(Object.entries(store).map(([key, value]) => [key, key === "instanceJoinHistory" ? value : (value?.value ?? value)])),
+    storeToRefs: (store: Record<string, unknown>) => Object.fromEntries(Object.entries(store).map(([key, value]) => [key, unwrapStoreValue(key, value)])),
   };
 });
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
 vi.mock("vue-sonner", () => ({
   toast: {
-    success: (...args) => mocks.toastSuccess(...args),
+    success: mocks.toastSuccess,
   },
 }));
 
@@ -69,19 +74,19 @@ vi.mock("../../src/stores/group", () => ({
 vi.mock("../../src/stores/instance", () => ({
   useInstanceStore: () => ({
     instanceJoinHistory: mocks.instanceJoinHistory,
-    applyInstance: (...args) => mocks.applyInstance(...args),
+    applyInstance: mocks.applyInstance,
   }),
 }));
 vi.mock("../../src/stores/modal", () => ({
   useModalStore: () => ({
-    confirm: (...args) => mocks.modalConfirm(...args),
+    confirm: mocks.modalConfirm,
   }),
 }));
 vi.mock("../../src/stores/launch", () => ({
   useLaunchStore: () => ({
     isOpeningInstance: mocks.isOpeningInstance,
-    showLaunchDialog: (...args) => mocks.showLaunchDialog(...args),
-    tryOpenInstanceInVrc: (...args) => mocks.tryOpenInstanceInVrc(...args),
+    showLaunchDialog: mocks.showLaunchDialog,
+    tryOpenInstanceInVrc: mocks.tryOpenInstanceInVrc,
   }),
 }));
 vi.mock("../../src/stores/invite", () => ({
@@ -92,34 +97,34 @@ vi.mock("../../src/stores/invite", () => ({
 
 vi.mock("../../src/composables/use-invite-checks", () => ({
   useInviteChecks: () => ({
-    checkCanInviteSelf: (...args) => mocks.checkCanInviteSelf(...args),
+    checkCanInviteSelf: mocks.checkCanInviteSelf,
   }),
 }));
 
 vi.mock("../../src/shared/utils/location-parser", async (importOriginal) => ({
-  ...(await importOriginal()),
-  parseLocation: (...args) => mocks.parseLocation(...args),
+  ...(await importOriginal<typeof import("../../src/shared/utils/location-parser")>()),
+  parseLocation: mocks.parseLocation,
 }));
 vi.mock("../../src/shared/utils/group", () => ({
-  hasGroupPermission: (...args) => mocks.hasGroupPermission(...args),
+  hasGroupPermission: mocks.hasGroupPermission,
 }));
 vi.mock("../../src/coordinators/date-coordinator", () => ({
-  formatDateFilter: (...args) => mocks.formatDateFilter(...args),
+  formatDateFilter: mocks.formatDateFilter,
 }));
 
 vi.mock("../../src/api/instance", () => ({
   instanceRequest: {
-    selfInvite: (...args) => mocks.selfInvite(...args),
+    selfInvite: mocks.selfInvite,
   },
 }));
 vi.mock("../../src/api/misc", () => ({
   miscRequest: {
-    closeInstance: (...args) => mocks.closeInstance(...args),
+    closeInstance: mocks.closeInstance,
   },
 }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mocks.showUserDialog(...args),
+  showUserDialog: mocks.showUserDialog,
 }));
 
 vi.mock("@/components/ui/button/Button.vue", () => ({
@@ -152,7 +157,25 @@ vi.mock("lucide-vue-next", () => ({
 
 import InstanceActionBar from "../../src/components/InstanceActionBar.vue";
 
-function mountBar(props = {}) {
+type MountBarProps = Partial<{
+  launchLocation: string;
+  inviteLocation: string;
+  showLaunch: boolean;
+  showInvite: boolean;
+  showRefresh: boolean;
+  showHistory: boolean;
+  showInstanceInfo: boolean;
+  onRefresh: () => void;
+  onHistory: () => void;
+}>;
+
+function getActionButton(wrapper: ReturnType<typeof mountBar>, index: number) {
+  const button = wrapper.findAll('[data-testid="btn"]')[index];
+  if (!button) throw new Error(`no action button at index ${index}`);
+  return button;
+}
+
+function mountBar(props: MountBarProps = {}) {
   return mount(InstanceActionBar, {
     props: {
       location: "wrld_base:111",
@@ -167,7 +190,6 @@ function mountBar(props = {}) {
         userCount: 4,
         hasCapacityForYou: true,
         platforms: { standalonewindows: 1, android: 2, ios: 0 },
-        users: [{ id: "usr_a", displayName: "Alice" }],
         gameServerVersion: 123,
         $disabledContentSettings: [],
       },
@@ -251,8 +273,7 @@ describe("InstanceActionBar.vue", () => {
       showHistory: false,
       showInstanceInfo: false,
     });
-    const launchBtn = wrapper.findAll('[data-testid="btn"]')[0];
-    expect(launchBtn).toBeTruthy();
+    const launchBtn = getActionButton(wrapper, 0);
 
     await launchBtn.trigger("click");
 
@@ -266,8 +287,7 @@ describe("InstanceActionBar.vue", () => {
       showHistory: false,
       showInstanceInfo: false,
     });
-    const inviteBtn = wrapper.findAll('[data-testid="btn"]')[1];
-    expect(inviteBtn).toBeTruthy();
+    const inviteBtn = getActionButton(wrapper, 1);
 
     await inviteBtn.trigger("click");
     await Promise.resolve();
@@ -288,8 +308,7 @@ describe("InstanceActionBar.vue", () => {
       showHistory: false,
       showInstanceInfo: false,
     });
-    const inviteBtn = wrapper.findAll('[data-testid="btn"]')[1];
-    expect(inviteBtn).toBeTruthy();
+    const inviteBtn = getActionButton(wrapper, 1);
 
     await inviteBtn.trigger("click");
 

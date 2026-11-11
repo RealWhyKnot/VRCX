@@ -1,5 +1,5 @@
 <template>
-  <div ref="notificationsRef" class="x-container x-container--auto-height">
+  <div class="x-container x-container--auto-height">
     <DataTableLayout
       :table="table"
       :loading="isNotificationsLoading"
@@ -98,7 +98,7 @@ import SelectGroup from "@/components/ui/select/SelectGroup.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import { RefreshCw } from "lucide-vue-next";
@@ -113,14 +113,19 @@ import { useGalleryStore } from "../../stores/gallery";
 import { useInviteStore } from "../../stores/invite";
 import { useNotificationStore } from "../../stores/notification";
 import { useVrcxStore } from "../../stores/vrcx";
+import { logFailure } from "../../stores/log-failure";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { convertFileUrlToImageUrl } from "../../shared/utils/common";
 import { createColumns } from "./columns.tsx";
+import type { NotificationRow } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import SendInviteRequestResponseDialog from "./dialogs/SendInviteRequestResponseDialog.vue";
 import SendInviteResponseDialog from "./dialogs/SendInviteResponseDialog.vue";
+import type { InviteResponseSelection } from "./dialogs/send-invite-response-columns.tsx";
 import { configRepository } from "../../services/config";
+
+defineOptions({ name: "NotificationView" });
 
 const { refreshInviteMessageTableData } = useInviteStore();
 const { clearInviteImageUpload } = useGalleryStore();
@@ -143,20 +148,21 @@ const vrcxStore = useVrcxStore();
 
 const { t } = useI18n();
 
-const notificationsRef = ref(null);
+type CreatedAtSource = { created_at?: unknown; createdAt?: unknown };
+type NotificationFilterValue = { prop: string | string[]; value: string | string[] };
 
-function getNotificationCreatedAt(row) {
-  if (typeof row?.created_at === "string" && row.created_at.length > 0) {
+function getNotificationCreatedAt(row: CreatedAtSource): string {
+  if (typeof row.created_at === "string" && row.created_at.length > 0) {
     return row.created_at;
   }
-  if (typeof row?.createdAt === "string" && row.createdAt.length > 0) {
+  if (typeof row.createdAt === "string" && row.createdAt.length > 0) {
     return row.createdAt;
   }
   return "";
 }
 
-function getNotificationCreatedAtTs(row) {
-  const createdAtRaw = row?.created_at ?? row?.createdAt;
+function getNotificationCreatedAtTs(row: CreatedAtSource): number {
+  const createdAtRaw = row.created_at ?? row.createdAt;
   if (typeof createdAtRaw === "number") {
     const ts = createdAtRaw > 1_000_000_000_000 ? createdAtRaw : createdAtRaw * 1000;
     return Number.isFinite(ts) ? ts : 0;
@@ -167,61 +173,55 @@ function getNotificationCreatedAtTs(row) {
   return Number.isFinite(ts) ? ts : 0;
 }
 
-const asRawArray = (value) => (Array.isArray(value) ? value : []);
-const isEmptyFilterValue = (value) => (Array.isArray(value) ? value.length === 0 : !value);
-const applyFilter = (row, filter) => {
+function isEmptyFilterValue(value: unknown): boolean {
+  return Array.isArray(value) ? value.length === 0 : !value;
+}
+
+function isString(item: unknown): item is string {
+  return typeof item === "string";
+}
+
+function applyFilter(row: Record<string, unknown>, filter: NotificationFilterValue): boolean {
   if (Array.isArray(filter.prop)) {
     return filter.prop.some((propItem) => applyFilter(row, { prop: propItem, value: filter.value }));
   }
 
   const cellValue = row[filter.prop];
-  if (cellValue === undefined || cellValue === null) {
+  if (typeof cellValue !== "string" && typeof cellValue !== "number" && typeof cellValue !== "boolean") {
     return false;
   }
 
   if (Array.isArray(filter.value)) {
-    return filter.value.some((val) => String(cellValue).toLowerCase() === String(val).toLowerCase());
+    return filter.value.some((val) => String(cellValue).toLowerCase() === val.toLowerCase());
   }
-  return String(cellValue).toLowerCase().includes(String(filter.value).toLowerCase());
-};
+  return String(cellValue).toLowerCase().includes(filter.value.toLowerCase());
+}
 
 const notificationDisplayData = computed(() => {
-  const rawData = asRawArray(notificationTable.value.data);
-  const rawFilters = Array.isArray(notificationTable.value.filters) ? notificationTable.value.filters : [];
-  const activeFilters = rawFilters.filter((filter) => !isEmptyFilterValue(filter?.value));
+  const rawData = notificationTable.value.data;
+  const activeFilters = notificationTable.value.filters.filter((filter) => !isEmptyFilterValue(filter.value));
 
   if (activeFilters.length === 0) {
     return rawData.slice();
   }
 
-  return rawData.filter((row) => {
-    for (const filter of activeFilters) {
-      if (filter.filterFn) {
-        if (!filter.filterFn(row, filter)) {
-          return false;
-        }
-        continue;
-      }
-      if (!applyFilter(row, filter)) {
-        return false;
-      }
-    }
-    return true;
-  });
+  return rawData.filter((row) => activeFilters.every((filter) => applyFilter(row, filter)));
 });
 
 const columns = createColumns({
   getNotificationCreatedAt,
   getNotificationCreatedAtTs,
   openNotificationLink,
-  showFullscreenImageDialog,
+  showFullscreenImageDialog: (imageUrl) => showFullscreenImageDialog(imageUrl, ""),
   getSmallThumbnailUrl,
   acceptFriendRequestNotification,
   showSendInviteResponseDialog,
   showSendInviteRequestResponseDialog,
   acceptRequestInvite,
   sendNotificationResponse,
-  hideNotification,
+  hideNotification: (row) => {
+    void hideNotification(row).catch(logFailure("Hiding notification failed:"));
+  },
   hideNotificationPrompt,
   deleteNotificationLog,
   deleteNotificationLogPrompt,
@@ -229,13 +229,13 @@ const columns = createColumns({
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-const { table, pagination } = useVrcxVueTable({
+const { table, pagination } = useVrcxVueTable<NotificationRow>({
   persistKey: "notifications",
   get data() {
     return notificationDisplayData.value;
   },
   columns,
-  getRowId: (row) => row.id ?? `${row.type}:${row.senderUserId ?? ""}:${row.created_at ?? ""}`,
+  getRowId: (row) => row.id ?? `${row.type}:${row.senderUserId ?? ""}:${row.created_at}`,
   initialSorting: [{ id: "created_at", desc: true }],
   initialPagination: {
     pageIndex: 0,
@@ -252,7 +252,7 @@ const totalItems = computed(() => {
   return length > max && length < max + 51 ? max : length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,
@@ -260,7 +260,7 @@ const handlePageSizeChange = (size) => {
   };
 };
 
-const sendInviteResponseDialog = ref({
+const sendInviteResponseDialog = ref<InviteResponseSelection>({
   messageSlot: {},
   invite: {},
 });
@@ -270,19 +270,21 @@ const sendInviteResponseDialogVisible = ref(false);
 const sendInviteRequestResponseDialogVisible = ref(false);
 
 function saveTableFilters() {
-  configRepository.setString("VRCX_notificationTableFilters", JSON.stringify(notificationTable.value.filters[0].value));
+  void configRepository
+    .setString("VRCX_notificationTableFilters", JSON.stringify(notificationTable.value.filters[0].value))
+    .catch(logFailure("Saving notification filters failed:"));
 }
 
-function handleNotificationFilterChange(value) {
-  notificationTable.value.filters[0].value = Array.isArray(value) ? value : [];
+function handleNotificationFilterChange(value: unknown) {
+  notificationTable.value.filters[0].value = Array.isArray(value) ? value.filter(isString) : [];
   saveTableFilters();
 }
 
-function getSmallThumbnailUrl(url) {
+function getSmallThumbnailUrl(url: string) {
   return convertFileUrlToImageUrl(url);
 }
 
-function showSendInviteResponseDialog(invite) {
+function showSendInviteResponseDialog(invite: NotificationRow) {
   sendInviteResponseDialog.value.invite = invite;
   sendInviteResponseDialog.value.messageSlot = {};
   refreshInviteMessageTableData("response");
@@ -290,7 +292,7 @@ function showSendInviteResponseDialog(invite) {
   sendInviteResponseDialogVisible.value = true;
 }
 
-function showSendInviteRequestResponseDialog(invite) {
+function showSendInviteRequestResponseDialog(invite: NotificationRow) {
   sendInviteResponseDialog.value.invite = invite;
   sendInviteResponseDialog.value.messageSlot = {};
   refreshInviteMessageTableData("requestResponse");

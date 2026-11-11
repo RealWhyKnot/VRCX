@@ -42,7 +42,7 @@
 
         <div class="mt-4" style="width: 100%">
           <VirtualCombobox
-            :model-value="Array.isArray(inviteDialog.userIds) ? inviteDialog.userIds : []"
+            :model-value="inviteDialog.userIds"
             :groups="userPickerGroups"
             multiple
             :disabled="inviteDialog.loading"
@@ -53,12 +53,16 @@
           >
             <template #item="{ item, selected }">
               <div class="flex w-full items-center p-1.5 text-[13px]">
-                <template v-if="item.user">
-                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(item.user)">
-                    <img class="size-full rounded-full object-cover" :src="userImage(item.user)" loading="lazy" />
+                <template v-if="pickerUser(item)">
+                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(pickerUser(item))">
+                    <img class="size-full rounded-full object-cover" :src="userImage(pickerUser(item))" loading="lazy" />
                   </div>
                   <div class="flex-1 overflow-hidden">
-                    <span class="block truncate font-medium leading-[18px]" :style="{ color: item.user.$userColour }">{{ item.user.displayName }}</span>
+                    <span
+                      class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+                      :style="{ '--user-colour': pickerUser(item)?.$userColour }"
+                      >{{ pickerUser(item)?.displayName }}</span
+                    >
                   </div>
                 </template>
                 <template v-else>
@@ -90,6 +94,7 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
@@ -107,6 +112,7 @@ import { useFriendStore } from "../../../stores/friend";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useInviteStore } from "../../../stores/invite";
 import { useModalStore } from "../../../stores/modal";
+import { logFailure } from "../../../stores/log-failure";
 import { useUserStore } from "../../../stores/user";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { useUserDisplay } from "../../../composables/use-user-display";
@@ -118,8 +124,15 @@ import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue"
 import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";
 import DropdownMenuSeparator from "../../ui/dropdown-menu/DropdownMenuSeparator.vue";
 import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
+import type { SendInviteDialogState } from "../UserDialog/use-user-dialog-commands";
+import type { FriendContext } from "../../../stores/friend-types";
+import type { InviteDialogState } from "./invite-dialog-types";
 
 import SendInviteDialog from "./SendInviteDialog.vue";
+
+type FavoriteGroupItem = { key: string; displayName: string; type: "remote" } | { key: string; displayName: string; type: "local"; localName: string };
+
+type FriendSection = { key: string; label: string; friends: FriendContext[] };
 
 const { userImage, userStatusClass } = useUserDisplay();
 const friendStore = useFriendStore();
@@ -128,32 +141,32 @@ const favoriteStore = useFavoriteStore();
 const { favoriteFriendGroups, localFriendFavoriteGroups, localFriendFavorites, groupedByGroupKeyFavoriteFriends } = storeToRefs(favoriteStore);
 const { refreshInviteMessageTableData } = useInviteStore();
 const { currentUser } = storeToRefs(useUserStore());
+const { cachedUsers } = useUserStore();
 const { clearInviteImageUpload } = useGalleryStore();
 
 const modalStore = useModalStore();
 
 const { t } = useI18n();
-const props = defineProps({
-  inviteDialog: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  inviteDialog: InviteDialogState;
+}>();
 
-const emit = defineEmits(["closeInviteDialog"]);
+const emit = defineEmits<{
+  closeInviteDialog: [];
+}>();
 
 const sendInviteDialogVisible = ref(false);
-const sendInviteDialog = ref({
+const sendInviteDialog = ref<SendInviteDialogState>({
   messageSlot: {},
   userId: "",
   params: {},
 });
 
-const friendSections = computed(() => [
+const friendSections = computed<FriendSection[]>(() => [
   {
     key: "friendsInInstance",
     label: t("dialog.invite.friends_in_instance"),
-    friends: props.inviteDialog?.friendsInInstance ?? [],
+    friends: props.inviteDialog.friendsInInstance,
   },
   {
     key: "vip",
@@ -173,36 +186,31 @@ const friendSections = computed(() => [
 ]);
 
 const userPickerGroups = computed(() => {
-  const groups = [];
+  const groups: { key: string; label: string; items: { value: string; label: string; search: string }[] }[] = [];
 
-  if (currentUser.value) {
-    groups.push({
-      key: "me",
-      label: t("side_panel.me"),
-      items: [
-        {
-          value: String(currentUser.value.id),
-          label: currentUser.value.displayName,
-          search: currentUser.value.displayName,
-          user: currentUser.value,
-        },
-      ],
-    });
-  }
+  groups.push({
+    key: "me",
+    label: t("side_panel.me"),
+    items: [
+      {
+        value: currentUser.value.id,
+        label: currentUser.value.displayName,
+        search: currentUser.value.displayName,
+      },
+    ],
+  });
 
-  const addFriendGroup = ({ key, label, friends }) => {
-    if (!friends?.length) return;
+  const addFriendGroup = ({ key, label, friends }: FriendSection) => {
+    if (!friends.length) return;
     groups.push({
       key,
       label,
       items: friends.map((friend) => {
-        const user = friend?.ref ?? null;
         const displayName = resolveUserDisplayName(friend.id);
         return {
-          value: String(friend.id),
+          value: friend.id,
           label: displayName,
           search: displayName,
-          user,
         };
       }),
     });
@@ -213,38 +221,60 @@ const userPickerGroups = computed(() => {
   return groups;
 });
 
-function setInviteUserIds(value) {
-  const next = Array.isArray(value) ? value.map((v) => String(v ?? "")).filter(Boolean) : [];
-  const ids = Array.isArray(props.inviteDialog.userIds) ? props.inviteDialog.userIds : [];
+type PickerUser = NonNullable<FriendContext["ref"]>;
+
+const pickerUserById = computed(() => {
+  const map = new Map<string, PickerUser>();
+  const self = cachedUsers.get(currentUser.value.id);
+  if (self) {
+    map.set(currentUser.value.id, self);
+  }
+  for (const section of friendSections.value) {
+    for (const friend of section.friends) {
+      if (friend.ref) {
+        map.set(friend.id, friend.ref);
+      }
+    }
+  }
+  return map;
+});
+
+function pickerUser(item: { value: string | number }) {
+  return pickerUserById.value.get(String(item.value));
+}
+
+function setInviteUserIds(value: unknown) {
+  const next = Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.length > 0) : [];
+  const ids = props.inviteDialog.userIds;
   ids.splice(0, ids.length, ...next);
 }
 
 const friendById = computed(() => {
-  const map = new Map();
+  const map = new Map<string, FriendContext>();
   for (const section of friendSections.value) {
-    for (const friend of section.friends ?? []) {
+    for (const friend of section.friends) {
       map.set(friend.id, friend);
     }
   }
   return map;
 });
 
-function resolveUserDisplayName(userId) {
-  if (currentUser.value?.id && currentUser.value.id === userId) {
+function resolveUserDisplayName(userId: string) {
+  if (currentUser.value.id && currentUser.value.id === userId) {
     return currentUser.value.displayName;
   }
   const friend = friendById.value.get(userId);
-  return friend?.ref?.displayName ?? friend?.name ?? String(userId);
+  return friend?.ref?.displayName ?? friend?.name ?? userId;
 }
 
 function closeInviteDialog() {
   emit("closeInviteDialog");
 }
 
-function showSendInviteDialog(params, userId) {
+function showSendInviteDialog() {
   sendInviteDialog.value = {
-    params,
-    userId,
+    params: {},
+    userId: "",
     messageSlot: {},
   };
   refreshInviteMessageTableData("message");
@@ -268,15 +298,15 @@ function addFriendsInInstanceToInvite() {
   }
 }
 
-function hasOnlineFriend(userIds) {
+function hasOnlineFriend(userIds: string[]) {
   for (const id of userIds) {
     const ctx = friends.value.get(id);
-    if (ctx && ctx.state === "online") return true;
+    if (ctx?.state === "online") return true;
   }
   return false;
 }
 
-const remoteFriendFavoriteGroupItems = computed(() =>
+const remoteFriendFavoriteGroupItems = computed<FavoriteGroupItem[]>(() =>
   favoriteFriendGroups.value
     .filter((group) => {
       const favorites = groupedByGroupKeyFavoriteFriends.value[group.key];
@@ -289,7 +319,7 @@ const remoteFriendFavoriteGroupItems = computed(() =>
     }))
 );
 
-const localFriendFavoriteGroupItems = computed(() =>
+const localFriendFavoriteGroupItems = computed<FavoriteGroupItem[]>(() =>
   localFriendFavoriteGroups.value
     .filter((groupName) => {
       const userIds = localFriendFavorites.value[groupName];
@@ -303,27 +333,27 @@ const localFriendFavoriteGroupItems = computed(() =>
     }))
 );
 
-function addGroupOnlineFriendsToInvite(group) {
+function addGroupOnlineFriendsToInvite(group: FavoriteGroupItem) {
   const D = props.inviteDialog;
-  let userIds;
+  let userIds: string[];
 
   if (group.type === "remote") {
-    const favorites = groupedByGroupKeyFavoriteFriends.value[group.key] || [];
+    const favorites = groupedByGroupKeyFavoriteFriends.value[group.key] ?? [];
     userIds = favorites.map((fav) => fav.id);
   } else {
-    userIds = localFriendFavorites.value[group.localName] || [];
+    userIds = localFriendFavorites.value[group.localName] ?? [];
   }
 
   for (const userId of userIds) {
     const ctx = friends.value.get(userId);
-    if (ctx && ctx.state === "online" && !D.userIds.includes(userId)) {
+    if (ctx?.state === "online" && !D.userIds.includes(userId)) {
       D.userIds.push(userId);
     }
   }
 }
 
 function sendInvite() {
-  modalStore
+  void modalStore
     .confirm({
       description: t("confirm.invite"),
       title: "Confirm",
@@ -331,42 +361,43 @@ function sendInvite() {
     .then(({ ok }) => {
       if (!ok) return;
       const D = props.inviteDialog;
-      if (D.loading === true) {
+      if (D.loading) {
         return;
       }
       D.loading = true;
       const inviteLoop = () => {
-        if (D.userIds.length > 0) {
-          const receiverUserId = D.userIds.shift();
-          if (receiverUserId === currentUser.value.id) {
-            const L = parseLocation(D.worldId);
-            instanceRequest
-              .selfInvite({
-                instanceId: L.instanceId,
-                worldId: L.worldId,
-              })
-              .finally(inviteLoop);
-          } else {
-            notificationRequest
-              .sendInvite(
-                {
-                  instanceId: D.worldId,
-                  worldId: D.worldId,
-                  worldName: D.worldName,
-                },
-                receiverUserId
-              )
-              .finally(inviteLoop);
-          }
-        } else {
+        const receiverUserId = D.userIds.shift();
+        if (receiverUserId === undefined) {
           D.loading = false;
           D.visible = false;
           toast.success(t("message.invite.sent"));
+          return;
+        }
+        if (receiverUserId === currentUser.value.id) {
+          const L = parseLocation(D.worldId);
+          void instanceRequest
+            .selfInvite({
+              instanceId: L.instanceId,
+              worldId: L.worldId,
+            })
+            .finally(inviteLoop)
+            .catch(logFailure("Sending the self invite failed:"));
+        } else {
+          void notificationRequest
+            .sendInvite(
+              {
+                instanceId: D.worldId,
+                worldId: D.worldId,
+                worldName: D.worldName,
+              },
+              receiverUserId
+            )
+            .finally(inviteLoop)
+            .catch(logFailure("Sending the invite failed:"));
         }
       };
       inviteLoop();
-    });
+    })
+    .catch(logFailure("Opening the invite confirmation failed:"));
 }
 </script>
-
-}) .catch(() => {});

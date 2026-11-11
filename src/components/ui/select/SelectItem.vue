@@ -1,27 +1,40 @@
 <script setup lang="ts">
-import { reactiveOmit } from "@vueuse/core";
+import type { ClassValue } from "clsx";
+import type { PrimitiveProps, SelectItemProps } from "reka-ui";
+import { SelectItem, SelectItemIndicator, SelectItemText } from "reka-ui";
 import { Check } from "lucide-vue-next";
-import { SelectItem, SelectItemIndicator, SelectItemText, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
+import { computed } from "vue";
 
-const props = defineProps({
-  value: { type: null, required: true },
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: SelectItemProps["value"];
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  value: props.value,
+  disabled: props.disabled,
+  ...(props.textValue === undefined ? {} : { textValue: props.textValue }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
   <SelectItem
     data-slot="select-item"
-    v-bind="forwardedProps"
+    v-bind="delegatedProps"
     :value="props.value"
     :class="
       cn(

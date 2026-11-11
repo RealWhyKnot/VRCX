@@ -5,11 +5,11 @@ import ItemDescription from "@/components/ui/item/ItemDescription.vue";
 import ItemMedia from "@/components/ui/item/ItemMedia.vue";
 import ItemTitle from "@/components/ui/item/ItemTitle.vue";
 
-defineProps({
-  icon: { type: String, required: true },
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-});
+defineProps<{
+  icon: string;
+  title: string;
+  description: string;
+}>();
 </script>
 
 <template>

@@ -1,21 +1,31 @@
 <script setup lang="ts">
-import { reactiveOmit } from "@vueuse/core";
+import type { PrimitiveProps, ScrollAreaScrollbarProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import { computed } from "vue";
 import { ScrollAreaScrollbar, ScrollAreaThumb } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  orientation: {
-    type: String,
-    required: false,
-    default: "vertical",
-  },
-  forceMount: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    orientation?: ScrollAreaScrollbarProps["orientation"];
+    forceMount?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    orientation: "vertical",
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  orientation: props.orientation,
+  forceMount: props.forceMount,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>

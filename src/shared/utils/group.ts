@@ -7,7 +7,7 @@ type GroupPermissionHolder = {
 
 type GroupMemberLike = {
   userId: string;
-  user?: { displayName?: string | null } | null;
+  user?: { displayName?: string | null | undefined } | null | undefined;
 };
 
 function hasGroupPermission(ref: GroupPermissionHolder | null | undefined, permission: string) {

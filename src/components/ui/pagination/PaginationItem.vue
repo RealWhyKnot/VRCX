@@ -1,19 +1,33 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
 import { PaginationListItem } from "reka-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  value: { type: Number, required: true },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  size: { type: null, required: false, default: "icon" },
-  class: { type: null, required: false },
-  isActive: { type: Boolean, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: number;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    size?: VariantProps<typeof buttonVariants>["size"];
+    class?: ClassValue | undefined;
+    isActive?: boolean;
+  }>(),
+  {
+    as: undefined,
+    size: "icon",
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class", "size", "isActive");
+const delegatedProps = computed(() => ({
+  value: props.value,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>

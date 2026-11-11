@@ -1,63 +1,87 @@
-import { computed, ref } from "vue";
+import { computed, ref, type Ref } from "vue";
 
 import { groupDialogFilterOptions, groupDialogSortingOptions, FILTER_EVERYONE, FILTER_NO_ROLE } from "../../../shared/constants/group";
 import { groupRequest } from "../../../api/group";
 import { queryRequest } from "../../../api/query-request";
 import { debounce } from "../../../shared/utils/common";
 import { mergeGroupMemberSearchResults } from "../../../shared/utils/group";
+import type { GroupSearchSort } from "vrchat";
+import type { GroupMemberRecord } from "../../../coordinators/group-coordinator";
+import type { GroupDialogState } from "../../../stores/group-types";
+import { hasUserId, toGroupSearchSort } from "./group-moderation-utils";
 
 import * as workerTimers from "worker-timers";
 
-export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, handleGroupMember, t }) {
+type MemberQueryParams = {
+  n: number;
+  offset: number;
+  groupId: string;
+  sort: GroupSearchSort;
+  roleId?: string;
+};
+
+export type GroupMembersSource = Omit<GroupDialogState, "memberFilter" | "memberSortOrder"> & {
+  memberSortOrder: Partial<GroupDialogState["memberSortOrder"]>;
+  memberFilter?: GroupDialogState["memberFilter"] | null | undefined;
+};
+
+type GroupMembersDeps = {
+  currentUser: Ref<{ id: string }>;
+  applyGroupMember: (json: GroupMemberRecord) => GroupMemberRecord;
+  handleGroupMember: (args: { json: GroupMemberRecord; params: { groupId: string } }) => void;
+  t: (key: string) => string;
+};
+
+export function useGroupMembers(groupDialog: Ref<GroupMembersSource>, { currentUser, applyGroupMember, handleGroupMember, t }: GroupMembersDeps) {
   const isGroupMembersDone = ref(false);
   const isGroupMembersLoading = ref(false);
 
-  const loadMoreGroupMembersParams = ref({
+  const loadMoreGroupMembersParams = ref<MemberQueryParams>({
     n: 100,
     offset: 0,
     groupId: "",
-    sort: "",
+    sort: "joinedAt:desc",
     roleId: "",
   });
 
   const groupDialogMemberSortValue = computed({
     get() {
-      return groupDialog.value?.memberSortOrder?.value ?? "";
+      return groupDialog.value.memberSortOrder.value ?? "";
     },
-    set(value) {
+    set(value: string) {
       const option = groupDialogSortingOptions.find((item) => item.value === value);
       if (option) {
-        setGroupMemberSortOrder(option);
+        setGroupMemberSortOrder(option).catch(console.error);
       }
     },
   });
 
-  const groupDialogMemberFilterKey = computed({
+  const groupDialogMemberFilterKey = computed<string | null>({
     get() {
-      const filter = groupDialog.value?.memberFilter;
+      const filter = groupDialog.value.memberFilter;
       if (!filter) return null;
 
       if (filter.id === null) return "everyone";
       if (filter.id === "") return "usersWithNoRole";
       return `role:${filter.id}`;
     },
-    set(key) {
+    set(key: string | null) {
       if (!key) return;
 
       if (key === "everyone") {
-        setGroupMemberFilter(FILTER_EVERYONE);
+        setGroupMemberFilter(FILTER_EVERYONE).catch(console.error);
         return;
       }
       if (key === "usersWithNoRole") {
-        setGroupMemberFilter(FILTER_NO_ROLE);
+        setGroupMemberFilter(FILTER_NO_ROLE).catch(console.error);
         return;
       }
 
       if (key.startsWith("role:")) {
         const roleId = key.slice("role:".length);
-        const role = groupDialog.value?.ref?.roles?.find((r) => r.id === roleId);
-        if (role) {
-          setGroupMemberFilter(role);
+        const role = groupDialog.value.ref.roles?.find((r) => r.id === roleId);
+        if (role?.id !== undefined && role.name !== undefined) {
+          setGroupMemberFilter({ id: role.id, name: role.name }).catch(console.error);
         }
       }
     },
@@ -70,12 +94,12 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
       search: t(item.name),
     }));
 
-    const roleItems = (groupDialog.value?.ref?.roles ?? [])
+    const roleItems = (groupDialog.value.ref.roles ?? [])
       .filter((role) => !role.defaultRole)
       .map((role) => ({
         value: `role:${role.id}`,
-        label: role.name,
-        search: role.name,
+        label: role.name ?? "",
+        search: role.name ?? "",
       }));
 
     return [
@@ -93,7 +117,9 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
   });
 
   let memberSearchRequestId = 0;
-  const groupMembersSearchDebounced = debounce(groupMembersSearchRequest, 200);
+  const groupMembersSearchDebounced = debounce(() => {
+    groupMembersSearchRequest().catch(console.error);
+  }, 200);
   const groupMembersSearchMaxPages = 10;
 
   function groupMembersSearch() {
@@ -123,7 +149,8 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
         n: 100,
         offset: 0,
       });
-      for (const json of args.json.results) {
+      const searchResults = args.json.results ?? [];
+      for (const json of searchResults) {
         handleGroupMember({
           json,
           params: {
@@ -134,9 +161,10 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
       if (requestId !== memberSearchRequestId || D.id !== args.params.groupId || search !== D.memberSearch) {
         return;
       }
-      D.memberSearchResults = mergeGroupMemberSearchResults(args.json.results, D.members, search);
+      D.memberSearchResults = mergeGroupMemberSearchResults(searchResults.filter(hasUserId), D.members.filter(hasUserId), search);
       await groupMembersSearchLoadRemaining(requestId, search);
-    } catch {
+    } catch (error) {
+      console.error(error);
     } finally {
       if (requestId === memberSearchRequestId) {
         isGroupMembersLoading.value = false;
@@ -144,8 +172,9 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
     }
   }
 
-  async function groupMembersSearchLoadRemaining(requestId, search) {
+  async function groupMembersSearchLoadRemaining(requestId: number, search: string) {
     const D = groupDialog.value;
+    const isSearchCurrent = () => D.visible && requestId === memberSearchRequestId && search === D.memberSearch && !isGroupMembersDone.value;
     for (let page = 0; page < groupMembersSearchMaxPages; ++page) {
       if (
         D.memberSearchResults.length ||
@@ -158,11 +187,11 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
         return;
       }
       isGroupMembersLoading.value = true;
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         workerTimers.setTimeout(resolve, 1000);
       });
       isGroupMembersLoading.value = false;
-      if (!D.visible || requestId !== memberSearchRequestId || search !== D.memberSearch || isGroupMembersDone.value) {
+      if (!isSearchCurrent()) {
         return;
       }
       try {
@@ -173,7 +202,7 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
       if (requestId !== memberSearchRequestId || search !== D.memberSearch) {
         return;
       }
-      D.memberSearchResults = mergeGroupMemberSearchResults(D.memberSearchResults, D.members, search);
+      D.memberSearchResults = mergeGroupMemberSearchResults(D.memberSearchResults.filter(hasUserId), D.members.filter(hasUserId), search);
     }
   }
 
@@ -189,10 +218,11 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
       groupId: D.id,
     };
     if (D.memberSortOrder.value) {
-      loadMoreGroupMembersParams.value.sort = D.memberSortOrder.value;
+      loadMoreGroupMembersParams.value.sort = toGroupSearchSort(D.memberSortOrder.value);
     }
-    if (D.memberFilter.id !== null) {
-      loadMoreGroupMembersParams.value.roleId = D.memberFilter.id;
+    const memberFilter = D.memberFilter;
+    if (memberFilter && memberFilter.id !== null) {
+      loadMoreGroupMembersParams.value.roleId = memberFilter.id;
     }
     if (D.inGroup) {
       await queryRequest
@@ -201,12 +231,13 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
           userId: currentUser.value.id,
         })
         .then((args) => {
+          if (!args.json) {
+            throw new TypeError("Group member response has no body");
+          }
           args.ref = applyGroupMember(args.json);
-          if (args.json) {
-            args.json.user = currentUser.value;
-            if (D.memberFilter.id === null) {
-              D.members.push(args.json);
-            }
+          args.json.user = currentUser.value;
+          if (memberFilter?.id === null) {
+            D.members.push(args.json);
           }
           return args;
         });
@@ -214,7 +245,7 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
     await loadMoreGroupMembers();
   }
 
-  async function loadMoreGroupMembers(options = {}) {
+  async function loadMoreGroupMembers(options: { preserveSearch?: boolean } = {}) {
     if (isGroupMembersDone.value || isGroupMembersLoading.value) {
       return;
     }
@@ -241,10 +272,9 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
             },
           });
         }
-        for (let i = 0; i < args.json.length; i++) {
-          const member = args.json[i];
+        for (const member of args.json) {
           if (member.userId === currentUser.value.id) {
-            if (D.members.length > 0 && D.members[0].userId === currentUser.value.id) {
+            if (D.members.length > 0 && D.members[0]?.userId === currentUser.value.id) {
               D.members.splice(0, 1);
             }
             break;
@@ -257,7 +287,7 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
         params.offset += params.n;
         return args;
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         isGroupMembersDone.value = true;
         throw err;
       });
@@ -270,7 +300,7 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
     await getGroupDialogGroupMembers();
     while (groupDialog.value.visible && !isGroupMembersDone.value) {
       isGroupMembersLoading.value = true;
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         workerTimers.setTimeout(resolve, 1000);
       });
       isGroupMembersLoading.value = false;
@@ -278,18 +308,18 @@ export function useGroupMembers(groupDialog, { currentUser, applyGroupMember, ha
     }
   }
 
-  async function setGroupMemberSortOrder(sortOrder) {
+  async function setGroupMemberSortOrder(sortOrder: { name: string; value: string }) {
     const D = groupDialog.value;
-    if (D.memberSortOrder?.value === sortOrder?.value) {
+    if (D.memberSortOrder.value === sortOrder.value) {
       return;
     }
     D.memberSortOrder = sortOrder;
     await getGroupDialogGroupMembers();
   }
 
-  async function setGroupMemberFilter(filter) {
+  async function setGroupMemberFilter(filter: { name: string; id: string | null }) {
     const D = groupDialog.value;
-    if (D.memberFilter === filter) {
+    if (D.memberFilter?.id === filter.id) {
       return;
     }
     D.memberFilter = filter;

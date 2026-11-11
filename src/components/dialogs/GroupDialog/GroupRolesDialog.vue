@@ -147,7 +147,7 @@
                       <Checkbox
                         :model-value="hasPermission(permission.name)"
                         :disabled="isPermissionsReadOnly || !permission.allowedToAdd"
-                        @update:model-value="togglePermission(permission.name, $event)"
+                        @update:model-value="(checked) => togglePermission(permission.name, checked === true)"
                       />
                       <span class="space-y-1">
                         <span class="block text-sm">
@@ -172,7 +172,7 @@
                       <Checkbox
                         :model-value="hasPermission(permission.name)"
                         :disabled="isPermissionsReadOnly || !permission.allowedToAdd"
-                        @update:model-value="togglePermission(permission.name, $event)"
+                        @update:model-value="(checked) => togglePermission(permission.name, checked === true)"
                       />
                       <span class="space-y-1">
                         <span class="block text-sm">
@@ -231,7 +231,7 @@ import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTexta
 import Badge from "@/components/ui/badge/Badge.vue";
 import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
-import { DragDropProvider } from "@dnd-kit/vue";
+import { DragDropProvider, type DragEndEvent } from "@dnd-kit/vue";
 import { RestrictToVerticalAxis } from "@dnd-kit/abstract/modifiers";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { isSortable } from "@dnd-kit/vue/sortable";
@@ -247,26 +247,59 @@ import { hasGroupPermission } from "../../../shared/utils/group";
 import { loadGroupRolesDialogRoles } from "../../../coordinators/group-dialog-coordinator";
 
 import SortableGroupRoleItem from "./SortableGroupRoleItem.vue";
+import type { GroupRequest } from "./group-moderation-types";
+import type { Json } from "../../../types/vrcx";
+import type { GroupRole } from "vrchat";
+
+type RoleRecord = Json<GroupRole>;
+type RoleWithId = RoleRecord & { id: string };
+
+function hasRoleId(role: RoleRecord): role is RoleWithId {
+  return typeof role.id === "string";
+}
+
+function hasPermissionName<T extends { name?: string | undefined }>(permission: T): permission is T & { name: string } {
+  return typeof permission.name === "string";
+}
+
+type RoleForm = {
+  mode: "" | "create" | "edit";
+  roleId: string;
+  name: string;
+  description: string;
+  isSelfAssignable: boolean;
+  isAddedOnJoin: boolean;
+  requiresTwoFactor: boolean;
+  requiresPurchase: boolean;
+  isManagementRole: boolean;
+  isDefaultRole: boolean;
+  isOwnerRole: boolean;
+  permissions: string[];
+};
+
+type RoleEditParams = Parameters<GroupRequest["editGroupRole"]>[0];
 
 const { t } = useI18n();
 const modalStore = useModalStore();
 const { groupRolesDialog } = storeToRefs(useGroupStore());
 const { currentUser } = storeToRefs(useUserStore());
 
-const form = ref(createBlankForm());
+const form = ref<RoleForm>(createBlankForm());
 const listKey = ref(0);
+
+const dialogRoles = computed(() => groupRolesDialog.value.roles.filter(hasRoleId));
 
 const roleSections = computed(() =>
   [
     {
       group: "management",
       label: t("dialog.group_roles.management_roles"),
-      roles: groupRolesDialog.value.roles.filter((role) => role.isManagementRole),
+      roles: dialogRoles.value.filter((role) => role.isManagementRole),
     },
     {
       group: "member",
       label: t("dialog.group_roles.member_roles"),
-      roles: groupRolesDialog.value.roles.filter((role) => !role.isManagementRole),
+      roles: dialogRoles.value.filter((role) => !role.isManagementRole),
     },
   ].filter((section) => section.roles.length > 0)
 );
@@ -275,15 +308,15 @@ const canManage = computed(() => hasGroupPermission(groupRolesDialog.value.group
 const canAssignRoles = computed(() => hasGroupPermission(groupRolesDialog.value.groupRef, "group-roles-assign"));
 const canManageDefaultRole = computed(() => hasGroupPermission(groupRolesDialog.value.groupRef, "group-default-role-manage"));
 const myHighestRoleOrder = computed(() => {
-  const roleIds = groupRolesDialog.value.groupRef?.myMember?.roleIds ?? [];
-  const orders = groupRolesDialog.value.roles.filter((role) => roleIds.includes(role.id)).map((role) => role.order);
+  const roleIds = groupRolesDialog.value.groupRef.myMember?.roleIds ?? [];
+  const orders = dialogRoles.value.filter((role) => roleIds.includes(role.id)).flatMap((role) => (typeof role.order === "number" ? [role.order] : []));
   return Math.min(...orders);
 });
-const selectedRole = computed(() => groupRolesDialog.value.roles.find((role) => role.id === form.value.roleId));
+const selectedRole = computed(() => dialogRoles.value.find((role) => role.id === form.value.roleId));
 const isReadOnly = computed(
   () =>
     (form.value.isDefaultRole ? !canManageDefaultRole.value : !canManage.value) ||
-    (form.value.mode === "edit" && selectedRole.value && !canModifyRole(selectedRole.value)) ||
+    (form.value.mode === "edit" && selectedRole.value !== undefined && !canModifyRole(selectedRole.value)) ||
     groupRolesDialog.value.loading
 );
 const isDetailsReadOnly = computed(() => isReadOnly.value || form.value.isDefaultRole);
@@ -291,11 +324,11 @@ const isFlagsReadOnly = computed(() => isDetailsReadOnly.value || form.value.isO
 const isPermissionsReadOnly = computed(() => isReadOnly.value || form.value.isOwnerRole);
 const canSave = computed(() => !isReadOnly.value && form.value.name.trim().length > 0);
 
-const assignablePermissions = computed(() => groupRolesDialog.value.permissions.filter((permission) => permission.name !== "*"));
+const assignablePermissions = computed(() => groupRolesDialog.value.permissions.filter(hasPermissionName).filter((permission) => permission.name !== "*"));
 const standardPermissions = computed(() => assignablePermissions.value.filter((permission) => permission.isManagementPermission !== true));
 const managementPermissions = computed(() => assignablePermissions.value.filter((permission) => permission.isManagementPermission === true));
 
-function createBlankForm() {
+function createBlankForm(): RoleForm {
   return {
     mode: "",
     roleId: "",
@@ -312,7 +345,7 @@ function createBlankForm() {
   };
 }
 
-function resetForm(role) {
+function resetForm(role?: RoleWithId) {
   if (!role) {
     form.value = createBlankForm();
     return;
@@ -320,8 +353,8 @@ function resetForm(role) {
   form.value = {
     mode: "edit",
     roleId: role.id,
-    name: role.name,
-    description: role.description,
+    name: role.name ?? "",
+    description: role.description ?? "",
     isSelfAssignable: role.isSelfAssignable === true,
     isAddedOnJoin: role.isAddedOnJoin === true,
     requiresTwoFactor: role.requiresTwoFactor === true,
@@ -333,7 +366,7 @@ function resetForm(role) {
   };
 }
 
-function selectRole(role) {
+function selectRole(role: RoleWithId) {
   groupRolesDialog.value.selectedRoleId = role.id;
   resetForm(role);
 }
@@ -349,12 +382,12 @@ function cancelEdit() {
   resetForm();
 }
 
-function hasPermission(name) {
+function hasPermission(name: string) {
   return form.value.permissions.includes("*") || form.value.permissions.includes(name);
 }
 
-function togglePermission(name, checked) {
-  if (checked) {
+function togglePermission(name: string, isChecked: boolean) {
+  if (isChecked) {
     if (!form.value.permissions.includes(name)) {
       form.value.permissions.push(name);
     }
@@ -369,28 +402,28 @@ async function saveRole() {
   }
   const D = groupRolesDialog.value;
 
-  const params = { groupId: D.id };
+  const details: Omit<RoleEditParams, "groupId" | "roleId"> = {};
   if (!isDetailsReadOnly.value) {
-    params.name = form.value.name.trim();
-    params.description = form.value.description;
-    params.requiresTwoFactor = form.value.requiresTwoFactor;
+    details.name = form.value.name.trim();
+    details.description = form.value.description;
+    details.requiresTwoFactor = form.value.requiresTwoFactor;
   }
   if (!isFlagsReadOnly.value) {
-    params.isSelfAssignable = form.value.isSelfAssignable;
-    params.isAddedOnJoin = form.value.isAddedOnJoin;
-    params.requiresPurchase = form.value.requiresPurchase;
+    details.isSelfAssignable = form.value.isSelfAssignable;
+    details.isAddedOnJoin = form.value.isAddedOnJoin;
+    details.requiresPurchase = form.value.requiresPurchase;
   }
   if (!isPermissionsReadOnly.value) {
-    params.permissions = [...form.value.permissions];
+    details.permissions = [...form.value.permissions];
   }
   D.loading = true;
   try {
     let roleId = form.value.roleId;
     if (form.value.mode === "create") {
-      const args = await groupRequest.createGroupRole(params);
-      roleId = args.json.id;
+      const args = await groupRequest.createGroupRole({ ...details, groupId: D.id, name: form.value.name.trim() });
+      roleId = args.json.id ?? "";
     } else {
-      await groupRequest.editGroupRole({ ...params, roleId });
+      await groupRequest.editGroupRole({ ...details, groupId: D.id, roleId });
     }
     D.selectedRoleId = roleId;
     form.value.mode = roleId ? "edit" : "";
@@ -405,7 +438,7 @@ async function saveRole() {
   }
 }
 
-async function deleteRole(role) {
+async function deleteRole(role: RoleWithId) {
   const { ok } = await modalStore.confirm({
     title: t("confirm.title"),
     description: t("dialog.group_roles.delete_confirm", { name: role.name }),
@@ -432,51 +465,51 @@ async function deleteRole(role) {
   }
 }
 
-function isFixedRole(role) {
+function isFixedRole(role: RoleRecord) {
   return role.defaultRole === true || isOwnerRole(role);
 }
 
-function isOwnerRole(role) {
+function isOwnerRole(role: RoleRecord) {
   return Array.isArray(role.permissions) && role.permissions.includes("*");
 }
 
-function canModifyRole(role) {
+function canModifyRole(role: RoleWithId) {
   if (role.defaultRole === true) {
     return true;
   }
   if (isOwnerRole(role)) {
     return isMyRole(role);
   }
-  return role.order > myHighestRoleOrder.value;
+  return typeof role.order === "number" && role.order > myHighestRoleOrder.value;
 }
 
-function isLockedRole(role) {
+function isLockedRole(role: RoleWithId) {
   return isFixedRole(role) || !canModifyRole(role);
 }
 
-function isMyRole(role) {
-  const roleIds = groupRolesDialog.value.groupRef?.myMember?.roleIds;
+function isMyRole(role: RoleWithId) {
+  const roleIds = groupRolesDialog.value.groupRef.myMember?.roleIds;
   return Array.isArray(roleIds) && roleIds.includes(role.id);
 }
 
-function canToggleSelfRole(role) {
+function canToggleSelfRole(role: RoleWithId) {
   if (role.defaultRole === true || isOwnerRole(role)) {
     return false;
   }
-  if (groupRolesDialog.value.groupRef?.myMember?.membershipStatus !== "member") {
+  if (groupRolesDialog.value.groupRef.myMember?.membershipStatus !== "member") {
     return false;
   }
-  return role.isSelfAssignable === true || (canAssignRoles.value && role.order > myHighestRoleOrder.value);
+  return role.isSelfAssignable === true || (canAssignRoles.value && typeof role.order === "number" && role.order > myHighestRoleOrder.value);
 }
 
-async function toggleSelfRole(role) {
+async function toggleSelfRole(role: RoleWithId) {
   const D = groupRolesDialog.value;
   const isRemoving = isMyRole(role);
   const params = { groupId: D.id, userId: currentUser.value.id, roleId: role.id };
   D.loading = true;
   try {
     const args = isRemoving ? await groupRequest.removeGroupMemberRole(params) : await groupRequest.addGroupMemberRole(params);
-    if (D.id === params.groupId && D.groupRef?.myMember) {
+    if (D.id === params.groupId && D.groupRef.myMember) {
       D.groupRef.myMember.roleIds = args.json;
     }
     toast.success(isRemoving ? t("dialog.group_roles.self_role_removed") : t("dialog.group_roles.self_role_added"));
@@ -488,7 +521,7 @@ async function toggleSelfRole(role) {
   }
 }
 
-async function onDragEnd(event) {
+async function onDragEnd(event: DragEndEvent) {
   if (event.canceled) {
     return;
   }
@@ -506,11 +539,14 @@ async function onDragEnd(event) {
   }
   const D = groupRolesDialog.value;
   const roles = roleSections.value.flatMap((section) => section.roles);
-  const sectionRoles = [...roleSections.value.find((section) => section.group === group).roles];
-  const [moved] = sectionRoles.splice(initialIndex, 1);
+  const sectionRoles = [...(roleSections.value.find((section) => section.group === group)?.roles ?? [])];
+  const moved = sectionRoles.splice(initialIndex, 1)[0];
+  if (!moved) {
+    return;
+  }
   sectionRoles.splice(index, 0, moved);
   const reordered = roleSections.value.flatMap((section) => (section.group === group ? sectionRoles : section.roles));
-  if (reordered.some((role, i) => isLockedRole(role) && role.id !== roles[i].id)) {
+  if (reordered.some((role, i) => isLockedRole(role) && role.id !== roles[i]?.id)) {
     listKey.value++;
     return;
   }
@@ -518,9 +554,10 @@ async function onDragEnd(event) {
   D.roles = reordered;
   D.loading = true;
   try {
-    for (let i = 0; i < reordered.length; i++) {
-      if (reordered[i].id !== roles[i].id) {
-        await groupRequest.editGroupRole({ groupId: D.id, roleId: reordered[i].id, order: orders[i] });
+    for (const [i, role] of reordered.entries()) {
+      if (role.id !== roles[i]?.id) {
+        const order = orders[i];
+        await groupRequest.editGroupRole({ groupId: D.id, roleId: role.id, ...(order === undefined ? {} : { order }) });
       }
     }
   } catch (error) {
@@ -539,7 +576,7 @@ watch(
     if (form.value.mode === "create" || !selectedId) {
       return;
     }
-    const role = roles.find((r) => r.id === selectedId);
+    const role = roles.filter(hasRoleId).find((r) => r.id === selectedId);
     if (role) {
       resetForm(role);
     } else {

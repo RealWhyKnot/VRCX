@@ -3,9 +3,9 @@ import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  selfInvite: vi.fn(async () => ({})),
-  writeText: vi.fn(),
-  getBool: vi.fn(async () => false),
+  selfInvite: vi.fn<(...args: unknown[]) => Promise<unknown>>(() => Promise.resolve({})),
+  writeText: vi.fn<(text: string) => Promise<void>>(() => Promise.resolve()),
+  getBool: vi.fn<(...args: unknown[]) => Promise<boolean>>(() => Promise.resolve(false)),
   launchDialogData: {
     value: {
       visible: true,
@@ -19,8 +19,8 @@ const mocks = vi.hoisted(() => ({
 vi.stubGlobal("navigator", { clipboard: { writeText: mocks.writeText } });
 afterAll(() => vi.unstubAllGlobals());
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({ ...(await importOriginal()), storeToRefs: (s: unknown) => s }));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("vue-sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({ friends: ref(new Map()) }),
@@ -61,7 +61,7 @@ vi.mock("../../../src/composables/use-invite-checks", () => ({
 }));
 vi.mock("../../../src/api/instance", () => ({
   instanceRequest: {
-    selfInvite: (...a) => mocks.selfInvite(...a),
+    selfInvite: (...args: unknown[]) => mocks.selfInvite(...args),
     getInstanceShortName: vi.fn(),
   },
 }));
@@ -69,7 +69,7 @@ vi.mock("../../../src/api/query-request", () => ({
   queryRequest: { fetch: vi.fn() },
 }));
 vi.mock("../../../src/services/config", () => ({
-  configRepository: { getBool: (...a) => mocks.getBool(...a), setBool: vi.fn() },
+  configRepository: { getBool: (...args: unknown[]) => mocks.getBool(...args), setBool: vi.fn() },
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
   default: { template: "<div><slot /></div>" },

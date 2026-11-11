@@ -30,9 +30,9 @@
             <img
               v-else
               class="w-full h-full object-cover cursor-pointer"
-              :src="groupDialog.ref.iconUrl"
+              :src="groupDialog.ref.iconUrl ?? undefined"
               loading="lazy"
-              @click.stop="showFullscreenImageDialog(groupDialog.ref.iconUrl)"
+              @click.stop="showFullscreenImageDialog(groupDialog.ref.iconUrl ?? '')"
               @error="imageError = true"
             />
           </div>
@@ -41,7 +41,7 @@
         <div class="flex flex-col p-3 mt-10">
           <div class="flex w-full min-w-0 max-w-full items-start justify-between gap-2">
             <div class="flex min-w-0 flex-1 flex-col">
-              <span class="font-bold cursor-pointer block min-w-0" @click="copyToClipboard(groupDialog.ref.name)">
+              <span class="font-bold cursor-pointer block min-w-0" @click="copyToClipboard(groupDialog.ref.name ?? '')">
                 <span class="flex min-w-0 items-center gap-1">
                   <span v-if="groupDialog.ref.ownerId === currentUser.id" class="shrink-0">👑</span>
                   <span class="truncate" :title="groupDialog.ref.name || groupDialog.id">{{ groupDialog.ref.name || groupDialog.id }}</span>
@@ -504,7 +504,7 @@
         :items="groupDialogTabs"
         :unmount-on-hide="false"
         fill
-        @update:model-value="groupDialogTabClick"
+        @update:model-value="(value) => groupDialogTabClick(String(value))"
       >
         <template #Info>
           <GroupDialogInfoTab :show-group-post-edit-dialog="showGroupPostEditDialog" :confirm-delete-group-post="confirmDeleteGroupPost" />
@@ -525,7 +525,7 @@
           <DialogJsonTab
             class="rounded-xl bg-(--profile-card) p-2"
             :tree-data="treeData"
-            :tree-data-key="treeData?.group?.id"
+            :tree-data-key="treeData?.group?.id ?? null"
             :dialog-id="groupDialog.id"
             :dialog-ref="groupDialog.ref"
             @refresh="refreshGroupDialogTreeData()"
@@ -591,7 +591,7 @@ import { getFaviconUrl } from "../../../shared/utils/url-utils";
 import { hasGroupModerationPermission, hasGroupPermission } from "../../../shared/utils/group";
 import { languageClass } from "../../../shared/utils/user";
 import { removeFromArray } from "../../../shared/utils/base/array";
-import { timeAgo, timeToText } from "../../../shared/utils/base/format";
+import { timeAgo } from "../../../shared/utils/base/format";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 import { useInstanceStore } from "../../../stores/instance";
@@ -626,6 +626,9 @@ import GroupDialogPhotosTab from "./GroupDialogPhotosTab.vue";
 import GroupDialogPostsTab from "./GroupDialogPostsTab.vue";
 import GroupDialogStoreTab from "./GroupDialogStoreTab.vue";
 import GroupPostEditDialog from "./GroupPostEditDialog.vue";
+import type { GroupPostEditDialogState, GroupPostSelectedImage, GroupTransferDialogState } from "./group-dialog-types";
+import type { GroupDialogState, GroupPostEntry } from "../../../stores/group-types";
+import type { VrcxGroup } from "../../../types/vrcx";
 import GroupTransferDialog from "./GroupTransferDialog.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
@@ -649,8 +652,8 @@ const { groupEventRevision } = storeToRefs(useGroupStore());
 const { showFullscreenImageDialog } = useGalleryStore();
 const instanceStore = useInstanceStore();
 
-function showPreviousInstancesListDialog(groupRef) {
-  instanceStore.showPreviousInstancesListDialog("group", groupRef);
+function showPreviousInstancesListDialog(groupRef: Partial<VrcxGroup>) {
+  instanceStore.showPreviousInstancesListDialog("group", groupRef).catch(console.error);
 }
 
 const { groupDialogCommand } = useGroupDialogCommands(groupDialog, {
@@ -678,7 +681,7 @@ const { groupDialogCommand } = useGroupDialogCommands(groupDialog, {
   showGroupPostEditDialog,
   groupRequest,
 });
-const groupTransferDialog = reactive({
+const groupTransferDialog = reactive<GroupTransferDialogState>({
   visible: false,
   groupId: "",
   groupName: "",
@@ -687,7 +690,7 @@ const groupTransferDialog = reactive({
 
 const groupDialogTabCurrentName = ref("0");
 
-const treeData = ref({});
+const treeData = ref<{ group?: { id?: string }; [key: string]: unknown }>({});
 const imageError = ref(false);
 const bannerError = ref(false);
 
@@ -698,15 +701,15 @@ watch(
     bannerError.value = false;
   }
 );
-const membersTabRef = ref(null);
-const photosTabRef = ref(null);
-const storeTabRef = ref(null);
+const membersTabRef = ref<InstanceType<typeof GroupDialogMembersTab> | null>(null);
+const photosTabRef = ref<InstanceType<typeof GroupDialogPhotosTab> | null>(null);
+const storeTabRef = ref<InstanceType<typeof GroupDialogStoreTab> | null>(null);
 
-const selectedGalleryFile = ref({
+const selectedGalleryFile = ref<GroupPostSelectedImage>({
   selectedFileId: "",
   selectedImageUrl: "",
 });
-const groupPostEditDialog = reactive({
+const groupPostEditDialog = reactive<GroupPostEditDialogState>({
   visible: false,
   groupRef: {},
   title: "",
@@ -720,8 +723,8 @@ const groupPostEditDialog = reactive({
 
 watch(
   () => groupDialog.value.isGetGroupDialogGroupLoading,
-  (val) => {
-    if (val) {
+  (isLoading) => {
+    if (isLoading) {
       loadLastActiveTab();
     }
   }
@@ -733,15 +736,15 @@ watch(groupEventRevision, () => {
   }
 });
 
-function setGroupRepresentation(groupId) {
+function setGroupRepresentation(groupId: string) {
   handleGroupRepresentationChange(groupId, true);
 }
 
-function clearGroupRepresentation(groupId) {
+function clearGroupRepresentation(groupId: string) {
   handleGroupRepresentationChange(groupId, false);
 }
 
-function handleGroupRepresentationChange(groupId, isSet) {
+function handleGroupRepresentationChange(groupId: string, isSet: boolean) {
   groupRequest
     .setGroupRepresentation(groupId, {
       isRepresenting: isSet,
@@ -753,23 +756,25 @@ function handleGroupRepresentationChange(groupId, isSet) {
           ref: { ...groupDialog.value.ref, isRepresenting: args.params.isRepresenting },
         });
       }
-      refetchActiveEntityQuery(queryKeys.representedGroup(currentUser.value.id));
-    });
+      refetchActiveEntityQuery(queryKeys.representedGroup(currentUser.value.id)).catch(console.error);
+    })
+    .catch(console.error);
 }
 
-function cancelGroupRequest(id) {
+function cancelGroupRequest(id: string) {
   groupRequest
     .cancelGroupRequest({
       groupId: id,
     })
     .then(() => {
       if (groupDialog.value.visible && groupDialog.value.id === id) {
-        getGroupDialogGroup(id);
+        getGroupDialogGroup(id).catch(console.error);
       }
-    });
+    })
+    .catch(console.error);
 }
 
-function confirmDeleteGroupPost(post) {
+function confirmDeleteGroupPost(post: GroupPostEntry) {
   modalStore
     .confirm({
       description: t("confirm.delete_post"),
@@ -777,7 +782,7 @@ function confirmDeleteGroupPost(post) {
       destructive: true,
     })
     .then(({ ok }) => {
-      if (!ok) return;
+      if (!ok || !post.groupId || !post.id) return;
       groupRequest
         .deleteGroupPost({
           groupId: post.groupId,
@@ -797,19 +802,17 @@ function confirmDeleteGroupPost(post) {
             }
           }
           if (postId === D.announcement.id) {
-            if (D.posts.length > 0) {
-              D.announcement = D.posts[0];
-            } else {
-              D.announcement = {};
-            }
+            const [firstPost] = D.posts;
+            D.announcement = firstPost ?? {};
           }
           updateGroupPostSearch();
-        });
+        })
+        .catch(console.error);
     })
-    .catch(() => {});
+    .catch(console.error);
 }
 
-function joinGroup(id) {
+function joinGroup(id: string) {
   if (!id) {
     return null;
   }
@@ -823,7 +826,7 @@ function joinGroup(id) {
           ...groupDialog.value,
           inGroup: args.json.membershipStatus === "member",
         });
-        getGroupDialogGroup(id);
+        getGroupDialogGroup(id).catch(console.error);
       }
       if (args.json.membershipStatus === "member") {
         toast.success(t("message.group.joined"));
@@ -834,7 +837,7 @@ function joinGroup(id) {
     });
 }
 
-function handleGroupDialogTab(tabName) {
+function handleGroupDialogTab(tabName: string) {
   groupDialog.value.lastActiveTab = tabName;
   if (tabName === "Members") {
     membersTabRef.value?.getGroupDialogGroupMembers();
@@ -856,7 +859,7 @@ function loadLastActiveTab() {
   handleGroupDialogTab(groupDialog.value.lastActiveTab);
 }
 
-function groupDialogTabClick(tabName) {
+function groupDialogTabClick(tabName: string) {
   if (tabName === groupDialogTabCurrentName.value) {
     if (tabName === "JSON") {
       refreshGroupDialogTreeData();
@@ -867,7 +870,7 @@ function groupDialogTabClick(tabName) {
   groupDialogTabCurrentName.value = tabName;
 }
 
-function showGroupPostEditDialog(groupId, post) {
+function showGroupPostEditDialog(groupId: string, post: GroupPostEntry | null) {
   const D = groupPostEditDialog;
   D.sendNotification = true;
   D.groupRef = {};
@@ -883,26 +886,29 @@ function showGroupPostEditDialog(groupId, post) {
   };
 
   if (post) {
-    D.title = post.title;
-    D.text = post.text;
-    D.visibility = post.visibility;
-    D.roleIds = post.roleIds;
-    D.postId = post.id;
+    D.title = post.title ?? "";
+    D.text = post.text ?? "";
+    D.visibility = post.visibility ?? "group";
+    D.roleIds = post.roleIds ?? [];
+    D.postId = post.id ?? "";
     selectedGalleryFile.value = {
-      selectedFileId: post.imageId,
-      selectedImageUrl: post.imageUrl,
+      selectedFileId: post.imageId ?? "",
+      selectedImageUrl: post.imageUrl ?? "",
     };
   }
-  queryRequest.fetch("group.dialog", { groupId }).then((args) => {
-    D.groupRef = args.ref;
-  });
+  queryRequest
+    .fetch("group.dialog", { groupId })
+    .then((args) => {
+      D.groupRef = args.ref;
+    })
+    .catch(console.error);
   D.visible = true;
 }
 
-function showGroupTransferDialog(groupId, groupName, ownerId) {
+function showGroupTransferDialog(groupId: string, groupName: string | undefined, ownerId: string | undefined) {
   groupTransferDialog.groupId = groupId;
-  groupTransferDialog.groupName = groupName;
-  groupTransferDialog.ownerId = ownerId;
+  groupTransferDialog.groupName = groupName ?? "";
+  groupTransferDialog.ownerId = ownerId ?? "";
   groupTransferDialog.visible = true;
 }
 
@@ -918,7 +924,7 @@ function refreshGroupDialogTreeData() {
   };
 }
 
-function updateGroupDialogData(obj) {
+function updateGroupDialogData(obj: Partial<GroupDialogState>) {
   groupDialog.value = {
     ...groupDialog.value,
     ...obj,

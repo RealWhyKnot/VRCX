@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { getAvailablePlatforms } from "../../../src/shared/utils/platform-utils";
 
+type PackageList = Parameters<typeof getAvailablePlatforms>[0];
+
+function asPackageList(value: unknown): PackageList {
+  return Array.isArray(value) ? value : undefined;
+}
+
 describe("getAvailablePlatforms", () => {
   it("detects PC platform", () => {
     const packages = [{ platform: "standalonewindows" }];
@@ -69,7 +75,7 @@ describe("getAvailablePlatforms", () => {
   });
 
   it("returns all false for non-object input", () => {
-    expect(getAvailablePlatforms("string")).toEqual({
+    expect(getAvailablePlatforms(asPackageList("string"))).toEqual({
       isPC: false,
       isQuest: false,
       isIos: false,

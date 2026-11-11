@@ -1,28 +1,28 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
+import { useCommand } from "@/components/ui/command";
+
 const mocks = vi.hoisted(() => ({
-  setQuery: vi.fn(),
+  setQuery: vi.fn((_query: string) => undefined),
   filterStateRaw: {
     search: "",
     filtered: {
-      items: new Map(),
+      items: new Map<string, number>(),
       count: 0,
-      groups: new Set(),
+      groups: new Set<string>(),
     },
   },
-  filterState: null,
-  allItemsEntries: [
+  allItemsEntries: new Map<string, object>([
     ["a", {}],
     ["b", {}],
-  ],
-  allGroupsEntries: [["g1", {}]],
+  ]),
+  allGroupsEntries: new Map<string, object>([["g1", {}]]),
 }));
 
 vi.mock("@/components/ui/command", async () => {
   const { reactive, ref } = await import("vue");
   const filterState = reactive(mocks.filterStateRaw);
-  mocks.filterState = filterState;
   const allItems = ref(new Map(mocks.allItemsEntries));
   const allGroups = ref(new Map(mocks.allGroupsEntries));
   return {
@@ -36,37 +36,39 @@ vi.mock("@/components/ui/command", async () => {
 
 vi.mock("../../src/stores/quick-search", () => ({
   useQuickSearchStore: () => ({
-    setQuery: (...args) => mocks.setQuery(...args),
+    setQuery: mocks.setQuery,
   }),
 }));
 
 import QuickSearchSync from "../../src/components/QuickSearchSync.vue";
 
+const { filterState } = useCommand();
+
 describe("QuickSearchSync.vue", () => {
   it("syncs query and keeps hint groups/items visible when query length < 2", async () => {
     mount(QuickSearchSync);
 
-    mocks.filterState.search = "a";
+    filterState.search = "a";
     await Promise.resolve();
     await Promise.resolve();
 
     expect(mocks.setQuery).toHaveBeenCalledWith("a");
-    expect(mocks.filterState.filtered.count).toBe(2);
-    expect(mocks.filterState.filtered.items.get("a")).toBe(1);
-    expect(mocks.filterState.filtered.groups.has("g1")).toBe(true);
+    expect(filterState.filtered.count).toBe(2);
+    expect(filterState.filtered.items.get("a")).toBe(1);
+    expect(filterState.filtered.groups.has("g1")).toBe(true);
   });
 
   it("overrides Command filter for longer queries so Worker results are not hidden", async () => {
     mount(QuickSearchSync);
 
-    mocks.filterState.search = "rene";
+    filterState.search = "rene";
     await Promise.resolve();
     await Promise.resolve();
 
     expect(mocks.setQuery).toHaveBeenCalledWith("rene");
-    expect(mocks.filterState.filtered.count).toBe(2);
-    expect(mocks.filterState.filtered.items.get("a")).toBe(1);
-    expect(mocks.filterState.filtered.items.get("b")).toBe(1);
-    expect(mocks.filterState.filtered.groups.has("g1")).toBe(true);
+    expect(filterState.filtered.count).toBe(2);
+    expect(filterState.filtered.items.get("a")).toBe(1);
+    expect(filterState.filtered.items.get("b")).toBe(1);
+    expect(filterState.filtered.groups.has("g1")).toBe(true);
   });
 });

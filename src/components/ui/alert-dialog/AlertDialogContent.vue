@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, useForwardPropsEmits } from "reka-ui";
+import type { AlertDialogContentEmits } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
 import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
 import { cn } from "@/lib/utils";
@@ -11,16 +14,22 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  disableOutsidePointerEvents: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "openAutoFocus", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    disableOutsidePointerEvents?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<AlertDialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
@@ -46,7 +55,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <AlertDialogPortal :to="portalTo">
+  <AlertDialogPortal v-bind="portalTo ? { to: portalTo } : {}">
     <AlertDialogOverlay
       data-slot="alert-dialog-overlay"
       class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-11000 bg-black/80"

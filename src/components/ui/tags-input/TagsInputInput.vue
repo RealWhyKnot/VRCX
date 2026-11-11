@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import { TagsInputInput, useForwardProps } from "reka-ui";
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import { TagsInputInput } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  placeholder: { type: String, required: false },
-  autoFocus: { type: Boolean, required: false },
-  maxLength: { type: Number, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    placeholder?: string | undefined;
+    autoFocus?: boolean;
+    maxLength?: number | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    placeholder: undefined,
+    maxLength: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  ...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
+  autoFocus: props.autoFocus,
+  ...(props.maxLength === undefined ? {} : { maxLength: props.maxLength }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
-  <TagsInputInput v-bind="forwardedProps" :class="cn('text-sm min-h-5 focus:outline-none flex-1 bg-transparent px-1', props.class)" />
+  <TagsInputInput v-bind="delegatedProps" :class="cn('text-sm min-h-5 focus:outline-none flex-1 bg-transparent px-1', props.class)" />
 </template>

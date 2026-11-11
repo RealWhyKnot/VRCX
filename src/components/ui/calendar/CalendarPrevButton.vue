@@ -1,21 +1,27 @@
 <script setup lang="ts">
+import type { CalendarPrevProps, PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { CalendarPrev, useForwardProps } from "reka-ui";
 import { ChevronLeft } from "lucide-vue-next";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  prevPage: {
-    type: Function,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    prevPage?: CalendarPrevProps["prevPage"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    prevPage: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwardedProps = useForwardProps(delegatedProps);
 </script>

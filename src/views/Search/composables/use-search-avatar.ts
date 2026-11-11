@@ -5,27 +5,27 @@ import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
 import { useSearchStore } from "../../../stores/search";
 import { lookupAvatars } from "../../../coordinators/avatar-coordinator";
 
+type SearchAvatarItem = Awaited<ReturnType<typeof lookupAvatars>> extends Map<string, infer T> ? T : never;
+
 export function useSearchAvatar() {
   const { avatarRemoteDatabase } = storeToRefs(useAdvancedSettingsStore());
   const { searchText } = storeToRefs(useSearchStore());
 
   const searchAvatarPageNum = ref(0);
-  const searchAvatarResults = ref([]);
-  const searchAvatarPage = ref([]);
+  const searchAvatarResults = ref<SearchAvatarItem[]>([]);
+  const searchAvatarPage = ref<SearchAvatarItem[]>([]);
   const isSearchAvatarLoading = ref(false);
 
   async function searchAvatar() {
     isSearchAvatarLoading.value = true;
-    const avatars = new Map();
+    const avatars = new Map<string, SearchAvatarItem>();
     const query = searchText.value;
 
     if (query && query.length >= 3 && avatarRemoteDatabase.value) {
       const data = await lookupAvatars("search", query);
-      if (data && typeof data === "object") {
-        data.forEach((avatar) => {
-          avatars.set(avatar.id, avatar);
-        });
-      }
+      data.forEach((avatar) => {
+        avatars.set(avatar.id, avatar);
+      });
     }
 
     isSearchAvatarLoading.value = false;
@@ -35,16 +35,9 @@ export function useSearchAvatar() {
     searchAvatarPage.value = avatarsArray.slice(0, 10);
   }
 
-  function moreSearchAvatar(n) {
-    let offset;
-    if (n === -1) {
-      searchAvatarPageNum.value--;
-      offset = searchAvatarPageNum.value * 10;
-    }
-    if (n === 1) {
-      searchAvatarPageNum.value++;
-      offset = searchAvatarPageNum.value * 10;
-    }
+  function moreSearchAvatar(n: -1 | 1) {
+    searchAvatarPageNum.value += n;
+    const offset = searchAvatarPageNum.value * 10;
     searchAvatarPage.value = searchAvatarResults.value.slice(offset, offset + 10);
   }
 

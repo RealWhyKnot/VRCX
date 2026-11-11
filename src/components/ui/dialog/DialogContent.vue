@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { DialogClose, DialogContent, DialogDescription, DialogPortal, useForwardPropsEmits, VisuallyHidden } from "reka-ui";
+import type { DialogContentEmits } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { acquireModalPortalLayer } from "@/lib/modal-portal-layers";
@@ -14,17 +17,24 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  disableOutsidePointerEvents: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  showCloseButton: { type: Boolean, required: false, default: true },
-});
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside", "focusOutside", "interactOutside", "openAutoFocus", "closeAutoFocus"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    disableOutsidePointerEvents?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    showCloseButton?: boolean;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+    showCloseButton: true,
+  }
+);
+const emits = defineEmits<DialogContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
@@ -50,7 +60,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <DialogPortal :to="portalTo">
+  <DialogPortal v-bind="portalTo ? { to: portalTo } : {}">
     <DialogOverlay />
     <DialogContent
       data-slot="dialog-content"

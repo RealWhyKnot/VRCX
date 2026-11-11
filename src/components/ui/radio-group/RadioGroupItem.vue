@@ -1,29 +1,37 @@
 <script setup lang="ts">
-import { RadioGroupIndicator, RadioGroupItem, useForwardProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { RadioGroupItemProps } from "reka-ui";
+import { RadioGroupIndicator, RadioGroupItem } from "reka-ui";
 import { CircleIcon } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  id: { type: String, required: false },
-  value: { type: null, required: false },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
+const props = defineProps<{
+  id?: string;
+  value?: RadioGroupItemProps["value"];
+  disabled?: boolean;
+  asChild?: boolean;
+  as?: RadioGroupItemProps["as"];
+  name?: string;
+  required?: boolean;
+  class?: ClassValue;
+}>();
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  ...(props.id === undefined ? {} : { id: props.id }),
+  ...(props.value === undefined ? {} : { value: props.value }),
+  disabled: props.disabled,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+}));
 </script>
 
 <template>
   <RadioGroupItem
     data-slot="radio-group-item"
-    v-bind="forwardedProps"
+    v-bind="delegatedProps"
     :class="
       cn(
         'border-input text-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 aspect-square size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer',

@@ -2,20 +2,22 @@ import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 
-const mocks = vi.hoisted(() => ({
-  lookup: vi.fn(),
-  makeRef: (value) => ({ value, __v_isRef: true }),
-  setSessionsViewMode: vi.fn(),
-  table: { value: { vip: false, filter: [], search: "" } },
-  sessionsViewMode: { value: "table", __v_isRef: true },
-}));
+const mocks = vi.hoisted(() => {
+  const table: { value: { vip: boolean; filter: string[]; search: string } } = { value: { vip: false, filter: [], search: "" } };
+  return {
+    lookup: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+    setSessionsViewMode: vi.fn<(...args: unknown[]) => unknown>(),
+    table,
+    sessionsViewMode: { value: "table", __v_isRef: true },
+  };
+});
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({ ...(await importOriginal<typeof import("pinia")>()), storeToRefs: <T>(store: T) => store }));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("../../../src/stores/gameLog", () => ({
   useGameLogStore: () => ({
-    gameLogTableLookup: (...a) => mocks.lookup(...a),
-    setSessionsViewMode: (...a) => mocks.setSessionsViewMode(...a),
+    gameLogTableLookup: (...args: unknown[]) => mocks.lookup(...args),
+    setSessionsViewMode: (...args: unknown[]) => mocks.setSessionsViewMode(...args),
     gameLogTable: mocks.table,
     gameLogTableData: ref([]),
     sessionsViewMode: mocks.sessionsViewMode,

@@ -15,7 +15,7 @@
         <DataTableEmpty v-if="!groups.length && !isLoading" type="nodata" />
         <div v-for="group in groups" :key="group.id" class="flex items-center gap-3 border-b py-2 last:border-b-0">
           <Avatar class="size-9 flex-none">
-            <AvatarImage :src="group.iconUrl" class="object-cover" />
+            <AvatarImage v-if="group.iconUrl" :src="group.iconUrl" class="object-cover" />
             <AvatarFallback>
               <Users class="size-4 text-muted-foreground" />
             </AvatarFallback>
@@ -24,7 +24,7 @@
             <button
               type="button"
               class="block max-w-full truncate font-medium hover:underline cursor-pointer"
-              @click="showGroupDialog(group.groupId)"
+              @click="showGroupDialog(group.id)"
               v-text="group.name"
             ></button>
             <div class="truncate text-xs text-muted-foreground">{{ group.shortCode }}.{{ group.discriminator }} · {{ group.memberCount }}</div>
@@ -55,30 +55,36 @@ import { useI18n } from "vue-i18n";
 
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
+import { logError } from "../../../stores/vrcx-messages";
 import { groupRequest } from "../../../api/group";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
+import { hasGroupId, type GroupRow } from "./group-rows";
 
-const props = defineProps({
-  isBlockedGroupsDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isBlockedGroupsDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isBlockedGroupsDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const modalStore = useModalStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const groups = ref([]);
+const groups = ref<GroupRow[]>([]);
 const isLoading = ref(false);
 
 watch(
   () => props.isBlockedGroupsDialogVisible,
-  (visible) => {
-    if (visible) {
-      loadGroups();
+  (isVisible) => {
+    if (isVisible) {
+      void loadGroups().catch(logError);
     }
   }
 );
@@ -92,13 +98,13 @@ async function loadGroups() {
   isLoading.value = true;
   try {
     const { json } = await groupRequest.getMyGroupsByStatus({ membershipStatus: "userblocked" });
-    groups.value = json ?? [];
+    groups.value = json.filter(hasGroupId);
   } finally {
     isLoading.value = false;
   }
 }
 
-async function unblockGroup(group) {
+async function unblockGroup(group: GroupRow) {
   const { ok } = await modalStore.confirm({
     title: t("confirm.title"),
     description: t("confirm.unblock_group"),
@@ -106,7 +112,7 @@ async function unblockGroup(group) {
   if (!ok) {
     return;
   }
-  await groupRequest.unblockGroup({ groupId: group.groupId, userId: currentUser.value.id });
+  await groupRequest.unblockGroup({ groupId: group.id, userId: currentUser.value.id });
   groups.value = groups.value.filter((g) => g.id !== group.id);
 }
 </script>

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { useFormField } from "./use-form-field";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 
 const { formDescriptionId } = useFormField();
 </script>

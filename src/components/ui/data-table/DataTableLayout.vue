@@ -1,6 +1,6 @@
 <template>
   <div :class="['flex flex-col min-w-0 data-table', autoHeight && 'flex-1 min-h-0 overflow-hidden']">
-    <div v-if="$slots.toolbar" class="mb-2">
+    <div v-if="$slots['toolbar']" class="mb-2">
       <slot name="toolbar"></slot>
     </div>
 
@@ -70,11 +70,7 @@
               </ContextMenuCheckboxItem>
               <template v-if="tcColumnOrderLocked != null">
                 <ContextMenuSeparator />
-                <ContextMenuCheckboxItem
-                  :model-value="tcColumnOrderLocked"
-                  @select.prevent
-                  @update:model-value="table.options.meta.columnOrderLocked.value = $event"
-                >
+                <ContextMenuCheckboxItem :model-value="tcColumnOrderLocked" @select.prevent @update:model-value="setColumnOrderLocked">
                   {{ t("table.header_menu.lock_column_order") }}
                 </ContextMenuCheckboxItem>
               </template>
@@ -136,11 +132,7 @@
             </ContextMenuTrigger>
             <ContextMenuContent class="w-48">
               <template v-if="tcColumnOrderLocked != null">
-                <ContextMenuCheckboxItem
-                  :model-value="tcColumnOrderLocked"
-                  @select.prevent
-                  @update:model-value="table.options.meta.columnOrderLocked.value = $event"
-                >
+                <ContextMenuCheckboxItem :model-value="tcColumnOrderLocked" @select.prevent @update:model-value="setColumnOrderLocked">
                   {{ t("table.header_menu.lock_column_order") }}
                 </ContextMenuCheckboxItem>
               </template>
@@ -187,9 +179,9 @@
                     <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
                   </TableCell>
                 </TableRow>
-                <TableRow v-if="row.getIsExpanded() && (expandedRenderer || $slots.expanded)">
+                <TableRow v-if="row.getIsExpanded() && (expandedRenderer || $slots['expanded'])">
                   <TableCell :colspan="row.getVisibleCells().length">
-                    <template v-if="$slots.expanded">
+                    <template v-if="$slots['expanded']">
                       <slot name="expanded" :row="row"></slot>
                     </template>
                     <template v-else>
@@ -246,15 +238,16 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
-import { DragDropProvider } from "@dnd-kit/vue";
-import { FlexRender } from "@tanstack/vue-table";
+<script setup lang="ts" generic="TData extends RowData">
+import { computed, nextTick, ref, watch, type CSSProperties } from "vue";
+import { DragDropProvider, type DragEndEvent } from "@dnd-kit/vue";
+import { FlexRender, type RowData, type SortingState } from "@tanstack/vue-table";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { isSortable } from "@dnd-kit/vue/sortable";
 import { storeToRefs } from "pinia";
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { useI18n } from "vue-i18n";
+import type { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 import ContextMenu from "../context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "../context-menu/ContextMenuCheckboxItem.vue";
@@ -279,7 +272,7 @@ import SelectContent from "../select/SelectContent.vue";
 import SelectItem from "../select/SelectItem.vue";
 import SelectTrigger from "../select/SelectTrigger.vue";
 import SelectValue from "../select/SelectValue.vue";
-import { getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./data-table-helpers.ts";
+import { asRecord, getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./data-table-helpers.ts";
 
 import DataTableEmpty from "./DataTableEmpty.vue";
 import SortableTableHead from "./SortableTableHead.vue";
@@ -287,106 +280,88 @@ import SortableTableHead from "./SortableTableHead.vue";
 const appearanceSettingsStore = useAppearanceSettingsStore();
 const { isDataTableStriped } = storeToRefs(appearanceSettingsStore);
 
-const props = defineProps({
-  table: {
-    type: Object,
-    required: true,
-  },
-  tableClass: {
-    type: [String, Array],
-    default: null,
-  },
-  tableStyle: {
-    type: Object,
-    default: null,
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  totalItems: {
-    type: Number,
-    default: 0,
-  },
-  pageSizes: {
-    type: Array,
-    default: () => [],
-  },
-  showPagination: {
-    type: Boolean,
-    default: true,
-  },
-  onPageSizeChange: {
-    type: Function,
-    default: null,
-  },
-  onPageChange: {
-    type: Function,
-    default: null,
-  },
-  onSortChange: {
-    type: Function,
-    default: null,
-  },
-  onRowClick: {
-    type: Function,
-    default: null,
-  },
-  rowClass: {
-    type: Function,
-    default: null,
-  },
-  enableColumnReorder: {
-    type: Boolean,
-    default: true,
-  },
-  enableColumnVisibility: {
-    type: Boolean,
-    default: true,
-  },
-  autoHeight: {
-    type: Boolean,
-    default: false,
-  },
-});
+type DataTable = ReturnType<typeof useVrcxVueTable<TData>>["table"];
+type RowItem = ReturnType<DataTable["getRowModel"]>["rows"][number];
+type CellItem = ReturnType<RowItem["getVisibleCells"]>[number];
+type HeaderItem = ReturnType<DataTable["getHeaderGroups"]>[number]["headers"][number];
+type ColumnItem = ReturnType<DataTable["getAllLeafColumns"]>[number];
+type ClassInput = string | false | null | undefined;
+
+const props = withDefaults(
+  defineProps<{
+    table: DataTable;
+    tableClass?: string | string[] | null | undefined;
+    tableStyle?: CSSProperties | null | undefined;
+    loading?: boolean;
+    totalItems?: number;
+    pageSizes?: number[];
+    showPagination?: boolean;
+    onPageSizeChange?: ((size: number) => void) | null | undefined;
+    onPageChange?: ((page: number) => void) | null | undefined;
+    onSortChange?: ((sorting: SortingState) => void) | null | undefined;
+    onRowClick?: ((row: RowItem) => void) | null | undefined;
+    rowClass?: ((row: RowItem) => string | null | undefined) | null | undefined;
+    enableColumnReorder?: boolean;
+    enableColumnVisibility?: boolean;
+    autoHeight?: boolean;
+  }>(),
+  {
+    tableClass: null,
+    tableStyle: null,
+    loading: false,
+    totalItems: 0,
+    pageSizes: () => [],
+    showPagination: true,
+    onPageSizeChange: null,
+    onPageChange: null,
+    onSortChange: null,
+    onRowClick: null,
+    rowClass: null,
+    enableColumnReorder: true,
+    enableColumnVisibility: true,
+    autoHeight: false,
+  }
+);
 
 const { t } = useI18n();
-const tableScrollRef = ref(null);
+const tableScrollRef = ref<HTMLElement | null>(null);
 
-const tableMeta = computed(() => props.table?.options?.meta ?? {});
+const tableMeta = computed(() => props.table.options.meta);
 
-const tcResetAll = computed(() => tableMeta.value.resetAll ?? null);
-const tcColumnOrderLocked = computed(() => {
-  const val = tableMeta.value.columnOrderLocked;
-  if (val == null) return null;
-  return typeof val === "object" && "value" in val ? val.value : val;
-});
+const tcResetAll = computed(() => tableMeta.value?.resetAll ?? null);
+const tcColumnOrderLocked = computed(() => tableMeta.value?.columnOrderLocked?.value ?? null);
 
-const showHeaderContextMenu = computed(() => props.enableColumnVisibility || tcResetAll.value || tcColumnOrderLocked.value != null);
+const setColumnOrderLocked = (isLocked: boolean) => {
+  const columnOrderLocked = tableMeta.value?.columnOrderLocked;
+  if (columnOrderLocked) columnOrderLocked.value = isLocked;
+};
 
-const showHeaderContextMenuNoVisibility = computed(() => !props.enableColumnVisibility && (tcResetAll.value || tcColumnOrderLocked.value != null));
+const showHeaderContextMenu = computed(() => props.enableColumnVisibility || tcResetAll.value !== null || tcColumnOrderLocked.value != null);
+
+const showHeaderContextMenuNoVisibility = computed(() => !props.enableColumnVisibility && (tcResetAll.value !== null || tcColumnOrderLocked.value != null));
 
 const effectiveColumnReorder = computed(() => props.enableColumnReorder && tcColumnOrderLocked.value !== true);
 
-const dndContextKey = computed(() => (props.table?.getVisibleLeafColumns?.() ?? []).map((c) => c.id).join(","));
+const dndContextKey = computed(() =>
+  props.table
+    .getVisibleLeafColumns()
+    .map((c) => c.id)
+    .join(",")
+);
 
-const emptyType = computed(() => {
-  const totalRows = props.table?.getCoreRowModel?.().rows?.length ?? 0;
-  return totalRows === 0 ? "nodata" : "nomatch";
-});
+const emptyType = computed(() => (props.table.getCoreRowModel().rows.length === 0 ? "nodata" : "nomatch"));
 
 const expandedRenderer = computed(() => {
-  const columns = props.table.getAllColumns?.() ?? [];
-  for (const column of columns) {
-    const meta = column.columnDef?.meta;
-    if (meta?.expandedRow) {
-      return meta.expandedRow;
+  for (const column of props.table.getAllColumns()) {
+    const expandedRow = asRecord(column.columnDef.meta)["expandedRow"];
+    if (expandedRow) {
+      return expandedRow;
     }
   }
   return null;
 });
 
-const joinClasses = (...values) =>
+const joinClasses = (...values: (ClassInput | ClassInput[])[]) =>
   values
     .flatMap((value) => (Array.isArray(value) ? value : [value]))
     .filter(Boolean)
@@ -395,46 +370,44 @@ const joinClasses = (...values) =>
 const tableClassValue = computed(() => joinClasses("table-fixed w-full", props.tableClass));
 
 const tableElementStyle = computed(() => {
-  const size = props.table?.getTotalSize?.();
+  const size = props.table.getTotalSize();
   if (!Number.isFinite(size) || size <= 0) return undefined;
   return { minWidth: `${size}px` };
 });
 
-const resolveClassValue = (value, ctx) => {
-  if (typeof value === "function") {
+const isClassGetter = (value: unknown): value is (ctx: unknown) => ClassInput => typeof value === "function";
+
+const resolveClassValue = (value: unknown, ctx: unknown): ClassInput => {
+  if (isClassGetter(value)) {
     return value(ctx);
   }
-  return value;
+  return typeof value === "string" ? value : undefined;
 };
 
-const getPinnedState = (col) => {
+const getPinnedState = (col: ColumnItem) => {
   try {
-    return col?.getIsPinned?.() ?? false;
+    return col.getIsPinned();
   } catch {
     return false;
   }
 };
 
-const getPinnedStyle = (col) => {
+const getPinnedStyle = (col: ColumnItem) => {
   const pinned = getPinnedState(col);
   if (!pinned) return null;
 
   if (pinned === "start") {
-    const left = col?.getStart?.("start") ?? 0;
+    const left = col.getStart("start");
     return { left: `${left}px` };
   }
 
-  if (pinned === "end") {
-    const right = col?.getAfter?.("end") ?? 0;
-    return { right: `${right}px` };
-  }
-
-  return null;
+  const right = col.getAfter("end");
+  return { right: `${right}px` };
 };
 
-const isReorderable = (header) => isReorderableHelper(header, getPinnedState);
+const isReorderable = (header: HeaderItem | undefined) => isReorderableHelper(header, getPinnedState);
 
-const reorderableIndex = (headers, actualIndex) => {
+const reorderableIndex = (headers: HeaderItem[], actualIndex: number) => {
   let sortableIdx = 0;
   for (let i = 0; i < actualIndex; i++) {
     if (isReorderable(headers[i])) {
@@ -444,7 +417,7 @@ const reorderableIndex = (headers, actualIndex) => {
   return sortableIdx;
 };
 
-const onHeaderDragEnd = (event) => {
+const onHeaderDragEnd = (event: DragEndEvent) => {
   if (event.canceled) return;
   const { source } = event.operation;
   if (!isSortable(source)) return;
@@ -452,23 +425,25 @@ const onHeaderDragEnd = (event) => {
   const { initialIndex, index } = source;
   if (initialIndex === index) return;
 
-  const allColumns = props.table.getVisibleLeafColumns?.() ?? [];
+  const allColumns = props.table.getVisibleLeafColumns();
   const reorderableIds = allColumns
     .filter((col) => {
       if (isSpacer(col)) return false;
-      if (!col.columnDef?.meta?.label) return false;
+      const meta = asRecord(col.columnDef.meta);
+      if (!meta["label"]) return false;
       if (getPinnedState(col)) return false;
-      if (col.columnDef?.meta?.disableReorder) return false;
+      if (meta["disableReorder"]) return false;
       return true;
     })
     .map((col) => col.id);
 
   const newOrder = [...reorderableIds];
   const [moved] = newOrder.splice(initialIndex, 1);
+  if (moved === undefined) return;
   newOrder.splice(index, 0, moved);
 
-  const fixedBefore = [];
-  const fixedAfter = [];
+  const fixedBefore: string[] = [];
+  const fixedAfter: string[] = [];
   for (const col of allColumns) {
     if (!reorderableIds.includes(col.id)) {
       const colIdx = allColumns.indexOf(col);
@@ -485,58 +460,54 @@ const onHeaderDragEnd = (event) => {
   props.table.setColumnOrder(fullOrder);
 };
 
-const toggleableColumns = computed(() => {
-  const cols = props.table?.getAllLeafColumns?.() ?? [];
-  return getToggleableColumns(cols);
-});
+const toggleableColumns = computed(() => getToggleableColumns(props.table.getAllLeafColumns()));
 
-const getHeaderClass = (header) => {
-  const columnDef = header?.column?.columnDef;
-  const meta = columnDef?.meta ?? {};
-  const pinned = getPinnedState(header?.column);
+const getHeaderClass = (header: HeaderItem) => {
+  const column = header.column;
+  const columnDef = asRecord(column.columnDef);
+  const meta = asRecord(column.columnDef.meta);
+  const pinned = getPinnedState(column);
   return joinClasses(
     "sticky top-0 bg-background dark:bg-sidebar border-b border-border group",
     pinned ? "z-30" : "z-10",
-    isSpacer(header.column) && "p-0",
-    resolveClassValue(meta.class, header?.getContext?.()),
-    resolveClassValue(meta.headerClass, header?.getContext?.()),
-    resolveClassValue(meta.thClass, header?.getContext?.()),
-    resolveClassValue(columnDef?.class, header?.getContext?.()),
-    resolveClassValue(columnDef?.headerClass, header?.getContext?.())
+    isSpacer(column) && "p-0",
+    resolveClassValue(meta["class"], header.getContext()),
+    resolveClassValue(meta["headerClass"], header.getContext()),
+    resolveClassValue(meta["thClass"], header.getContext()),
+    resolveClassValue(columnDef["class"], header.getContext()),
+    resolveClassValue(columnDef["headerClass"], header.getContext())
   );
 };
 
-const getCellClass = (cell) => {
-  const columnDef = cell?.column?.columnDef;
-  const meta = columnDef?.meta ?? {};
-  const pinned = getPinnedState(cell?.column);
+const getCellClass = (cell: CellItem) => {
+  const columnDef = asRecord(cell.column.columnDef);
+  const meta = asRecord(cell.column.columnDef.meta);
+  const pinned = getPinnedState(cell.column);
   return joinClasses(
     pinned && "sticky bg-background z-20",
     isSpacer(cell.column) && "p-0",
-    resolveClassValue(meta.class, cell?.getContext?.()),
-    resolveClassValue(meta.cellClass, cell?.getContext?.()),
-    resolveClassValue(meta.tdClass, cell?.getContext?.()),
-    resolveClassValue(columnDef?.class, cell?.getContext?.()),
-    resolveClassValue(columnDef?.cellClass, cell?.getContext?.())
+    resolveClassValue(meta["class"], cell.getContext()),
+    resolveClassValue(meta["cellClass"], cell.getContext()),
+    resolveClassValue(meta["tdClass"], cell.getContext()),
+    resolveClassValue(columnDef["class"], cell.getContext()),
+    resolveClassValue(columnDef["cellClass"], cell.getContext())
   );
 };
 
-const handlePageSizeChange = (size) => {
-  if (props.onPageSizeChange) {
-    props.onPageSizeChange(size);
-  }
+const handlePageSizeChange = (size: number) => {
+  props.onPageSizeChange?.(size);
   props.table.setPageSize(size);
 };
 
 const pageSizeProxy = computed({
-  get: () => props.table.atoms?.pagination?.get()?.pageSize ?? 0,
-  set: (size) => handlePageSizeChange(size),
+  get: () => props.table.atoms.pagination.get().pageSize,
+  set: (size: number) => handlePageSizeChange(size),
 });
 
 watch(
   [pageSizeProxy, () => props.pageSizes],
   ([current, sizes]) => {
-    if (!sizes?.length || sizes.includes(current)) {
+    if (!sizes.length || sizes.includes(current)) {
       return;
     }
     const nearest = sizes.reduce((prev, s) => (Math.abs(s - current) < Math.abs(prev - current) ? s : prev));
@@ -547,32 +518,28 @@ watch(
 
 const pageSizeValue = computed({
   get: () => String(pageSizeProxy.value),
-  set: (value) => handlePageSizeChange(Number(value)),
+  set: (value: string) => handlePageSizeChange(Number(value)),
 });
 
 const currentPage = computed({
-  get: () => (props.table.atoms?.pagination?.get()?.pageIndex ?? 0) + 1,
-  set: (page) => {
+  get: () => props.table.atoms.pagination.get().pageIndex + 1,
+  set: (page: number) => {
     props.table.setPageIndex(page - 1);
-    if (props.onPageChange) {
-      props.onPageChange(page);
-    }
+    props.onPageChange?.(page);
   },
 });
 
-const sortBy = computed(() => props.table.atoms?.sorting?.get() ?? []);
+const sortBy = computed(() => props.table.atoms.sorting.get());
 
 watch(sortBy, (newSorting) => {
-  if (props.onSortChange) {
-    props.onSortChange(newSorting);
-  }
+  props.onSortChange?.(newSorting);
 });
 
 watch(
-  () => props.table.getPageCount?.(),
+  () => props.table.getPageCount(),
   (pageCount) => {
-    if (pageCount == null || pageCount <= 0) return;
-    const pageIndex = props.table.atoms?.pagination?.get()?.pageIndex ?? 0;
+    if (pageCount <= 0) return;
+    const pageIndex = props.table.atoms.pagination.get().pageIndex;
     if (pageIndex >= pageCount) {
       props.table.setPageIndex(pageCount - 1);
     }
@@ -586,8 +553,7 @@ watch([currentPage, pageSizeProxy], async () => {
   }
 });
 
-const handleRowClick = (row) => {
-  if (!props.onRowClick) return;
-  props.onRowClick(row);
+const handleRowClick = (row: RowItem) => {
+  props.onRowClick?.(row);
 };
 </script>

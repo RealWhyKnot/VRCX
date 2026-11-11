@@ -24,6 +24,7 @@ import { timeToText } from "../../../shared/utils/base/format";
 import * as echarts from "echarts";
 import type { BarSeriesOption, EChartsOption, EChartsType, ECElementEvent, TooltipComponentFormatterCallbackParams } from "echarts";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
+import { logError } from "../../../stores/vrcx-messages";
 import { InstanceActivityTooltip } from "@/views/Charts/components/instance-activity-tooltip.tsx";
 import { renderToHtml } from "@/lib/utils";
 
@@ -57,8 +58,8 @@ const processedData = computed(() => {
     joinTime: dayjs(item.created_at).subtract(item.time, "millisecond"),
     leaveTime: dayjs(item.created_at),
     time: item.time < 0 ? 0 : item.time,
-    isFriend: item.user_id === currentUser.value.id ? null : Boolean(gameLogIsFriend(item)),
-    isFavorite: item.user_id === currentUser.value.id ? null : Boolean(gameLogIsFavorite(item)),
+    isFriend: item.user_id === currentUser.value.id ? null : gameLogIsFriend(item),
+    isFavorite: item.user_id === currentUser.value.id ? null : gameLogIsFavorite(item),
   }));
 });
 
@@ -111,9 +112,9 @@ watch(
       echartsInstance.dispose();
       echartsInstance = null;
     }
-    nextTick(() => {
+    void nextTick(() => {
       initEcharts();
-    });
+    }).catch(logError);
   }
 );
 
@@ -155,7 +156,7 @@ function initResizeObserver() {
   });
 }
 
-async function initEcharts() {
+function initEcharts() {
   const data = processedData.value;
   if (!chartRef.value || data.length === 0) {
     return;
@@ -201,7 +202,7 @@ async function initEcharts() {
   };
 
   if (!echartsInstance) {
-    echartsInstance = echarts.init(chartDom, `${isDarkMode.value ? "dark" : null}`, {
+    echartsInstance = echarts.init(chartDom, isDarkMode.value ? "dark" : undefined, {
       height: chartsHeight,
       useDirtyRect: data.length > 80,
     });
@@ -360,7 +361,7 @@ function getNewOption(): EChartsOption {
 
     return renderToHtml(
       InstanceActivityTooltip({
-        color: params.color,
+        color: typeof params.color === "string" ? params.color : undefined,
         displayName: instanceData.display_name,
         icon: friendOrFavIcon(instanceData.display_name),
         joinTime: dayjs(instanceData.joinTime).format(format),
@@ -390,7 +391,7 @@ function getNewOption(): EChartsOption {
       type: "category",
       axisLabel: {
         interval: 0,
-        formatter: (value) => {
+        formatter: (value: string) => {
           const maxLength = 20;
           const len = value.length;
           return `${friendOrFavIcon(value)} ${len > maxLength ? `${value.substring(0, maxLength)}...` : value}`;

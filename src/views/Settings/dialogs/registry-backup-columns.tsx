@@ -4,10 +4,24 @@ import Button from "@/components/ui/button/Button.vue";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { i18n } from "@/plugins/i18n";
 import { formatDateFilter } from "@/coordinators/date-coordinator";
+import type { RegistryBackup } from "@/stores/vrcx-messages";
 
 const { t } = i18n.global;
 
-export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
+type RegistryBackupCell = { row: { original: RegistryBackup } };
+
+type RegistryBackupColumnHandlers = {
+  onRestore?: (row: RegistryBackup) => void;
+  onSaveToFile?: (row: RegistryBackup) => void;
+  onDelete?: (row: RegistryBackup) => void;
+};
+
+type RegistryBackupHeaderColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+export const createColumns = ({ onRestore, onSaveToFile, onDelete }: RegistryBackupColumnHandlers) => [
   {
     id: "name",
     accessorKey: "name",
@@ -15,17 +29,17 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
     meta: {
       stretch: true,
     },
-    cell: ({ row }) => <span>{row.original?.name}</span>,
+    cell: ({ row }: RegistryBackupCell) => <span>{row.original.name}</span>,
   },
   {
     id: "date",
-    accessorFn: (row) => {
-      const v = row?.date;
-      if (typeof v === "number") return v;
-      const ts = Date.parse(String(v ?? ""));
-      return Number.isFinite(ts) ? ts : 0;
+    accessorFn: (row: RegistryBackup) => {
+      const value: unknown = row.date;
+      if (typeof value === "number") return value;
+      const timestamp = Date.parse(typeof value === "string" ? value : "");
+      return Number.isFinite(timestamp) ? timestamp : 0;
     },
-    header: ({ column }) => (
+    header: ({ column }: { column: RegistryBackupHeaderColumn }) => (
       <button
         class="inline-flex items-center cursor-pointer"
         onClick={() => {
@@ -37,7 +51,7 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
       </button>
     ),
     size: 170,
-    cell: ({ row }) => <span>{formatDateFilter(row.original?.date, "long")}</span>,
+    cell: ({ row }: RegistryBackupCell) => <span>{formatDateFilter(row.original.date, "long")}</span>,
   },
   {
     id: "action",
@@ -47,7 +61,7 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
     meta: {
       tdClass: "text-right",
     },
-    cell: ({ row }) => {
+    cell: ({ row }: RegistryBackupCell) => {
       const original = row.original;
       return (
         <div class="inline-flex items-center justify-end gap-1">
@@ -56,8 +70,8 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
               size="icon-sm"
               variant="ghost"
               class="button-pd-0"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation();
                 onRestore?.(original);
               }}
             >
@@ -70,8 +84,8 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
               size="icon-sm"
               variant="ghost"
               class="button-pd-0"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation();
                 onSaveToFile?.(original);
               }}
             >
@@ -84,8 +98,8 @@ export const createColumns = ({ onRestore, onSaveToFile, onDelete }) => [
               size="icon-sm"
               variant="ghost"
               class="button-pd-0"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event: MouseEvent) => {
+                event.stopPropagation();
                 onDelete?.(original);
               }}
             >

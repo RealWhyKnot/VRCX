@@ -78,6 +78,9 @@ import { useRouter } from "vue-router";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useInviteStore } from "../../../stores/invite";
 import { useNotificationStore } from "../../../stores/notification";
+import type { NotificationEntry } from "../../../stores/notification/types";
+import { logFailure } from "../../../stores/log-failure";
+import type { InviteResponseSelection } from "../../Notifications/dialogs/send-invite-response-columns.tsx";
 
 import NotificationList from "./NotificationList.vue";
 import SendInviteRequestResponseDialog from "../../Notifications/dialogs/SendInviteRequestResponseDialog.vue";
@@ -100,8 +103,8 @@ const {
 
 const activeTab = ref("friend");
 
-watch(isNotificationCenterOpen, (open) => {
-  if (open) {
+watch(isNotificationCenterOpen, (isOpenNow) => {
+  if (isOpenNow) {
     if (unseenFriendNotifications.value.length) {
       activeTab.value = "friend";
     } else if (unseenGroupNotifications.value.length) {
@@ -114,7 +117,7 @@ watch(isNotificationCenterOpen, (open) => {
   }
 });
 
-const sendInviteResponseDialog = ref({
+const sendInviteResponseDialog = ref<InviteResponseSelection>({
   messageSlot: {},
   invite: {},
 });
@@ -123,10 +126,10 @@ const sendInviteRequestResponseDialogVisible = ref(false);
 
 function navigateToTable() {
   isNotificationCenterOpen.value = false;
-  router.push({ name: "notification", query: { fromCenter: "1" } });
+  void router.push({ name: "notification", query: { fromCenter: "1" } }).catch(logFailure("open notification table"));
 }
 
-function showSendInviteResponseDialog(invite) {
+function showSendInviteResponseDialog(invite: NotificationEntry) {
   sendInviteResponseDialog.value.invite = invite;
   sendInviteResponseDialog.value.messageSlot = {};
   refreshInviteMessageTableData("response");
@@ -134,7 +137,7 @@ function showSendInviteResponseDialog(invite) {
   sendInviteResponseDialogVisible.value = true;
 }
 
-function showSendInviteRequestResponseDialog(invite) {
+function showSendInviteRequestResponseDialog(invite: NotificationEntry) {
   sendInviteResponseDialog.value.invite = invite;
   sendInviteResponseDialog.value.messageSlot = {};
   refreshInviteMessageTableData("requestResponse");

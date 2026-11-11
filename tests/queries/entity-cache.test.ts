@@ -202,10 +202,11 @@ describe("entity query cache helpers", () => {
       params: {},
     });
 
-    patchUserFromEvent({
+    const placeholderUser = {
       id: "usr_1",
       displayName: "Alice",
-    });
+    };
+    patchUserFromEvent(placeholderUser);
 
     expect(queryClient.getQueryData(queryKey)).toEqual({
       params: {},
@@ -220,10 +221,11 @@ describe("entity query cache helpers", () => {
       json: { id: "usr_1", displayName: "Old" },
     });
 
-    patchUserFromEvent({
+    const updatedUser = {
       id: "usr_1",
       displayName: "New",
-    });
+    };
+    patchUserFromEvent(updatedUser);
 
     const data = queryClient.getQueryData<{ ref: { displayName: string } }>(queryKey);
     expect(data?.ref.displayName).toBe("New");

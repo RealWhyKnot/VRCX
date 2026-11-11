@@ -45,15 +45,17 @@ type OverlapViewInput = {
 
 type Fields = Record<string, unknown>;
 
+const NORMALIZE_CONFIG_NUMBER_KEYS = ["floorPercentile", "capPercentile", "rankWeight", "targetCoverage", "targetVolume", "rangeDays"] as const;
+
 function isFields(value: unknown): value is Fields {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function parseEnvelope(data: unknown): WorkerEnvelope {
-  if (!isFields(data) || typeof data.type !== "string" || typeof data.seq !== "number") {
+  if (!isFields(data) || typeof data["type"] !== "string" || typeof data["seq"] !== "number") {
     throw new Error("Activity worker received a malformed message");
   }
-  return { type: data.type, seq: data.seq, payload: data.payload };
+  return { type: data["type"], seq: data["seq"], payload: data["payload"] };
 }
 
 function requireFields(payload: unknown, task: string): Fields {
@@ -116,24 +118,30 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number";
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 function isActivitySession(value: unknown): value is ActivitySession {
   if (!isFields(value)) {
     return false;
   }
   return (
-    typeof value.start === "number" &&
-    typeof value.end === "number" &&
-    (value.isOpenTail === undefined || typeof value.isOpenTail === "boolean") &&
-    (value.sourceRevision === undefined || typeof value.sourceRevision === "string")
+    typeof value["start"] === "number" &&
+    typeof value["end"] === "number" &&
+    (value["isOpenTail"] === undefined || typeof value["isOpenTail"] === "boolean") &&
+    (value["sourceRevision"] === undefined || typeof value["sourceRevision"] === "string")
   );
 }
 
 function isActivityEvent(value: unknown): value is ActivityEvent {
-  return isFields(value) && typeof value.created_at === "string" && typeof value.type === "string";
+  return isFields(value) && typeof value["created_at"] === "string" && typeof value["type"] === "string";
 }
 
 function isGamelogSessionRow(value: unknown): value is GamelogSessionRow {
-  return isFields(value) && typeof value.created_at === "string" && (value.time === undefined || value.time === null || typeof value.time === "number");
+  return (
+    isFields(value) && typeof value["created_at"] === "string" && (value["time"] === undefined || value["time"] === null || typeof value["time"] === "number")
+  );
 }
 
 function parseNormalizeConfig(value: unknown): ActivityNormalizeConfig {
@@ -141,14 +149,14 @@ function parseNormalizeConfig(value: unknown): ActivityNormalizeConfig {
     return {};
   }
   const fields = requireFields(value, "normalizeConfig");
-  return {
-    floorPercentile: optionalNumber(fields, "floorPercentile"),
-    capPercentile: optionalNumber(fields, "capPercentile"),
-    rankWeight: optionalNumber(fields, "rankWeight"),
-    targetCoverage: optionalNumber(fields, "targetCoverage"),
-    targetVolume: optionalNumber(fields, "targetVolume"),
-    rangeDays: optionalNumber(fields, "rangeDays"),
-  };
+  const config: ActivityNormalizeConfig = {};
+  for (const key of NORMALIZE_CONFIG_NUMBER_KEYS) {
+    const number = optionalNumber(fields, key);
+    if (number !== undefined) {
+      config[key] = number;
+    }
+  }
+  return config;
 }
 
 function parseExcludeHours(value: unknown): ActivityExcludeHours | null {
@@ -163,13 +171,13 @@ function parseSnapshotInput(payload: unknown): SnapshotInput {
   const fields = requireFields(payload, "computeSessionsSnapshot");
   return {
     sourceType: requireString(fields, "sourceType"),
-    sourceRevision: typeof fields.sourceRevision === "string" ? fields.sourceRevision : "",
+    sourceRevision: typeof fields["sourceRevision"] === "string" ? fields["sourceRevision"] : "",
     rows: optionalArray(fields, "rows", isGamelogSessionRow),
     events: optionalArray(fields, "events", isActivityEvent),
     initialStart: optionalNullableNumber(fields, "initialStart") ?? null,
     mergeGapMs: optionalNumber(fields, "mergeGapMs"),
     nowMs: optionalNumber(fields, "nowMs"),
-    mayHaveOpenTail: fields.mayHaveOpenTail === true,
+    mayHaveOpenTail: fields["mayHaveOpenTail"] === true,
   };
 }
 
@@ -180,7 +188,7 @@ function parseActivityViewInput(payload: unknown): ActivityViewInput {
     dayLabels: optionalArray(fields, "dayLabels", isString),
     rangeDays: requireNumber(fields, "rangeDays"),
     nowMs: optionalNumber(fields, "nowMs"),
-    normalizeConfig: parseNormalizeConfig(fields.normalizeConfig),
+    normalizeConfig: parseNormalizeConfig(fields["normalizeConfig"]),
     maxSessionMs: optionalNumber(fields, "maxSessionMs"),
   };
 }
@@ -192,18 +200,14 @@ function parseOverlapViewInput(payload: unknown): OverlapViewInput {
     targetSessions: optionalArray(fields, "targetSessions", isActivitySession),
     dayLabels: optionalArray(fields, "dayLabels", isString),
     rangeDays: requireNumber(fields, "rangeDays"),
-    excludeHours: parseExcludeHours(fields.excludeHours),
+    excludeHours: parseExcludeHours(fields["excludeHours"]),
     nowMs: optionalNumber(fields, "nowMs"),
-    normalizeConfig: parseNormalizeConfig(fields.normalizeConfig),
+    normalizeConfig: parseNormalizeConfig(fields["normalizeConfig"]),
     maxSessionMs: optionalNumber(fields, "maxSessionMs"),
   };
 }
 
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-self.addEventListener("message", (event) => {
+self.addEventListener("message", (event: MessageEvent<unknown>) => {
   const { type, seq, payload } = parseEnvelope(event.data);
 
   try {
@@ -213,28 +217,20 @@ self.addEventListener("message", (event) => {
         result = computeSessionsSnapshot(parseSnapshotInput(payload));
         break;
       case "computeActivityView": {
-        const input = parseActivityViewInput(payload);
+        const { nowMs, maxSessionMs, ...input } = parseActivityViewInput(payload);
         result = computeActivityView({
-          sessions: input.sessions,
-          dayLabels: input.dayLabels,
-          rangeDays: input.rangeDays,
-          nowMs: input.nowMs,
-          normalizeConfig: input.normalizeConfig,
-          maxSessionMs: input.maxSessionMs,
+          ...input,
+          ...(nowMs === undefined ? {} : { nowMs }),
+          ...(maxSessionMs === undefined ? {} : { maxSessionMs }),
         });
         break;
       }
       case "computeOverlapView": {
-        const input = parseOverlapViewInput(payload);
+        const { nowMs, maxSessionMs, ...input } = parseOverlapViewInput(payload);
         result = computeOverlapView({
-          selfSessions: input.selfSessions,
-          targetSessions: input.targetSessions,
-          dayLabels: input.dayLabels,
-          rangeDays: input.rangeDays,
-          excludeHours: input.excludeHours,
-          nowMs: input.nowMs,
-          normalizeConfig: input.normalizeConfig,
-          maxSessionMs: input.maxSessionMs,
+          ...input,
+          ...(nowMs === undefined ? {} : { nowMs }),
+          ...(maxSessionMs === undefined ? {} : { maxSessionMs }),
         });
         break;
       }
@@ -285,7 +281,7 @@ self.addEventListener("message", (event) => {
           console.warn("[activityWorker] normalizeHeatmapBuckets received legacy payload fields (thresholdMinutes/mode). Use payload.config instead.");
         }
         result = {
-          normalized: normalizeBuckets(optionalArray(fields, "buckets", isNumber), parseNormalizeConfig(fields.config)),
+          normalized: normalizeBuckets(optionalArray(fields, "buckets", isNumber), parseNormalizeConfig(fields["config"])),
         };
         break;
       }

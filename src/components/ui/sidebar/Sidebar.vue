@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Sheet from "@/components/ui/sheet/Sheet.vue";
 import SheetContent from "@/components/ui/sheet/SheetContent.vue";
 import { cn } from "@/lib/utils";
@@ -10,27 +11,24 @@ import SheetTitle from "@/components/ui/sheet/SheetTitle.vue";
 import { SIDEBAR_WIDTH_MOBILE, useSidebar } from "./utils";
 
 defineOptions({
+  name: "UiSidebar",
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  side: {
-    type: String,
-    default: "left",
-  },
-  variant: {
-    type: String,
-    default: "sidebar",
-  },
-  collapsible: {
-    type: String,
-    default: "offcanvas",
-  },
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    side?: string;
+    variant?: string;
+    collapsible?: string;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    side: "left",
+    variant: "sidebar",
+    collapsible: "offcanvas",
+    class: undefined,
+  }
+);
 
 const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 </script>

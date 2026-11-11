@@ -6,6 +6,16 @@ import { ref } from "vue";
 
 import en from "../../src/localization/en.json";
 
+const { otpInputStub } = vi.hoisted(() => ({
+  otpInputStub: {
+    name: "InputOTP",
+    template:
+      '<div class="input-otp-stub"><input :data-maxlength="maxlength" :inputmode="inputmode" @input="$emit(\'complete\', $event.target.value)" /><slot /></div>',
+    props: ["maxlength", "inputmode", "modelValue", "pasteTransformer"],
+    emits: ["update:modelValue", "complete"],
+  },
+}));
+
 vi.mock("../../src/views/Feed/Feed.vue", () => ({
   default: { template: "<div />" },
 }));
@@ -21,7 +31,7 @@ vi.mock("../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -38,7 +48,7 @@ vi.mock("../../src/services/database", () => ({
     {
       get: (_target, prop) => {
         if (prop === "__esModule") return false;
-        return vi.fn().mockResolvedValue(null);
+        return vi.fn(() => Promise.resolve(null));
       },
     }
   ),
@@ -46,13 +56,13 @@ vi.mock("../../src/services/database", () => ({
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_key: string, defaultValue?: string) => defaultValue ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_key: string, isDefaultValue?: boolean) => isDefaultValue ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -93,12 +103,7 @@ const stubs = {
     template: '<span class="dialog-description"><slot /></span>',
   },
   DialogFooter: { template: '<div class="dialog-footer"><slot /></div>' },
-  InputOTP: {
-    name: "InputOTP",
-    template: '<div class="input-otp-stub"><input :data-maxlength="maxlength" :inputmode="inputmode" /><slot /></div>',
-    props: ["maxlength", "inputmode", "modelValue", "pasteTransformer"],
-    emits: ["update:modelValue", "complete"],
-  },
+  InputOTP: otpInputStub,
   InputOTPGroup: { template: '<div class="otp-group"><slot /></div>' },
   InputOTPSlot: {
     template: '<div class="otp-slot" :data-index="index"></div>',
@@ -107,7 +112,7 @@ const stubs = {
   InputOTPSeparator: { template: '<div class="otp-separator">-</div>' },
 };
 
-function mountOtpDialog(storeOverrides = {}) {
+function mountOtpDialog(storeOverrides: Record<string, unknown> = {}) {
   const pinia = createTestingPinia({
     createSpy: vi.fn,
     stubActions: false,
@@ -123,8 +128,18 @@ function mountOtpDialog(storeOverrides = {}) {
   });
 }
 
+function findButtonByText(wrapper: ReturnType<typeof mountOtpDialog>, text: string) {
+  const button = wrapper.findAll("button").find((candidate) => candidate.text() === text);
+  if (!button) throw new Error(`no button labelled ${text}`);
+  return button;
+}
+
+function isPasteTransformer(value: unknown): value is (text: string) => string {
+  return typeof value === "function";
+}
+
 describe("OtpDialogModal.vue", () => {
-  let store;
+  let store: ReturnType<typeof useModalStore>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -211,7 +226,7 @@ describe("OtpDialogModal.vue", () => {
 
       const inputs = wrapper.findAll(".input-otp-stub");
       expect(inputs).toHaveLength(1);
-      expect(inputs[0].find("input").attributes("data-maxlength")).toBe("6");
+      expect(inputs[0]?.find("input").attributes("data-maxlength")).toBe("6");
     });
   });
 
@@ -224,10 +239,8 @@ describe("OtpDialogModal.vue", () => {
       });
       store = useModalStore();
       const buttons = wrapper.findAll("button");
-      const cancelBtn = buttons.find((b) => b.text() === "Use Recovery");
-      const okBtn = buttons.find((b) => b.text() === "Verify");
-      expect(cancelBtn).toBeTruthy();
-      expect(okBtn).toBeTruthy();
+      expect(buttons.find((b) => b.text() === "Use Recovery")).toBeTruthy();
+      expect(buttons.find((b) => b.text() === "Verify")).toBeTruthy();
     });
   });
 
@@ -241,8 +254,7 @@ describe("OtpDialogModal.vue", () => {
       store = useModalStore();
       const spy = vi.spyOn(store, "handleOtpCancel");
 
-      const cancelBtn = wrapper.findAll("button").find((b) => b.text() === "Cancel");
-      await cancelBtn.trigger("click");
+      await findButtonByText(wrapper, "Cancel").trigger("click");
 
       expect(spy).toHaveBeenCalledWith("");
     });
@@ -270,8 +282,8 @@ describe("OtpDialogModal.vue", () => {
       store = useModalStore();
       const spy = vi.spyOn(store, "handleOtpOk");
 
-      const otpInput = wrapper.findComponent({ name: "InputOTP" });
-      otpInput.vm.$emit("complete", "123456");
+      const otpInput = wrapper.findComponent(otpInputStub);
+      await otpInput.find("input").setValue("123456");
       await wrapper.vm.$nextTick();
 
       expect(spy).toHaveBeenCalledWith("123456");
@@ -291,7 +303,7 @@ describe("OtpDialogModal.vue", () => {
 
       await wrapper.vm.$nextTick();
 
-      const otpInput = wrapper.findComponent({ name: "InputOTP" });
+      const otpInput = wrapper.findComponent(otpInputStub);
       expect(otpInput.exists()).toBe(true);
       expect(otpInput.props("modelValue")).toBe("");
     });
@@ -304,9 +316,10 @@ describe("OtpDialogModal.vue", () => {
         otpMode: "otp",
       });
       store = useModalStore();
-      const otpInput = wrapper.findComponent({ name: "InputOTP" });
-      const transformer = otpInput.props("pasteTransformer");
+      const otpInput = wrapper.findComponent(otpInputStub);
+      const transformer: unknown = otpInput.props("pasteTransformer");
       expect(transformer).toBeTypeOf("function");
+      if (!isPasteTransformer(transformer)) throw new Error("pasteTransformer is not a function");
       expect(transformer("abcd-1234")).toBe("abcd1234");
       expect(transformer("ab-cd-12-34")).toBe("abcd1234");
       expect(transformer("abcd1234")).toBe("abcd1234");
@@ -318,7 +331,7 @@ describe("OtpDialogModal.vue", () => {
         otpMode: "totp",
       });
       store = useModalStore();
-      const otpInput = wrapper.findComponent({ name: "InputOTP" });
+      const otpInput = wrapper.findComponent(otpInputStub);
       expect(otpInput.props("pasteTransformer")).toBeUndefined();
     });
   });

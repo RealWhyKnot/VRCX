@@ -1,15 +1,13 @@
 <script setup lang="ts">
+import type { HoverCardTriggerProps } from "reka-ui";
 import { HoverCardTrigger } from "reka-ui";
 
-const props = defineProps({
-  reference: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
+const props = defineProps<HoverCardTriggerProps>();
+const delegatedProps: Record<string, unknown> = props;
 </script>
 
 <template>
-  <HoverCardTrigger data-slot="hover-card-trigger" v-bind="props">
+  <HoverCardTrigger data-slot="hover-card-trigger" v-bind="delegatedProps">
     <slot />
   </HoverCardTrigger>
 </template>

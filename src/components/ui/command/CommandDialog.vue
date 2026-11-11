@@ -8,18 +8,20 @@ import { useForwardPropsEmits } from "reka-ui";
 
 import Command from "./Command.vue";
 
-const props = defineProps({
-  open: { type: Boolean, required: false },
-  defaultOpen: { type: Boolean, required: false },
-  modal: { type: Boolean, required: false },
-  title: { type: String, required: false, default: "Command Palette" },
-  description: {
-    type: String,
-    required: false,
-    default: "Search for a command to run...",
-  },
-});
-const emits = defineEmits(["update:open"]);
+const props = withDefaults(
+  defineProps<{
+    open?: boolean;
+    defaultOpen?: boolean;
+    modal?: boolean;
+    title?: string;
+    description?: string;
+  }>(),
+  {
+    title: "Command Palette",
+    description: "Search for a command to run...",
+  }
+);
+const emits = defineEmits<{ "update:open": [value: boolean] }>();
 
 const forwarded = useForwardPropsEmits(props, emits);
 </script>

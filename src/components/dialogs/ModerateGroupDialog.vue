@@ -13,8 +13,8 @@
           <div class="flex-1 overflow-hidden">
             <span
               v-if="moderateGroupDialog.userObject.id"
-              class="block truncate font-medium leading-[18px]"
-              :style="{ color: moderateGroupDialog.userObject.$userColour }"
+              class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+              :style="{ '--user-colour': moderateGroupDialog.userObject.$userColour }"
               v-text="moderateGroupDialog.userObject.displayName"
             ></span>
             <span v-else v-text="moderateGroupDialog.userId"></span>
@@ -32,7 +32,7 @@
           >
             <template #item="{ item, selected }">
               <div class="flex w-full items-center gap-2">
-                <img :src="item.iconUrl" loading="lazy" class="size-5 rounded-sm" />
+                <img :src="groupIconUrls.get(String(item.value))" loading="lazy" class="size-5 rounded-sm" />
                 <span class="truncate text-sm" v-text="item.label"></span>
                 <span v-if="selected" class="ml-auto opacity-70">✓</span>
               </div>
@@ -72,6 +72,7 @@ import { useUserDisplay } from "../../composables/use-user-display";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { queryRequest } from "../../api/query-request";
 import { useGroupStore } from "../../stores/group";
+import { logFailure } from "../../stores/log-failure";
 import { showGroupMemberModerationDialog } from "../../coordinators/group-dialog-coordinator";
 
 const { userImage } = useUserDisplay();
@@ -87,24 +88,27 @@ const groupPickerGroups = computed(() => [
     key: "groups",
     label: t("dialog.moderate_group.header"),
     items: groupsWithModerationPermission.value.map((group) => ({
-      value: group.id,
-      label: group.name,
-      search: group.name,
-      iconUrl: group.iconUrl,
+      value: group.id ?? "",
+      label: group.name ?? "",
+      search: group.name ?? "",
     })),
   },
 ]);
 
-function setGroupId(value) {
-  moderateGroupDialog.value.groupId = String(value ?? "");
+const groupIconUrls = computed(
+  () => new Map(groupsWithModerationPermission.value.map((group): [string, string | undefined] => [group.id ?? "", group.iconUrl ?? undefined]))
+);
+
+function setGroupId(selectedGroupId: unknown) {
+  moderateGroupDialog.value.groupId = typeof selectedGroupId === "string" ? selectedGroupId : "";
 }
 
 watch(
   () => {
     return moderateGroupDialog.value.visible;
   },
-  (value) => {
-    if (value) {
+  (isVisible) => {
+    if (isVisible) {
       initDialog();
     }
   }
@@ -118,7 +122,7 @@ function initDialog() {
         groupId: D.groupId,
       })
       .then((args) => {
-        D.groupName = args.ref.name;
+        D.groupName = args.ref.name ?? "";
       })
       .catch(() => {
         D.groupId = "";
@@ -126,9 +130,12 @@ function initDialog() {
   }
 
   if (D.userId) {
-    queryRequest.fetch("user.dialog", { userId: D.userId }).then((args) => {
-      D.userObject = args.ref;
-    });
+    void queryRequest
+      .fetch("user.dialog", { userId: D.userId })
+      .then((args) => {
+        D.userObject = args.ref;
+      })
+      .catch(logFailure("Loading the user for the moderation dialog failed:"));
   }
 }
 </script>

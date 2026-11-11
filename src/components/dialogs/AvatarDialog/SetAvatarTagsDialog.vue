@@ -14,40 +14,41 @@
 
       <template v-if="setAvatarTagsDialog.visible">
         <label class="inline-flex items-center gap-2 mt-2">
-          <Checkbox v-model="setAvatarTagsDialog.contentHorror" @update:model-value="updateSelectedAvatarTags" />
+          <Checkbox :model-value="setAvatarTagsDialog.contentHorror" @update:model-value="(checked) => setContentFlag('contentHorror', checked)" />
           <span>{{ t("dialog.set_avatar_tags.content_horror") }}</span>
         </label>
         <label class="inline-flex items-center gap-2">
-          <Checkbox v-model="setAvatarTagsDialog.contentGore" @update:model-value="updateSelectedAvatarTags" />
+          <Checkbox :model-value="setAvatarTagsDialog.contentGore" @update:model-value="(checked) => setContentFlag('contentGore', checked)" />
           <span>{{ t("dialog.set_avatar_tags.content_gore") }}</span>
         </label>
         <label class="inline-flex items-center gap-2">
-          <Checkbox v-model="setAvatarTagsDialog.contentViolence" @update:model-value="updateSelectedAvatarTags" />
+          <Checkbox :model-value="setAvatarTagsDialog.contentViolence" @update:model-value="(checked) => setContentFlag('contentViolence', checked)" />
           <span>{{ t("dialog.set_avatar_tags.content_violence") }}</span>
         </label>
         <label class="inline-flex items-center gap-2">
-          <Checkbox v-model="setAvatarTagsDialog.contentAdult" @update:model-value="updateSelectedAvatarTags" />
+          <Checkbox :model-value="setAvatarTagsDialog.contentAdult" @update:model-value="(checked) => setContentFlag('contentAdult', checked)" />
           <span>{{ t("dialog.set_avatar_tags.content_adult") }}</span>
         </label>
         <label class="inline-flex items-center gap-2">
-          <Checkbox v-model="setAvatarTagsDialog.contentSex" @update:model-value="updateSelectedAvatarTags" />
+          <Checkbox :model-value="setAvatarTagsDialog.contentSex" @update:model-value="(checked) => setContentFlag('contentSex', checked)" />
           <span>{{ t("dialog.set_avatar_tags.content_sex") }}</span>
         </label>
         <InputGroupTextareaField
-          v-model="setAvatarTagsDialog.selectedTagsCsv"
+          :model-value="setAvatarTagsDialog.selectedTagsCsv"
           :rows="2"
           :placeholder="t('dialog.set_avatar_tags.custom_tags_placeholder')"
           class="mt-2"
           input-class="resize-none"
+          @update:model-value="(value) => setSelectedTagsCsv(value)"
           @input="updateInputAvatarTags"
         />
-        <template v-if="setAvatarTagsDialog.ownAvatars.length === props.setAvatarTagsDialog.selectedAvatarIds.length">
+        <template v-if="setAvatarTagsDialog.ownAvatars.length === setAvatarTagsDialog.selectedAvatarIds.length">
           <Button size="sm" variant="outline" @click="setAvatarTagsSelectToggle">{{ t("dialog.set_avatar_tags.select_none") }}</Button>
         </template>
         <template v-else>
           <Button size="sm" variant="outline" @click="setAvatarTagsSelectToggle">{{ t("dialog.set_avatar_tags.select_all") }}</Button>
         </template>
-        <span style="margin-left: 6px">{{ props.setAvatarTagsDialog.selectedAvatarIds.length }} / {{ setAvatarTagsDialog.ownAvatars.length }}</span>
+        <span style="margin-left: 6px">{{ setAvatarTagsDialog.selectedAvatarIds.length }} / {{ setAvatarTagsDialog.ownAvatars.length }}</span>
         <Spinner v-if="setAvatarTagsDialog.loading" class="inline-block ml-2" />
         <div class="flex flex-wrap items-start max-h-[300px] overflow-auto" style="margin-top: 8px; min-height: 60px">
           <div
@@ -68,8 +69,8 @@
             </div>
             <Button size="sm" variant="ghost" style="margin-left: 6px" @click.stop>
               <Checkbox
-                :model-value="props.setAvatarTagsDialog.selectedAvatarIds.includes(avatar.id)"
-                @update:model-value="(val) => toggleAvatarSelection(avatar.id, val)"
+                :model-value="setAvatarTagsDialog.selectedAvatarIds.includes(avatar.id)"
+                @update:model-value="(checked) => toggleAvatarSelection(avatar.id, checked)"
               />
             </Button>
           </div>
@@ -102,24 +103,24 @@ import { avatarRequest } from "../../../api/avatar";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { useAvatarStore } from "../../../stores/avatar";
 import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
+import type { ContentFlagKey, SetAvatarTagsState } from "./avatar-dialog-types";
 
 const { cachedAvatars } = useAvatarStore();
 
 const { t } = useI18n();
-const props = defineProps({
-  setAvatarTagsDialog: {
-    type: Object,
-    required: true,
-  },
-});
-const avatarTagStrings = new Map();
+const props = defineProps<{
+  setAvatarTagsDialog: SetAvatarTagsState;
+}>();
+const avatarTagStrings = new Map<string, string>();
 
-const emit = defineEmits(["update:setAvatarTagsDialog"]);
+const emit = defineEmits<{
+  "update:setAvatarTagsDialog": [value: SetAvatarTagsState];
+}>();
 
 watch(
   () => props.setAvatarTagsDialog.visible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       updateAvatarTagsString();
       updateSelectedAvatarTags();
       updateInputAvatarTags();
@@ -132,6 +133,17 @@ function closeSetAvatarTagsDialog() {
     ...props.setAvatarTagsDialog,
     visible: false,
   });
+}
+
+function setContentFlag(key: ContentFlagKey, checked: boolean | "indeterminate") {
+  const D = props.setAvatarTagsDialog;
+  D[key] = checked === true;
+  updateSelectedAvatarTags();
+}
+
+function setSelectedTagsCsv(value: string) {
+  const D = props.setAvatarTagsDialog;
+  D.selectedTagsCsv = value;
 }
 
 function updateSelectedAvatarTags() {
@@ -175,7 +187,7 @@ function updateSelectedAvatarTags() {
   D.selectedTagsCsv = D.selectedTags.join(",").replace(/content_/g, "");
 }
 
-function toggleAvatarSelection(avatarId, checked) {
+function toggleAvatarSelection(avatarId: string, checked: boolean | "indeterminate") {
   const D = props.setAvatarTagsDialog;
   const isSelected = D.selectedAvatarIds.includes(avatarId);
   const shouldSelect = typeof checked === "boolean" ? checked : !isSelected;
@@ -189,19 +201,15 @@ function toggleAvatarSelection(avatarId, checked) {
 function updateAvatarTagsString() {
   const D = props.setAvatarTagsDialog;
   for (const ref of D.ownAvatars) {
-    if (!ref) {
-      continue;
-    }
     let tagString = "";
-    const contentTags = [];
+    const contentTags: string[] = [];
     ref.tags.forEach((tag) => {
       if (tag.startsWith("content_")) {
         contentTags.push(tag.substring(8));
       }
     });
-    for (let i = 0; i < contentTags.length; ++i) {
-      const tag = contentTags[i];
-      if (i < contentTags.length - 1) {
+    for (const [index, tag] of contentTags.entries()) {
+      if (index < contentTags.length - 1) {
         tagString += `${tag}, `;
       } else {
         tagString += tag;
@@ -213,9 +221,9 @@ function updateAvatarTagsString() {
 
 function setAvatarTagsSelectToggle() {
   const D = props.setAvatarTagsDialog;
-  const allSelected = D.ownAvatars.length === D.selectedAvatarIds.length;
+  const isAllSelected = D.ownAvatars.length === D.selectedAvatarIds.length;
   for (const ref of D.ownAvatars) {
-    if (!allSelected) {
+    if (!isAllSelected) {
       if (!D.selectedAvatarIds.includes(ref.id)) {
         D.selectedAvatarIds.push(ref.id);
       }

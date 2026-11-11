@@ -1,39 +1,50 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
-const mocks = vi.hoisted(() => ({
-  isAgeGatedInstancesVisible: { value: true },
-  groupInstances: {
-    value: [
-      {
-        group: {
-          groupId: "grp_1",
-          name: "Group One",
-          iconUrl: "https://example.com/icon.png",
-        },
-        instance: {
-          id: "inst_1",
-          ownerId: "usr_owner",
-          userCount: 1,
-          capacity: 16,
-          location: "wrld_1:123",
-        },
+import type { GroupSidebarEntry } from "../../../../src/views/Sidebar/groups-sidebar-utils";
+
+const mocks = vi.hoisted(() => {
+  const groupInstances: GroupSidebarEntry[] = [
+    {
+      group: {
+        groupId: "grp_1",
+        name: "Group One",
+        iconUrl: "https://example.com/icon.png",
       },
-    ],
-  },
-  sortGroupInstancesByInGame: (a, b) => a[0].group.name.localeCompare(b[0].group.name),
-  showLaunchDialog: vi.fn(),
-  checkCanInviteSelf: vi.fn(() => true),
-  selfInvite: vi.fn().mockResolvedValue({}),
-  showGroupDialog: vi.fn(),
-  toastSuccess: vi.fn(),
+      instance: {
+        id: "inst_1",
+        ownerId: "usr_owner",
+        userCount: 1,
+        capacity: 16,
+        location: "wrld_1:123",
+      },
+    },
+  ];
+  return {
+    isAgeGatedInstancesVisible: { value: true },
+    groupInstances: { value: groupInstances },
+    sortGroupInstancesByInGame: (a: GroupSidebarEntry, b: GroupSidebarEntry) => (a.group?.name ?? "").localeCompare(b.group?.name ?? ""),
+    showLaunchDialog: vi.fn<(location: string) => Promise<void>>().mockResolvedValue(undefined),
+    checkCanInviteSelf: vi.fn<(location: string | null | undefined) => boolean>(() => true),
+    selfInvite: vi.fn<(request: { worldId: string; instanceId: string }) => Promise<void>>().mockResolvedValue(undefined),
+    showGroupDialog: vi.fn<(groupId: string) => void>(),
+    toastSuccess: vi.fn<(message: string) => void>(),
+  };
+});
+
+vi.mock("pinia", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("pinia")>();
+  return {
+    ...actual,
+    storeToRefs: <T>(store: T) => store,
+  };
+});
+vi.mock("vue-i18n", () => ({
+  useI18n: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
-
 vi.mock("@tanstack/vue-virtual", () => ({
-  useVirtualizer: (optionsRef) => ({
+  useVirtualizer: (optionsRef: { value: { count: number; getItemKey: (index: number) => string | number } }) => ({
     value: {
       getVirtualItems: () =>
         Array.from({ length: optionsRef.value.count }, (_, index) => ({
@@ -42,8 +53,8 @@ vi.mock("@tanstack/vue-virtual", () => ({
           start: index * 52,
         })),
       getTotalSize: () => optionsRef.value.count * 52,
-      measure: vi.fn(),
-      measureElement: vi.fn(),
+      measure: vi.fn<() => void>(),
+      measureElement: vi.fn<(node: Element | null) => void>(),
     },
   }),
 }));
@@ -61,21 +72,21 @@ vi.mock("../../../../src/stores/group", () => ({
 }));
 vi.mock("../../../../src/stores/launch", () => ({
   useLaunchStore: () => ({
-    showLaunchDialog: (...a) => mocks.showLaunchDialog(...a),
+    showLaunchDialog: mocks.showLaunchDialog,
   }),
 }));
 
 vi.mock("../../../../src/composables/use-invite-checks", () => ({
   useInviteChecks: () => ({
-    checkCanInviteSelf: (...a) => mocks.checkCanInviteSelf(...a),
+    checkCanInviteSelf: mocks.checkCanInviteSelf,
   }),
 }));
 
 vi.mock("../../../../src/shared/utils/common", () => ({
-  convertFileUrlToImageUrl: (url) => `${url}?small`,
+  convertFileUrlToImageUrl: (url: string) => `${url}?small`,
 }));
 vi.mock("../../../../src/shared/utils/location-parser", () => ({
-  parseLocation: (location) => ({
+  parseLocation: (location: string) => ({
     isRealInstance: !!location,
     worldId: location.split(":")[0],
     instanceId: location.split(":")[1],
@@ -83,18 +94,18 @@ vi.mock("../../../../src/shared/utils/location-parser", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/group-dialog-coordinator", () => ({
-  showGroupDialog: (...a) => mocks.showGroupDialog(...a),
+  showGroupDialog: mocks.showGroupDialog,
 }));
 
 vi.mock("../../../../src/api/instance", () => ({
   instanceRequest: {
-    selfInvite: (...a) => mocks.selfInvite(...a),
+    selfInvite: mocks.selfInvite,
   },
 }));
 
 vi.mock("vue-sonner", () => ({
   toast: {
-    success: (...a) => mocks.toastSuccess(...a),
+    success: mocks.toastSuccess,
   },
 }));
 
@@ -149,11 +160,14 @@ describe("GroupsSidebar.vue", () => {
     await wrapper.get('[data-testid="location"]').trigger("click");
     expect(mocks.showGroupDialog).toHaveBeenCalledWith("usr_owner");
 
-    const items = wrapper.findAll('[data-testid="ctx-item"]');
-    await items[0].trigger("click");
+    const [launchItem, selfInviteItem] = wrapper.findAll('[data-testid="ctx-item"]');
+    if (!launchItem || !selfInviteItem) {
+      throw new Error("context menu items not rendered");
+    }
+    await launchItem.trigger("click");
     expect(mocks.showLaunchDialog).toHaveBeenCalledWith("wrld_1:123");
 
-    await items[1].trigger("click");
+    await selfInviteItem.trigger("click");
     await Promise.resolve();
     expect(mocks.selfInvite).toHaveBeenCalledWith({
       worldId: "wrld_1",

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { computed, nextTick, onMounted, ref, useAttrs, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
@@ -9,81 +10,64 @@ import InputGroupAddon from "./InputGroupAddon.vue";
 import InputGroupButton from "./InputGroupButton.vue";
 import InputGroupText from "./InputGroupText.vue";
 import InputGroupTextarea from "./InputGroupTextarea.vue";
+import { resolveWrapperStyle } from "./wrapper-style";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  class: { type: null, required: false },
-  inputClass: { type: null, required: false },
-  clearable: { type: Boolean, default: false },
-  showCount: { type: Boolean, default: false },
-  maxlength: { type: Number, required: false },
-  rows: { type: Number, required: false },
-  autosize: { type: [Boolean, Object], default: false },
-});
+type AutosizeOptions = {
+  minRows?: number;
+  maxRows?: number;
+};
 
-const emit = defineEmits(["update:modelValue", "input", "change"]);
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null | undefined;
+    class?: ClassValue | undefined;
+    inputClass?: ClassValue | undefined;
+    clearable?: boolean;
+    showCount?: boolean;
+    maxlength?: number | undefined;
+    rows?: number | undefined;
+    autosize?: boolean | AutosizeOptions;
+  }>(),
+  {
+    modelValue: "",
+    class: undefined,
+    inputClass: undefined,
+    clearable: false,
+    showCount: false,
+    maxlength: undefined,
+    rows: undefined,
+    autosize: false,
+  }
+);
+
+const emit = defineEmits<{ "update:modelValue": [value: string]; input: [value: string]; change: [value: string] }>();
 const attrs = useAttrs();
+const DETACHED_ATTRS = ["style", "onInput", "onChange"];
 
 const modelValue = useVModel(props, "modelValue", emit, {
   passive: true,
   defaultValue: props.modelValue,
 });
 
-const textareaRef = ref(null);
+const textareaRef = ref<{ $el: unknown } | null>(null);
 const valueLength = computed(() => String(modelValue.value ?? "").length);
-const maxLength = computed(() => props.maxlength ?? attrs.maxlength);
-const wrapperClass = computed(() => cn(props.class, attrs.class, "flex-nowrap"));
+const maxLength = computed(() => props.maxlength);
+const wrapperClass = computed(() => cn(props.class, "flex-nowrap"));
 const inputClass = computed(() => cn(props.inputClass));
 const wrapperStyle = computed(() => {
-  const raw = attrs.style;
-  if (!raw) return undefined;
-  if (typeof raw === "string") {
-    const filtered = raw
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s && !s.toLowerCase().startsWith("display:"))
-      .join("; ");
-    return filtered || undefined;
-  }
-  if (Array.isArray(raw)) {
-    return raw.map((s) => {
-      if (typeof s === "string") {
-        return s
-          .split(";")
-          .map((p) => p.trim())
-          .filter((p) => p && !p.toLowerCase().startsWith("display:"))
-          .join("; ");
-      }
-      if (s && typeof s === "object") {
-        const next = { ...s };
-        delete next.display;
-        return next;
-      }
-      return s;
-    });
-  }
-  if (raw && typeof raw === "object") {
-    const next = { ...raw };
-    delete next.display;
-    return next;
-  }
-  return raw;
+  const { style } = attrs;
+  return resolveWrapperStyle(style);
 });
 const showCount = computed(() => Boolean(maxLength.value) && props.showCount);
-const autosizeConfig = computed(() => {
+const autosizeConfig = computed<AutosizeOptions | null>(() => {
   if (!props.autosize) return null;
   return typeof props.autosize === "object" ? props.autosize : {};
 });
 
 const inputAttrs = computed(() => {
-  const rest = { ...(attrs ?? {}) };
-  delete rest.class;
-  delete rest.style;
-  delete rest.maxlength;
-  delete rest.onInput;
-  delete rest.onChange;
+  const rest = Object.fromEntries(Object.entries(attrs).filter(([key]) => !DETACHED_ATTRS.includes(key)));
   return {
     ...rest,
     ...(autosizeConfig.value ? { "data-autosize": "true" } : {}),
@@ -91,12 +75,14 @@ const inputAttrs = computed(() => {
   };
 });
 
-const isDisabled = computed(() => Boolean(inputAttrs.value?.disabled));
+const isDisabled = computed(() => {
+  const { disabled } = attrs;
+  return Boolean(disabled);
+});
 
 function resolveTextareaEl() {
-  const instance = textareaRef.value;
-  if (!instance) return null;
-  return instance.$el ?? instance;
+  const el = textareaRef.value?.$el;
+  return el instanceof HTMLElement ? el : null;
 }
 
 function resizeTextarea() {
@@ -104,10 +90,10 @@ function resizeTextarea() {
   const el = resolveTextareaEl();
   if (!el) return;
   const computedStyle = window.getComputedStyle(el);
-  const lineHeight = parseFloat(computedStyle.lineHeight) || 16;
-  const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
-  const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
-  const minRows = autosizeConfig.value.minRows ?? (Number(attrs.rows) || 1);
+  const lineHeight = Number(computedStyle.lineHeight.replace("px", "")) || 16;
+  const paddingTop = Number(computedStyle.paddingTop.replace("px", "")) || 0;
+  const paddingBottom = Number(computedStyle.paddingBottom.replace("px", "")) || 0;
+  const minRows = autosizeConfig.value.minRows ?? (Number(attrs["rows"]) || 1);
   const maxRows = autosizeConfig.value.maxRows ?? Number.POSITIVE_INFINITY;
   const minHeight = lineHeight * minRows + paddingTop + paddingBottom;
   const maxHeight = lineHeight * maxRows + paddingTop + paddingBottom;
@@ -117,36 +103,42 @@ function resizeTextarea() {
   el.style.height = `${nextHeight}px`;
 }
 
-function clearValue() {
+async function clearValue() {
   if (isDisabled.value) return;
   modelValue.value = "";
   emit("input", "");
   emit("change", "");
-  nextTick(resizeTextarea);
-}
-
-function handleInput(event) {
-  const value = event?.target?.value ?? "";
-  emit("input", value);
+  await nextTick();
   resizeTextarea();
 }
 
-function handleChange(event) {
-  const value = event?.target?.value ?? "";
-  emit("change", value);
+function readTextareaValue(event: Event) {
+  const target = event.target;
+  return target instanceof HTMLTextAreaElement ? target.value : "";
 }
 
-onMounted(() => {
+function handleInput(event: Event) {
+  emit("input", readTextareaValue(event));
+  resizeTextarea();
+}
+
+function handleChange(event: Event) {
+  emit("change", readTextareaValue(event));
+}
+
+onMounted(async () => {
   if (autosizeConfig.value) {
-    nextTick(resizeTextarea);
+    await nextTick();
+    resizeTextarea();
   }
 });
 
 watch(
   () => modelValue.value,
-  () => {
+  async () => {
     if (autosizeConfig.value) {
-      nextTick(resizeTextarea);
+      await nextTick();
+      resizeTextarea();
     }
   }
 );
@@ -154,7 +146,7 @@ watch(
 
 <template>
   <InputGroup :class="wrapperClass" :style="wrapperStyle" :data-disabled="isDisabled ? 'true' : undefined">
-    <InputGroupAddon v-if="$slots.leading" align="block-start">
+    <InputGroupAddon v-if="$slots['leading']" align="block-start">
       <slot name="leading" />
     </InputGroupAddon>
     <InputGroupTextarea
@@ -166,7 +158,7 @@ watch(
       @input="handleInput"
       @change="handleChange"
     />
-    <InputGroupAddon v-if="$slots.trailing" align="block-end">
+    <InputGroupAddon v-if="$slots['trailing']" align="block-end">
       <slot name="trailing" />
     </InputGroupAddon>
     <InputGroupAddon v-if="props.clearable && valueLength > 0" align="inline-end">

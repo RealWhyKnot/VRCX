@@ -1,25 +1,71 @@
 import { ref, watch } from "vue";
+import type { Ref } from "vue";
 import { storeToRefs } from "pinia";
+import type { GroupRole } from "vrchat";
 
 import { buildLegacyInstanceTag, getLaunchURL, isRealInstance } from "../../../shared/utils/instance";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { useGroupStore } from "../../../stores/group";
+import type { Json, VrcxGroup } from "../../../types/vrcx";
 import { useInstanceStore } from "../../../stores/instance";
 import { useUserStore } from "../../../stores/user";
 import { groupRequest } from "../../../api/group";
 import { handleGroupPermissions } from "../../../coordinators/group-membership-coordinator";
+import { logFailure } from "../../../stores/log-failure";
 
 import { configRepository } from "../../../services/config";
 
-export function useNewInstanceBuilder(locationTagRef) {
+const logSettingLoadFailure = logFailure("Loading the new instance dialog settings failed:");
+const logSettingSaveFailure = logFailure("Saving the new instance dialog settings failed:");
+
+export type NewInstanceDialogState = {
+  visible: boolean;
+  loading: boolean;
+  selectedTab: string;
+  instanceCreated: boolean;
+  queueEnabled: boolean;
+  worldId: string;
+  instanceId: string;
+  instanceName: string;
+  userId: string;
+  legacyUserId: string;
+  accessType: string;
+  region: string;
+  groupRegion: string;
+  groupId: string;
+  groupAccessType: string;
+  ageGate: boolean;
+  strict: boolean;
+  location: string;
+  shortName: string;
+  displayName: string;
+  url: string;
+  secureOrShortName: string;
+  lastSelectedGroupId: string;
+  selectedGroupRoles: Json<GroupRole>[];
+  roleIds: string[];
+  groupRef: Partial<VrcxGroup>;
+  minimumAvatarPerformance: string;
+  description: string;
+  languages: string[];
+  categoryId: string;
+  vibeIds: string[];
+};
+
+function toStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+export function useNewInstanceBuilder(locationTagRef: Ref<string>) {
   const { cachedGroups } = useGroupStore();
   const { currentUser } = storeToRefs(useUserStore());
   const instanceStore = useInstanceStore();
   const { createNewInstance, loadInstanceCategoriesAndVibes } = instanceStore;
   const { instanceCategories, instanceVibes } = storeToRefs(instanceStore);
 
-  const newInstanceDialog = ref({
+  const newInstanceDialog = ref<NewInstanceDialogState>({
     visible: false,
+    loading: false,
 
     selectedTab: "Normal",
     instanceCreated: false,
@@ -53,33 +99,75 @@ export function useNewInstanceBuilder(locationTagRef) {
   });
 
   function initializeNewInstanceDialog() {
-    configRepository.getBool("instanceDialogQueueEnabled", true).then((value) => (newInstanceDialog.value.queueEnabled = value));
+    configRepository
+      .getBool("instanceDialogQueueEnabled", true)
+      .then((isEnabled) => (newInstanceDialog.value.queueEnabled = isEnabled))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogInstanceName", "").then((value) => (newInstanceDialog.value.instanceName = value));
+    configRepository
+      .getString("instanceDialogInstanceName", "")
+      .then((value) => (newInstanceDialog.value.instanceName = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogUserId", "").then((value) => (newInstanceDialog.value.legacyUserId = value));
+    configRepository
+      .getString("instanceDialogUserId", "")
+      .then((value) => (newInstanceDialog.value.legacyUserId = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogAccessType", "public").then((value) => (newInstanceDialog.value.accessType = value));
+    configRepository
+      .getString("instanceDialogAccessType", "public")
+      .then((value) => (newInstanceDialog.value.accessType = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceRegion", "US West").then((value) => (newInstanceDialog.value.region = value));
+    configRepository
+      .getString("instanceRegion", "US West")
+      .then((value) => (newInstanceDialog.value.region = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogGroupId", "").then((value) => (newInstanceDialog.value.groupId = value));
+    configRepository
+      .getString("instanceDialogGroupId", "")
+      .then((value) => (newInstanceDialog.value.groupId = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogGroupAccessType", "plus").then((value) => (newInstanceDialog.value.groupAccessType = value));
+    configRepository
+      .getString("instanceDialogGroupAccessType", "plus")
+      .then((value) => (newInstanceDialog.value.groupAccessType = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getBool("instanceDialogAgeGate", false).then((value) => (newInstanceDialog.value.ageGate = value));
+    configRepository
+      .getBool("instanceDialogAgeGate", false)
+      .then((isAgeGated) => (newInstanceDialog.value.ageGate = isAgeGated))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogDisplayName", "").then((value) => (newInstanceDialog.value.displayName = value));
+    configRepository
+      .getString("instanceDialogDisplayName", "")
+      .then((value) => (newInstanceDialog.value.displayName = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogMinimumAvatarPerformance", "").then((value) => (newInstanceDialog.value.minimumAvatarPerformance = value));
+    configRepository
+      .getString("instanceDialogMinimumAvatarPerformance", "")
+      .then((value) => (newInstanceDialog.value.minimumAvatarPerformance = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogDescription", "").then((value) => (newInstanceDialog.value.description = value));
+    configRepository
+      .getString("instanceDialogDescription", "")
+      .then((value) => (newInstanceDialog.value.description = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getArray("instanceDialogLanguages", []).then((value) => (newInstanceDialog.value.languages = value ?? []));
+    configRepository
+      .getArray("instanceDialogLanguages", [])
+      .then((value) => (newInstanceDialog.value.languages = toStringList(value)))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getString("instanceDialogCategoryId", "").then((value) => (newInstanceDialog.value.categoryId = value));
+    configRepository
+      .getString("instanceDialogCategoryId", "")
+      .then((value) => (newInstanceDialog.value.categoryId = value))
+      .catch(logSettingLoadFailure);
 
-    configRepository.getArray("instanceDialogVibeIds", []).then((value) => (newInstanceDialog.value.vibeIds = value ?? []));
+    configRepository
+      .getArray("instanceDialogVibeIds", [])
+      .then((value) => (newInstanceDialog.value.vibeIds = toStringList(value)))
+      .catch(logSettingLoadFailure);
   }
   function saveNewInstanceDialog() {
     const {
@@ -99,49 +187,50 @@ export function useNewInstanceBuilder(locationTagRef) {
       vibeIds,
     } = newInstanceDialog.value;
 
-    configRepository.setString("instanceDialogAccessType", accessType);
-    configRepository.setString("instanceRegion", region);
-    configRepository.setString("instanceDialogInstanceName", instanceName);
-    configRepository.setString("instanceDialogUserId", legacyUserId === currentUser.value.id ? "" : legacyUserId);
-    configRepository.setString("instanceDialogGroupId", groupId);
-    configRepository.setString("instanceDialogGroupAccessType", groupAccessType);
-    configRepository.setBool("instanceDialogQueueEnabled", queueEnabled);
-    configRepository.setBool("instanceDialogAgeGate", ageGate);
-    configRepository.setString("instanceDialogDisplayName", displayName);
-    configRepository.setString("instanceDialogMinimumAvatarPerformance", minimumAvatarPerformance);
-    configRepository.setString("instanceDialogDescription", description);
-    configRepository.setArray("instanceDialogLanguages", languages);
-    configRepository.setString("instanceDialogCategoryId", categoryId);
-    configRepository.setArray("instanceDialogVibeIds", vibeIds);
+    configRepository.setString("instanceDialogAccessType", accessType).catch(logSettingSaveFailure);
+    configRepository.setString("instanceRegion", region).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogInstanceName", instanceName).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogUserId", legacyUserId === currentUser.value.id ? "" : legacyUserId).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogGroupId", groupId).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogGroupAccessType", groupAccessType).catch(logSettingSaveFailure);
+    configRepository.setBool("instanceDialogQueueEnabled", queueEnabled).catch(logSettingSaveFailure);
+    configRepository.setBool("instanceDialogAgeGate", ageGate).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogDisplayName", displayName).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogMinimumAvatarPerformance", minimumAvatarPerformance).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogDescription", description).catch(logSettingSaveFailure);
+    configRepository.setArray("instanceDialogLanguages", languages).catch(logSettingSaveFailure);
+    configRepository.setString("instanceDialogCategoryId", categoryId).catch(logSettingSaveFailure);
+    configRepository.setArray("instanceDialogVibeIds", vibeIds).catch(logSettingSaveFailure);
   }
 
-  function refreshGroupRoles(D) {
-    if (D.groupId && D.groupId !== D.lastSelectedGroupId) {
-      D.roleIds = [];
-      const ref = cachedGroups.get(D.groupId);
+  function refreshGroupRoles(dialog: NewInstanceDialogState) {
+    if (dialog.groupId && dialog.groupId !== dialog.lastSelectedGroupId) {
+      dialog.roleIds = [];
+      const ref = cachedGroups.get(dialog.groupId);
       if (typeof ref !== "undefined") {
-        D.groupRef = ref;
-        D.selectedGroupRoles = ref.roles;
-        groupRequest
+        dialog.groupRef = ref;
+        dialog.selectedGroupRoles = ref.roles ?? [];
+        void groupRequest
           .getGroupRoles({
-            groupId: D.groupId,
+            groupId: dialog.groupId,
           })
           .then((args) => {
-            D.lastSelectedGroupId = D.groupId;
-            D.selectedGroupRoles = args.json;
+            dialog.lastSelectedGroupId = dialog.groupId;
+            dialog.selectedGroupRoles = args.json;
             ref.roles = args.json;
-          });
+          })
+          .catch(logFailure("Loading the group roles failed:"));
       }
     }
-    if (!D.groupId) {
-      D.roleIds = [];
-      D.groupRef = {};
-      D.selectedGroupRoles = [];
-      D.lastSelectedGroupId = "";
+    if (!dialog.groupId) {
+      dialog.roleIds = [];
+      dialog.groupRef = {};
+      dialog.selectedGroupRoles = [];
+      dialog.lastSelectedGroupId = "";
     }
   }
 
-  function updateNewInstanceDialog(noChanges) {
+  function updateNewInstanceDialog(shouldKeepShortName = false) {
     const D = newInstanceDialog.value;
     if (D.instanceId) {
       D.location = `${D.worldId}:${D.instanceId}`;
@@ -149,7 +238,7 @@ export function useNewInstanceBuilder(locationTagRef) {
       D.location = D.worldId;
     }
     const L = parseLocation(D.location);
-    if (noChanges) {
+    if (shouldKeepShortName) {
       L.shortName = D.shortName;
     } else {
       D.shortName = "";
@@ -181,7 +270,7 @@ export function useNewInstanceBuilder(locationTagRef) {
       D.strict = false;
     }
 
-    const instanceName = D.instanceName || String((99999 * Math.random() + 1).toFixed(0)).padStart(5, "0");
+    const instanceName = D.instanceName || (99999 * Math.random() + 1).toFixed(0).padStart(5, "0");
 
     D.instanceId = buildLegacyInstanceTag({
       instanceName,
@@ -199,7 +288,7 @@ export function useNewInstanceBuilder(locationTagRef) {
     saveNewInstanceDialog();
   }
 
-  async function initNewInstanceDialog(tag) {
+  async function initNewInstanceDialog(tag: string) {
     if (!isRealInstance(tag)) {
       return;
     }
@@ -218,7 +307,7 @@ export function useNewInstanceBuilder(locationTagRef) {
     D.strict = false;
     D.shortName = "";
     D.secureOrShortName = "";
-    loadInstanceCategoriesAndVibes();
+    void loadInstanceCategoriesAndVibes().catch(logFailure("Loading instance categories and vibes failed:"));
     const args = await groupRequest.getGroupPermissions({
       userId: currentUser.value.id,
     });
@@ -234,13 +323,17 @@ export function useNewInstanceBuilder(locationTagRef) {
     if (args) {
       newInstanceDialog.value.location = args.json.location;
       newInstanceDialog.value.instanceId = args.json.instanceId;
-      newInstanceDialog.value.secureOrShortName = args.json.shortName || args.json.secureName;
+      let secureOrShortName = args.json.secureName;
+      if (args.json.shortName) {
+        secureOrShortName = args.json.shortName;
+      }
+      newInstanceDialog.value.secureOrShortName = secureOrShortName;
       newInstanceDialog.value.instanceCreated = true;
       updateNewInstanceDialog();
     }
   }
 
-  function newInstanceTabClick(tabName) {
+  function newInstanceTabClick(tabName: string | number) {
     if (tabName === "Normal") {
       buildInstance();
     } else {
@@ -248,31 +341,31 @@ export function useNewInstanceBuilder(locationTagRef) {
     }
   }
 
-  function handleRoleIdsChange(value) {
-    const next = Array.isArray(value) ? value.map((v) => String(v ?? "")).filter(Boolean) : [];
+  function handleRoleIdsChange(value: unknown) {
+    const next = Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.length > 0) : [];
     newInstanceDialog.value.roleIds = next;
     buildInstance();
   }
 
-  function handleLanguagesChange(value) {
-    newInstanceDialog.value.languages = Array.isArray(value) ? value.slice(0, 3) : [];
+  function handleLanguagesChange(value: unknown) {
+    newInstanceDialog.value.languages = toStringList(value).slice(0, 3);
     buildInstance();
   }
 
-  function handleVibeIdsChange(value) {
-    newInstanceDialog.value.vibeIds = Array.isArray(value) ? value.slice(0, 3) : [];
+  function handleVibeIdsChange(value: unknown) {
+    newInstanceDialog.value.vibeIds = toStringList(value).slice(0, 3);
     buildInstance();
   }
 
-  function handleCategoryIdChange(value) {
-    newInstanceDialog.value.categoryId = value === "none" ? "" : String(value ?? "");
+  function handleCategoryIdChange(value: unknown) {
+    newInstanceDialog.value.categoryId = typeof value === "string" && value !== "none" ? value : "";
     buildInstance();
   }
 
   watch(
     () => locationTagRef.value,
     (value) => {
-      initNewInstanceDialog(value);
+      void initNewInstanceDialog(value).catch(logFailure("Preparing the new instance dialog failed:"));
     }
   );
 

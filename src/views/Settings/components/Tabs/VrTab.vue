@@ -84,10 +84,7 @@
         <Select
           :model-value="overlayToast"
           :disabled="(!overlayNotifications || !openVR) && !xsNotifications && !ovrtHudNotifications && !ovrtWristNotifications"
-          @update:model-value="
-            setOverlayToast($event);
-            saveOpenVROption();
-          "
+          @update:model-value="handleOverlayToastChange"
         >
           <SelectTrigger size="sm">
             <SelectValue />
@@ -133,7 +130,7 @@
           :format-options="{ maximumFractionDigits: 0 }"
           :disabled="(!overlayNotifications || !openVR) && !xsNotifications"
           class="w-32"
-          @update:model-value="setNotificationTimeout"
+          @update:model-value="handleNotificationTimeoutChange"
         >
           <NumberFieldContent>
             <NumberFieldDecrement />
@@ -216,6 +213,7 @@ import { useWristOverlaySettingsStore } from "@/stores/settings/wrist-overlay";
 
 import FeedFiltersDialog from "../../dialogs/FeedFiltersDialog.vue";
 import NotificationPositionDialog from "../../dialogs/NotificationPositionDialog.vue";
+import { logError } from "@/stores/notification/errors";
 import WristOverlaySettings from "../WristOverlaySettings.vue";
 import SettingsGroup from "../SettingsGroup.vue";
 import SettingsItem from "../SettingsItem.vue";
@@ -260,9 +258,9 @@ const isLinux = computed(() => isLinuxHost());
 const notificationOpacityValue = computed({
   get: () => [notificationOpacity.value],
   set: (value) => {
-    const next = value?.[0];
+    const next = value[0];
     if (typeof next === "number") {
-      setNotificationOpacity(next);
+      void setNotificationOpacity(next).catch(logError);
     }
   },
 });
@@ -275,19 +273,32 @@ function showWristFeedFiltersDialog() {
   feedFiltersDialogMode.value = "wrist";
 }
 
-function handleOpenVRAlwaysRadio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== openVRAlways.value) {
+function handleOpenVRAlwaysRadio(value: unknown) {
+  const isEnabled = value === "true";
+  if (isEnabled !== openVRAlways.value) {
     setOpenVRAlways();
     saveOpenVROption();
   }
 }
 
-async function changeYouTubeApi(configKey = "") {
+function handleOverlayToastChange(value: unknown) {
+  if (typeof value === "string") {
+    setOverlayToast(value);
+  }
+  saveOpenVROption();
+}
+
+function handleNotificationTimeoutChange(value: unknown) {
+  if (typeof value === "number") {
+    setNotificationTimeout(value);
+  }
+}
+
+function changeYouTubeApi(configKey = "") {
   if (configKey === "VRCX_progressPie") {
-    advancedSettingsStore.setProgressPie();
+    void advancedSettingsStore.setProgressPie().catch(logError);
   } else if (configKey === "VRCX_progressPieFilter") {
-    advancedSettingsStore.setProgressPieFilter();
+    void advancedSettingsStore.setProgressPieFilter().catch(logError);
   }
   updateVRLastLocation();
   updateOpenVR();

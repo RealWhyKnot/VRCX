@@ -6,7 +6,7 @@
           <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
             <div
               v-if="item.row"
-              :ref="virtualizer.measureElement"
+              :ref="measureRowElement"
               class="absolute left-0 top-0 w-full box-border"
               :data-index="item.virtualItem.index"
               :style="rowStyle(item)"
@@ -17,7 +17,7 @@
                   :style="item.row.headerPadding ? { padding: item.row.headerPadding } : undefined"
                   @click="item.row.onClick && item.row.onClick()"
                 >
-                  <ChevronDown class="transition-transform duration-200 ease-in-out" :class="{ '-rotate-90': !item.row.expanded }" />
+                  <ChevronDown class="transition-transform duration-200 ease-in-out" :class="{ '-rotate-90': !item.row.isExpanded }" />
                   <span class="ml-1.5">
                     {{ item.row.label }}
                     <template v-if="item.row.count !== null && item.row.count !== undefined"> &horbar; {{ item.row.count }} </template>
@@ -90,12 +90,12 @@
                         </ContextMenuCheckboxItem>
                         <ContextMenuSeparator v-if="recentStatuses.length" />
                         <ContextMenuCheckboxItem
-                          v-for="(item, idx) in recentStatuses"
+                          v-for="(status, idx) in recentStatuses"
                           :key="idx"
-                          :model-value="currentUser.statusDescription === item"
-                          @click="setStatusFromHistory(item)"
+                          :model-value="currentUser.statusDescription === status"
+                          @click="setStatusFromHistory(status)"
                         >
-                          {{ item }}
+                          {{ status }}
                         </ContextMenuCheckboxItem>
                       </ContextMenuSubContent>
                     </ContextMenuSub>
@@ -119,7 +119,7 @@
 
               <template v-else-if="item.row.type === 'instance-header'">
                 <div class="mb-1 flex items-center">
-                  <Location class="inline text-xs" :location="item.row.location" />
+                  <Location class="inline text-xs" :location="item.row.location ?? ''" />
                   <span class="text-xs ml-1.5">{{ `(${item.row.count})` }}</span>
                 </div>
               </template>
@@ -173,18 +173,21 @@
         </div>
       </div>
     </div>
-    <BackToTop :virtualizer="virtualizer" :target="scrollViewportRef" :tooltip="false" />
+    <BackToTop :virtualizer="virtualizer" :target="scrollViewportRef ?? ''" :tooltip="false" />
     <EditProfileDialog :edit-profile-dialog="editProfileDialog" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
+import type { CSSProperties } from "vue";
 import { ChevronDown, Clock, User } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
+import type { VirtualItem } from "@tanstack/vue-virtual";
+import type { UserStatus } from "vrchat";
 
 import ContextMenu from "../../../components/ui/context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "../../../components/ui/context-menu/ContextMenuCheckboxItem.vue";
@@ -204,10 +207,13 @@ import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useFavoriteStore } from "../../../stores/favorite";
 import { useFriendStore } from "../../../stores/friend";
+import type { FriendContext } from "../../../stores/friend-types";
 import { useGameStore } from "../../../stores/game";
 import { useLaunchStore } from "../../../stores/launch";
 import { useLocationStore } from "../../../stores/location";
+import { logFailure } from "../../../stores/log-failure";
 import { useUserStore } from "../../../stores/user";
+import type { FriendRow, InstanceHeaderRow, MeRow, ToggleRow } from "../friends-sidebar-utils";
 import { buildFriendRow, buildInstanceHeaderRow, buildToggleRow, estimateRowSize } from "../friends-sidebar-utils";
 import { getFriendsSortFunction } from "../../../shared/utils/friend";
 import { isRealInstance } from "../../../shared/utils/instance";
@@ -230,6 +236,13 @@ import { useStatusPresets } from "../../../components/dialogs/UserDialog/composa
 
 import "@/styles/status-icon.css";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
+
+type SidebarRow = ToggleRow | MeRow | FriendRow<FriendContext> | InstanceHeaderRow;
+type VirtualRowItem = { virtualItem: VirtualItem; row: SidebarRow | undefined };
+type FavoriteFriendEntry = FriendContext & { groupName: string; key: string };
+type FavoriteGroupSelection = { key: string; groupName: string; memberIds: Set<string> };
+type StatusOption = { value: UserStatus; statusClass: string; label: string };
+type StatusPreset = { status: UserStatus; statusDescription: string };
 
 const { t } = useI18n();
 
@@ -256,7 +269,8 @@ const { isGameRunning } = storeToRefs(useGameStore());
 const { currentUser, editProfileDialog } = storeToRefs(userStore);
 const { checkCanInvite, checkCanInviteSelf } = useInviteChecks();
 const { userImage, userStatusClass } = useUserDisplay();
-const { presets: statusPresets, getStatusClass: presetStatusClass } = useStatusPresets();
+const { presets, getStatusClass: presetStatusClass } = useStatusPresets();
+const statusPresets = computed<StatusPreset[]>(() => presets.value);
 
 const isFriendsGroupMe = ref(true);
 const isVIPFriends = ref(true);
@@ -264,13 +278,13 @@ const isOnlineFriends = ref(true);
 const isActiveFriends = ref(true);
 const isOfflineFriends = ref(true);
 const isSidebarGroupByInstanceCollapsed = ref(false);
-const collapsedFavGroups = reactive(new Set());
-const scrollViewportRef = ref(null);
+const collapsedFavGroups = reactive(new Set<string | number>());
+const scrollViewportRef = ref<HTMLDivElement | null>(null);
 
-loadFriendsGroupStates();
+void loadFriendsGroupStates().catch(logFailure("load friends group states"));
 
 const sameInstanceFriendId = computed(() => {
-  const ids = new Set();
+  const ids = new Set<string>();
   for (const item of friendsInSameInstance.value) {
     for (const friend of item) {
       if (isRealInstance(friend.ref?.$location.tag) || lastLocation.value.friendList.has(friend.id)) {
@@ -283,23 +297,23 @@ const sameInstanceFriendId = computed(() => {
 
 const shouldHideSameInstance = computed(() => isSidebarGroupByInstance.value && isHideFriendsInSameInstance.value);
 
-const selectedFavoriteGroups = computed(() => {
+const selectedFavoriteGroups = computed<FavoriteGroupSelection[]>(() => {
   const remoteFriendsByGroup = groupedByGroupKeyFavoriteFriends.value;
   const selectedGroups = new Set(sidebarFavoriteGroups.value);
   const hasFilter = selectedGroups.size > 0;
-  const groups = [];
+  const groups: FavoriteGroupSelection[] = [];
 
-  for (const key in remoteFriendsByGroup) {
+  for (const [key, members] of Object.entries(remoteFriendsByGroup)) {
     if (hasFilter && !selectedGroups.has(key)) continue;
-    const groupName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName || "";
-    const memberIds = new Set(remoteFriendsByGroup[key].map((f) => f.id));
+    if (!members) continue;
+    const groupName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName ?? "";
+    const memberIds = new Set(members.map((f) => f.id));
     groups.push({ key, groupName, memberIds });
   }
 
-  for (const groupName in localFriendFavorites.value) {
+  for (const [groupName, userIds] of Object.entries(localFriendFavorites.value)) {
     const key = `local:${groupName}`;
     if (hasFilter && !selectedGroups.has(key)) continue;
-    const userIds = localFriendFavorites.value[groupName];
     if (userIds?.length) {
       groups.push({ key, groupName, memberIds: new Set(userIds) });
     }
@@ -308,7 +322,7 @@ const selectedFavoriteGroups = computed(() => {
 });
 
 const selectedFavoriteGroupIds = computed(() => {
-  const ids = new Set();
+  const ids = new Set<string>();
   for (const { memberIds } of selectedFavoriteGroups.value) {
     for (const id of memberIds) ids.add(id);
   }
@@ -322,7 +336,7 @@ const visibleFavoriteOnlineFriends = computed(() => {
   return excludeSameInstance(allOnlineFriends.value.filter((f) => selectedIds.has(f.id)));
 });
 
-function excludeSameInstance(list) {
+function excludeSameInstance(list: FriendContext[]): FriendContext[] {
   if (!shouldHideSameInstance.value) {
     return list;
   }
@@ -334,8 +348,12 @@ const onlineFriendsByGroupStatus = computed(() => {
   return excludeSameInstance(allOnlineFriends.value.filter((f) => !selectedIds.has(f.id)));
 });
 
+function indexOfFavoriteGroupKey(order: readonly string[], key: string | undefined): number {
+  return key === undefined ? -1 : order.indexOf(key);
+}
+
 const vipFriendsDivideByGroup = computed(() => {
-  const result = [];
+  const result: FavoriteFriendEntry[][] = [];
   for (const { key, groupName, memberIds } of selectedFavoriteGroups.value) {
     const filteredFriends = visibleFavoriteOnlineFriends.value.filter((friend) => memberIds.has(friend.id));
     if (filteredFriends.length > 0) {
@@ -345,8 +363,8 @@ const vipFriendsDivideByGroup = computed(() => {
 
   const order = sidebarFavoriteGroupOrder.value;
   return result.sort((a, b) => {
-    const idxA = order.indexOf(a[0]?.key);
-    const idxB = order.indexOf(b[0]?.key);
+    const idxA = indexOfFavoriteGroupKey(order, a[0]?.key);
+    const idxB = indexOfFavoriteGroupKey(order, b[0]?.key);
     if (idxA !== -1 && idxB !== -1) return idxA - idxB;
     if (idxA !== -1) return -1;
     if (idxB !== -1) return 1;
@@ -354,7 +372,7 @@ const vipFriendsDivideByGroup = computed(() => {
   });
 });
 
-function buildFavoriteRows(rows) {
+function buildFavoriteRows(rows: SidebarRow[]) {
   const vipFriendCount = isSidebarDivideByFriendGroup.value
     ? vipFriendsDivideByGroup.value.reduce((sum, group) => sum + group.length, 0)
     : visibleFavoriteOnlineFriends.value.length;
@@ -365,7 +383,7 @@ function buildFavoriteRows(rows) {
         key: "vip-header",
         label: t("side_panel.favorite"),
         count: vipFriendCount,
-        expanded: isVIPFriends.value,
+        isExpanded: isVIPFriends.value,
         onClick: toggleVIPFriends,
       })
     );
@@ -374,8 +392,8 @@ function buildFavoriteRows(rows) {
   if (isVIPFriends.value) {
     if (isSidebarDivideByFriendGroup.value) {
       vipFriendsDivideByGroup.value.forEach((group, groupIndex) => {
-        const groupName = group?.[0]?.groupName ?? "";
-        const groupKey = group?.[0]?.key ?? groupIndex;
+        const groupName = group[0]?.groupName ?? "";
+        const groupKey = group[0]?.key ?? groupIndex;
         const isExpanded = !collapsedFavGroups.has(groupKey);
         if (groupName) {
           rows.push(
@@ -383,7 +401,7 @@ function buildFavoriteRows(rows) {
               key: `vip-subheader:${groupKey}`,
               label: groupName,
               count: group.length,
-              expanded: isExpanded,
+              isExpanded,
               headerPadding: "4px 0 4px 4px",
               onClick: () => {
                 if (collapsedFavGroups.has(groupKey)) {
@@ -398,7 +416,7 @@ function buildFavoriteRows(rows) {
         if (isExpanded) {
           group.forEach((friend, idx) => {
             rows.push(
-              buildFriendRow(friend, `vip:${groupKey}:${friend?.id ?? idx}`, {
+              buildFriendRow(friend, `vip:${groupKey}:${friend.id}`, {
                 paddingBottom: idx === group.length - 1 ? 10 : undefined,
               })
             );
@@ -406,21 +424,21 @@ function buildFavoriteRows(rows) {
         }
       });
     } else {
-      visibleFavoriteOnlineFriends.value.forEach((friend, idx) => {
-        rows.push(buildFriendRow(friend, `vip:${friend?.id ?? idx}`));
+      visibleFavoriteOnlineFriends.value.forEach((friend) => {
+        rows.push(buildFriendRow(friend, `vip:${friend.id}`));
       });
     }
   }
 }
 
-function buildSameInstanceRows(rows) {
+function buildSameInstanceRows(rows: SidebarRow[]) {
   if (isSidebarGroupByInstance.value && friendsInSameInstance.value.length) {
     rows.push(
       buildToggleRow({
         key: "same-instance-header",
         label: t("side_panel.same_instance"),
         count: friendsInSameInstance.value.length,
-        expanded: !isSidebarGroupByInstanceCollapsed.value,
+        isExpanded: !isSidebarGroupByInstanceCollapsed.value,
         onClick: toggleSwitchGroupByInstanceCollapsed,
         paddingBottom: 4,
       })
@@ -428,12 +446,12 @@ function buildSameInstanceRows(rows) {
 
     if (!isSidebarGroupByInstanceCollapsed.value) {
       friendsInSameInstance.value.forEach((friendArr, groupIndex) => {
-        if (!friendArr?.length) return;
-        const groupKey = friendArr?.[0]?.ref?.$location?.tag ?? `group-${groupIndex}`;
+        if (!friendArr.length) return;
+        const groupKey = friendArr[0]?.ref?.$location.tag ?? `group-${groupIndex}`;
         rows.push(buildInstanceHeaderRow(getFriendsLocations(friendArr, lastLocation.value), friendArr.length, `instance:${groupKey}`));
         friendArr.forEach((friend, idx) => {
           rows.push(
-            buildFriendRow(friend, `instance:${groupKey}:${friend?.id ?? idx}`, {
+            buildFriendRow(friend, `instance:${groupKey}:${friend.id}`, {
               isGroupByInstance: true,
               paddingBottom: idx === friendArr.length - 1 ? 5 : undefined,
               itemStyle: idx === friendArr.length - 1 ? { marginBottom: "6px" } : undefined,
@@ -446,20 +464,20 @@ function buildSameInstanceRows(rows) {
 }
 
 const virtualRows = computed(() => {
-  const rows = [];
+  const rows: SidebarRow[] = [];
 
   rows.push(
     buildToggleRow({
       key: "me-header",
       label: t("side_panel.me"),
-      expanded: isFriendsGroupMe.value,
+      isExpanded: isFriendsGroupMe.value,
       headerPadding: "0 0 5px",
       onClick: toggleFriendsGroupMe,
     })
   );
 
   if (isFriendsGroupMe.value) {
-    rows.push({ type: "me-item", key: `me:${currentUser.value?.id ?? "me"}` });
+    rows.push({ type: "me-item", key: `me:${currentUser.value.id}` });
   }
 
   if (isSameInstanceAboveFavorites.value) {
@@ -476,15 +494,15 @@ const virtualRows = computed(() => {
         key: "online-header",
         label: t("side_panel.online"),
         count: onlineFriendsByGroupStatus.value.length,
-        expanded: isOnlineFriends.value,
+        isExpanded: isOnlineFriends.value,
         onClick: toggleOnlineFriends,
       })
     );
   }
 
   if (isOnlineFriends.value) {
-    onlineFriendsByGroupStatus.value.forEach((friend, idx) => {
-      rows.push(buildFriendRow(friend, `online:${friend?.id ?? idx}`));
+    onlineFriendsByGroupStatus.value.forEach((friend) => {
+      rows.push(buildFriendRow(friend, `online:${friend.id}`));
     });
   }
 
@@ -494,15 +512,15 @@ const virtualRows = computed(() => {
         key: "active-header",
         label: t("side_panel.active"),
         count: activeFriends.value.length,
-        expanded: isActiveFriends.value,
+        isExpanded: isActiveFriends.value,
         onClick: toggleActiveFriends,
       })
     );
   }
 
   if (isActiveFriends.value) {
-    activeFriends.value.forEach((friend, idx) => {
-      rows.push(buildFriendRow(friend, `active:${friend?.id ?? idx}`));
+    activeFriends.value.forEach((friend) => {
+      rows.push(buildFriendRow(friend, `active:${friend.id}`));
     });
   }
 
@@ -512,15 +530,15 @@ const virtualRows = computed(() => {
         key: "offline-header",
         label: t("side_panel.offline"),
         count: offlineFriends.value.length,
-        expanded: isOfflineFriends.value,
+        isExpanded: isOfflineFriends.value,
         onClick: toggleOfflineFriends,
       })
     );
   }
 
   if (isOfflineFriends.value) {
-    offlineFriends.value.forEach((friend, idx) => {
-      rows.push(buildFriendRow(friend, `offline:${friend?.id ?? idx}`));
+    offlineFriends.value.forEach((friend) => {
+      rows.push(buildFriendRow(friend, `offline:${friend.id}`));
     });
   }
 
@@ -531,39 +549,48 @@ const virtualizer = useVirtualizer(
   computed(() => ({
     count: virtualRows.value.length,
     getScrollElement: () => scrollViewportRef.value,
-    estimateSize: (index) => estimateRowSize(virtualRows.value[index]),
-    getItemKey: (index) => virtualRows.value[index]?.key ?? index,
+    estimateSize: (index: number) => estimateRowSize(virtualRows.value[index]),
+    getItemKey: (index: number) => virtualRows.value[index]?.key ?? index,
     overscan: 6,
   }))
 );
 
-const virtualItems = computed(() => {
-  const items = virtualizer.value?.getVirtualItems?.() ?? [];
-  return items.map((virtualItem) => ({
+function measureRowElement(node: unknown) {
+  if (node === null || node instanceof Element) {
+    virtualizer.value.measureElement(node);
+  }
+}
+
+const virtualItems = computed(() =>
+  virtualizer.value.getVirtualItems().map((virtualItem) => ({
     virtualItem,
     row: virtualRows.value[virtualItem.index],
-  }));
-});
+  }))
+);
 
-const virtualContainerStyle = computed(() => ({
-  height: `${virtualizer.value?.getTotalSize?.() ?? 0}px`,
+const virtualContainerStyle = computed<CSSProperties>(() => ({
+  height: `${virtualizer.value.getTotalSize()}px`,
   width: "100%",
 }));
 
-const rowStyle = (item) => {
-  const paddingBottom = item?.row?.paddingBottom;
+function rowStyle(item: VirtualRowItem): CSSProperties {
+  const paddingBottom = item.row?.paddingBottom;
   return {
     transform: `translateY(${item.virtualItem.start}px)`,
     ...(paddingBottom ? { paddingBottom: `${paddingBottom}px` } : {}),
   };
-};
+}
+
+function saveBoolConfig(key: string, isEnabled: boolean) {
+  void configRepository.setBool(key, isEnabled).catch(logFailure(`save ${key}`));
+}
 
 function saveFriendsGroupStates() {
-  configRepository.setBool("VRCX_isFriendsGroupMe", isFriendsGroupMe.value);
-  configRepository.setBool("VRCX_isFriendsGroupFavorites", isVIPFriends.value);
-  configRepository.setBool("VRCX_isFriendsGroupOnline", isOnlineFriends.value);
-  configRepository.setBool("VRCX_isFriendsGroupActive", isActiveFriends.value);
-  configRepository.setBool("VRCX_isFriendsGroupOffline", isOfflineFriends.value);
+  saveBoolConfig("VRCX_isFriendsGroupMe", isFriendsGroupMe.value);
+  saveBoolConfig("VRCX_isFriendsGroupFavorites", isVIPFriends.value);
+  saveBoolConfig("VRCX_isFriendsGroupOnline", isOnlineFriends.value);
+  saveBoolConfig("VRCX_isFriendsGroupActive", isActiveFriends.value);
+  saveBoolConfig("VRCX_isFriendsGroupOffline", isOfflineFriends.value);
 }
 
 async function loadFriendsGroupStates() {
@@ -577,7 +604,7 @@ async function loadFriendsGroupStates() {
 
 function toggleSwitchGroupByInstanceCollapsed() {
   isSidebarGroupByInstanceCollapsed.value = !isSidebarGroupByInstanceCollapsed.value;
-  configRepository.setBool("VRCX_sidebarGroupByInstanceCollapsed", isSidebarGroupByInstanceCollapsed.value);
+  saveBoolConfig("VRCX_sidebarGroupByInstanceCollapsed", isSidebarGroupByInstanceCollapsed.value);
 }
 
 function toggleFriendsGroupMe() {
@@ -605,20 +632,22 @@ function toggleOfflineFriends() {
   saveFriendsGroupStates();
 }
 
+function remeasureVirtualRows() {
+  void nextTick(() => {
+    virtualizer.value.measure();
+  }).catch(logFailure("measure friend rows"));
+}
+
 onMounted(() => {
-  nextTick(() => {
-    virtualizer.value?.measure?.();
-  });
+  remeasureVirtualRows();
 });
 
 const virtualRowCount = computed(() => virtualRows.value.length);
 watch(virtualRowCount, () => {
-  nextTick(() => {
-    virtualizer.value?.measure?.();
-  });
+  remeasureVirtualRows();
 });
 
-const statusOptions = computed(() => [
+const statusOptions = computed<StatusOption[]>(() => [
   {
     value: "join me",
     statusClass: "joinme",
@@ -642,38 +671,47 @@ const statusOptions = computed(() => [
 ]);
 
 const recentStatuses = computed(() => {
-  const history = currentUser.value?.statusHistory;
-  if (!history?.length) return [];
+  const history = currentUser.value.statusHistory;
+  if (!history.length) return [];
   return history.slice(0, 10);
 });
 
-function changeStatus(value) {
-  userRequest.saveCurrentUser({ status: value }).then(() => {
-    toast.success("Status updated");
-  });
+function changeStatus(value: UserStatus) {
+  void userRequest
+    .saveCurrentUser({ status: value })
+    .then(() => {
+      toast.success("Status updated");
+    })
+    .catch(logFailure("change status"));
 }
 
-function setStatusFromHistory(status) {
-  userRequest.saveCurrentUser({ statusDescription: status }).then(() => {
-    toast.success("Status updated");
-  });
+function setStatusFromHistory(status: string) {
+  void userRequest
+    .saveCurrentUser({ statusDescription: status })
+    .then(() => {
+      toast.success("Status updated");
+    })
+    .catch(logFailure("set status from history"));
 }
 
-function getPresetDisplayText(preset) {
+function getPresetDisplayText(preset: StatusPreset): string {
   if (preset.statusDescription) return preset.statusDescription;
   const option = statusOptions.value.find((o) => o.value === preset.status);
-  return option?.label || preset.status;
+  const label = option?.label;
+  if (label) return label;
+  return preset.status;
 }
 
-function applyStatusPreset(preset) {
-  userRequest
+function applyStatusPreset(preset: StatusPreset) {
+  void userRequest
     .saveCurrentUser({
       status: preset.status,
       statusDescription: preset.statusDescription,
     })
     .then(() => {
       toast.success("Status updated");
-    });
+    })
+    .catch(logFailure("apply status preset"));
 }
 
 function openEditProfileFromSidebar() {
@@ -682,68 +720,75 @@ function openEditProfileFromSidebar() {
 
 const canInviteToMyLocation = computed(() => checkCanInvite(lastLocation.value.location));
 
-function hasFriendLocation(friend) {
+function hasFriendLocation(friend: FriendContext): boolean {
   const loc = friend.ref?.location;
   return !!loc && isRealInstance(loc);
 }
 
-function canJoinFriend(friend) {
+function canJoinFriend(friend: FriendContext): boolean {
   const loc = friend.ref?.location;
   if (!loc || !isRealInstance(loc)) return false;
   return checkCanInviteSelf(loc);
 }
 
-function friendRequestInvite(friend) {
-  notificationRequest.sendRequestInvite({ platform: "standalonewindows" }, friend.id).then(() => {
-    recordRecentAction(friend.id, "Request Invite");
-    toast.success("Request invite sent");
-  });
+function friendRequestInvite(friend: FriendContext) {
+  void notificationRequest
+    .sendRequestInvite({ platform: "standalonewindows" }, friend.id)
+    .then(() => {
+      recordRecentAction(friend.id, "Request Invite");
+      toast.success("Request invite sent");
+    })
+    .catch(logFailure("send request invite"));
 }
 
-function friendInvite(friend) {
+function friendInvite(friend: FriendContext) {
   let currentLocation = lastLocation.value.location;
   if (currentLocation === "traveling") {
     currentLocation = lastLocationDestination.value;
   }
   const L = parseLocation(currentLocation);
-  queryRequest.fetch("world.location", { worldId: L.worldId }).then((args) => {
-    notificationRequest
-      .sendInvite(
-        {
-          instanceId: L.tag,
-          worldId: L.tag,
-          worldName: args.ref.name,
-        },
-        friend.id
-      )
-      .then(() => {
-        recordRecentAction(friend.id, "Invite");
-        toast.success(t("message.invite.sent"));
-      });
-  });
+  void queryRequest
+    .fetch("world.location", { worldId: L.worldId })
+    .then((args) => {
+      return notificationRequest
+        .sendInvite(
+          {
+            instanceId: L.tag,
+            worldId: L.tag,
+            worldName: args.ref.name,
+          },
+          friend.id
+        )
+        .then(() => {
+          recordRecentAction(friend.id, "Invite");
+          toast.success(t("message.invite.sent"));
+        });
+    })
+    .catch(logFailure("send invite"));
 }
 
-function friendSendBoop(friend) {
+function friendSendBoop(friend: FriendContext) {
   showSendBoopDialog(friend.id);
 }
 
-function friendJoin(friend) {
+function friendJoin(friend: FriendContext) {
   const loc = friend.ref?.location;
   if (!loc) return;
-  launchStore.showLaunchDialog(loc);
+  void launchStore.showLaunchDialog(loc).catch(logFailure("show launch dialog"));
 }
 
-function friendInviteSelf(friend) {
+function friendInviteSelf(friend: FriendContext) {
   const loc = friend.ref?.location;
   if (!loc) return;
   const L = parseLocation(loc);
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: L.instanceId,
       worldId: L.worldId,
     })
     .then(() => {
       toast.success(t("message.invite.self_sent"));
-    });
+    })
+    .catch(logFailure("send self invite"));
 }
 </script>

@@ -12,10 +12,11 @@ import { computed, nextTick, ref, watch } from "vue";
 
 import { useExternalLinkStore } from "@/stores/external-link";
 import { copyToClipboard } from "@/shared/utils/app-actions";
+import { logFailure } from "@/stores/log-failure";
 
 const externalLinkStore = useExternalLinkStore();
 const { externalLinkDialog } = storeToRefs(externalLinkStore);
-const openButtonRef = ref(null);
+const openButtonRef = ref<{ $el: HTMLElement } | null>(null);
 
 const vrcdnStreamPrefix = "rtspt://stream.vrcdn.live/live/";
 const vrcdnPreviewUrl = computed(() => {
@@ -24,8 +25,8 @@ const vrcdnPreviewUrl = computed(() => {
   return `https://panel.vrcdn.live/preview/${link.slice(vrcdnStreamPrefix.length)}`;
 });
 
-function setOpen(open) {
-  externalLinkDialog.value.visible = open;
+function setOpen(isOpen: boolean) {
+  externalLinkDialog.value.visible = isOpen;
 }
 
 function dismiss() {
@@ -44,13 +45,13 @@ function openLink() {
   const link = externalLinkDialog.value.link;
   setOpen(false);
   if (vrcdnPreviewUrl.value) {
-    AppApi.OpenLink(vrcdnPreviewUrl.value);
+    void window.AppApi.OpenLink(vrcdnPreviewUrl.value).catch(logFailure("Opening the link failed:"));
     return;
   }
-  AppApi.OpenLink(link);
+  void window.AppApi.OpenLink(link).catch(logFailure("Opening the link failed:"));
 }
 
-function onKeyDown(event) {
+function onKeyDown(event: KeyboardEvent) {
   if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "c") {
     return;
   }
@@ -60,11 +61,11 @@ function onKeyDown(event) {
 
 watch(
   () => externalLinkDialog.value.visible,
-  async (visible) => {
-    if (!visible) return;
+  async (isVisible) => {
+    if (!isVisible) return;
     await nextTick();
     await nextTick();
-    openButtonRef.value?.$el?.focus?.();
+    openButtonRef.value?.$el.focus();
   }
 );
 </script>

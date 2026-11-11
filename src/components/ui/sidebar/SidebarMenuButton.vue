@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { Component } from "vue";
 import Tooltip from "@/components/ui/tooltip/Tooltip.vue";
 import TooltipContent from "@/components/ui/tooltip/TooltipContent.vue";
 import TooltipTrigger from "@/components/ui/tooltip/TooltipTrigger.vue";
@@ -12,36 +15,26 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  as: {
-    type: [String, Object, Function],
-    default: "button",
-  },
-  asChild: {
-    type: Boolean,
-    default: false,
-  },
-  variant: {
-    type: String,
-    default: "default",
-  },
-  size: {
-    type: String,
-    default: "default",
-  },
-  isActive: {
-    type: Boolean,
-    default: false,
-  },
-  tooltip: {
-    type: [String, Object, Function],
-    default: undefined,
-  },
-  class: {
-    type: null,
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    as?: PrimitiveProps["as"] | undefined;
+    asChild?: boolean;
+    variant?: "default" | "outline";
+    size?: "default" | "sm" | "lg";
+    isActive?: boolean;
+    tooltip?: string | Component | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: "button",
+    asChild: false,
+    variant: "default",
+    size: "default",
+    isActive: false,
+    tooltip: undefined,
+    class: undefined,
+  }
+);
 
 const { isMobile, state } = useSidebar();
 

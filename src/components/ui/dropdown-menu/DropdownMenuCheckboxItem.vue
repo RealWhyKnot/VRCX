@@ -1,24 +1,33 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { DropdownMenuCheckboxItem, DropdownMenuItemIndicator, useForwardPropsEmits } from "reka-ui";
+import type { DropdownMenuCheckboxItemEmits } from "reka-ui";
 import { Check } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  modelValue: {
-    type: [Boolean, String],
-    required: false,
-  },
-  disabled: { type: Boolean, required: false },
-  textValue: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  indicatorPosition: { type: String, required: false, default: "left" },
-});
-const emits = defineEmits(["select", "update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    modelValue?: boolean | string | undefined;
+    disabled?: boolean;
+    textValue?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    indicatorPosition?: string;
+  }>(),
+  {
+    modelValue: undefined,
+    textValue: undefined,
+    as: undefined,
+    class: undefined,
+    indicatorPosition: "left",
+  }
+);
+const emits = defineEmits<DropdownMenuCheckboxItemEmits>();
 
-const delegatedProps = reactiveOmit(props, "class", "indicatorPosition");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class", "indicatorPosition");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

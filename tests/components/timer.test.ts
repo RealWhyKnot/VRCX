@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  timeToText: vi.fn((ms) => `${ms}ms`),
-  nowRef: null,
+  timeToText: vi.fn<(ms: number) => string>((ms) => `${ms}ms`),
+  nowRef: { value: new Date(0) },
 }));
 
 vi.mock("../../src/shared/utils/base/format", () => ({
-  timeToText: (...args) => mocks.timeToText(...args),
+  timeToText: (...args: Parameters<typeof mocks.timeToText>) => mocks.timeToText(...args),
 }));
 
 vi.mock("@vueuse/core", () => ({
@@ -20,7 +19,7 @@ import Timer from "../../src/components/Timer.vue";
 describe("Timer.vue", () => {
   beforeEach(() => {
     mocks.timeToText.mockClear();
-    mocks.nowRef = ref(10000);
+    mocks.nowRef.value = new Date(10000);
   });
 
   afterEach(() => {

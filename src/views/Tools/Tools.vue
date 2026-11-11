@@ -77,6 +77,9 @@ import { useToolActions } from "../../composables/use-tool-actions";
 import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
 import { getToolsByCategory, toolCategories } from "../../shared/constants/tools";
 import { configRepository } from "../../services/config.ts";
+import { logError } from "../../stores/vrcx-messages";
+
+defineOptions({ name: "ToolsView" });
 
 const { t } = useI18n();
 const { triggerTool } = useToolActions();
@@ -88,7 +91,7 @@ const categories = toolCategories.map((category) => ({
   tools: getToolsByCategory(category.key),
 }));
 
-const categoryCollapsed = ref({
+const categoryCollapsed = ref<Record<string, boolean>>({
   group: false,
   image: false,
   shortcuts: false,
@@ -98,20 +101,26 @@ const categoryCollapsed = ref({
   other: false,
 });
 
-const toggleCategory = (category) => {
+const toggleCategory = (category: string) => {
   categoryCollapsed.value[category] = !categoryCollapsed.value[category];
-  configRepository.setString(toolsCategoryCollapsedConfigKey, JSON.stringify(categoryCollapsed.value));
+  void configRepository.setString(toolsCategoryCollapsedConfigKey, JSON.stringify(categoryCollapsed.value)).catch(logError);
 };
 
 onMounted(async () => {
   await refreshPinnedState();
   const storedValue = await configRepository.getString(toolsCategoryCollapsedConfigKey, "{}");
   try {
-    const parsed = JSON.parse(storedValue);
-    categoryCollapsed.value = {
-      ...categoryCollapsed.value,
-      ...parsed,
-    };
-  } catch {}
+    const parsed: unknown = JSON.parse(storedValue);
+    if (typeof parsed === "object" && parsed !== null) {
+      categoryCollapsed.value = {
+        ...categoryCollapsed.value,
+        ...parsed,
+      };
+    }
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) {
+      throw error;
+    }
+  }
 });
 </script>

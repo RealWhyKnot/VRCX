@@ -1,44 +1,73 @@
 <script setup lang="ts">
+import type { TooltipContentEmits, TooltipContentProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { PrimitiveProps } from "reka-ui";
 import { TooltipArrow, TooltipContent, TooltipPortal, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
 defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  ariaLabel: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  side: { type: null, required: false },
-  sideOffset: { type: Number, required: false, default: 4 },
-  align: { type: null, required: false },
-  alignOffset: { type: Number, required: false },
-  avoidCollisions: { type: Boolean, required: false },
-  collisionBoundary: { type: null, required: false },
-  collisionPadding: { type: [Number, Object], required: false },
-  arrowPadding: { type: Number, required: false },
-  sticky: {
-    type: String,
-    required: false,
-  },
-  hideWhenDetached: { type: Boolean, required: false },
-  positionStrategy: {
-    type: String,
-    required: false,
-  },
-  updatePositionStrategy: {
-    type: String,
-    required: false,
-  },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    ariaLabel?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    side?: TooltipContentProps["side"] | undefined;
+    sideOffset?: number;
+    align?: TooltipContentProps["align"] | undefined;
+    alignOffset?: number | undefined;
+    avoidCollisions?: boolean;
+    collisionBoundary?: TooltipContentProps["collisionBoundary"] | undefined;
+    collisionPadding?: TooltipContentProps["collisionPadding"] | undefined;
+    arrowPadding?: number | undefined;
+    sticky?: TooltipContentProps["sticky"] | undefined;
+    hideWhenDetached?: boolean;
+    positionStrategy?: TooltipContentProps["positionStrategy"] | undefined;
+    updatePositionStrategy?: TooltipContentProps["updatePositionStrategy"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    ariaLabel: undefined,
+    as: undefined,
+    side: undefined,
+    sideOffset: 4,
+    align: undefined,
+    alignOffset: undefined,
+    collisionBoundary: undefined,
+    collisionPadding: undefined,
+    arrowPadding: undefined,
+    sticky: undefined,
+    positionStrategy: undefined,
+    updatePositionStrategy: undefined,
+    class: undefined,
+  }
+);
 
-const emits = defineEmits(["escapeKeyDown", "pointerDownOutside"]);
+const emits = defineEmits<TooltipContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  forceMount: props.forceMount,
+  ...(props.ariaLabel === undefined ? {} : { ariaLabel: props.ariaLabel }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.side === undefined ? {} : { side: props.side }),
+  sideOffset: props.sideOffset,
+  ...(props.align === undefined ? {} : { align: props.align }),
+  ...(props.alignOffset === undefined ? {} : { alignOffset: props.alignOffset }),
+  avoidCollisions: props.avoidCollisions,
+  ...(props.collisionBoundary === undefined ? {} : { collisionBoundary: props.collisionBoundary }),
+  ...(props.collisionPadding === undefined ? {} : { collisionPadding: props.collisionPadding }),
+  ...(props.arrowPadding === undefined ? {} : { arrowPadding: props.arrowPadding }),
+  ...(props.sticky === undefined ? {} : { sticky: props.sticky }),
+  hideWhenDetached: props.hideWhenDetached,
+  ...(props.positionStrategy === undefined ? {} : { positionStrategy: props.positionStrategy }),
+  ...(props.updatePositionStrategy === undefined ? {} : { updatePositionStrategy: props.updatePositionStrategy }),
+}));
+
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 

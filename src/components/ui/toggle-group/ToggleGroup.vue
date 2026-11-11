@@ -1,32 +1,47 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
+import type { ToggleGroupRootEmits, ToggleGroupRootProps } from "reka-ui";
 import { computed, provide, unref } from "vue";
 import { ToggleGroupRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { toggleVariants } from "@/components/ui/toggle";
 
-const props = defineProps({
-  rovingFocus: { type: Boolean, required: false },
-  disabled: { type: Boolean, required: false },
-  orientation: {
-    type: String,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  loop: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  type: { type: String, required: false },
-  modelValue: { type: null, required: false },
-  defaultValue: { type: null, required: false },
-  class: { type: null, required: false },
-  variant: { type: null, required: false },
-  size: { type: null, required: false },
-  spacing: { type: Number, required: false, default: 0 },
-});
+const props = withDefaults(
+  defineProps<{
+    rovingFocus?: boolean;
+    disabled?: boolean;
+    orientation?: ToggleGroupRootProps["orientation"] | undefined;
+    dir?: ToggleGroupRootProps["dir"] | undefined;
+    loop?: boolean;
+    asChild?: boolean;
+    as?: ToggleGroupRootProps["as"] | undefined;
+    name?: string | undefined;
+    required?: boolean;
+    type?: ToggleGroupRootProps["type"] | undefined;
+    modelValue?: ToggleGroupRootProps["modelValue"] | undefined;
+    defaultValue?: ToggleGroupRootProps["defaultValue"] | undefined;
+    class?: ClassValue | undefined;
+    variant?: VariantProps<typeof toggleVariants>["variant"] | undefined;
+    size?: VariantProps<typeof toggleVariants>["size"] | undefined;
+    spacing?: number;
+  }>(),
+  {
+    orientation: undefined,
+    dir: undefined,
+    as: undefined,
+    name: undefined,
+    type: undefined,
+    modelValue: undefined,
+    defaultValue: undefined,
+    class: undefined,
+    variant: undefined,
+    size: undefined,
+    spacing: 0,
+  }
+);
 
-const emits = defineEmits(["update:modelValue"]);
+const emits = defineEmits<ToggleGroupRootEmits>();
 
 provide("toggleGroup", {
   variant: props.variant,
@@ -34,14 +49,28 @@ provide("toggleGroup", {
   spacing: props.spacing,
 });
 
-const delegatedProps = reactiveOmit(props, "class", "size", "variant");
+const delegatedProps = computed(() => ({
+  rovingFocus: props.rovingFocus,
+  disabled: props.disabled,
+  ...(props.orientation === undefined ? {} : { orientation: props.orientation }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  loop: props.loop,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+  ...(props.type === undefined ? {} : { type: props.type }),
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  spacing: props.spacing,
+}));
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 const forwardedProps = computed(() => {
   const { ["onUpdate:modelValue"]: _ignored, ...rest } = unref(forwarded);
   return rest;
 });
 
-function onUpdateModelValue(value) {
+function onUpdateModelValue(value: ToggleGroupRootEmits["update:modelValue"][0]) {
   if (props.type === "single" && !value) {
     return;
   }

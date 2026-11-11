@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { Loader2Icon } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 
-const props = defineProps<{ class?: unknown }>();
+defineOptions({ name: "UiSpinner" });
+
+const props = defineProps<{ class?: ClassValue }>();
 </script>
 
 <template>

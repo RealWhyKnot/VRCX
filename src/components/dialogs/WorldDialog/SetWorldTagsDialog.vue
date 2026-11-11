@@ -104,31 +104,25 @@ import { useI18n } from "vue-i18n";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { worldRequest } from "../../../api/world";
 import { removeFromArray } from "../../../shared/utils/base/array";
+import { logError } from "../../../stores/vrcx-messages";
 
-const props = defineProps({
-  oldTags: {
-    type: Array,
-    default: () => [],
-  },
-  oldDisabledPropAbilities: {
-    type: Array,
-    default: () => [],
-  },
-  isSetWorldTagsDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-  worldId: {
-    type: String,
-    required: true,
-  },
-  isWorldDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    oldTags?: string[] | undefined;
+    oldDisabledPropAbilities?: string[] | undefined;
+    isSetWorldTagsDialogVisible: boolean;
+    worldId: string;
+    isWorldDialogVisible: boolean;
+  }>(),
+  {
+    oldTags: () => [],
+    oldDisabledPropAbilities: () => [],
+  }
+);
 
-const emit = defineEmits(["update:isSetWorldTagsDialogVisible"]);
+const emit = defineEmits<{
+  "update:isSetWorldTagsDialogVisible": [value: boolean];
+}>();
 
 const { t } = useI18n();
 
@@ -157,15 +151,15 @@ const isVisible = computed({
   get() {
     return props.isSetWorldTagsDialogVisible;
   },
-  set(val) {
-    emit("update:isSetWorldTagsDialogVisible", val);
+  set(isOpen: boolean) {
+    emit("update:isSetWorldTagsDialogVisible", isOpen);
   },
 });
 
 watch(
   () => props.isSetWorldTagsDialogVisible,
-  (val) => {
-    if (val) {
+  (isOpen) => {
+    if (isOpen) {
       showSetWorldTagsDialog();
     }
   }
@@ -182,16 +176,16 @@ function showSetWorldTagsDialog() {
   D.contentViolence = false;
   D.contentAdult = false;
   D.contentSex = false;
-  const authorTags = [];
-  const contentTags = [];
+  const authorTags: string[] = [];
+  const contentTags: string[] = [];
   props.oldTags.forEach((tag) => {
-    if (String(tag).startsWith("author_tag_")) {
-      authorTags.unshift(String(tag).substring(11));
+    if (tag.startsWith("author_tag_")) {
+      authorTags.unshift(tag.substring(11));
     }
-    if (String(tag).startsWith("content_")) {
-      contentTags.unshift(String(tag).substring(8));
+    if (tag.startsWith("content_")) {
+      contentTags.unshift(tag.substring(8));
     }
-    switch (String(tag)) {
+    switch (tag) {
       case "content_horror":
         D.contentHorror = true;
         break;
@@ -248,7 +242,7 @@ function saveSetWorldTagsDialog() {
   const D = setWorldTagsDialog.value;
   const authorTags = D.authorTags.trim().split(",");
   const contentTags = D.contentTags.trim().split(",");
-  const tags = [];
+  const tags: string[] = [];
   const disabledPropAbilities = [...props.oldDisabledPropAbilities];
   authorTags.forEach((tag) => {
     if (tag) {
@@ -315,13 +309,13 @@ function saveSetWorldTagsDialog() {
   if (!D.thirdPerson) {
     tags.unshift("feature_third_person_view_disabled");
   }
-  const disabledPlayerMovement = disabledPropAbilities.includes("player_movement");
-  if (D.propMovement && disabledPlayerMovement) {
+  const isPlayerMovementDisabled = disabledPropAbilities.includes("player_movement");
+  if (D.propMovement && isPlayerMovementDisabled) {
     removeFromArray(disabledPropAbilities, "player_movement");
-  } else if (!D.propMovement && !disabledPlayerMovement) {
+  } else if (!D.propMovement && !isPlayerMovementDisabled) {
     disabledPropAbilities.unshift("player_movement");
   }
-  worldRequest
+  void worldRequest
     .saveWorld({
       id: props.worldId,
       tags,
@@ -333,7 +327,7 @@ function saveSetWorldTagsDialog() {
       if (props.isWorldDialogVisible) {
         showWorldDialog(args.json.id);
       }
-      return args;
-    });
+    })
+    .catch(logError);
 }
 </script>

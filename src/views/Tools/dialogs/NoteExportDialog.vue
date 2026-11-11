@@ -60,8 +60,7 @@ import { removeFromArray } from "../../../shared/utils/base/array";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { useFriendStore } from "../../../stores/friend";
 import { useGalleryStore } from "../../../stores/gallery";
-import { useUserStore } from "../../../stores/user";
-import { createColumns } from "./note-export-columns.tsx";
+import { createColumns, type NoteExportRow } from "./note-export-columns.tsx";
 import { miscRequest } from "../../../api/misc";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
@@ -75,20 +74,22 @@ const { friends } = storeToRefs(useFriendStore());
 
 const { showFullscreenImageDialog } = useGalleryStore();
 
-const props = defineProps({
-  isNoteExportDialogVisible: {
-    type: Boolean,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isNoteExportDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isNoteExportDialogVisible: false,
+  }
+);
 
-const noteExportTable = ref({
+const noteExportTable = ref<{ data: NoteExportRow[] }>({
   data: [],
-  layout: "table",
 });
 
 const tableStyle = { maxHeight: "500px" };
 
-const rows = computed(() => (Array.isArray(noteExportTable.value?.data) ? noteExportTable.value.data.slice() : []));
+const rows = computed(() => noteExportTable.value.data.slice());
 
 const columns = computed(() =>
   createColumns({
@@ -106,7 +107,7 @@ const { table } = useVrcxVueTable({
     return rows.value;
   },
   columns: columns.value,
-  getRowId: (row) => String(row?.id ?? ""),
+  getRowId: (row) => row.id,
   enablePagination: false,
   enableSorting: false,
 });
@@ -118,8 +119,8 @@ const errors = ref("");
 
 watch(
   () => props.isNoteExportDialogVisible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       initData();
     }
   }
@@ -133,48 +134,56 @@ function initData() {
   errors.value = "";
 }
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 function updateNoteExportDialog() {
-  const data = [];
+  const data: NoteExportRow[] = [];
   friends.value.forEach((ctx) => {
-    const memo = ctx.ref?.$memo || "";
+    const ref = ctx.ref;
+    if (!ref) return;
+    const memo = ref.$memo || "";
     const newMemo = memo.replace(/[\r\n]/g, " ");
-    if (memo && ctx.ref.note !== newMemo.slice(0, 256)) {
+    if (memo && ref.note !== newMemo.slice(0, 256)) {
       data.push({
         id: ctx.id,
         name: ctx.name,
         memo: newMemo,
-        ref: ctx.ref,
+        ref,
       });
     }
   });
   noteExportTable.value.data = data;
 }
 
+function isExportRunning(): boolean {
+  return loading.value;
+}
+
 async function exportNoteExport() {
-  let ctx;
+  let ctx: NoteExportRow | undefined;
 
   loading.value = true;
-  const data = [...noteExportTable.value.data].reverse();
+  const data = [...noteExportTable.value.data];
   progressTotal.value = data.length;
   try {
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (props.isNoteExportDialogVisible && loading.value) {
-        ctx = data[i];
+    for (const row of data) {
+      if (props.isNoteExportDialogVisible && isExportRunning()) {
+        ctx = row;
         await miscRequest.saveNote({
-          targetUserId: ctx.id,
-          note: ctx.memo.slice(0, 256),
+          targetUserId: row.id,
+          note: row.memo.slice(0, 256),
         });
-        removeFromArray(noteExportTable.value.data, ctx);
+        removeFromArray(noteExportTable.value.data, row);
         progress.value++;
-        await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
           workerTimers.setTimeout(resolve, 5000);
         });
       }
     }
   } catch (err) {
-    errors.value = `Name: ${ctx?.name}\n${err}\n\n`;
+    errors.value = `Name: ${ctx?.name ?? ""}\n${String(err)}\n\n`;
   } finally {
     progress.value = 0;
     progressTotal.value = 0;
@@ -186,8 +195,8 @@ function cancelNoteExport() {
   loading.value = false;
 }
 
-function removeFromNoteExportTable(ref) {
-  removeFromArray(noteExportTable.value.data, ref);
+function removeFromNoteExportTable(row: NoteExportRow) {
+  removeFromArray(noteExportTable.value.data, row);
 }
 
 function closeDialog() {

@@ -70,33 +70,35 @@ import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { groupRequest } from "../../api/group";
 import { instanceRequest } from "../../api/instance";
 import { useGroupStore } from "../../stores/group";
+import { logFailure } from "../../stores/log-failure";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import { parseLocation } from "../../shared/utils/location-parser";
 import GroupCalendarEventDetails from "../../views/Tools/components/GroupCalendarEventDetails.vue";
 
+type CalendarEventEntry = ReturnType<ReturnType<typeof useGroupStore>["applyGroupEvent"]>;
+
 const LINK_WINDOW_MS = 6 * 60 * 60 * 1000;
 const FETCH_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-  location: {
-    type: String,
-    required: true,
-  },
-  currentEventId: {
-    type: String,
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    open?: boolean;
+    location: string;
+    currentEventId?: string;
+  }>(),
+  {
+    open: false,
+    currentEventId: "",
+  }
+);
 
-const emit = defineEmits(["update:open"]);
+const emit = defineEmits<{
+  "update:open": [isOpen: boolean];
+}>();
 const { t } = useI18n();
 const groupStore = useGroupStore();
 
-const events = ref([]);
+const events = ref<CalendarEventEntry[]>([]);
 const selectedEventId = ref("");
 const fetching = ref(false);
 const loading = ref(false);
@@ -114,10 +116,10 @@ const canAssign = computed(() => !loading.value && !!selectedEvent.value && sele
 
 watch(
   () => props.open,
-  (open) => {
-    if (open) {
+  (isOpen) => {
+    if (isOpen) {
       selectedEventId.value = props.currentEventId;
-      fetchEvents();
+      void fetchEvents().catch(logFailure("Loading calendar events failed:"));
     }
   },
   { immediate: true }
@@ -132,16 +134,17 @@ async function fetchEvents() {
       n: 100,
       after: new Date(Date.now() - FETCH_LOOKBACK_MS).toISOString(),
     });
-    events.value = (args.json?.results ?? []).map((event) => groupStore.applyGroupEvent(event));
-    if (!selectedEventId.value && linkableEvents.value.length) {
-      selectedEventId.value = linkableEvents.value[0].id;
+    events.value = (args.json.results ?? []).map((event) => groupStore.applyGroupEvent(event));
+    const firstLinkable = linkableEvents.value[0];
+    if (!selectedEventId.value && firstLinkable) {
+      selectedEventId.value = firstLinkable.id;
     }
   } finally {
     fetching.value = false;
   }
 }
 
-function formatTimeRange(event) {
+function formatTimeRange(event: CalendarEventEntry) {
   return `${formatDateFilter(event.startsAt, "short")} - ${formatDateFilter(event.endsAt, "time")}`;
 }
 
@@ -151,13 +154,13 @@ function closeDialog() {
   }
 }
 
-function handleOpenChange(open) {
-  if (!open) {
+function handleOpenChange(isOpen: boolean) {
+  if (!isOpen) {
     closeDialog();
   }
 }
 
-async function updateLink(calendarEntryId) {
+async function updateLink(calendarEntryId: string | null) {
   loading.value = true;
   try {
     await instanceRequest.updateInstance({ location: props.location, calendarEntryId });

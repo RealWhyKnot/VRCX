@@ -1,33 +1,30 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="TData extends RowData">
+import type { CSSProperties } from "vue";
 import { computed, ref } from "vue";
-import { FlexRender } from "@tanstack/vue-table";
+import { FlexRender, type RowData } from "@tanstack/vue-table";
 import { GripVertical } from "lucide-vue-next";
 import { useSortable } from "@dnd-kit/vue/sortable";
+import type { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 import TableHead from "../table/TableHead.vue";
 
-const props = defineProps({
-  header: {
-    type: Object,
-    required: true,
-  },
-  index: {
-    type: Number,
-    required: true,
-  },
-  headerClass: {
-    type: String,
-    default: "",
-  },
-  pinnedStyle: {
-    type: Object,
-    default: null,
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-});
+type DataTable = ReturnType<typeof useVrcxVueTable<TData>>["table"];
+type HeaderItem = ReturnType<DataTable["getHeaderGroups"]>[number]["headers"][number];
+
+const props = withDefaults(
+  defineProps<{
+    header: HeaderItem;
+    index: number;
+    headerClass?: string;
+    pinnedStyle?: CSSProperties | null;
+    disabled?: boolean;
+  }>(),
+  {
+    headerClass: "",
+    pinnedStyle: null,
+    disabled: false,
+  }
+);
 
 const element = ref(null);
 

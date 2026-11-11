@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const mocks = vi.hoisted(() => ({
-  fetch: vi.fn(() => Promise.resolve({ json: { displayName: "Fetched User" } })),
-  showUserDialog: vi.fn(),
+  fetch: vi.fn((_endpoint: string, _params: { userId: string }) => Promise.resolve({ json: { displayName: "Fetched User" } })),
+  showUserDialog: vi.fn((_userId: string) => undefined),
 }));
 
 vi.mock("../../src/api/query-request", () => ({
   queryRequest: {
-    fetch: (...args) => mocks.fetch(...args),
+    fetch: mocks.fetch,
   },
 }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mocks.showUserDialog(...args),
+  showUserDialog: mocks.showUserDialog,
 }));
 
 import DisplayName from "../../src/components/DisplayName.vue";

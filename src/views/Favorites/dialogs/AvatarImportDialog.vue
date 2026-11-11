@@ -119,35 +119,50 @@ import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { useAvatarStore } from "../../../stores/avatar";
 import { useFavoriteStore } from "../../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 import { useGalleryStore } from "../../../stores/gallery";
-import { useUserStore } from "../../../stores/user";
 import { addLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
+import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { avatarRequest } from "../../../api/avatar";
 import { favoriteRequest } from "../../../api/favorite";
 import { createColumns } from "./avatar-import-columns.tsx";
 import { removeFromArray } from "../../../shared/utils/base/array";
+import type { AvatarRef } from "../../../shared/utils/avatar-transforms";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
+import { logFailure } from "../../../stores/log-failure";
 
-const emit = defineEmits(["update:avatarImportDialogInput"]);
+type AvatarImportDialogState = {
+  loading: boolean;
+  progress: number;
+  progressTotal: number;
+  input: string;
+  avatarIdList: Set<string>;
+  errors: string;
+  avatarImportFavoriteGroup: FavoriteGroupSlot | null;
+  avatarImportLocalFavoriteGroup: string | null;
+  importProgress: number;
+  importProgressTotal: number;
+};
+
+const emit = defineEmits<{
+  "update:avatarImportDialogInput": [value: string];
+}>();
 const { t } = useI18n();
 
 const { favoriteAvatarGroups, avatarImportDialogInput, avatarImportDialogVisible, localAvatarFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { localAvatarFavGroupLength, getCachedFavoritesByObjectId } = useFavoriteStore();
-import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";
-import { showUserDialog } from "../../../coordinators/user-coordinator";
 const { showFullscreenImageDialog } = useGalleryStore();
 
-const avatarImportDialog = ref({
+const avatarImportDialog = ref<AvatarImportDialogState>({
   loading: false,
   progress: 0,
   progressTotal: 0,
   input: "",
-  avatarIdList: new Set(),
+  avatarIdList: new Set<string>(),
   errors: "",
   avatarImportFavoriteGroup: null,
   avatarImportLocalFavoriteGroup: null,
@@ -158,14 +173,14 @@ const avatarImportDialog = ref({
 const avatarImportFavoriteGroupSelection = ref("");
 const avatarImportLocalFavoriteGroupSelection = ref("");
 
-const avatarImportTable = ref({
+const avatarImportTable = ref<{ data: AvatarRef[]; layout: string }>({
   data: [],
   layout: "table",
 });
 
 const tableStyle = { maxHeight: "400px" };
 
-const rows = computed(() => (Array.isArray(avatarImportTable.value?.data) ? avatarImportTable.value.data.slice() : []));
+const rows = computed(() => avatarImportTable.value.data.slice());
 
 const columns = computed(() =>
   createColumns({
@@ -182,29 +197,31 @@ const { table } = useVrcxVueTable({
     return rows.value;
   },
   columns: columns.value,
-  getRowId: (row) => String(row?.id ?? ""),
+  getRowId: (row) => row.id,
   enablePagination: false,
   enableSorting: false,
 });
+
+const isLoading = () => avatarImportDialog.value.loading;
 
 const isVisible = computed({
   get() {
     return avatarImportDialogVisible.value;
   },
-  set(value) {
-    avatarImportDialogVisible.value = value;
+  set(isOpen: boolean) {
+    avatarImportDialogVisible.value = isOpen;
   },
 });
 
 watch(
   () => avatarImportDialogVisible.value,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       clearAvatarImportTable();
       resetAvatarImport();
       if (avatarImportDialogInput.value) {
         avatarImportDialog.value.input = avatarImportDialogInput.value;
-        processAvatarImportList();
+        void processAvatarImportList().catch(logFailure("Avatar import list"));
         emit("update:avatarImportDialogInput", "");
       }
     }
@@ -215,34 +232,34 @@ async function processAvatarImportList() {
   const D = avatarImportDialog.value;
   D.loading = true;
   const regexAvatarId = /avtr_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
-  let match = [];
-  const avatarIdList = new Set();
-  while ((match = regexAvatarId.exec(D.input)) !== null) {
+  const avatarIdList = new Set<string>();
+  let match = regexAvatarId.exec(D.input);
+  while (match !== null) {
     avatarIdList.add(match[0]);
+    match = regexAvatarId.exec(D.input);
   }
   D.input = "";
   D.errors = "";
   D.progress = 0;
   D.progressTotal = avatarIdList.size;
   const data = Array.from(avatarIdList);
-  for (let i = 0; i < data.length; ++i) {
+  for (const avatarId of data) {
     if (!isVisible.value) {
       resetAvatarImport();
     }
-    if (!D.loading || !isVisible.value) {
+    if (!isLoading() || !isVisible.value) {
       break;
     }
-    const avatarId = data[i];
     if (!D.avatarIdList.has(avatarId)) {
       try {
         const args = await avatarRequest.getAvatar({
           avatarId,
         });
-        const ref = applyAvatar(args.json);
-        avatarImportTable.value.data.push(ref);
+        const avatarRef = applyAvatar(args.json);
+        avatarImportTable.value.data.push(avatarRef);
         D.avatarIdList.add(avatarId);
       } catch (err) {
-        D.errors = D.errors.concat(`AvatarId: ${avatarId}\n${err}\n\n`);
+        D.errors = D.errors.concat(`AvatarId: ${avatarId}\n${String(err)}\n\n`);
       }
     }
     D.progress++;
@@ -252,9 +269,9 @@ async function processAvatarImportList() {
   D.progressTotal = 0;
 }
 
-function deleteItemAvatarImport(ref) {
-  removeFromArray(avatarImportTable.value.data, ref);
-  avatarImportDialog.value.avatarIdList.delete(ref.id);
+function deleteItemAvatarImport(item: AvatarRef) {
+  removeFromArray(avatarImportTable.value.data, item);
+  avatarImportDialog.value.avatarIdList.delete(item.id);
 }
 
 function resetAvatarImport() {
@@ -264,81 +281,77 @@ function resetAvatarImport() {
 
 function clearAvatarImportTable() {
   avatarImportTable.value.data = [];
-  avatarImportDialog.value.avatarIdList = new Set();
+  avatarImportDialog.value.avatarIdList = new Set<string>();
 }
 
-function selectAvatarImportGroup(group) {
+function selectAvatarImportGroup(group: FavoriteGroupSlot | null) {
   avatarImportDialog.value.avatarImportLocalFavoriteGroup = null;
   avatarImportDialog.value.avatarImportFavoriteGroup = group;
   avatarImportFavoriteGroupSelection.value = group?.name ?? "";
   avatarImportLocalFavoriteGroupSelection.value = "";
 }
 
-function selectAvatarImportLocalGroup(group) {
+function selectAvatarImportLocalGroup(group: string | null) {
   avatarImportDialog.value.avatarImportFavoriteGroup = null;
   avatarImportDialog.value.avatarImportLocalFavoriteGroup = group;
   avatarImportFavoriteGroupSelection.value = "";
   avatarImportLocalFavoriteGroupSelection.value = group ?? "";
 }
 
-function handleAvatarImportGroupSelect(value) {
-  avatarImportFavoriteGroupSelection.value = value;
-  const group = favoriteAvatarGroups.value.find((g) => g.name === value) ?? null;
+function handleAvatarImportGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  avatarImportFavoriteGroupSelection.value = selectedValue;
+  const group = favoriteAvatarGroups.value.find((g) => g.name === selectedValue) ?? null;
   selectAvatarImportGroup(group);
 }
 
-function handleAvatarImportLocalGroupSelect(value) {
-  avatarImportLocalFavoriteGroupSelection.value = value;
-  selectAvatarImportLocalGroup(value || null);
+function handleAvatarImportLocalGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  avatarImportLocalFavoriteGroupSelection.value = selectedValue;
+  selectAvatarImportLocalGroup(selectedValue || null);
 }
 
 function cancelAvatarImport() {
   avatarImportDialog.value.loading = false;
 }
 
-function addFavoriteAvatar(ref, group, message) {
-  return favoriteRequest
-    .addFavorite({
-      type: group.type,
-      favoriteId: ref.id,
-      tags: group.name,
-    })
-    .then((args) => {
-      if (message) {
-        toast.success("Avatar added to favorites");
-      }
-      return args;
-    });
+function addFavoriteAvatar(avatar: AvatarRef, group: FavoriteGroupSlot) {
+  return favoriteRequest.addFavorite({
+    type: group.type,
+    favoriteId: avatar.id,
+    tags: group.name,
+  });
 }
+
 async function importAvatarImportTable() {
   const D = avatarImportDialog.value;
   if (!D.avatarImportFavoriteGroup && !D.avatarImportLocalFavoriteGroup) {
     return;
   }
   D.loading = true;
-  const data = [...avatarImportTable.value.data].reverse();
+  const data = [...avatarImportTable.value.data];
   D.importProgressTotal = data.length;
-  let ref = null;
+  let current: AvatarRef | null = null;
   try {
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (!D.loading || !isVisible.value) {
+    for (const item of data) {
+      if (!isLoading() || !isVisible.value) {
         break;
       }
-      ref = data[i];
+      current = item;
       if (D.avatarImportFavoriteGroup) {
-        if (getCachedFavoritesByObjectId(ref.id)) {
+        if (getCachedFavoritesByObjectId(item.id)) {
           throw new Error("Avatar is already in favorites");
         }
-        await addFavoriteAvatar(ref, D.avatarImportFavoriteGroup, false);
+        await addFavoriteAvatar(item, D.avatarImportFavoriteGroup);
       } else if (D.avatarImportLocalFavoriteGroup) {
-        addLocalAvatarFavorite(ref.id, D.avatarImportLocalFavoriteGroup);
+        addLocalAvatarFavorite(item.id, D.avatarImportLocalFavoriteGroup);
       }
-      removeFromArray(avatarImportTable.value.data, ref);
-      D.avatarIdList.delete(ref.id);
+      removeFromArray(avatarImportTable.value.data, item);
+      D.avatarIdList.delete(item.id);
       D.importProgress++;
     }
   } catch (err) {
-    D.errors = `Name: ${ref?.name}\nAvatarId: ${ref?.id}\n${err}\n\n`;
+    D.errors = `Name: ${current?.name}\nAvatarId: ${current?.id}\n${String(err)}\n\n`;
   } finally {
     D.importProgress = 0;
     D.importProgressTotal = 0;

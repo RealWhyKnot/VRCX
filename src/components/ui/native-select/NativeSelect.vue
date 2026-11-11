@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { reactiveOmit, useVModel } from "@vueuse/core";
 import { ChevronDownIcon } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
@@ -7,12 +8,20 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  modelValue: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | string[] | null | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    modelValue: undefined,
+    class: undefined,
+  }
+);
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{
+  "update:modelValue": [value: string | number | string[] | null | undefined];
+}>();
 
 const modelValue = useVModel(props, "modelValue", emit, {
   passive: true,

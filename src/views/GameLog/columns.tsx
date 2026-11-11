@@ -17,12 +17,44 @@ import { useInstanceStore } from "../../stores/instance";
 import { useUiStore } from "../../stores/ui";
 import { lookupUser } from "../../coordinators/user-coordinator";
 import { showWorldDialog } from "../../coordinators/world-coordinator";
+import { logFailure } from "../../stores/log-failure";
+import type { GameLogEntry } from "../../stores/gameLog/types";
+import type { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+
+type GameLogTableOptions = Parameters<typeof useVrcxVueTable<GameLogEntry>>[0];
+type GameLogColumn = Extract<GameLogTableOptions["columns"], unknown[]>[number];
+type GameLogColumnsOptions = {
+  getCreatedAt: (row: GameLogEntry) => string;
+  onDelete: (row: GameLogEntry) => void;
+  onDeletePrompt: (row: GameLogEntry) => void;
+};
 
 const { t } = i18n.global;
 
 const UNACTIONABLE_TYPES = new Set(["OnPlayerJoined", "OnPlayerLeft", "Location", "PortalSpawn"]);
 
-export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
+function firstNonEmpty(...values: (string | null | undefined)[]): string {
+  for (const value of values) {
+    if (value) return value;
+  }
+  return "";
+}
+
+function getInstanceId(entry: GameLogEntry): string {
+  return "instanceId" in entry && typeof entry.instanceId === "string" ? entry.instanceId : "";
+}
+
+export function toUserRef(entry: { userId?: string | null | undefined; displayName?: string | null | undefined }): {
+  userId?: string;
+  displayName?: string;
+} {
+  const userRef: { userId?: string; displayName?: string } = {};
+  if (entry.userId) userRef.userId = entry.userId;
+  if (entry.displayName) userRef.displayName = entry.displayName;
+  return userRef;
+}
+
+export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }: GameLogColumnsOptions): GameLogColumn[] => {
   const { showPreviousInstancesInfoDialog } = useInstanceStore();
   const { shiftHeld } = storeToRefs(useUiStore());
 
@@ -71,7 +103,14 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
 
         return (
           <Badge variant="outline" class="text-muted-foreground">
-            <span class={isLink ? "cursor-pointer" : undefined} onClick={() => isLink && showWorldDialog(original.location)}>
+            <span
+              class={isLink ? "cursor-pointer" : undefined}
+              onClick={() => {
+                if (isLink && original.location) {
+                  showWorldDialog(original.location);
+                }
+              }}
+            >
               {label}
             </span>
           </Badge>
@@ -90,7 +129,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
         return (
           <span class="cursor-pointer">
             {original.displayName ? (
-              <span class="cursor-pointer table-user mr-1" onClick={() => lookupUser(original)}>
+              <span class="cursor-pointer table-user mr-1" onClick={() => void lookupUser(toUserRef(original)).catch(logFailure("Failed to look up user:"))}>
                 {original.displayName}
               </span>
             ) : null}
@@ -113,7 +152,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
         if (original.type === "Location") {
           return (
             <div class="w-full min-w-0 truncate">
-              <Location location={original.location} hint={original.worldName} grouphint={original.groupName} enableContextMenu />
+              <Location location={original.location ?? ""} hint={original.worldName ?? ""} grouphint={original.groupName ?? ""} enableContextMenu />
             </div>
           );
         }
@@ -121,7 +160,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
         if (original.type === "PortalSpawn") {
           return (
             <div class="w-full min-w-0 truncate">
-              <Location location={original.instanceId} hint={original.worldName} grouphint={original.groupName} enableContextMenu />
+              <Location location={getInstanceId(original)} hint={original.worldName ?? ""} grouphint={original.groupName ?? ""} enableContextMenu />
             </div>
           );
         }
@@ -130,12 +169,12 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
           return (
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TooltipWrapper content={original.data} side="bottom">
+                <TooltipWrapper content={original.data ?? ""} side="bottom">
                   <span class="block w-full min-w-0 truncate">{original.data}</span>
                 </TooltipWrapper>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => copyToClipboard(original.data)}>
+                <ContextMenuItem onClick={() => copyToClipboard(original.data ?? "")}>
                   <Copy class="size-4" />
                   {t("common.actions.copy")}
                 </ContextMenuItem>
@@ -146,15 +185,15 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
 
         if (original.type === "External") {
           return (
-            <TooltipWrapper content={original.message} side="bottom">
+            <TooltipWrapper content={original.message ?? ""} side="bottom">
               <span class="block w-full min-w-0 truncate">{original.message}</span>
             </TooltipWrapper>
           );
         }
 
         if (original.type === "VideoPlay") {
-          const showLink = original.videoId !== "PopcornPalace" && !!original.videoUrl;
-          const label = original.videoName || original.videoUrl;
+          const hasVideoLink = original.videoId !== "PopcornPalace" && !!original.videoUrl;
+          const label = firstNonEmpty(original.videoName, original.videoUrl);
           const tooltipText = original.videoId ? `${original.videoId}: ${label}` : label;
           return (
             <ContextMenu>
@@ -162,8 +201,8 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
                 <TooltipWrapper content={tooltipText} side="bottom">
                   <span class="block w-full min-w-0 truncate cursor-pointer">
                     {original.videoId ? <span class="mr-1.5">{original.videoId}:</span> : null}
-                    {showLink ? (
-                      <span class="cursor-pointer" onClick={() => openExternalLink(original.videoUrl)}>
+                    {hasVideoLink ? (
+                      <span class="cursor-pointer" onClick={() => openExternalLink(original.videoUrl ?? "")}>
                         {label}
                       </span>
                     ) : (
@@ -173,16 +212,16 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
                 </TooltipWrapper>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                {showLink ? (
+                {hasVideoLink ? (
                   <>
-                    <ContextMenuItem onClick={() => openExternalLink(original.videoUrl)}>
+                    <ContextMenuItem onClick={() => openExternalLink(original.videoUrl ?? "")}>
                       <ExternalLink class="size-4" />
                       {t("common.actions.open_link")}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                   </>
                 ) : null}
-                <ContextMenuItem onClick={() => copyToClipboard(original.videoUrl || original.videoName)}>
+                <ContextMenuItem onClick={() => copyToClipboard(firstNonEmpty(original.videoUrl, original.videoName))}>
                   <Copy class="size-4" />
                   {t("common.actions.copy")}
                 </ContextMenuItem>
@@ -195,21 +234,21 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
           return (
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TooltipWrapper content={original.resourceUrl} side="bottom">
+                <TooltipWrapper content={original.resourceUrl ?? ""} side="bottom">
                   <span class="block w-full min-w-0 truncate cursor-pointer">
-                    <span class="cursor-pointer" onClick={() => openExternalLink(original.resourceUrl)}>
+                    <span class="cursor-pointer" onClick={() => openExternalLink(original.resourceUrl ?? "")}>
                       {original.resourceUrl}
                     </span>
                   </span>
                 </TooltipWrapper>
               </ContextMenuTrigger>
               <ContextMenuContent>
-                <ContextMenuItem onClick={() => openExternalLink(original.resourceUrl)}>
+                <ContextMenuItem onClick={() => openExternalLink(original.resourceUrl ?? "")}>
                   <ExternalLink class="size-4" />
                   {t("common.actions.open_link")}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem onClick={() => copyToClipboard(original.resourceUrl)}>
+                <ContextMenuItem onClick={() => copyToClipboard(original.resourceUrl ?? "")}>
                   <Copy class="size-4" />
                   {t("common.actions.copy")}
                 </ContextMenuItem>
@@ -223,7 +262,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
         }
 
         return (
-          <TooltipWrapper content={original.data} side="bottom">
+          <TooltipWrapper content={original.data ?? ""} side="bottom">
             <span class="block w-full min-w-0 truncate">{original.data}</span>
           </TooltipWrapper>
         );
@@ -265,7 +304,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }) => {
                 <button
                   type="button"
                   class="inline-flex h-6 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
-                  onClick={() => showPreviousInstancesInfoDialog(original.location)}
+                  onClick={() => showPreviousInstancesInfoDialog(original.location ?? "")}
                 >
                   <FileText class="h-4 w-4" />
                 </button>

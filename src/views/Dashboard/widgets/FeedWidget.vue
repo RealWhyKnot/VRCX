@@ -32,7 +32,7 @@
             v-for="(item, index) in filteredData"
             :key="`${item.type}-${item.created_at}-${index}`"
             class="cursor-default in-[.is-compact-table]:py-1! in-[.is-comfortable-table]:py-1.5!"
-            :class="{ 'border-l-2 border-l-chart-4': item.isFavorite }"
+            :class="{ 'border-l-2 border-l-chart-4': isFavoriteRow(item) }"
           >
             <TableCell class="w-28 text-[11px] tabular-nums text-muted-foreground">
               <TooltipWrapper :content="formatExactTime(item.created_at)" side="top">
@@ -46,58 +46,70 @@
               <template v-if="item.type === 'GPS'">
                 <div class="flex items-center min-w-0">
                   <MapPin class="mr-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                  <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                     <span class="shrink-0 cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                   </UserContextMenu>
                   <span class="shrink-0 text-muted-foreground mx-1"> → </span>
                   <div class="min-w-0 flex-1 truncate">
-                    <Location :location="item.location" :hint="item.worldName" :grouphint="item.groupName" enable-context-menu disable-tooltip />
+                    <Location
+                      :location="item.location ?? ''"
+                      :hint="item.worldName ?? ''"
+                      :grouphint="item.groupName ?? ''"
+                      enable-context-menu
+                      disable-tooltip
+                    />
                   </div>
                 </div>
               </template>
               <template v-else-if="item.type === 'Online'">
                 <div class="flex items-center min-w-0">
                   <i class="x-user-status online mr-1 shrink-0"></i>
-                  <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                  <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                     <span class="shrink-0 cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                   </UserContextMenu>
                   <template v-if="item.location">
                     <span class="shrink-0 text-muted-foreground"> → </span>
                     <div class="min-w-0 flex-1 truncate">
-                      <Location :location="item.location" :hint="item.worldName" :grouphint="item.groupName" enable-context-menu disable-tooltip />
+                      <Location
+                        :location="item.location ?? ''"
+                        :hint="item.worldName ?? ''"
+                        :grouphint="item.groupName ?? ''"
+                        enable-context-menu
+                        disable-tooltip
+                      />
                     </div>
                   </template>
                 </div>
               </template>
               <template v-else-if="item.type === 'Offline'">
                 <i class="x-user-status mr-1"></i>
-                <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                   <span class="cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 </UserContextMenu>
               </template>
               <template v-else-if="item.type === 'Status'">
-                <i class="x-user-status mr-1" :class="statusClass(item.status)"></i>
-                <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                <i class="x-user-status mr-1" :class="statusClass(item.status ?? undefined)"></i>
+                <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                   <span class="cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 </UserContextMenu>
                 <span class="text-muted-foreground ml-1"> {{ item.statusDescription }}</span>
               </template>
               <template v-else-if="item.type === 'Avatar'">
                 <Box class="mr-1 inline-block h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                   <span class="cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 </UserContextMenu>
                 <span class="text-muted-foreground"> → {{ item.avatarName }}</span>
               </template>
               <template v-else-if="item.type === 'Bio'">
                 <Pencil class="mr-1 inline-block h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                   <span class="cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 </UserContextMenu>
                 <span class="ml-1 text-muted-foreground">{{ t("dashboard.widget.feed_bio") }}</span>
               </template>
               <template v-else>
-                <UserContextMenu :user-id="item.userId" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
+                <UserContextMenu :user-id="item.userId ?? ''" :state="getFriendState(item.userId)" :location="getFriendLocation(item.userId)">
                   <span class="cursor-pointer" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 </UserContextMenu>
                 <span class="text-muted-foreground"> {{ item.type }}</span>
@@ -114,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { Box, MapPin, Pencil, Settings } from "lucide-vue-next";
 
@@ -138,42 +150,52 @@ import Table from "@/components/ui/table/Table.vue";
 import TableBody from "@/components/ui/table/TableBody.vue";
 import TableRow from "@/components/ui/table/TableRow.vue";
 import TableCell from "@/components/ui/table/TableCell.vue";
+import type { FeedRow } from "@/services/database/feed";
+
+type FeedWidgetConfig = {
+  filters?: string[];
+  showType?: boolean;
+};
 
 const FEED_TYPES = ["GPS", "Online", "Offline", "Status", "Avatar", "Bio"];
 
-const props = defineProps({
-  config: {
-    type: Object,
-    default: () => ({}),
-  },
-  configUpdater: {
-    type: Function,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    config?: FeedWidgetConfig;
+    configUpdater?: ((config: FeedWidgetConfig) => void) | null;
+  }>(),
+  {
+    config: () => ({}),
+    configUpdater: null,
+  }
+);
 
 const { t } = useI18n();
 const feedStore = useFeedStore();
 const friendStore = useFriendStore();
-const listRef = ref(null);
 
 const activeFilters = computed(() => {
-  if (props.config.filters && Array.isArray(props.config.filters) && props.config.filters.length > 0) {
-    return props.config.filters;
+  const filters = props.config.filters;
+  if (filters && Array.isArray(filters) && filters.length > 0) {
+    return filters;
   }
   return FEED_TYPES;
 });
 
-function isFilterActive(filterType) {
+function isFavoriteRow(row: FeedRow) {
+  return "isFavorite" in row && Boolean(row.isFavorite);
+}
+
+function isFilterActive(filterType: string) {
   const filters = props.config.filters;
   if (!filters || !Array.isArray(filters) || filters.length === 0) return true;
   return filters.includes(filterType);
 }
 
-function toggleFilter(filterType) {
+function toggleFilter(filterType: string) {
   if (!props.configUpdater) return;
   const currentFilters = props.config.filters;
-  let filters;
+  let filters: string[];
   if (!currentFilters || !Array.isArray(currentFilters) || currentFilters.length === 0) {
     filters = FEED_TYPES.filter((f) => f !== filterType);
   } else if (currentFilters.includes(filterType)) {
@@ -186,13 +208,13 @@ function toggleFilter(filterType) {
   props.configUpdater({ ...props.config, filters });
 }
 
-function toggleBooleanConfig(key) {
+function toggleBooleanConfig(key: "showType") {
   if (!props.configUpdater) return;
   props.configUpdater({ ...props.config, [key]: !props.config[key] });
 }
 
 const showType = computed(() => {
-  return props.config.showType || false;
+  return props.config.showType ?? false;
 });
 
 const filteredData = computed(() => {
@@ -200,26 +222,28 @@ const filteredData = computed(() => {
   return feedStore.feedTableData.filter((item) => filters.includes(item.type)).slice(0, 100);
 });
 
-function formatTime(dateStr) {
+function formatTime(dateStr: string | null) {
   return formatDateFilter(dateStr, "short");
 }
 
-function formatExactTime(dateStr) {
+function formatExactTime(dateStr: string | null) {
   return formatDateFilter(dateStr, "long");
 }
 
-function openUser(userId) {
+function openUser(userId: string | null) {
   if (userId) {
     showUserDialog(userId);
   }
 }
 
-function getFriendState(userId) {
+function getFriendState(userId: string | null) {
+  if (!userId) return "";
   const friend = friendStore.friends.get(userId);
   return friend?.state ?? "";
 }
 
-function getFriendLocation(userId) {
+function getFriendLocation(userId: string | null) {
+  if (!userId) return "";
   const friend = friendStore.friends.get(userId);
   return friend?.ref?.location ?? "";
 }

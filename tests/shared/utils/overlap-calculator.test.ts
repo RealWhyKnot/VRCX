@@ -106,8 +106,8 @@ describe("buildSessionsFromGamelog", () => {
     const result = buildSessionsFromGamelog(rows);
 
     expect(result).toHaveLength(1);
-    expect(result[0].start).toBe(ts("2025-01-06T10:00:00Z"));
-    expect(result[0].end).toBe(ts("2025-01-06T13:00:00Z"));
+    expect(result[0]?.start).toBe(ts("2025-01-06T10:00:00Z"));
+    expect(result[0]?.end).toBe(ts("2025-01-06T13:00:00Z"));
   });
 
   test("caps duration at 24h for last row with time=0", () => {
@@ -116,8 +116,8 @@ describe("buildSessionsFromGamelog", () => {
     const rows = [{ created_at: longAgo, time: 0 }];
     const result = buildSessionsFromGamelog(rows);
     expect(result).toHaveLength(1);
-    const duration = result[0].end - result[0].start;
-    expect(duration).toBe(24 * 3600000);
+    const durations = result.map((session) => session.end - session.start);
+    expect(durations).toEqual([24 * 3600000]);
   });
 
   test("merges adjacent sessions within default gap (5min)", () => {
@@ -127,8 +127,8 @@ describe("buildSessionsFromGamelog", () => {
     ];
     const result = buildSessionsFromGamelog(rows);
     expect(result).toHaveLength(1);
-    expect(result[0].start).toBe(ts("2025-01-06T10:00:00Z"));
-    expect(result[0].end).toBe(ts("2025-01-06T12:03:00Z"));
+    expect(result[0]?.start).toBe(ts("2025-01-06T10:00:00Z"));
+    expect(result[0]?.end).toBe(ts("2025-01-06T12:03:00Z"));
   });
 
   test("does not merge sessions with gap exceeding mergeGapMs", () => {
@@ -168,7 +168,7 @@ describe("filterSessionsByPeriod", () => {
     const cutoff = ts("2025-01-05T00:00:00Z");
     const result = filterSessionsByPeriod(sessions, cutoff);
     expect(result).toHaveLength(2);
-    expect(result[0].start).toBe(ts("2025-01-10T00:00:00Z"));
+    expect(result[0]?.start).toBe(ts("2025-01-10T00:00:00Z"));
   });
 
   test("clamps session start to cutoff when session spans cutoff", () => {
@@ -176,8 +176,8 @@ describe("filterSessionsByPeriod", () => {
     const result = filterSessionsByPeriod(sessions, cutoff);
     expect(result).toHaveLength(2);
 
-    expect(result[0].start).toBe(cutoff);
-    expect(result[0].end).toBe(ts("2025-01-10T02:00:00Z"));
+    expect(result[0]?.start).toBe(cutoff);
+    expect(result[0]?.end).toBe(ts("2025-01-10T02:00:00Z"));
   });
 
   test("returns empty for all sessions before cutoff", () => {
@@ -336,6 +336,14 @@ describe("aggregateSessionsToGrid", () => {
   });
 });
 
+function setCell(grid: number[][], day: number, hour: number, value: number) {
+  const row = grid[day];
+  if (row === undefined) {
+    throw new Error(`grid has no row ${day}`);
+  }
+  row[hour] = value;
+}
+
 describe("findBestOverlapTime", () => {
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -347,9 +355,9 @@ describe("findBestOverlapTime", () => {
   test("returns time range for adjacent high hours", () => {
     const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
 
-    grid[6][20] = 10;
-    grid[6][21] = 10;
-    grid[6][22] = 10;
+    setCell(grid, 6, 20, 10);
+    setCell(grid, 6, 21, 10);
+    setCell(grid, 6, 22, 10);
     const result = findBestOverlapTime(grid, dayLabels);
     expect(result).toContain("Sat");
     expect(result).toContain("20:00");
@@ -359,8 +367,8 @@ describe("findBestOverlapTime", () => {
   test("picks the day with highest overlap in peak hours", () => {
     const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
 
-    grid[1][20] = 3;
-    grid[5][20] = 8;
+    setCell(grid, 1, 20, 3);
+    setCell(grid, 5, 20, 8);
     const result = findBestOverlapTime(grid, dayLabels);
     expect(result).toContain("Fri");
   });
@@ -368,7 +376,7 @@ describe("findBestOverlapTime", () => {
   test("handles activity spread across all days equally", () => {
     const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     for (let d = 0; d < 7; d++) {
-      grid[d][15] = 5;
+      setCell(grid, d, 15, 5);
     }
     const result = findBestOverlapTime(grid, dayLabels);
 

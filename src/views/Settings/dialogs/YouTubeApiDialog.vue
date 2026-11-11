@@ -33,6 +33,7 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { openExternalLink } from "../../../shared/utils/app-actions";
+import { logError } from "../../../stores/notification/errors";
 import { useAdvancedSettingsStore } from "../../../stores/settings/advanced";
 
 const advancedSettingsStore = useAdvancedSettingsStore();
@@ -43,14 +44,9 @@ const { lookupYouTubeVideo, setYouTubeApiKey } = advancedSettingsStore;
 
 const { t } = useI18n();
 
-defineProps({
-  isYouTubeApiDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+withDefaults(defineProps<{ isYouTubeApiDialogVisible?: boolean }>(), { isYouTubeApiDialogVisible: false });
 
-const emit = defineEmits(["update:isYouTubeApiDialogVisible"]);
+const emit = defineEmits<{ "update:isYouTubeApiDialogVisible": [value: boolean] }>();
 
 async function testYouTubeApiKey() {
   const previousKey = youTubeApiKey.value;
@@ -61,10 +57,10 @@ async function testYouTubeApiKey() {
   }
   const data = await lookupYouTubeVideo("dQw4w9WgXcQ");
   if (!data) {
-    setYouTubeApiKey(previousKey);
+    void setYouTubeApiKey(previousKey).catch(logError);
     toast.error("Invalid YouTube API key");
   } else {
-    setYouTubeApiKey(youTubeApiKey.value);
+    void setYouTubeApiKey(youTubeApiKey.value).catch(logError);
     toast.success("YouTube API key valid!");
     closeDialog();
   }

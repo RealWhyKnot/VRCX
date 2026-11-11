@@ -10,7 +10,7 @@
           >
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton
-                :is-active="item.children?.some((e) => e.index === activeMenuIndex)"
+                :is-active="item.children?.some((e) => e.index === activeMenuIndex) ?? false"
                 :tooltip="item.titleIsCustom ? item.title : t(item.title || '')"
               >
                 <i :class="item.icon" class="inline-flex size-6 items-center justify-center text-lg relative"
@@ -20,7 +20,7 @@
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" class="w-56">
-              <DropdownMenuItem v-for="entry in item.children" :key="entry.index" @select="(event) => emit('collapsed-submenu-select', event, entry)">
+              <DropdownMenuItem v-for="entry in item.children" :key="entry.index" @select="(event: Event) => emit('collapsed-submenu-select', event, entry)">
                 <i v-if="entry.icon" :class="entry.icon" class="inline-flex size-4 items-center justify-center text-base relative"
                   ><span v-if="isEntryNotified(entry)" class="notify-dot bg-red-500 -right-1! top-0.5!" aria-hidden="true"></span
                 ></i>
@@ -30,11 +30,11 @@
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Collapsible v-else class="group/collapsible" :default-open="activeMenuIndex && item.children?.some((e) => e.index === activeMenuIndex)">
+          <Collapsible v-else class="group/collapsible" :default-open="isFolderDefaultOpen()">
             <template #default="{ open }">
               <CollapsibleTrigger as-child>
                 <SidebarMenuButton
-                  :is-active="item.children?.some((e) => e.index === activeMenuIndex)"
+                  :is-active="item.children?.some((e) => e.index === activeMenuIndex) ?? false"
                   :tooltip="item.titleIsCustom ? item.title : t(item.title || '')"
                 >
                   <i :class="item.icon" class="inline-flex size-6 items-center justify-center text-lg relative"
@@ -123,56 +123,42 @@ import SidebarMenuSub from "@/components/ui/sidebar/SidebarMenuSub.vue";
 import SidebarMenuSubButton from "@/components/ui/sidebar/SidebarMenuSubButton.vue";
 import SidebarMenuSubItem from "@/components/ui/sidebar/SidebarMenuSubItem.vue";
 
-defineProps({
-  item: {
-    type: Object,
-    required: true,
-  },
-  isCollapsed: {
-    type: Boolean,
-    default: false,
-  },
-  activeMenuIndex: {
-    type: String,
-    default: "",
-  },
-  collapsedDropdownOpenId: {
-    type: String,
-    default: null,
-  },
-  hasNotifications: {
-    type: Boolean,
-    default: false,
-  },
-  isEntryNotified: {
-    type: Function,
-    required: true,
-  },
-  isNavItemNotified: {
-    type: Function,
-    required: true,
-  },
-  isDashboardItem: {
-    type: Function,
-    required: true,
-  },
-  isToolItem: {
-    type: Function,
-    required: true,
-  },
-});
+import type { NavIndexed, NavMenuChild, NavMenuItem } from "./nav-menu-types";
 
-const emit = defineEmits([
-  "collapsed-dropdown-open-change",
-  "collapsed-submenu-select",
-  "submenu-click",
-  "clear-notifications",
-  "edit-dashboard",
-  "delete-dashboard",
-  "unpin-tool",
-  "open-custom-nav",
-]);
+const props = withDefaults(
+  defineProps<{
+    item: NavMenuItem;
+    isCollapsed?: boolean;
+    activeMenuIndex?: string;
+    collapsedDropdownOpenId?: string | null;
+    hasNotifications?: boolean;
+    isEntryNotified: (entry: NavMenuChild) => boolean;
+    isNavItemNotified: (item: NavMenuItem) => boolean;
+    isDashboardItem: (item: NavIndexed) => boolean;
+    isToolItem: (item: NavIndexed) => boolean;
+  }>(),
+  {
+    isCollapsed: false,
+    activeMenuIndex: "",
+    collapsedDropdownOpenId: null,
+    hasNotifications: false,
+  }
+);
+
+const emit = defineEmits<{
+  "collapsed-dropdown-open-change": [index: string, isOpen: boolean];
+  "collapsed-submenu-select": [event: Event, entry: NavMenuChild];
+  "submenu-click": [entry: NavMenuChild];
+  "clear-notifications": [];
+  "edit-dashboard": [item: NavIndexed];
+  "delete-dashboard": [item: NavIndexed];
+  "unpin-tool": [item: NavIndexed];
+  "open-custom-nav": [];
+}>();
 const { t } = useI18n();
+
+const isFolderDefaultOpen = (): boolean =>
+  props.activeMenuIndex === "" || (props.item.children?.some((entry) => entry.index === props.activeMenuIndex) ?? false);
 </script>
 
 <style scoped>

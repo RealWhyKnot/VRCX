@@ -67,6 +67,8 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
+import type { InviteMessage } from "vrchat";
+import type { Json } from "../../../types/vrcx";
 
 import { columns as inviteMessageColumns } from "./edit-invite-messages-message-columns.tsx";
 import { columns as inviteRequestColumns } from "./edit-invite-messages-request-columns.tsx";
@@ -81,11 +83,14 @@ const { refreshInviteMessageTableData } = useInviteStore();
 
 const { t } = useI18n();
 
-const props = defineProps({
-  isEditInviteMessagesDialogVisible: {
-    type: Boolean,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isEditInviteMessagesDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isEditInviteMessagesDialogVisible: false,
+  }
+);
 
 const activeTab = ref("message");
 const editInviteTabs = computed(() => [
@@ -96,12 +101,12 @@ const editInviteTabs = computed(() => [
 ]);
 
 const isEditInviteMessageDialogVisible = ref(false);
-const inviteMessage = ref({});
+const inviteMessage = ref<Partial<Json<InviteMessage>>>({});
 
 watch(
   () => props.isEditInviteMessagesDialogVisible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       refreshInviteMessageTableData("message");
       refreshInviteMessageTableData("request");
       refreshInviteMessageTableData("requestResponse");
@@ -110,16 +115,18 @@ watch(
   }
 );
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 function closeDialog() {
   emit("close");
 }
 
-const inviteMessageRows = computed(() => inviteMessageTable.value?.data ?? []);
-const inviteRequestRows = computed(() => inviteRequestMessageTable.value?.data ?? []);
-const inviteRequestResponseRows = computed(() => inviteRequestResponseMessageTable.value?.data ?? []);
-const inviteResponseRows = computed(() => inviteResponseMessageTable.value?.data ?? []);
+const inviteMessageRows = computed(() => inviteMessageTable.value.data);
+const inviteRequestRows = computed(() => inviteRequestMessageTable.value.data);
+const inviteRequestResponseRows = computed(() => inviteRequestResponseMessageTable.value.data);
+const inviteResponseRows = computed(() => inviteResponseMessageTable.value.data);
 
 const { table: inviteMessageTanstackTable } = useVrcxVueTable({
   persistKey: "edit-invite-messages:message",
@@ -127,7 +134,7 @@ const { table: inviteMessageTanstackTable } = useVrcxVueTable({
     return inviteMessageRows.value;
   },
   columns: inviteMessageColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
@@ -138,7 +145,7 @@ const { table: inviteRequestTanstackTable } = useVrcxVueTable({
     return inviteRequestRows.value;
   },
   columns: inviteRequestColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
@@ -149,7 +156,7 @@ const { table: inviteRequestResponseTanstackTable } = useVrcxVueTable({
     return inviteRequestResponseRows.value;
   },
   columns: inviteRequestResponseColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
@@ -160,16 +167,16 @@ const { table: inviteResponseTanstackTable } = useVrcxVueTable({
     return inviteResponseRows.value;
   },
   columns: inviteResponseColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
 
-function handleEditInviteMessageRowClick(row) {
-  showEditInviteMessageDialog(row?.original);
+function handleEditInviteMessageRowClick(row: { original: Json<InviteMessage> }) {
+  showEditInviteMessageDialog(row.original);
 }
 
-function showEditInviteMessageDialog(row) {
+function showEditInviteMessageDialog(row: Json<InviteMessage>) {
   if (row.updatedAt) {
     const cooldownEnd = new Date(row.updatedAt);
     cooldownEnd.setHours(cooldownEnd.getHours() + 1);

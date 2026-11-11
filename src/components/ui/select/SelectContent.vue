@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { PrimitiveProps, SelectContentEmits, SelectContentProps } from "reka-ui";
 import { SelectContent, SelectPortal, SelectViewport, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
 import SelectScrollDownButton from "./SelectScrollDownButton.vue";
 import SelectScrollUpButton from "./SelectScrollUpButton.vue";
@@ -10,45 +12,76 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  forceMount: { type: Boolean, required: false },
-  position: {
-    type: String,
-    required: false,
-    default: "popper",
-  },
-  bodyLock: { type: Boolean, required: false },
-  side: { type: null, required: false },
-  sideOffset: { type: Number, required: false },
-  sideFlip: { type: Boolean, required: false },
-  align: { type: null, required: false },
-  alignOffset: { type: Number, required: false },
-  alignFlip: { type: Boolean, required: false },
-  avoidCollisions: { type: Boolean, required: false },
-  collisionBoundary: { type: null, required: false },
-  collisionPadding: { type: [Number, Object], required: false },
-  arrowPadding: { type: Number, required: false },
-  sticky: { type: String, required: false },
-  hideWhenDetached: { type: Boolean, required: false },
-  positionStrategy: {
-    type: String,
-    required: false,
-  },
-  updatePositionStrategy: {
-    type: String,
-    required: false,
-  },
-  disableUpdateOnLayoutShift: { type: Boolean, required: false },
-  prioritizePosition: { type: Boolean, required: false },
-  reference: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  disableOutsidePointerEvents: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["closeAutoFocus", "escapeKeyDown", "pointerDownOutside"]);
+const props = withDefaults(
+  defineProps<{
+    forceMount?: boolean;
+    position?: string;
+    bodyLock?: boolean;
+    side?: SelectContentProps["side"] | undefined;
+    sideOffset?: number | undefined;
+    sideFlip?: boolean;
+    align?: SelectContentProps["align"] | undefined;
+    alignOffset?: number | undefined;
+    alignFlip?: boolean;
+    avoidCollisions?: boolean;
+    collisionBoundary?: SelectContentProps["collisionBoundary"] | undefined;
+    collisionPadding?: SelectContentProps["collisionPadding"] | undefined;
+    arrowPadding?: number | undefined;
+    sticky?: SelectContentProps["sticky"] | undefined;
+    hideWhenDetached?: boolean;
+    positionStrategy?: SelectContentProps["positionStrategy"] | undefined;
+    updatePositionStrategy?: SelectContentProps["updatePositionStrategy"] | undefined;
+    disableUpdateOnLayoutShift?: boolean;
+    prioritizePosition?: boolean;
+    reference?: SelectContentProps["reference"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    disableOutsidePointerEvents?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    position: "popper",
+    side: undefined,
+    sideOffset: undefined,
+    align: undefined,
+    alignOffset: undefined,
+    collisionBoundary: undefined,
+    collisionPadding: undefined,
+    arrowPadding: undefined,
+    sticky: undefined,
+    positionStrategy: undefined,
+    updatePositionStrategy: undefined,
+    reference: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<SelectContentEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  forceMount: props.forceMount,
+  bodyLock: props.bodyLock,
+  ...(props.side === undefined ? {} : { side: props.side }),
+  ...(props.sideOffset === undefined ? {} : { sideOffset: props.sideOffset }),
+  sideFlip: props.sideFlip,
+  ...(props.align === undefined ? {} : { align: props.align }),
+  ...(props.alignOffset === undefined ? {} : { alignOffset: props.alignOffset }),
+  alignFlip: props.alignFlip,
+  avoidCollisions: props.avoidCollisions,
+  ...(props.collisionBoundary === undefined ? {} : { collisionBoundary: props.collisionBoundary }),
+  ...(props.collisionPadding === undefined ? {} : { collisionPadding: props.collisionPadding }),
+  ...(props.arrowPadding === undefined ? {} : { arrowPadding: props.arrowPadding }),
+  ...(props.sticky === undefined ? {} : { sticky: props.sticky }),
+  hideWhenDetached: props.hideWhenDetached,
+  ...(props.positionStrategy === undefined ? {} : { positionStrategy: props.positionStrategy }),
+  ...(props.updatePositionStrategy === undefined ? {} : { updatePositionStrategy: props.updatePositionStrategy }),
+  disableUpdateOnLayoutShift: props.disableUpdateOnLayoutShift,
+  prioritizePosition: props.prioritizePosition,
+  ...(props.reference === undefined ? {} : { reference: props.reference }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  disableOutsidePointerEvents: props.disableOutsidePointerEvents,
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

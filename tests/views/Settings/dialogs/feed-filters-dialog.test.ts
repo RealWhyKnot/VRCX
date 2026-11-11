@@ -1,21 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
-const mocks = vi.hoisted(() => ({
-  sharedFeedFilters: {
+type FeedFilterSettings = { status: string };
+type SharedFeedFilters = { noty: FeedFilterSettings; wrist: FeedFilterSettings };
+
+const mocks = vi.hoisted(() => {
+  const sharedFeedFilters: { __v_isRef: true; value: SharedFeedFilters } = {
     __v_isRef: true,
     value: {
       noty: { status: "all" },
       wrist: { status: "none" },
     },
-  },
-  photonLoggingEnabled: { __v_isRef: true, value: false },
-  loadSharedFeed: vi.fn(),
-  setString: vi.fn(),
-}));
+  };
+  const photonLoggingEnabled: { __v_isRef: true; value: boolean } = { __v_isRef: true, value: false };
+  return {
+    sharedFeedFilters,
+    photonLoggingEnabled,
+    loadSharedFeed: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+    setString: vi.fn<(...args: unknown[]) => Promise<void>>(() => Promise.resolve()),
+  };
+});
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal: () => Promise<Record<string, unknown>>) => ({
+  ...(await importOriginal()),
+  storeToRefs: (store: unknown) => store,
+}));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 
 vi.mock("../../../../src/stores/photon", () => ({
   usePhotonStore: () => ({
@@ -29,13 +39,13 @@ vi.mock("../../../../src/stores/settings/notifications", () => ({
 }));
 vi.mock("../../../../src/stores/shared-feed", () => ({
   useSharedFeedStore: () => ({
-    loadSharedFeed: (...a) => mocks.loadSharedFeed(...a),
+    loadSharedFeed: (...args: unknown[]) => mocks.loadSharedFeed(...args),
   }),
 }));
 
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
-    setString: (...a) => mocks.setString(...a),
+    setString: (...args: unknown[]) => mocks.setString(...args),
   },
 }));
 
@@ -136,6 +146,9 @@ describe("FeedFiltersDialog.vue", () => {
     expect(mocks.loadSharedFeed).toHaveBeenCalledTimes(1);
 
     const closeButton = wrapper.findAll('[data-testid="btn"]')[1];
+    if (!closeButton) {
+      throw new Error("close button not found");
+    }
     await closeButton.trigger("click");
     expect(wrapper.emitted("update:feedFiltersDialogMode")).toEqual([[""]]);
   });
@@ -148,6 +161,9 @@ describe("FeedFiltersDialog.vue", () => {
     });
 
     const resetButton = wrapper.findAll('[data-testid="btn"]')[0];
+    if (!resetButton) {
+      throw new Error("reset button not found");
+    }
     await resetButton.trigger("click");
 
     expect(mocks.sharedFeedFilters.value.noty).toEqual({

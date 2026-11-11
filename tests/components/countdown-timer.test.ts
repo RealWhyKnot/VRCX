@@ -3,26 +3,26 @@ import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  setInterval: vi.fn(() => 42),
-  clearInterval: vi.fn(),
-  timeToText: vi.fn((ms) => `${Math.floor(ms / 1000)}s`),
+  startInterval: vi.fn<(handler: () => void, timeout: number) => number>(() => 42),
+  stopInterval: vi.fn<(id: number) => void>(),
+  timeToText: vi.fn<(ms: number) => string>((ms) => `${Math.floor(ms / 1000)}s`),
 }));
 
 vi.mock("worker-timers", () => ({
-  setInterval: (...args) => mocks.setInterval(...args),
-  clearInterval: (...args) => mocks.clearInterval(...args),
+  setInterval: (...args: Parameters<typeof mocks.startInterval>) => mocks.startInterval(...args),
+  clearInterval: (...args: Parameters<typeof mocks.stopInterval>) => mocks.stopInterval(...args),
 }));
 
 vi.mock("../../src/shared/utils/base/format", () => ({
-  timeToText: (...args) => mocks.timeToText(...args),
+  timeToText: (...args: Parameters<typeof mocks.timeToText>) => mocks.timeToText(...args),
 }));
 
 import CountdownTimer from "../../src/components/CountdownTimer.vue";
 
 describe("CountdownTimer.vue", () => {
   beforeEach(() => {
-    mocks.setInterval.mockClear();
-    mocks.clearInterval.mockClear();
+    mocks.startInterval.mockClear();
+    mocks.stopInterval.mockClear();
     mocks.timeToText.mockClear();
     vi.spyOn(Date, "now").mockReturnValue(new Date("2026-01-01T00:00:00.000Z").getTime());
   });
@@ -73,7 +73,7 @@ describe("CountdownTimer.vue", () => {
 
     wrapper.unmount();
 
-    expect(mocks.setInterval).toHaveBeenCalled();
-    expect(mocks.clearInterval).toHaveBeenCalledWith(42);
+    expect(mocks.startInterval).toHaveBeenCalled();
+    expect(mocks.stopInterval).toHaveBeenCalledWith(42);
   });
 });

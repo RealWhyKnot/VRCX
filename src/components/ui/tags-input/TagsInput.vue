@@ -1,37 +1,51 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { TagsInputRootEmits, TagsInputRootProps } from "reka-ui";
 import { TagsInputRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  modelValue: { type: [Array, null], required: false },
-  defaultValue: { type: Array, required: false },
-  addOnPaste: { type: Boolean, required: false },
-  addOnTab: { type: Boolean, required: false },
-  addOnBlur: { type: Boolean, required: false },
-  duplicate: { type: Boolean, required: false },
-  disabled: { type: Boolean, required: false },
-  delimiter: { type: null, required: false },
-  dir: { type: String, required: false },
-  max: { type: Number, required: false },
-  id: { type: String, required: false },
-  convertValue: {
-    type: Function,
-    required: false,
-  },
-  displayValue: {
-    type: Function,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:modelValue", "invalid", "addTag", "removeTag"]);
+const props = defineProps<{
+  modelValue?: TagsInputRootProps["modelValue"];
+  defaultValue?: TagsInputRootProps["defaultValue"];
+  addOnPaste?: boolean;
+  addOnTab?: boolean;
+  addOnBlur?: boolean;
+  duplicate?: boolean;
+  disabled?: boolean;
+  delimiter?: TagsInputRootProps["delimiter"];
+  dir?: TagsInputRootProps["dir"];
+  max?: number;
+  id?: string;
+  convertValue?: TagsInputRootProps["convertValue"];
+  displayValue?: TagsInputRootProps["displayValue"];
+  asChild?: boolean;
+  as?: TagsInputRootProps["as"];
+  name?: string;
+  required?: boolean;
+  class?: ClassValue;
+}>();
+const emits = defineEmits<TagsInputRootEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  addOnPaste: props.addOnPaste,
+  addOnTab: props.addOnTab,
+  addOnBlur: props.addOnBlur,
+  duplicate: props.duplicate,
+  disabled: props.disabled,
+  ...(props.delimiter === undefined ? {} : { delimiter: props.delimiter }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  ...(props.max === undefined ? {} : { max: props.max }),
+  ...(props.id === undefined ? {} : { id: props.id }),
+  ...(props.convertValue === undefined ? {} : { convertValue: props.convertValue }),
+  ...(props.displayValue === undefined ? {} : { displayValue: props.displayValue }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

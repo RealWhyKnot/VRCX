@@ -1,30 +1,35 @@
 import { describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
+import type { StoredNotificationEntry } from "../../../../src/stores/notification/types";
+
 vi.mock("@tanstack/vue-virtual", () => ({
-  useVirtualizer: (optionsRef) => ({
+  useVirtualizer: (optionsRef: { value: { count: number; getItemKey: (index: number) => string | number } }) => ({
     value: {
       getVirtualItems: () => {
         const options = optionsRef.value;
         return Array.from({ length: options.count }, (_, index) => ({
           index,
-          key: options.getItemKey?.(index) ?? index,
+          key: options.getItemKey(index),
           start: index * 56,
         }));
       },
       getTotalSize: () => optionsRef.value.count * 56,
-      measure: vi.fn(),
-      measureElement: vi.fn(),
+      measure: vi.fn<() => void>(),
+      measureElement: vi.fn<(node: Element | null) => void>(),
     },
   }),
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("@/components/ui/button/Button.vue", () => ({
   default: {
@@ -52,11 +57,13 @@ vi.mock("../../../../src/views/Sidebar/components/NotificationItem.vue", () => (
 
 import NotificationList from "../../../../src/views/Sidebar/components/NotificationList.vue";
 
-function makeNoty(id, createdAt) {
+function makeNoty(id: string, createdAt: string): StoredNotificationEntry {
   return {
     id,
     created_at: createdAt,
     type: "friendRequest",
+    message: "",
+    details: {},
   };
 }
 

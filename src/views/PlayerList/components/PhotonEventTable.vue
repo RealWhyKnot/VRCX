@@ -1,16 +1,7 @@
 <template>
   <div class="mt-5">
     <div class="gap-2 mb-2" style="display: flex; align-items: center; flex-wrap: wrap">
-      <Select
-        :model-value="photonEventTableTypeFilter"
-        multiple
-        @update:model-value="
-          (v) => {
-            photonEventTableTypeFilter = v;
-            photonEventTableFilterChange();
-          }
-        "
-      >
+      <Select :model-value="photonEventTableTypeFilter" multiple @update:model-value="handlePhotonEventTypeFilterChange">
         <SelectTrigger style="width: 220px">
           <SelectValue :placeholder="t('view.player_list.photon.filter_placeholder')" />
         </SelectTrigger>
@@ -76,9 +67,7 @@ import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { usePhotonStore } from "../../../stores/photon";
-import { useUserStore } from "../../../stores/user";
 import { useVrcxStore } from "../../../stores/vrcx";
-import { useWorldStore } from "../../../stores/world";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
@@ -90,8 +79,13 @@ import SelectValue from "../../../components/ui/select/SelectValue.vue";
 import { createColumns } from "./photon-event-columns.tsx";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
 import { lookupUser } from "../../../coordinators/user-coordinator";
+import { logFailure } from "../../../stores/log-failure";
+import { toUserRef } from "../../GameLog/columns.tsx";
+import type { PhotonEventEntry } from "../../../stores/photon-types";
 
-const emit = defineEmits(["show-chatbox-blacklist"]);
+const emit = defineEmits<{
+  "show-chatbox-blacklist": [];
+}>();
 const { t } = useI18n();
 
 const photonStore = usePhotonStore();
@@ -110,29 +104,29 @@ const { ipcEnabled } = storeToRefs(useVrcxStore());
 const pageSizes = [10, 25, 50, 100];
 const tableStyle = { maxHeight: "320px" };
 
-const q = computed(() =>
-  String(photonEventTableFilter.value ?? "")
-    .trim()
-    .toLowerCase()
-);
-const typeFilterSet = computed(() => new Set(photonEventTableTypeFilter.value ?? []));
+function handlePhotonEventTypeFilterChange(value: unknown) {
+  photonEventTableTypeFilter.value = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  void photonEventTableFilterChange().catch(logFailure("Failed to save photon event filter:"));
+}
 
-const filterRows = (rows) => {
+const q = computed(() => photonEventTableFilter.value.trim().toLowerCase());
+const typeFilterSet = computed(() => new Set(photonEventTableTypeFilter.value));
+
+const filterRows = (rows: PhotonEventEntry[]) => {
   const query = q.value;
   const types = typeFilterSet.value;
   const comparer = stringComparer.value;
-  const src = Array.isArray(rows) ? rows : [];
 
-  return src.filter((row) => {
-    if (types.size && !types.has(row?.type)) return false;
+  return rows.filter((row) => {
+    if (types.size && !types.has(row.type)) return false;
     if (!query) return true;
 
-    return localeIncludes(row?.displayName ?? "", query, comparer) || localeIncludes(row?.text ?? "", query, comparer);
+    return localeIncludes(row.displayName ?? "", query, comparer) || localeIncludes(row.text ?? "", query, comparer);
   });
 };
 
-const currentRawRows = computed(() => (Array.isArray(photonEventTable.value?.data) ? photonEventTable.value.data.slice() : []));
-const previousRawRows = computed(() => (Array.isArray(photonEventTablePrevious.value?.data) ? photonEventTablePrevious.value.data.slice() : []));
+const currentRawRows = computed(() => photonEventTable.value.data.slice());
+const previousRawRows = computed(() => photonEventTablePrevious.value.data.slice());
 
 const currentRows = computed(() => filterRows(currentRawRows.value));
 const previousRows = computed(() => filterRows(previousRawRows.value));
@@ -140,28 +134,44 @@ const previousRows = computed(() => filterRows(previousRawRows.value));
 const currentTotal = computed(() => currentRows.value.length);
 const previousTotal = computed(() => previousRows.value.length);
 
-const currentPageSize = ref(photonEventTable.value?.pageSize ?? 10);
-const previousPageSize = ref(photonEventTablePrevious.value?.pageSize ?? 10);
+const currentPageSize = ref(photonEventTable.value.pageSize);
+const previousPageSize = ref(photonEventTablePrevious.value.pageSize);
+
+const showAvatarFromPhotonEvent = (avatarId: string | undefined) => {
+  if (avatarId) showAvatarDialog(avatarId);
+};
+
+const showGroupFromPhotonEvent = (groupId: string | undefined) => {
+  if (groupId) showGroupDialog(groupId);
+};
+
+const showWorldFromPhotonEvent = (location: string | undefined, shortName: string | undefined) => {
+  if (location) showWorldDialog(location, shortName);
+};
+
+const showImageFromPhotonEvent = (imageUrl: string) => {
+  showFullscreenImageDialog(imageUrl, "");
+};
 
 const currentColumns = computed(() =>
   createColumns({
     isPrevious: false,
-    onShowUser: (row) => showUserFromPhotonId(row?.photonId),
-    onShowAvatar: showAvatarDialog,
-    onShowGroup: showGroupDialog,
-    onShowWorld: showWorldDialog,
-    onShowImage: showFullscreenImageDialog,
+    onShowUser: (row) => showUserFromPhotonId(row.photonId),
+    onShowAvatar: showAvatarFromPhotonEvent,
+    onShowGroup: showGroupFromPhotonEvent,
+    onShowWorld: showWorldFromPhotonEvent,
+    onShowImage: showImageFromPhotonEvent,
   })
 );
 
 const previousColumns = computed(() =>
   createColumns({
     isPrevious: true,
-    onShowUser: (row) => lookupUser(row),
-    onShowAvatar: showAvatarDialog,
-    onShowGroup: showGroupDialog,
-    onShowWorld: showWorldDialog,
-    onShowImage: showFullscreenImageDialog,
+    onShowUser: (row) => void lookupUser(toUserRef(row)).catch(logFailure("Failed to look up user:")),
+    onShowAvatar: showAvatarFromPhotonEvent,
+    onShowGroup: showGroupFromPhotonEvent,
+    onShowWorld: showWorldFromPhotonEvent,
+    onShowImage: showImageFromPhotonEvent,
   })
 );
 
@@ -171,7 +181,7 @@ const { table: currentTable } = useVrcxVueTable({
     return currentRows.value;
   },
   columns: currentColumns.value,
-  getRowId: (row) => `${row?.photonId ?? ""}:${row?.created_at ?? ""}:${row?.type ?? ""}`,
+  getRowId: (row) => `${row.photonId ?? ""}:${row.created_at ?? ""}:${row.type}`,
   initialSorting: [{ id: "created_at", desc: true }],
   initialPagination: { pageIndex: 0, pageSize: currentPageSize.value },
 });
@@ -182,15 +192,15 @@ const { table: previousTable } = useVrcxVueTable({
     return previousRows.value;
   },
   columns: previousColumns.value,
-  getRowId: (row) => `${row?.photonId ?? ""}:${row?.created_at ?? ""}:${row?.type ?? ""}`,
+  getRowId: (row) => `${row.photonId ?? ""}:${row.created_at ?? ""}:${row.type}`,
   initialSorting: [{ id: "created_at", desc: true }],
   initialPagination: { pageIndex: 0, pageSize: previousPageSize.value },
 });
 
-const handleCurrentPageSizeChange = (size) => {
+const handleCurrentPageSizeChange = (size: number) => {
   currentPageSize.value = size;
 };
-const handlePreviousPageSizeChange = (size) => {
+const handlePreviousPageSizeChange = (size: number) => {
   previousPageSize.value = size;
 };
 

@@ -74,7 +74,8 @@ async function submit() {
     AppDebug.endpointDomain = loginForm.value.endpoint || AppDebug.endpointDomainVrchat;
     await authRequest.resetPassword({ email: email.value.trim() });
     open.value = false;
-  } catch {
+  } catch (error: unknown) {
+    console.error("Failed to send password reset email", error);
   } finally {
     loading.value = false;
   }

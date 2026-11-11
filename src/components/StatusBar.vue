@@ -145,8 +145,8 @@
                   :title="`${nowPlayingElapsedText} / ${nowPlayingLengthText}`"
                 >
                   <div
-                    class="h-full rounded-full bg-foreground/60 transition-[width] duration-1000 ease-linear"
-                    :style="{ width: `${nowPlaying.percentage}%` }"
+                    class="h-full w-(--now-playing-progress) rounded-full bg-foreground/60 transition-[width] duration-1000 ease-linear"
+                    :style="{ '--now-playing-progress': `${nowPlaying.percentage}%` }"
                   />
                 </div>
                 <span class="text-[10px] tabular-nums shrink-0"> {{ nowPlayingElapsedText }} / {{ nowPlayingLengthText }} </span>
@@ -308,9 +308,21 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 
-import { defaultVisibility, formatAppUptime, formatUtcHour, normalizeClock, normalizeUtcHour, parseClockOffset } from "./status-bar-utils";
+import {
+  defaultVisibility,
+  formatAppUptime,
+  formatUtcHour,
+  mergeVisibility,
+  normalizeClock,
+  normalizeUtcHour,
+  parseClockOffset,
+  type StatusBarClock,
+  type StatusBarVisibility,
+  type StatusBarVisibilityKey,
+} from "./status-bar-utils";
 
 import { configRepository } from "../services/config";
+import { logFailure } from "../stores/log-failure";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -378,7 +390,7 @@ const lastOfflineTimeText = computed(() => {
 });
 
 const serversHoverOpen = ref(false);
-let serversHoverTimer = null;
+let serversHoverTimer: ReturnType<typeof setTimeout> | undefined;
 
 watch(
   () => vrcStatusStore.hasIssue,
@@ -398,21 +410,21 @@ watch(
 
 const VISIBILITY_KEY = "VRCX_statusBarVisibility";
 
-const visibility = reactive({ ...defaultVisibility });
+const visibility = reactive<StatusBarVisibility>({ ...defaultVisibility });
 
-function toggleVisibility(key) {
+function toggleVisibility(key: StatusBarVisibilityKey) {
   visibility[key] = !visibility[key];
-  configRepository.setString(VISIBILITY_KEY, JSON.stringify(visibility));
+  void configRepository.setString(VISIBILITY_KEY, JSON.stringify(visibility)).catch(logFailure("Saving status bar visibility failed:"));
 }
 
 const GRAPH_POINTS = 60;
 const WS_CANVAS_WIDTH = 48;
 const WS_CANVAS_HEIGHT = 12;
-const msgHistory = ref(new Array(GRAPH_POINTS).fill(0));
+const msgHistory = ref<number[]>(new Array<number>(GRAPH_POINTS).fill(0));
 const msgsLastMinute = ref(0);
 let lastMsgCount = wsState.messageCount;
 
-const wsCanvasRef = ref(null);
+const wsCanvasRef = ref<HTMLCanvasElement | null>(null);
 const now = useNow({ scheduler: (cb) => useIntervalFn(cb, 1000) });
 
 useIntervalFn(() => {
@@ -459,7 +471,7 @@ function drawSparkline() {
   ctx.beginPath();
   for (let i = 0; i < data.length; i++) {
     const x = i * step;
-    const y = h - (data[i] / max) * (h - 2);
+    const y = h - ((data[i] ?? 0) / max) * (h - 2);
     if (i === 0) {
       ctx.moveTo(x, y);
     } else {
@@ -470,7 +482,7 @@ function drawSparkline() {
   ctx.globalAlpha = 1;
 }
 
-function resolveCssColor(variableName, fallback) {
+function resolveCssColor(variableName: string, fallback: string) {
   const value = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
   if (!value) return fallback;
   if (value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl") || value.startsWith("oklch")) {
@@ -494,26 +506,26 @@ const CLOCK_COUNT_KEY = "VRCX_statusBarClockCount";
 const localOffset = normalizeUtcHour(dayjs().utcOffset() / 60);
 const defaultClocks = [{ offset: localOffset }, { offset: 0 }, { offset: localOffset < 0 ? 9 : -5 }];
 
-const clocks = ref(defaultClocks.map((c) => ({ ...c })));
+const clocks = ref<StatusBarClock[]>(defaultClocks.map((c) => ({ ...c })));
 const clockCount = ref(2);
 const clockPopoverOpen = reactive([false, false, false]);
 
 const visibleClocks = computed(() => clocks.value.slice(0, clockCount.value));
 
 function saveClocks() {
-  configRepository.setString(CLOCKS_KEY, JSON.stringify(clocks.value));
+  void configRepository.setString(CLOCKS_KEY, JSON.stringify(clocks.value)).catch(logFailure("Saving status bar clocks failed:"));
 }
 
-function setClockCount(val) {
+function setClockCount(val: string) {
   clockCount.value = Number(val);
-  configRepository.setString(CLOCK_COUNT_KEY, String(clockCount.value));
+  void configRepository.setString(CLOCK_COUNT_KEY, String(clockCount.value)).catch(logFailure("Saving status bar clock count failed:"));
   if (clockCount.value > 0) {
     visibility.clocks = true;
-    configRepository.setString(VISIBILITY_KEY, JSON.stringify(visibility));
+    void configRepository.setString(VISIBILITY_KEY, JSON.stringify(visibility)).catch(logFailure("Saving status bar visibility failed:"));
   }
 }
 
-function formatClock(clock) {
+function formatClock(clock: StatusBarClock) {
   try {
     const current = dayjs(now.value).utcOffset(normalizeUtcHour(clock.offset) * 60);
     const time = current.format("HH:mm");
@@ -523,10 +535,21 @@ function formatClock(clock) {
   }
 }
 
-function updateClockTimezone(idx, offsetValue) {
-  clocks.value[idx].offset = parseClockOffset(offsetValue);
+function updateClockTimezone(idx: number, offsetValue: unknown) {
+  const clock = clocks.value[idx];
+  if (clock) {
+    clock.offset = parseClockOffset(offsetValue);
+  }
   saveClocks();
   clockPopoverOpen[idx] = false;
+}
+
+function parseStoredJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
 }
 
 const timezoneOptions = computed(() => {
@@ -543,17 +566,13 @@ onMounted(async () => {
     configRepository.getString(CLOCK_COUNT_KEY, null),
   ]);
   if (savedVis) {
-    try {
-      Object.assign(visibility, JSON.parse(savedVis));
-    } catch {}
+    Object.assign(visibility, mergeVisibility(parseStoredJson(savedVis)));
   }
   if (savedClocks) {
-    try {
-      const parsed = JSON.parse(savedClocks);
-      if (Array.isArray(parsed) && parsed.length === 3) {
-        clocks.value = parsed.map(normalizeClock);
-      }
-    } catch {}
+    const parsed = parseStoredJson(savedClocks);
+    if (Array.isArray(parsed) && parsed.length === 3) {
+      clocks.value = parsed.map((entry: unknown) => normalizeClock(entry));
+    }
   }
   if (savedClockCount !== null) {
     const n = Number(savedClockCount);
@@ -565,8 +584,9 @@ onMounted(async () => {
 
 const zoomLevel = ref(100);
 const zoomEditing = ref(false);
-const zoomInputRef = ref(null);
-let cleanupWheel = null;
+const zoomInputRef = ref<{ $el: unknown } | null>(null);
+let cleanupWheel: (() => void) | null = null;
+const reportZoomReadFailure = logFailure("Reading the zoom level failed:");
 
 onBeforeUnmount(() => {
   clearTimeout(serversHoverTimer);
@@ -579,35 +599,35 @@ initGetZoomLevel();
 
 watch(
   () => visibility.ws,
-  (enabled) => {
-    if (enabled) {
-      nextTick(() => {
+  (isEnabled) => {
+    if (isEnabled) {
+      void nextTick(() => {
         drawSparkline();
-      });
+      }).catch(logFailure("Redrawing the sparkline failed:"));
     }
   }
 );
 
-async function initGetZoomLevel() {
-  const handleWheel = (event) => {
+function initGetZoomLevel() {
+  const handleWheel = (event: WheelEvent) => {
     if (event.ctrlKey) {
-      getZoomLevel();
+      void getZoomLevel().catch(reportZoomReadFailure);
     }
   };
   window.addEventListener("wheel", handleWheel);
   cleanupWheel = () => {
     window.removeEventListener("wheel", handleWheel);
   };
-  getZoomLevel();
+  void getZoomLevel().catch(reportZoomReadFailure);
 }
 
 async function getZoomLevel() {
-  zoomLevel.value = Math.round(((await AppApi.GetZoom()) + 10) * 10);
+  zoomLevel.value = Math.round(((await window.AppApi.GetZoom()) + 10) * 10);
 }
 
 function setZoomLevel() {
   zoomEditing.value = false;
-  AppApi.SetZoom(zoomLevel.value / 10 - 10);
+  void window.AppApi.SetZoom(zoomLevel.value / 10 - 10).catch(logFailure("Setting the zoom level failed:"));
 }
 
 async function toggleZoomEdit() {
@@ -618,7 +638,10 @@ async function toggleZoomEdit() {
   await getZoomLevel();
   zoomEditing.value = true;
   await nextTick();
-  zoomInputRef.value?.$el?.focus?.();
+  const inputEl = zoomInputRef.value?.$el;
+  if (inputEl instanceof HTMLElement) {
+    inputEl.focus();
+  }
 }
 
 function handleProxyClick() {

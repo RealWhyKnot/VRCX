@@ -39,7 +39,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.avatar.info.visibility") }}</FieldLabel>
               <FieldContent>
-                <ToggleGroup type="single" :model-value="releaseStatusFilter" variant="outline" @update:model-value="releaseStatusFilter = $event">
+                <ToggleGroup type="single" :model-value="releaseStatusFilter" variant="outline" @update:model-value="setReleaseStatusFilter">
                   <ToggleGroupItem v-for="opt in releaseStatusOptions" :key="opt.value" :value="opt.value" class="px-2.5">
                     {{ opt.label }}
                   </ToggleGroupItem>
@@ -50,7 +50,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.avatar.info.platform") }}</FieldLabel>
               <FieldContent>
-                <ToggleGroup type="single" :model-value="platformFilter" variant="outline" @update:model-value="platformFilter = $event">
+                <ToggleGroup type="single" :model-value="platformFilter" variant="outline" @update:model-value="setPlatformFilter">
                   <ToggleGroupItem value="all" class="px-2.5">
                     {{ t("view.search.avatar.all") }}
                   </ToggleGroupItem>
@@ -73,12 +73,12 @@
                     :style="
                       tagFilters.has(tag)
                         ? {
-                            backgroundColor: getTagColor(tag).bg,
-                            color: getTagColor(tag).text,
+                            backgroundColor: getAvatarTagColor(tag).bg,
+                            color: getAvatarTagColor(tag).text,
                           }
                         : {
-                            borderColor: getTagColor(tag).bg,
-                            color: getTagColor(tag).text,
+                            borderColor: getAvatarTagColor(tag).bg,
+                            color: getAvatarTagColor(tag).text,
                           }
                     "
                     @click="toggleTagFilter(tag)"
@@ -200,7 +200,7 @@
         <div
           v-for="vItem in virtualItems"
           :key="vItem.row?.key ?? String(vItem.virtualItem.index)"
-          :ref="virtualizer.measureElement"
+          :ref="measureRow"
           class="absolute left-0 top-0 w-full box-border pb-2"
           :data-index="vItem.virtualItem.index"
           :style="{ transform: `translateY(${vItem.virtualItem.start}px)` }"
@@ -213,12 +213,12 @@
             }"
           >
             <MyAvatarCard
-              v-for="avatar in vItem.row.items"
+              v-for="avatar in vItem.row?.items ?? []"
               :key="avatar.id"
               :avatar="avatar"
               :current-avatar-id="currentAvatarId"
               :card-scale="cardScale"
-              @click="handleWearAvatar(avatar.id)"
+              @click="() => handleWearAvatar(avatar.id)"
               @context-action="handleContextMenuAction"
             />
           </div>
@@ -251,13 +251,16 @@
 <script setup lang="ts">
 import { isLinuxHost } from "@/shared/constants/platform";
 import { Check, Eye, Image as ImageIcon, LayoutGrid, List, ListFilter, Pencil, RefreshCw, Settings as SettingsIcon, Tag, User } from "lucide-vue-next";
-import { computed, nextTick, onBeforeMount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeMount, onMounted, ref, watch, type ComponentPublicInstance } from "vue";
+import type { AcceptableValue } from "reka-ui";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
+import type { SearchAvatars, UpdateAvatarRequest } from "vrchat";
 
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
+import { logFailure } from "../../stores/log-failure";
 import { useModalStore } from "../../stores/modal";
 import { useUserStore } from "../../stores/user";
 import ContextMenuContent from "../../components/ui/context-menu/ContextMenuContent.vue";
@@ -288,8 +291,8 @@ import { avatarRequest } from "../../api/avatar";
 import { database } from "../../services/database";
 import { getColumns } from "./columns";
 import { getPlatformInfo } from "../../shared/utils/avatar";
-import { getTagColor } from "../../shared/constants/tags";
 import { processBulk } from "../../services/request";
+import { getAvatarTagColor, toAvatarTagMap, type AvatarContextAction, type AvatarTag, type AvatarTagSavePayload, type MyAvatar } from "./types";
 import { useAvatarCardGrid } from "./composables/use-avatar-card-grid";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
@@ -306,26 +309,27 @@ const { currentUser } = storeToRefs(useUserStore());
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-const containerRef = ref(null);
+type PlatformFilter = "all" | "pc" | "android" | "ios";
+
 const searchText = ref("");
-const releaseStatusFilter = ref("all");
-const tagFilters = ref(new Set());
-const platformFilter = ref("all");
+const releaseStatusFilter = ref<string | undefined>("all");
+const tagFilters = ref(new Set<string>());
+const platformFilter = ref<PlatformFilter | undefined>("all");
 const isLoading = ref(false);
-const avatars = ref([]);
-const avatarTagsMap = ref(new Map());
-const imageUploadInput = ref(null);
+const avatars = ref<MyAvatar[]>([]);
+const avatarTagsMap = ref(new Map<string | null, AvatarTag[]>());
+const imageUploadInput = ref<HTMLInputElement | null>(null);
 const viewMode = ref("grid");
-const gridScrollRef = ref(null);
-const gridContainerRefEl = ref(null);
+const gridScrollRef = ref<HTMLElement | null>(null);
+const gridContainerRefEl = ref<HTMLElement | null>(null);
 const cropDialogOpen = ref(false);
-const cropDialogFile = ref(null);
-const changeImageAvatarRef = ref(null);
+const cropDialogFile = ref<File | null>(null);
+const changeImageAvatarRef = ref<MyAvatar | null>(null);
 const manageTagsOpen = ref(false);
-const manageTagsAvatar = ref(null);
+const manageTagsAvatar = ref<MyAvatar | null>(null);
 
 const allTags = computed(() => {
-  const tagSet = new Set();
+  const tagSet = new Set<string>();
   for (const tags of avatarTagsMap.value.values()) {
     for (const entry of tags) {
       tagSet.add(entry.tag);
@@ -354,7 +358,19 @@ const activeFilterCount = computed(() => {
   return count;
 });
 
-function toggleTagFilter(tag) {
+function setReleaseStatusFilter(value: AcceptableValue | AcceptableValue[]) {
+  releaseStatusFilter.value = typeof value === "string" ? value : undefined;
+}
+
+function setPlatformFilter(value: AcceptableValue | AcceptableValue[]) {
+  platformFilter.value = isPlatformFilter(value) ? value : undefined;
+}
+
+function isPlatformFilter(value: AcceptableValue | AcceptableValue[]): value is PlatformFilter {
+  return value === "pc" || value === "android" || value === "ios" || value === "all";
+}
+
+function toggleTagFilter(tag: string) {
   const next = new Set(tagFilters.value);
   if (next.has(tag)) next.delete(tag);
   else next.add(tag);
@@ -380,45 +396,48 @@ const filteredAvatars = computed(() => {
     list = list.filter((a) => a.$tags?.some((t) => tagFilters.value.has(t.tag)));
   }
 
-  if (platformFilter.value !== "all") {
+  const platform = platformFilter.value;
+  if (platform !== "all") {
     list = list.filter((a) => {
+      if (!platform) return false;
       const info = getPlatformInfo(a.unityPackages);
-      return !!info[platformFilter.value]?.performanceRating;
+      return !!info[platform].performanceRating;
     });
   }
 
   if (searchText.value) {
     const query = searchText.value.toLowerCase();
-    list = list.filter((a) => a.name?.toLowerCase().includes(query) || a.$tags?.some((t) => t.tag.toLowerCase().includes(query)));
+    list = list.filter((a) => a.name.toLowerCase().includes(query) || a.$tags?.some((t) => t.tag.toLowerCase().includes(query)));
   }
 
   return list;
 });
 
-function handleShowAvatarDialog(avatarId) {
+function handleShowAvatarDialog(avatarId: string) {
   showAvatarDialog(avatarId);
 }
 
-function handleWearAvatar(avatarId) {
+function handleWearAvatar(avatarId: string) {
   if (currentUser.value.currentAvatar === avatarId) {
     return;
   }
   const avatar = avatars.value.find((a) => a.id === avatarId);
-  const avatarName = avatar?.name || avatarId;
-  modalStore
+  const avatarName = avatar?.name === undefined || avatar.name === "" ? avatarId : avatar.name;
+  void modalStore
     .confirm({
       title: t("confirm.title"),
       description: `${t("confirm.select_avatar")}\n${avatarName}`,
     })
     .then(({ ok }) => {
       if (ok) {
-        selectAvatarWithoutConfirmation(avatarId);
+        void selectAvatarWithoutConfirmation(avatarId).catch(logFailure("Failed to select avatar"));
       }
-    });
+    })
+    .catch(logFailure("Failed to confirm avatar selection"));
 }
 
-function confirmAndRun(command, labelKey, fn) {
-  modalStore
+function confirmAndRun(labelKey: string, fn: () => void) {
+  void modalStore
     .confirm({
       title: t("confirm.title"),
       description: t("confirm.command_question", {
@@ -427,10 +446,22 @@ function confirmAndRun(command, labelKey, fn) {
     })
     .then(({ ok }) => {
       if (ok) fn();
-    });
+    })
+    .catch(logFailure("Failed to confirm avatar command"));
 }
 
-function handleContextMenuAction(action, avatarRef) {
+function saveAvatarField(fields: UpdateAvatarRequest, successMessage: string) {
+  void avatarRequest
+    .saveAvatar(fields)
+    .then((args) => {
+      applyAvatar(args.json);
+      toast.success(successMessage);
+      void refreshAvatars().catch(logFailure("Failed to refresh avatars"));
+    })
+    .catch(logFailure("Failed to save avatar"));
+}
+
+function handleContextMenuAction(action: AvatarContextAction, avatarRef: MyAvatar) {
   switch (action) {
     case "details":
       showAvatarDialog(avatarRef.id);
@@ -439,25 +470,17 @@ function handleContextMenuAction(action, avatarRef) {
       handleWearAvatar(avatarRef.id);
       break;
     case "makePrivate":
-      confirmAndRun(action, "dialog.avatar.actions.make_private", () => {
-        avatarRequest.saveAvatar({ id: avatarRef.id, releaseStatus: "private" }).then((args) => {
-          applyAvatar(args.json);
-          toast.success(t("message.avatar.updated_private"));
-          refreshAvatars();
-        });
+      confirmAndRun("dialog.avatar.actions.make_private", () => {
+        saveAvatarField({ id: avatarRef.id, releaseStatus: "private" }, t("message.avatar.updated_private"));
       });
       break;
     case "makePublic":
-      confirmAndRun(action, "dialog.avatar.actions.make_public", () => {
-        avatarRequest.saveAvatar({ id: avatarRef.id, releaseStatus: "public" }).then((args) => {
-          applyAvatar(args.json);
-          toast.success(t("message.avatar.updated_public"));
-          refreshAvatars();
-        });
+      confirmAndRun("dialog.avatar.actions.make_public", () => {
+        saveAvatarField({ id: avatarRef.id, releaseStatus: "public" }, t("message.avatar.updated_public"));
       });
       break;
     case "rename":
-      modalStore
+      void modalStore
         .prompt({
           title: t("prompt.rename_avatar.header"),
           description: t("prompt.rename_avatar.description"),
@@ -469,17 +492,13 @@ function handleContextMenuAction(action, avatarRef) {
         .then(({ ok, value }) => {
           if (!ok) return;
           if (value && value !== avatarRef.name) {
-            avatarRequest.saveAvatar({ id: avatarRef.id, name: value }).then((args) => {
-              applyAvatar(args.json);
-              toast.success(t("prompt.rename_avatar.message.success"));
-              refreshAvatars();
-            });
+            saveAvatarField({ id: avatarRef.id, name: value }, t("prompt.rename_avatar.message.success"));
           }
         })
-        .catch(() => {});
+        .catch(logFailure("Failed to rename avatar"));
       break;
     case "changeDescription":
-      modalStore
+      void modalStore
         .prompt({
           title: t("prompt.change_avatar_description.header"),
           description: t("prompt.change_avatar_description.description"),
@@ -491,20 +510,19 @@ function handleContextMenuAction(action, avatarRef) {
         .then(({ ok, value }) => {
           if (!ok) return;
           if (value && value !== avatarRef.description) {
-            avatarRequest.saveAvatar({ id: avatarRef.id, description: value }).then((args) => {
-              applyAvatar(args.json);
-              toast.success(t("prompt.change_avatar_description.message.success"));
-              refreshAvatars();
-            });
+            saveAvatarField({ id: avatarRef.id, description: value }, t("prompt.change_avatar_description.message.success"));
           }
         })
-        .catch(() => {});
+        .catch(logFailure("Failed to change avatar description"));
       break;
     case "createImpostor":
-      confirmAndRun(action, "dialog.avatar.actions.create_impostor", () => {
-        avatarRequest.createImposter({ avatarId: avatarRef.id }).then(() => {
-          toast.success(t("message.avatar.impostor_queued"));
-        });
+      confirmAndRun("dialog.avatar.actions.create_impostor", () => {
+        void avatarRequest
+          .createImposter({ avatarId: avatarRef.id })
+          .then(() => {
+            toast.success(t("message.avatar.impostor_queued"));
+          })
+          .catch(logFailure("Failed to create avatar impostor"));
       });
       break;
     case "changeImage":
@@ -522,11 +540,11 @@ function handleContextMenuAction(action, avatarRef) {
   }
 }
 
-async function onSaveTags({ avatarId, tags: newEntries }) {
+async function onSaveTags({ avatarId, tags: newEntries }: AvatarTagSavePayload) {
   const avatar = avatars.value.find((a) => a.id === avatarId);
-  const oldEntries = avatar?.$tags || [];
-  const oldMap = new Map(oldEntries.map((e) => [e.tag, e]));
-  const newMap = new Map(newEntries.map((e) => [e.tag, e]));
+  const oldEntries = avatar?.$tags ?? [];
+  const oldMap = new Map<string, AvatarTag>(oldEntries.map((e): [string, AvatarTag] => [e.tag, e]));
+  const newMap = new Map<string, AvatarTag>(newEntries.map((e): [string, AvatarTag] => [e.tag, e]));
 
   for (const [name] of oldMap) {
     if (!newMap.has(name)) {
@@ -550,7 +568,7 @@ async function onSaveTags({ avatarId, tags: newEntries }) {
   avatarTagsMap.value = new Map(avatarTagsMap.value);
 }
 
-function onFileChangeAvatarImage(e) {
+function onFileChangeAvatarImage(e: Event) {
   const { file, clearInput } = handleImageUploadInput(e, {
     inputSelector: imageUploadInput.value,
     tooLargeMessage: () => t("message.file.too_large"),
@@ -564,9 +582,9 @@ function onFileChangeAvatarImage(e) {
   cropDialogOpen.value = true;
 }
 
-async function onCropConfirmAvatar(blob) {
+async function onCropConfirmAvatar(blob: File | Blob | null) {
   const avatarRef = changeImageAvatarRef.value;
-  if (!avatarRef) return;
+  if (!avatarRef || blob === null) return;
   try {
     await withUploadTimeout(
       (async () => {
@@ -574,7 +592,10 @@ async function onCropConfirmAvatar(blob) {
         const base64File = await resizeImageToFitLimits(base64Body);
         if (isLinuxHost()) {
           const args = await avatarRequest.uploadAvatarImage(base64File);
-          const fileUrl = args.json.versions[args.json.versions.length - 1].file.url;
+          const fileUrl = args.json.versions.at(-1)?.file?.url;
+          if (!fileUrl) {
+            throw new Error("Avatar image upload returned no file version");
+          }
           await avatarRequest.saveAvatar({
             id: avatarRef.id,
             imageUrl: fileUrl,
@@ -590,7 +611,7 @@ async function onCropConfirmAvatar(blob) {
       })()
     );
     toast.success(t("message.upload.success"));
-    refreshAvatars();
+    void refreshAvatars().catch(logFailure("Failed to refresh avatars"));
   } catch (error) {
     console.error("avatar image upload process failed:", error);
     toast.error(t("message.upload.error"));
@@ -600,7 +621,7 @@ async function onCropConfirmAvatar(blob) {
   }
 }
 
-const currentAvatarId = computed(() => currentUser.value?.currentAvatar);
+const currentAvatarId = computed(() => currentUser.value.currentAvatar);
 
 const {
   cardScale,
@@ -625,13 +646,13 @@ const virtualizer = useVirtualizer(
     count: gridRows.value.length,
     getItemKey: (index) => gridRows.value[index]?.key ?? `avatar-row:${index}`,
     getScrollElement: () => gridScrollRef.value,
-    estimateSize: (index) => estimateRowHeight(gridRows.value[index]?.items?.length ?? 0),
+    estimateSize: (index) => estimateRowHeight(gridRows.value[index]?.items.length ?? 0),
     overscan: 5,
   }))
 );
 
 const virtualItems = computed(() => {
-  const items = virtualizer.value?.getVirtualItems?.() ?? [];
+  const items = virtualizer.value.getVirtualItems();
   return items.map((virtualItem) => ({
     virtualItem,
     row: gridRows.value[virtualItem.index],
@@ -643,26 +664,26 @@ watch(gridContainerRefEl, (el) => {
 });
 
 const gridLayoutSignature = computed(() => {
-  const firstRowItems = gridRows.value[0]?.items?.length ?? 0;
+  const firstRowItems = gridRows.value[0]?.items.length ?? 0;
   return `${filteredAvatars.value.length}:${firstRowItems}:${cardScale.value}:${cardSpacing.value}`;
 });
 
 watch(gridLayoutSignature, () => {
-  nextTick(() => {
+  void nextTick(() => {
     updateContainerWidth();
-    virtualizer.value?.measure?.();
-  });
+    virtualizer.value.measure();
+  }).catch(logFailure("Failed to measure avatar grid"));
 });
 
-function handleViewModeChange(value) {
-  if (value) {
+function handleViewModeChange(value: AcceptableValue | AcceptableValue[]) {
+  if (typeof value === "string" && value) {
     viewMode.value = value;
-    configRepository.setString("VRCX_MyAvatarsViewMode", value);
+    void configRepository.setString("VRCX_MyAvatarsViewMode", value).catch(logFailure("Failed to save avatar view mode"));
     if (value === "grid") {
-      nextTick(() => {
+      void nextTick(() => {
         updateContainerWidth();
-        virtualizer.value?.measure?.();
-      });
+        virtualizer.value.measure();
+      }).catch(logFailure("Failed to measure avatar grid"));
     }
   }
 }
@@ -673,11 +694,17 @@ const columns = getColumns({
   currentAvatarId,
 });
 
-function handleRowClick(row) {
+function measureRow(element: Element | ComponentPublicInstance | null) {
+  if (element === null || element instanceof Element) {
+    virtualizer.value.measureElement(element);
+  }
+}
+
+function handleRowClick(row: { original: MyAvatar }) {
   handleShowAvatarDialog(row.original.id);
 }
 
-function getRowClass(row) {
+function getRowClass(row: { original: MyAvatar }) {
   if (row.original.id === currentAvatarId.value) {
     return "bg-primary/10 hover:bg-primary/15";
   }
@@ -697,7 +724,7 @@ const { table, pagination } = useVrcxVueTable({
   },
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,
@@ -705,14 +732,32 @@ const handlePageSizeChange = (size) => {
   };
 };
 
+async function finishAvatarRefresh(map: Map<string, MyAvatar>) {
+  const list = Array.from(map.values());
+  const currentAvatarId = currentUser.value.currentAvatar;
+  const swapTime = currentUser.value.$previousAvatarSwapTime;
+  const [tagsMap, avatarTimeSpentMap] = await Promise.all([database.getAllAvatarTags(), database.getAllAvatarTimeSpent()]);
+  const tagEntriesByAvatar = toAvatarTagMap(tagsMap);
+  avatarTagsMap.value = tagEntriesByAvatar;
+  for (const avatar of list) {
+    avatar.$timeSpent = avatarTimeSpentMap.get(avatar.id) ?? 0;
+    if (avatar.id === currentAvatarId && swapTime) {
+      avatar.$timeSpent += Date.now() - swapTime;
+    }
+    avatar.$tags = tagEntriesByAvatar.get(avatar.id) ?? [];
+  }
+  avatars.value = list;
+  isLoading.value = false;
+}
+
 async function refreshAvatars() {
   if (isLoading.value) {
     return;
   }
   isLoading.value = true;
 
-  const map = new Map();
-  const params = {
+  const map = new Map<string, MyAvatar>();
+  const params: SearchAvatars["query"] = {
     n: 50,
     offset: 0,
     sort: "updated",
@@ -722,30 +767,17 @@ async function refreshAvatars() {
   };
 
   await processBulk({
-    fn: avatarRequest.getAvatars,
+    fn: (requestParams) => avatarRequest.getAvatars(requestParams),
     N: -1,
     params,
     handle: (args) => {
       for (const json of args.json) {
-        const ref = applyAvatar(json);
-        map.set(ref.id, ref);
+        const avatar = applyAvatar(json);
+        map.set(avatar.id, avatar);
       }
     },
-    done: async () => {
-      const list = Array.from(map.values());
-      const currentAvatarId = currentUser.value.currentAvatar;
-      const swapTime = currentUser.value.$previousAvatarSwapTime;
-      const [tagsMap, avatarTimeSpentMap] = await Promise.all([database.getAllAvatarTags(), database.getAllAvatarTimeSpent()]);
-      avatarTagsMap.value = tagsMap;
-      for (const ref of list) {
-        ref.$timeSpent = avatarTimeSpentMap.get(ref.id) || 0;
-        if (ref.id === currentAvatarId && swapTime) {
-          ref.$timeSpent += Date.now() - swapTime;
-        }
-        ref.$tags = tagsMap.get(ref.id) || [];
-      }
-      avatars.value = list;
-      isLoading.value = false;
+    done: () => {
+      void finishAvatarRefresh(map).catch(logFailure("Failed to finish avatar refresh"));
     },
   });
 }
@@ -762,7 +794,7 @@ onBeforeMount(async () => {
 });
 
 onMounted(() => {
-  refreshAvatars();
+  void refreshAvatars().catch(logFailure("Failed to load avatars"));
 });
 </script>
 

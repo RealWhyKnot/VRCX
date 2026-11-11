@@ -20,7 +20,7 @@
     </div>
     <GroupGalleryForm
       v-if="isCreatingGallery"
-      :form="galleryForm"
+      v-model:form="galleryForm"
       :saving="isSavingGallery"
       :submit-label="t('dialog.group.gallery.create')"
       @save="saveGallery"
@@ -39,12 +39,12 @@
         <TooltipWrapper side="top" :content="groupGalleryStatusText(gallery)">
           <i class="x-status-icon" style="margin-left: 6px" :class="groupGalleryStatus(gallery)" />
         </TooltipWrapper>
-        <span class="text-muted-foreground text-xs ml-1.5">{{ groupDialog.galleries[gallery.id] ? groupDialog.galleries[gallery.id].length : 0 }}</span>
+        <span class="text-muted-foreground text-xs ml-1.5">{{ groupDialog.galleries[gallery.id ?? ""]?.length ?? 0 }}</span>
       </template>
       <template v-for="(gallery, index) in groupDialog.ref.galleries" :key="`content-${index}`" #[String(index)]>
         <GroupGalleryForm
           v-if="editingGalleryId === gallery.id"
-          :form="galleryForm"
+          v-model:form="galleryForm"
           :saving="isSavingGallery"
           :submit-label="t('dialog.group.gallery.save')"
           @save="saveGallery"
@@ -87,7 +87,11 @@
           </TooltipWrapper>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 8px">
-          <Card v-for="image in groupDialog.galleries[gallery.id]" :key="image.id" class="group relative p-0 overflow-hidden transition-shadow hover:shadow-md">
+          <Card
+            v-for="image in groupDialog.galleries[gallery.id ?? ''] ?? []"
+            :key="image.id ?? ''"
+            class="group relative p-0 overflow-hidden transition-shadow hover:shadow-md"
+          >
             <TooltipWrapper v-if="canDeleteImage(gallery, image)" side="top" :content="t('dialog.group.gallery.delete_image_tooltip')">
               <Button
                 size="icon-sm"
@@ -99,7 +103,7 @@
                 <Trash2 />
               </Button>
             </TooltipWrapper>
-            <div class="cursor-pointer" @click="showFullscreenImageDialog(image.imageUrl)">
+            <div class="cursor-pointer" @click="showFullscreenImageDialog(image.imageUrl ?? '')">
               <img :src="image.imageUrl" :class="['max-w-full', 'max-h-full']" loading="lazy" @error="onImageError" />
               <div class="hidden h-[200px] w-full items-center justify-center bg-muted" style="display: none">
                 <Image class="size-8 text-muted-foreground" />
@@ -128,6 +132,8 @@ import { useGroupStore } from "../../../stores/group";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { useGroupGalleries } from "./use-group-galleries";
+import type { GalleryEntry } from "./use-group-galleries";
+import type { GallerySelectionPayload } from "./group-dialog-types";
 import GallerySelectDialog from "./GallerySelectDialog.vue";
 import GroupGalleryForm from "./GroupGalleryForm.vue";
 
@@ -166,7 +172,7 @@ const gallerySelectDialog = ref({
   isIconGallerySelectDialog: false,
 });
 
-function groupGalleryStatusText(gallery) {
+function groupGalleryStatusText(gallery: GalleryEntry) {
   if (!gallery.membersOnly) {
     return t("dialog.group.gallery.visibility_public");
   }
@@ -182,9 +188,9 @@ function startCreateGallery() {
   galleryForm.value = { name: "", description: "", membersOnly: false };
 }
 
-function startEditGallery(gallery) {
+function startEditGallery(gallery: GalleryEntry) {
   isCreatingGallery.value = false;
-  editingGalleryId.value = gallery.id;
+  editingGalleryId.value = gallery.id ?? "";
   galleryForm.value = {
     name: gallery.name ?? "",
     description: gallery.description ?? "",
@@ -206,8 +212,8 @@ async function saveGallery() {
   };
   isSavingGallery.value = true;
   try {
-    const saved = isCreatingGallery.value ? await createGallery(fields) : await updateGallery(editingGalleryId.value, fields);
-    if (saved) {
+    const isSaved = isCreatingGallery.value ? await createGallery(fields) : await updateGallery(editingGalleryId.value, fields);
+    if (isSaved) {
       closeGalleryForm();
     }
   } finally {
@@ -215,8 +221,8 @@ async function saveGallery() {
   }
 }
 
-function showAddImageDialog(gallery) {
-  addImageGalleryId = gallery.id;
+function showAddImageDialog(gallery: GalleryEntry) {
+  addImageGalleryId = gallery.id ?? "";
   gallerySelectDialog.value = {
     visible: true,
     selectedFileId: "",
@@ -225,17 +231,22 @@ function showAddImageDialog(gallery) {
   };
 }
 
-function handleGalleryImageSelect({ fileId }) {
+function handleGalleryImageSelect({ fileId }: GallerySelectionPayload) {
   if (!fileId || !addImageGalleryId) {
     return;
   }
-  addGalleryImage(addImageGalleryId, fileId);
+  addGalleryImage(addImageGalleryId, fileId).catch((err: unknown) => console.error(err));
 }
 
-function onImageError(event) {
+function onImageError(event: Event) {
   const img = event.target;
+  if (!(img instanceof HTMLImageElement)) {
+    return;
+  }
   img.style.display = "none";
-  img.nextElementSibling.style.display = "flex";
+  if (img.nextElementSibling instanceof HTMLElement) {
+    img.nextElementSibling.style.display = "flex";
+  }
 }
 
 defineExpose({

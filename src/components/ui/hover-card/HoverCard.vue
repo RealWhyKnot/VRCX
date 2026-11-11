@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { HoverCardRoot, useForwardPropsEmits } from "reka-ui";
+import type { HoverCardRootEmits, HoverCardRootProps } from "reka-ui";
 
-const props = defineProps({
-  defaultOpen: { type: Boolean, required: false },
-  open: { type: Boolean, required: false },
-  openDelay: { type: Number, required: false },
-  closeDelay: { type: Number, required: false },
-});
-const emits = defineEmits(["update:open"]);
+const props = defineProps<HoverCardRootProps>();
+const delegatedProps: Record<string, unknown> = props;
+const emits = defineEmits<HoverCardRootEmits>();
 
-const forwarded = useForwardPropsEmits(props, emits);
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

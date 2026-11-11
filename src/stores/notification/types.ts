@@ -26,6 +26,12 @@ type NotificationFields = {
   userId?: string | undefined;
   location?: string | undefined;
   videoName?: string | undefined;
+  link?: string | undefined;
+  linkText?: string | undefined;
+  groupName?: string | undefined;
+  worldName?: string | undefined;
+  senderUserIcon?: string | undefined;
+  responses?: NotificationResponse[] | undefined;
   data?: unknown;
 };
 
@@ -50,6 +56,8 @@ export type NotificationArgs = {
 export type NotificationResponse = {
   type: string;
   data: string;
+  icon?: string | undefined;
+  text?: string | undefined;
 };
 
 export type NotificationTable = {

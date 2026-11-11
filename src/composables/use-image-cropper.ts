@@ -1,11 +1,18 @@
 import { ref } from "vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import type { Point, Transform } from "vue-advanced-cropper";
 
 type CropCoordinates = { left: number; top: number; width: number; height: number };
 type CropTransforms = { rotate?: number; flip?: { horizontal?: boolean; vertical?: boolean } };
 type CropperResult = { coordinates?: CropCoordinates; image?: { transforms?: CropTransforms } };
-type CropperHandle = { getResult: () => CropperResult | null | undefined };
+type CropperHandle = {
+  getResult: () => CropperResult | null | undefined;
+  setCoordinates: (transform: Transform | Transform[], options?: { autoZoom?: boolean; transitions?: boolean }) => void;
+  zoom: (factor: number, center?: Point) => void;
+  rotate: (angle: number) => void;
+  flip: (horizontal: boolean, vertical?: boolean) => void;
+};
 
 const MAX_PREVIEW_SIZE = 800;
 

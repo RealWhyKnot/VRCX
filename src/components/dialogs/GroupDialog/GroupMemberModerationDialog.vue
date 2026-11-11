@@ -34,7 +34,7 @@
               :filter-options="groupDialogFilterOptions"
               :page-sizes="pageSizes"
               :column-context="membersColumnContext"
-              :handle-page-change="(val) => (tables.members.pageIndex = Math.max(0, val - 1))"
+              :handle-page-change="(val: number) => (tables.members.pageIndex = Math.max(0, val - 1))"
               @refresh="loadAllGroupMembers"
               @update:member-search="memberSearch = $event"
               @search="groupMembersSearch"
@@ -51,7 +51,7 @@
               :group-ref="groupMemberModeration.groupRef"
               :page-sizes="pageSizes"
               :column-context="bansColumnContext"
-              :handle-page-change="(val) => (tables.bans.pageIndex = Math.max(0, val - 1))"
+              :handle-page-change="(val: number) => (tables.bans.pageIndex = Math.max(0, val - 1))"
               @refresh="getAllGroupBans(groupMemberModeration.id)"
               @select-all="selectAll"
               @export="isGroupBansExportDialogVisible = true"
@@ -69,7 +69,7 @@
               :progress-current="progressCurrent"
               :page-sizes="pageSizes"
               :column-context="invitesColumnContext"
-              :handle-page-change="(val) => (tables.invites.pageIndex = Math.max(0, val - 1))"
+              :handle-page-change="(val: number) => (tables.invites.pageIndex = Math.max(0, val - 1))"
               @refresh="getAllGroupInvitesAndJoinRequests(groupMemberModeration.id)"
               @select-all="selectAll"
               @delete-sent-invite="handleDeleteSentInvite"
@@ -88,7 +88,7 @@
               :audit-log-types="groupMemberModeration.auditLogTypes"
               :page-sizes="pageSizes"
               :column-context="logsColumnContext"
-              :handle-page-change="(val) => (tables.logs.pageIndex = Math.max(0, val - 1))"
+              :handle-page-change="(val: number) => (tables.logs.pageIndex = Math.max(0, val - 1))"
               @refresh="handleLogsRefresh"
               @export="isGroupLogsExportDialogVisible = true"
             />
@@ -159,7 +159,7 @@ import { useUserDisplay } from "../../../composables/use-user-display";
 import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants/group";
 import { groupRequest } from "../../../api/group";
 import { resolveRoleNames } from "./group-moderation-utils";
-import { useGroupBatchOperations } from "./use-group-batch-operations";
+import { useGroupBatchOperations, type GroupRoleChangeArgs } from "./use-group-batch-operations";
 import { useGroupModerationData } from "./use-group-moderation-data";
 import { useGroupModerationSelection } from "./use-group-moderation-selection";
 
@@ -187,17 +187,17 @@ const groupModerationTabs = computed(() => [
   {
     value: "bans",
     label: t("dialog.group_member_moderation.bans"),
-    disabled: !hasGroupPermission(groupMemberModeration.value?.groupRef, "group-bans-manage"),
+    disabled: !hasGroupPermission(groupMemberModeration.value.groupRef, "group-bans-manage"),
   },
   {
     value: "invites",
     label: t("dialog.group_member_moderation.invites"),
-    disabled: !hasGroupPermission(groupMemberModeration.value?.groupRef, "group-invites-manage"),
+    disabled: !hasGroupPermission(groupMemberModeration.value.groupRef, "group-invites-manage"),
   },
   {
     value: "logs",
     label: t("dialog.group_member_moderation.logs"),
-    disabled: !hasGroupPermission(groupMemberModeration.value?.groupRef, "group-audit-view"),
+    disabled: !hasGroupPermission(groupMemberModeration.value.groupRef, "group-audit-view"),
   },
 ]);
 
@@ -209,14 +209,14 @@ const { setSelectedUsers, deselectedUsers, onSelectionChange, deleteSelectedUser
   groupMemberModeration.value
 );
 
-const rolesText = (roleIds) => resolveRoleNames(roleIds, groupMemberModeration.value?.groupRef?.roles ?? []);
+const rolesText = (roleIds: string[] | null | undefined) => resolveRoleNames(roleIds, groupMemberModeration.value.groupRef.roles ?? []);
 
 const membersColumnContext = computed(() => ({
   randomUserColours,
   rolesText,
   userImage,
   userImageFull,
-  onShowFullscreenImage: showFullscreenImageDialog,
+  onShowFullscreenImage: (imageUrl: string) => showFullscreenImageDialog(imageUrl, ""),
   onShowUser: showUserDialog,
   onSelectionChange,
 }));
@@ -226,7 +226,7 @@ const bansColumnContext = computed(() => ({
   rolesText,
   userImage,
   userImageFull,
-  onShowFullscreenImage: showFullscreenImageDialog,
+  onShowFullscreenImage: (imageUrl: string) => showFullscreenImageDialog(imageUrl, ""),
   onShowUser: showUserDialog,
   onSelectionChange,
 }));
@@ -235,7 +235,7 @@ const invitesColumnContext = computed(() => ({
   randomUserColours,
   userImage,
   userImageFull,
-  onShowFullscreenImage: showFullscreenImageDialog,
+  onShowFullscreenImage: (imageUrl: string) => showFullscreenImageDialog(imageUrl, ""),
   onShowUser: showUserDialog,
   onSelectionChange,
 }));
@@ -268,12 +268,11 @@ const {
   groupRequest,
 });
 
-function handleGroupMemberRoleChange(args) {
+function handleGroupMemberRoleChange(args: GroupRoleChangeArgs) {
   if (groupDialog.value.id === args.params.groupId) {
     groupDialog.value.members.forEach((member) => {
       if (member.userId === args.params.userId) {
         member.roleIds = args.json;
-        return true;
       }
     });
   }
@@ -303,55 +302,77 @@ const {
 });
 
 const selectUserId = ref("");
-const selectedRoles = ref([]);
+const selectedRoles = ref<string[]>([]);
 const note = ref("");
 const isGroupLogsExportDialogVisible = ref(false);
 const isGroupBansExportDialogVisible = ref(false);
 const isGroupBansImportDialogVisible = ref(false);
-const logsTabRef = ref(null);
+const logsTabRef = ref<{ selectedAuditLogTypes: string[] } | null>(null);
 
 function handleBan() {
-  groupMembersBan({ onComplete: () => getAllGroupBans(groupMemberModeration.value.id) });
+  groupMembersBan({
+    onComplete: () => {
+      getAllGroupBans(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleUnban() {
-  groupMembersUnban({ onComplete: () => getAllGroupBans(groupMemberModeration.value.id) });
+  groupMembersUnban({
+    onComplete: () => {
+      getAllGroupBans(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleKick() {
-  groupMembersKick({ onComplete: () => loadAllGroupMembers() });
+  groupMembersKick({
+    onComplete: () => {
+      loadAllGroupMembers().catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleSaveNote() {
-  groupMembersSaveNote(note.value);
+  groupMembersSaveNote(note.value).catch(console.error);
 }
 function handleAddRoles() {
-  groupMembersAddRoles(selectedRoles.value);
+  groupMembersAddRoles(selectedRoles.value).catch(console.error);
 }
 function handleRemoveRoles() {
-  groupMembersRemoveRoles(selectedRoles.value);
+  groupMembersRemoveRoles(selectedRoles.value).catch(console.error);
 }
 function handleDeleteSentInvite() {
   groupMembersDeleteSentInvite({
-    onComplete: () => getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id),
-  });
+    onComplete: () => {
+      getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleAcceptInviteRequest() {
   groupMembersAcceptInviteRequest({
-    onComplete: () => getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id),
-  });
+    onComplete: () => {
+      getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleRejectInviteRequest() {
   groupMembersRejectInviteRequest({
-    onComplete: () => getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id),
-  });
+    onComplete: () => {
+      getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleBlockJoinRequest() {
   groupMembersBlockJoinRequest({
-    onComplete: () => getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id),
-  });
+    onComplete: () => {
+      getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 function handleDeleteBlockedRequest() {
   groupMembersDeleteBlockedRequest({
-    onComplete: () => getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id),
-  });
+    onComplete: () => {
+      getAllGroupInvitesAndJoinRequests(groupMemberModeration.value.id).catch(console.error);
+    },
+  }).catch(console.error);
 }
 async function handleSelectUser() {
   await selectGroupMemberUserId(selectUserId.value);
@@ -359,19 +380,19 @@ async function handleSelectUser() {
 }
 function handleLogsRefresh() {
   const eventTypes = logsTabRef.value?.selectedAuditLogTypes ?? [];
-  getAllGroupLogs(groupMemberModeration.value.id, eventTypes);
+  getAllGroupLogs(groupMemberModeration.value.id, eventTypes).catch(console.error);
 }
 
-function tabClick(newTab) {
-  groupMemberModeration.value.activeTab = newTab;
+function tabClick(newTab: string | number) {
+  groupMemberModeration.value.activeTab = String(newTab);
 }
 
 watch(
   () => groupMemberModeration.value.visible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       if (groupMemberModeration.value.openWithUserId) {
-        addGroupMemberToSelection(groupMemberModeration.value.openWithUserId);
+        addGroupMemberToSelection(groupMemberModeration.value.openWithUserId).catch(console.error);
       }
     }
   },

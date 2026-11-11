@@ -18,19 +18,14 @@
             </Badge>
             <span v-if="!isNotificationExpired(notification) && !isSeen" class="ml-auto size-2 shrink-0 rounded-full bg-blue-500" />
           </ItemTitle>
-          <ItemDescription v-if="notification.type === 'invite' && notification.details?.worldId" class="text-xs">
-            <Location
-              :location="notification.details.worldId"
-              :hint="notification.details.worldName || ''"
-              :grouphint="notification.details.groupName || ''"
-              link
-            />
+          <ItemDescription v-if="notification.type === 'invite' && detailText('worldId')" class="text-xs">
+            <Location :location="detailText('worldId')" :hint="detailText('worldName')" :grouphint="detailText('groupName')" link />
           </ItemDescription>
           <ItemDescription
             v-else-if="(notification.type === 'group.queueReady' || notification.type === 'instance.closed') && notification.location"
             class="text-xs"
           >
-            <Location :location="notification.location" :hint="notification.worldName || ''" :grouphint="notification.groupName || ''" link />
+            <Location :location="notification.location" :hint="textAt(notification, 'worldName')" :grouphint="textAt(notification, 'groupName')" link />
           </ItemDescription>
           <ItemDescription v-if="displayMessage" class="text-xs select-none truncate">
             {{ displayMessage }}
@@ -90,8 +85,8 @@
                 </TooltipWrapper>
               </template>
 
-              <template v-if="hasResponses">
-                <TooltipWrapper v-for="response in notification.responses" :key="`${response.text}:${response.type}`" side="top" :content="response.text">
+              <template v-if="responses.length">
+                <TooltipWrapper v-for="response in responses" :key="`${response.text}:${response.type}`" side="top" :content="response.text">
                   <button
                     type="button"
                     class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
@@ -103,7 +98,7 @@
                 </TooltipWrapper>
               </template>
 
-              <TooltipWrapper v-if="showDecline" side="top" :content="t('view.notification.actions.decline')">
+              <TooltipWrapper v-if="canDecline" side="top" :content="t('view.notification.actions.decline')">
                 <button
                   type="button"
                   class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
@@ -115,7 +110,7 @@
               </TooltipWrapper>
             </template>
 
-            <TooltipWrapper v-if="showDeleteLog" side="top" :content="t('view.notification.actions.delete_log')">
+            <TooltipWrapper v-if="canDeleteLog" side="top" :content="t('view.notification.actions.delete_log')">
               <button
                 type="button"
                 class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
@@ -162,13 +157,8 @@
             <p class="text-xs text-muted-foreground">{{ typeLabel }}</p>
           </div>
         </div>
-        <div v-if="notification.details?.worldId" class="text-xs mb-1">
-          <Location
-            :location="notification.details.worldId"
-            :hint="notification.details.worldName || ''"
-            :grouphint="notification.details.groupName || ''"
-            link
-          />
+        <div v-if="detailText('worldId')" class="text-xs mb-1">
+          <Location :location="detailText('worldId')" :hint="detailText('worldName')" :grouphint="detailText('groupName')" link />
         </div>
         <p v-if="friendMessage" class="text-xs text-muted-foreground warp-break-words leading-relaxed">
           {{ friendMessage }}
@@ -214,6 +204,7 @@ import HoverCard from "@/components/ui/hover-card/HoverCard.vue";
 import HoverCardContent from "@/components/ui/hover-card/HoverCardContent.vue";
 import HoverCardTrigger from "@/components/ui/hover-card/HoverCardTrigger.vue";
 import { computed, onBeforeUnmount } from "vue";
+import type { Component } from "vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 import Separator from "@/components/ui/separator/Separator.vue";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
@@ -223,10 +214,10 @@ import { useI18n } from "vue-i18n";
 import dayjs from "dayjs";
 
 import { useGameStore } from "../../../stores/game";
-import { useGroupStore } from "../../../stores/group";
 import { useLocationStore } from "../../../stores/location";
 import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
+import type { NotificationEntry } from "../../../stores/notification/types";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
@@ -234,16 +225,31 @@ import { useUserDisplay } from "../../../composables/use-user-display";
 
 import Location from "../../../components/Location.vue";
 
-const props = defineProps({
-  notification: { type: Object, required: true },
-  isUnseen: { type: Boolean, default: false },
-});
+type NotificationResponseItem = {
+  type: string;
+  text: string;
+  data: string;
+  icon: string;
+};
 
-defineEmits(["show-invite-response", "show-invite-request-response"]);
+const props = withDefaults(
+  defineProps<{
+    notification: NotificationEntry;
+    isUnseen?: boolean;
+  }>(),
+  {
+    isUnseen: false,
+  }
+);
 
-const { t, te } = useI18n();
+defineEmits<{
+  "show-invite-response": [notification: NotificationEntry];
+  "show-invite-request-response": [notification: NotificationEntry];
+}>();
+
+const i18n = useI18n();
+const { t } = i18n;
 const userStore = useUserStore();
-const groupStore = useGroupStore();
 const notificationStore = useNotificationStore();
 const { lastLocation } = storeToRefs(useLocationStore());
 const { isGameRunning } = storeToRefs(useGameStore());
@@ -251,18 +257,56 @@ const { openNotificationLink, isNotificationExpired } = useNotificationStore();
 const { checkCanInvite } = useInviteChecks();
 const { userImage } = useUserDisplay();
 
+function textAt(source: unknown, key: string): string {
+  if (typeof source !== "object" || source === null) {
+    return "";
+  }
+  const value: unknown = Reflect.get(source, key);
+  return typeof value === "string" ? value : "";
+}
+
+function firstText(...values: (string | null | undefined)[]): string {
+  return values.find((value) => Boolean(value)) ?? "";
+}
+
+function detailText(key: string): string {
+  return textAt(props.notification.details, key);
+}
+
+function isNotificationResponseItem(value: unknown): value is NotificationResponseItem {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof Reflect.get(value, "type") === "string" &&
+    typeof Reflect.get(value, "text") === "string" &&
+    typeof Reflect.get(value, "data") === "string"
+  );
+}
+
+const responses = computed<NotificationResponseItem[]>(() => {
+  const value: unknown = Reflect.get(props.notification, "responses");
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isNotificationResponseItem).map((item) => ({
+    type: item.type,
+    text: item.text,
+    data: item.data,
+    icon: textAt(item, "icon"),
+  }));
+});
+
 const senderName = computed(() => {
   const n = props.notification;
-
-  return n.title || n.senderUsername || n.data?.groupName || n.groupName || n.details?.groupName || "";
+  return firstText(n.title, n.senderUsername, textAt(n.data, "groupName"), textAt(n, "groupName"), textAt(n.details, "groupName"));
 });
 
 const avatarUrl = computed(() => {
   const n = props.notification;
   const userId = typeof n.senderUserId === "string" ? n.senderUserId : "";
 
-  if (userId.startsWith("grp_") || n.type?.startsWith("group.") || n.type === "groupChange") {
-    return n.details?.imageUrl || n.imageUrl || n.senderUserIcon || null;
+  if (userId.startsWith("grp_") || n.type.startsWith("group.") || n.type === "groupChange") {
+    return firstText(textAt(n.details, "imageUrl"), n.imageUrl, textAt(n, "senderUserIcon")) || null;
   }
 
   if (userId) {
@@ -271,40 +315,42 @@ const avatarUrl = computed(() => {
       return userImage(user);
     }
   }
-  return n.senderUserIcon || null;
+  return textAt(n, "senderUserIcon") || null;
 });
 
 const typeLabel = computed(() => {
   const typeKey = `view.notification.filters.${props.notification.type}`;
-  return te(typeKey) ? t(typeKey) : props.notification.type;
+  return i18n.te(typeKey) ? t(typeKey) : props.notification.type;
 });
 
-const TYPE_ICON_MAP = {
-  friendRequest: UserPlus,
-  ignoredFriendRequest: UserPlus,
-  invite: Send,
-  requestInvite: Send,
-  inviteResponse: Send,
-  requestInviteResponse: Send,
-  boop: MessageCircle,
-  message: Mail,
-};
+const TYPE_ICON_MAP = new Map<string, Component>([
+  ["friendRequest", UserPlus],
+  ["ignoredFriendRequest", UserPlus],
+  ["invite", Send],
+  ["requestInvite", Send],
+  ["inviteResponse", Send],
+  ["requestInviteResponse", Send],
+  ["boop", MessageCircle],
+  ["message", Mail],
+]);
 
-const typeIcon = computed(() => {
+const typeIcon = computed<Component>(() => {
   const type = props.notification.type;
-  if (TYPE_ICON_MAP[type]) return TYPE_ICON_MAP[type];
-  if (type?.startsWith("group.") || type === "groupChange") return Users;
+  const mappedIcon = TYPE_ICON_MAP.get(type);
+  if (mappedIcon) return mappedIcon;
+  if (type.startsWith("group.") || type === "groupChange") return Users;
   return Bell;
 });
 
 const displayMessage = computed(() => {
   const n = props.notification;
-  if (n.message) return n.message;
-  if (n.details?.inviteMessage) return n.details.inviteMessage;
-  if (n.details?.requestMessage) return n.details.requestMessage;
-  if (n.details?.responseMessage) return n.details.responseMessage;
-  if (n.details?.worldName) return n.details.worldName;
-  return "";
+  return firstText(
+    n.message,
+    textAt(n.details, "inviteMessage"),
+    textAt(n.details, "requestMessage"),
+    textAt(n.details, "responseMessage"),
+    textAt(n.details, "worldName")
+  );
 });
 
 const createdAtValue = computed(() => props.notification.created_at || props.notification.createdAt);
@@ -319,34 +365,31 @@ const absoluteTime = computed(() => {
   return dayjs(createdAtValue.value).format("YYYY-MM-DD HH:mm:ss");
 });
 
-const showDecline = computed(() => {
+const canDecline = computed(() => {
   const type = props.notification.type;
-  const link = props.notification.link;
+  const link = textAt(props.notification, "link");
   return (
     type !== "requestInviteResponse" &&
     type !== "inviteResponse" &&
     type !== "message" &&
     type !== "boop" &&
     type !== "groupChange" &&
-    !type?.includes("group.") &&
-    !type?.includes("moderation.") &&
-    !type?.includes("instance.") &&
-    !link?.startsWith("economy.")
+    !type.includes("group.") &&
+    !type.includes("moderation.") &&
+    !type.includes("instance.") &&
+    !link.startsWith("economy.")
   );
 });
 
-const hasResponses = computed(() => Array.isArray(props.notification.responses));
-
-const showDeleteLog = computed(() => {
-  const n = props.notification;
-  const type = n.type;
+const canDeleteLog = computed(() => {
+  const type = props.notification.type;
   if (type === "friendRequest" || type === "ignoredFriendRequest") return false;
   return true;
 });
 
 const isGroupType = computed(() => {
   const type = props.notification.type;
-  return type?.startsWith("group.") || type === "groupChange";
+  return type.startsWith("group.") || type === "groupChange";
 });
 
 const isFriendType = computed(() => {
@@ -356,22 +399,22 @@ const isFriendType = computed(() => {
 
 const groupDisplayName = computed(() => {
   const n = props.notification;
-  return n.title || n.data?.groupName || n.groupName || n.details?.groupName || n.senderUsername || "";
+  return firstText(n.title, textAt(n.data, "groupName"), textAt(n, "groupName"), textAt(n.details, "groupName"), n.senderUsername);
 });
 
 const hoverTitle = computed(() => {
   const n = props.notification;
-  return n.data?.announcementTitle || n.title || "";
+  return firstText(textAt(n.data, "announcementTitle"), n.title);
 });
 
 const hoverImageUrl = computed(() => {
   const n = props.notification;
-  return n.imageUrl || n.details?.imageUrl || null;
+  return firstText(n.imageUrl, textAt(n.details, "imageUrl")) || null;
 });
 
 const friendMessage = computed(() => {
   const n = props.notification;
-  return n.message || n.details?.inviteMessage || n.details?.requestMessage || n.details?.responseMessage || "";
+  return firstText(n.message, textAt(n.details, "inviteMessage"), textAt(n.details, "requestMessage"), textAt(n.details, "responseMessage"));
 });
 
 const isSeen = computed(() => {
@@ -384,13 +427,13 @@ const isSeen = computed(() => {
 });
 
 const canInvite = computed(() => {
-  const location = lastLocation.value?.location;
+  const location = lastLocation.value.location;
   return Boolean(location) && isGameRunning.value && checkCanInvite(location);
 });
 
-function getResponseIcon(response) {
-  if (response?.type === "link") return Link;
-  switch (response?.icon) {
+function getResponseIcon(response: NotificationResponseItem): Component {
+  if (response.type === "link") return Link;
+  switch (response.icon) {
     case "check":
       return Check;
     case "cancel":
@@ -406,24 +449,27 @@ function getResponseIcon(response) {
   }
 }
 
-function handleResponse(response) {
+function handleResponse(response: NotificationResponseItem) {
   if (response.type === "link") {
     openNotificationLink(response.data);
     return;
   }
   if (response.icon === "reply" && props.notification.type === "boop") {
-    userStore.showSendBoopDialog(props.notification.senderUserId);
+    const senderUserId = props.notification.senderUserId;
+    if (senderUserId) userStore.showSendBoopDialog(senderUserId);
     return;
   }
-  notificationStore.sendNotificationResponse(props.notification.id, props.notification.responses, response.type);
+  const id = props.notification.id;
+  if (!id) return;
+  notificationStore.sendNotificationResponse(id, responses.value, response.type);
 }
 
 function openSender() {
   const n = props.notification;
   const userId = typeof n.senderUserId === "string" ? n.senderUserId : "";
 
-  if (userId.startsWith("grp_") || n.type?.startsWith("group.") || n.type === "groupChange") {
-    const groupId = userId.startsWith("grp_") ? userId : n.data?.groupId || n.details?.groupId || "";
+  if (userId.startsWith("grp_") || n.type.startsWith("group.") || n.type === "groupChange") {
+    const groupId = userId.startsWith("grp_") ? userId : firstText(textAt(n.data, "groupId"), textAt(n.details, "groupId"));
     if (groupId) {
       showGroupDialog(groupId);
       return;
@@ -435,17 +481,19 @@ function openSender() {
     return;
   }
 
-  const link = n.link;
+  const link = textAt(n, "link");
   if (link) {
     openNotificationLink(link);
   }
 }
 
 onBeforeUnmount(() => {
-  if (isNotificationExpired(props.notification) || isSeen.value) {
+  const id = props.notification.id;
+  if (isNotificationExpired(props.notification) || isSeen.value || !id) {
     return;
   }
-  const version = props.notification.version || 1;
-  notificationStore.queueMarkAsSeen(props.notification.id, version);
+  let version = 1;
+  if (props.notification.version) version = props.notification.version;
+  notificationStore.queueMarkAsSeen(id, version);
 });
 </script>

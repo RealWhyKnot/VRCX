@@ -65,6 +65,7 @@ import { notificationRequest } from "../api/notification";
 import { queryRequest } from "../api/query-request";
 import { useInviteChecks } from "../composables/use-invite-checks";
 import { isActionRecent, recordRecentAction } from "../composables/use-recent-actions";
+import { logFailure } from "../stores/log-failure";
 
 import { showUserDialog } from "../coordinators/user-coordinator";
 
@@ -76,20 +77,17 @@ const { isGameRunning } = storeToRefs(useGameStore());
 const { currentUser } = storeToRefs(useUserStore());
 const { checkCanInvite, checkCanInviteSelf } = useInviteChecks();
 
-const props = defineProps({
-  userId: {
-    type: String,
-    required: true,
-  },
-  state: {
-    type: String,
-    default: "",
-  },
-  location: {
-    type: String,
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    userId: string;
+    state?: string;
+    location?: string;
+  }>(),
+  {
+    state: "",
+    location: "",
+  }
+);
 
 const isOnline = computed(() => props.state === "online");
 const hasLocation = computed(() => !!props.location && isRealInstance(props.location));
@@ -107,10 +105,13 @@ function handleViewDetails() {
 }
 
 function handleRequestInvite() {
-  notificationRequest.sendRequestInvite({ platform: "standalonewindows" }, props.userId).then(() => {
-    recordRecentAction(props.userId, "Request Invite");
-    toast.success(t("message.user.request_invite_sent"));
-  });
+  void notificationRequest
+    .sendRequestInvite({ platform: "standalonewindows" }, props.userId)
+    .then(() => {
+      recordRecentAction(props.userId, "Request Invite");
+      toast.success(t("message.user.request_invite_sent"));
+    })
+    .catch(logFailure("Failed to send request invite:"));
 }
 
 function handleInvite() {
@@ -118,22 +119,24 @@ function handleInvite() {
   if (currentLocation === "traveling") {
     currentLocation = lastLocationDestination.value;
   }
-  const L = parseLocation(currentLocation);
-  queryRequest.fetch("world.location", { worldId: L.worldId }).then((args) => {
-    notificationRequest
-      .sendInvite(
+  const parsedLocation = parseLocation(currentLocation);
+  void queryRequest
+    .fetch("world.location", { worldId: parsedLocation.worldId })
+    .then((args) =>
+      notificationRequest.sendInvite(
         {
-          instanceId: L.tag,
-          worldId: L.tag,
+          instanceId: parsedLocation.tag,
+          worldId: parsedLocation.tag,
           worldName: args.ref.name,
         },
         props.userId
       )
-      .then(() => {
-        recordRecentAction(props.userId, "Invite");
-        toast.success(t("message.invite.sent"));
-      });
-  });
+    )
+    .then(() => {
+      recordRecentAction(props.userId, "Invite");
+      toast.success(t("message.invite.sent"));
+    })
+    .catch(logFailure("Failed to send invite:"));
 }
 
 function handleSendBoop() {
@@ -142,19 +145,20 @@ function handleSendBoop() {
 
 function handleJoin() {
   if (!props.location) return;
-  launchStore.showLaunchDialog(props.location);
+  void launchStore.showLaunchDialog(props.location).catch(logFailure("Failed to show launch dialog:"));
 }
 
 function handleSelfInvite() {
   if (!props.location) return;
-  const L = parseLocation(props.location);
-  instanceRequest
+  const parsedLocation = parseLocation(props.location);
+  void instanceRequest
     .selfInvite({
-      instanceId: L.instanceId,
-      worldId: L.worldId,
+      instanceId: parsedLocation.instanceId,
+      worldId: parsedLocation.worldId,
     })
     .then(() => {
       toast.success(t("message.invite.self_sent"));
-    });
+    })
+    .catch(logFailure("Failed to send self invite:"));
 }
 </script>

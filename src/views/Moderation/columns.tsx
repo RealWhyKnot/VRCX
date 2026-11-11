@@ -9,12 +9,20 @@ import { storeToRefs } from "pinia";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import { i18n } from "../../plugins/i18n";
 import { useUiStore } from "../../stores/ui";
+import type { PlayerModerationEntry } from "../../stores/moderation";
 import { useUserStore } from "../../stores/user";
 import { showUserDialog } from "../../coordinators/user-coordinator";
+import type { VrcxColumn } from "../FriendList/vrcx-column";
 
-const { t, te } = i18n.global;
+const { t } = i18n.global;
+const te = (key: string) => i18n.global.te(key);
 
-export const createColumns = ({ onDelete, onDeletePrompt }) => {
+type ModerationColumnsOptions = {
+  onDelete: (row: PlayerModerationEntry) => void;
+  onDeletePrompt: (row: PlayerModerationEntry) => void;
+};
+
+export const createColumns = ({ onDelete, onDeletePrompt }: ModerationColumnsOptions): VrcxColumn<PlayerModerationEntry>[] => {
   const { shiftHeld } = storeToRefs(useUiStore());
   const { currentUser } = storeToRefs(useUserStore());
 
@@ -39,7 +47,7 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
         </Button>
       ),
       cell: ({ row }) => {
-        const createdAt = row.getValue("created");
+        const createdAt = row.original.created;
         const shortText = formatDateFilter(createdAt, "short");
         const longText = formatDateFilter(createdAt, "long");
 
@@ -61,7 +69,7 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
       header: () => t("table.moderation.type"),
       meta: { label: () => t("table.moderation.type") },
       cell: ({ row }) => {
-        const type = row.getValue("type");
+        const type = row.original.type;
         const typeKey = `view.moderation.filters.${type}`;
         const label = te(typeKey) ? t(typeKey) : type;
 
@@ -123,7 +131,7 @@ export const createColumns = ({ onDelete, onDeletePrompt }) => {
       header: () => t("table.moderation.action"),
       cell: ({ row }) => {
         const original = row.original;
-        if (original.sourceUserId !== currentUser.value?.id) {
+        if (original.sourceUserId !== currentUser.value.id) {
           return null;
         }
 

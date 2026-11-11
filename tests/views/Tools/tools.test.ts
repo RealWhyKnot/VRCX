@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 
-const push = vi.fn();
-const showGalleryPage = vi.fn();
-const showVRChatConfig = vi.fn();
-const showLaunchOptions = vi.fn();
-const showRegistryBackupDialog = vi.fn();
-const getString = vi.fn();
-const setString = vi.fn();
-const friends = ref([]);
+const push = vi.fn<(location: { name: string }) => Promise<void>>(() => Promise.resolve());
+const showGalleryPage = vi.fn<() => void>();
+const showVRChatConfig = vi.fn<() => void>();
+const showLaunchOptions = vi.fn<() => void>();
+const showRegistryBackupDialog = vi.fn<() => void>();
+const getString = vi.fn<(key: string) => Promise<string>>();
+const setString = vi.fn<(key: string, value: string) => Promise<void>>(() => Promise.resolve());
+const friends = ref<unknown[]>([]);
 let routeName = "not-tools";
 
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<object>();
   return {
     ...actual,
     useRouter: () => ({ push }),
@@ -26,14 +26,14 @@ vi.mock("vue-router", async (importOriginal) => {
 });
 
 vi.mock("vue-i18n", () => ({
-  useI18n: () => ({ t: (key) => key }),
+  useI18n: () => ({ t: (key: string) => key }),
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<object>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: (store: unknown) => store,
   };
 });
 
@@ -59,16 +59,16 @@ vi.mock("../../../src/stores/vrcx", () => ({
 vi.mock("../../../src/composables/use-tool-nav-pinning", () => ({
   useToolNavPinning: () => ({
     pinToolToNav: vi.fn(),
-    pinnedToolKeys: new Set(),
-    refreshPinnedState: vi.fn().mockResolvedValue(undefined),
+    pinnedToolKeys: new Set<string>(),
+    refreshPinnedState: () => Promise.resolve(),
     unpinToolFromNav: vi.fn(),
   }),
 }));
 
 vi.mock("../../../src/services/config.ts", () => ({
   configRepository: {
-    getString: (...args) => getString(...args),
-    setString: (...args) => setString(...args),
+    getString: (key: string) => getString(key),
+    setString: (key: string, value: string) => setString(key, value),
   },
 }));
 
@@ -85,12 +85,26 @@ vi.mock("../../../src/components/ui/tooltip/TooltipWrapper.vue", () => ({
 
 import Tools from "../../../src/views/Tools/Tools.vue";
 
-function findToolItemByTitle(wrapper, titleKey) {
-  return wrapper.findAllComponents({ name: "ToolItem" }).find((component) => component.text().includes(titleKey));
+function mountTools() {
+  return mount(Tools);
 }
 
-function findCategoryHeaderByTitle(wrapper, titleKey) {
-  return wrapper.findAll("div.cursor-pointer").find((node) => node.text().includes(titleKey));
+type ToolsWrapper = ReturnType<typeof mountTools>;
+
+function findToolItemByTitle(wrapper: ToolsWrapper, titleKey: string) {
+  const item = wrapper.findAllComponents({ name: "ToolItem" }).find((component) => component.text().includes(titleKey));
+  if (!item) {
+    throw new Error(`tool item not rendered: ${titleKey}`);
+  }
+  return item;
+}
+
+function findCategoryHeaderByTitle(wrapper: ToolsWrapper, titleKey: string) {
+  const header = wrapper.findAll("div.cursor-pointer").find((node) => node.text().includes(titleKey));
+  if (!header) {
+    throw new Error(`category header not rendered: ${titleKey}`);
+  }
+  return header;
 }
 
 describe("Tools.vue", () => {
@@ -101,36 +115,33 @@ describe("Tools.vue", () => {
   });
 
   test("clicking screenshot tool navigates to screenshot metadata", async () => {
-    const wrapper = mount(Tools);
+    const wrapper = mountTools();
     await flushPromises();
 
     const screenshotItem = findToolItemByTitle(wrapper, "view.tools.pictures.screenshot");
 
-    expect(screenshotItem).toBeTruthy();
     await screenshotItem.trigger("click");
 
     expect(push).toHaveBeenCalledWith({ name: "screenshot-metadata" });
   });
 
   test("clicking gallery tool calls showGalleryPage", async () => {
-    const wrapper = mount(Tools);
+    const wrapper = mountTools();
     await flushPromises();
 
     const galleryItem = findToolItemByTitle(wrapper, "view.tools.pictures.gallery");
 
-    expect(galleryItem).toBeTruthy();
     await galleryItem.trigger("click");
 
     expect(push).toHaveBeenCalledWith({ name: "gallery" });
   });
 
   test("toggle category persists collapsed state", async () => {
-    const wrapper = mount(Tools);
+    const wrapper = mountTools();
     await flushPromises();
 
     const imageCategoryHeader = findCategoryHeaderByTitle(wrapper, "view.tools.pictures.header");
 
-    expect(imageCategoryHeader).toBeTruthy();
     await imageCategoryHeader.trigger("click");
 
     expect(setString).toHaveBeenCalledWith("VRCX_toolsCategoryCollapsed", expect.stringContaining('"image":true'));
@@ -139,12 +150,11 @@ describe("Tools.vue", () => {
   test("loads stored collapsed state before toggling category", async () => {
     getString.mockResolvedValue('{"image":true}');
 
-    const wrapper = mount(Tools);
+    const wrapper = mountTools();
     await flushPromises();
 
     const imageCategoryHeader = findCategoryHeaderByTitle(wrapper, "view.tools.pictures.header");
 
-    expect(imageCategoryHeader).toBeTruthy();
     await imageCategoryHeader.trigger("click");
 
     expect(setString).toHaveBeenCalledWith("VRCX_toolsCategoryCollapsed", expect.stringContaining('"image":false'));

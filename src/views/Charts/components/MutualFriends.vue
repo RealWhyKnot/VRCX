@@ -30,15 +30,15 @@
           >
             <template #item="{ item, selected }">
               <div class="flex w-full items-center p-1.5 text-[13px]">
-                <template v-if="item.user">
-                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(item.user)">
-                    <img class="size-full rounded-full object-cover" :src="userImage(item.user)" loading="lazy" />
+                <template v-for="user in pickerUsers(item)" :key="user.id">
+                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(user)">
+                    <img class="size-full rounded-full object-cover" :src="userImage(user)" loading="lazy" />
                   </div>
                   <div class="flex-1 overflow-hidden">
-                    <span class="block truncate font-medium leading-[18px]" :style="{ color: item.user.$userColour }">{{ item.user.displayName }}</span>
+                    <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }">{{ user.displayName }}</span>
                   </div>
                 </template>
-                <template v-else>
+                <template v-if="pickerUsers(item).length === 0">
                   <span>{{ item.label }}</span>
                 </template>
                 <CheckIcon :class="['ml-auto size-4', selected ? 'opacity-100' : 'opacity-0']" />
@@ -137,17 +137,15 @@
                     >
                       <template #item="{ item, selected }">
                         <div class="flex w-full items-center p-1.5 text-[13px]">
-                          <template v-if="item.user">
-                            <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(item.user)">
-                              <img class="size-full rounded-full object-cover" :src="userImage(item.user)" loading="lazy" />
+                          <template v-for="user in pickerUsers(item)" :key="user.id">
+                            <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(user)">
+                              <img class="size-full rounded-full object-cover" :src="userImage(user)" loading="lazy" />
                             </div>
                             <div class="flex-1 overflow-hidden">
-                              <span class="block truncate font-medium leading-[18px]" :style="{ color: item.user.$userColour }">{{
-                                item.user.displayName
-                              }}</span>
+                              <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }">{{ user.displayName }}</span>
                             </div>
                           </template>
-                          <template v-else>
+                          <template v-if="pickerUsers(item).length === 0">
                             <span>{{ item.label }}</span>
                           </template>
                           <CheckIcon :class="['ml-auto size-4', selected ? 'opacity-100' : 'opacity-0']" />
@@ -248,6 +246,7 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import VirtualCombobox from "@/components/ui/virtual-combobox/VirtualCombobox.vue";
 import { layerBorder } from "@sigma/node-border";
 import { pathCurved } from "sigma/rendering";
+import type { NodeDisplayData } from "sigma/types";
 import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
@@ -269,8 +268,71 @@ import { useUserDisplay } from "../../../composables/use-user-display";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { database } from "../../../services/database";
 import { watchState } from "../../../services/watch-state";
+import type { VrcxUser } from "../../../types/vrcx";
+import { logFailure } from "@/stores/log-failure";
 
 import { configRepository } from "../../../services/config";
+
+type MutualNodeAttributes = {
+  label: string;
+  size: number;
+  x?: number;
+  y?: number;
+  color?: string | undefined;
+  community?: number | undefined;
+  isOptedOut?: boolean;
+  lastFetchedAt?: string | null;
+};
+
+type MutualEdgeAttributes = {
+  size: number;
+  curvature?: number;
+};
+
+type MutualGraph = Graph<MutualNodeAttributes, MutualEdgeAttributes>;
+
+type MutualNodeMeta = {
+  lastFetchedAt: string | null;
+  isOptedOut: boolean;
+};
+
+type MutualMapEntry = {
+  friend: { id: string; ref?: VrcxUser | undefined };
+  mutuals: { id: string; displayName?: string | undefined }[];
+};
+
+type MutualMap = Map<string, MutualMapEntry>;
+
+type PickerItem = {
+  value: string;
+  label: string;
+  search: string;
+};
+
+type LayoutPosition = { x: number; y: number };
+
+type LayoutPositions = Record<string, LayoutPosition>;
+
+type LayoutResolver = {
+  resolve: (positions: LayoutPositions) => void;
+  reject: (reason: unknown) => void;
+};
+
+type LayoutMessage = {
+  requestId: number;
+  positions: LayoutPositions | undefined;
+  error: string | undefined;
+};
+
+type LayoutCommunity = {
+  nodes: { node: string; x: number; y: number }[];
+  cx: number;
+  cy: number;
+};
+
+type SigmaCameraState = ReturnType<ReturnType<Sigma["getCamera"]>["getState"]>;
+
+type NodeReducerResult = Partial<NodeDisplayData> & { borderColor?: string };
 
 const { userImage, userStatusClass } = useUserDisplay();
 const { t } = useI18n();
@@ -298,10 +360,11 @@ const NODE_BORDER_LAYER = layerBorder({
   ],
 });
 
-function renderLastFetchedAttachment({ attributes, pixelRatio }) {
-  if (!attributes.lastFetchedAt) return null;
+function renderLastFetchedAttachment({ attributes, pixelRatio }: { attributes: Record<string, unknown>; pixelRatio: number }) {
+  const lastFetchedAt = attributes["lastFetchedAt"];
+  if (typeof lastFetchedAt !== "string" || !lastFetchedAt) return null;
 
-  const text = `${t("view.charts.mutual_friend.context_menu.last_fetched")}: ${dayjs(attributes.lastFetchedAt).format("YYYY-MM-DD HH:mm")}`;
+  const text = `${t("view.charts.mutual_friend.context_menu.last_fetched")}: ${dayjs(lastFetchedAt).format("YYYY-MM-DD HH:mm")}`;
   const fontSize = 10;
   const font = `${fontSize}px sans-serif`;
   const paddingX = 6;
@@ -309,6 +372,7 @@ function renderLastFetchedAttachment({ attributes, pixelRatio }) {
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
   ctx.font = font;
   const width = Math.ceil(ctx.measureText(text).width) + paddingX * 2;
   const height = fontSize + paddingY * 2;
@@ -320,28 +384,29 @@ function renderLastFetchedAttachment({ attributes, pixelRatio }) {
   ctx.fillRect(0, 0, width, height);
   ctx.font = font;
   ctx.textBaseline = "middle";
-  ctx.fillStyle = attributes.optedOut ? "#dc2626" : "#6b7280";
+  ctx.fillStyle = attributes["isOptedOut"] === true ? "#dc2626" : "#6b7280";
   ctx.fillText(text, paddingX, height / 2);
 
-  return { type: "canvas", canvas };
+  const content: { type: "canvas"; canvas: HTMLCanvasElement } = { type: "canvas", canvas };
+  return content;
 }
 
-const graphContainerRef = ref(null);
-const mutualGraphRef = ref(null);
+const graphContainerRef = ref<HTMLDivElement | null>(null);
+const mutualGraphRef = ref<HTMLDivElement | null>(null);
 
-let sigmaInstance = null;
-let currentGraph = null;
-let hoveredNode = null;
-let hoveredNeighbors = new Set();
-let resizeObserver = null;
-let mutualGraphResizeObserver = null;
-let pendingRender = null;
-let pendingLayoutUpdate = null;
-let lastMutualMap = null;
-let layoutWorker = null;
+let sigmaInstance: Sigma<MutualNodeAttributes, MutualEdgeAttributes> | null = null;
+let currentGraph: MutualGraph | null = null;
+let hoveredNode: string | null = null;
+let hoveredNeighbors = new Set<string>();
+let resizeObserver: ResizeObserver | null = null;
+let mutualGraphResizeObserver: ResizeObserver | null = null;
+let pendingRender: number | null = null;
+let pendingLayoutUpdate: ReturnType<typeof setTimeout> | null = null;
+let lastMutualMap: MutualMap | null = null;
+let layoutWorker: Worker | null = null;
 let layoutRequestId = 0;
-const layoutResolvers = new Map();
-let layoutQueue = Promise.resolve();
+const layoutResolvers = new Map<number, LayoutResolver>();
+let layoutQueue: Promise<void> = Promise.resolve();
 
 function getLayoutWorker() {
   if (!layoutWorker) {
@@ -352,19 +417,38 @@ function getLayoutWorker() {
   return layoutWorker;
 }
 
-function handleLayoutMessage(event) {
-  const { requestId, positions, error } = event.data;
-  const resolver = layoutResolvers.get(requestId);
+function isLayoutPosition(value: unknown): value is LayoutPosition {
+  return typeof value === "object" && value !== null && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number";
+}
+
+function isLayoutPositions(value: unknown): value is LayoutPositions {
+  return typeof value === "object" && value !== null && Object.values(value).every(isLayoutPosition);
+}
+
+function readLayoutMessage(value: unknown): LayoutMessage | null {
+  if (typeof value !== "object" || value === null) return null;
+  if (!("requestId" in value) || typeof value.requestId !== "number") return null;
+  const positions = "positions" in value ? value.positions : undefined;
+  const error = "error" in value ? value.error : undefined;
+  if (positions !== undefined && !isLayoutPositions(positions)) return null;
+  if (error !== undefined && typeof error !== "string") return null;
+  return { requestId: value.requestId, positions, error };
+}
+
+function handleLayoutMessage(event: MessageEvent<unknown>) {
+  const message = readLayoutMessage(event.data);
+  if (!message) return;
+  const resolver = layoutResolvers.get(message.requestId);
   if (!resolver) return;
-  layoutResolvers.delete(requestId);
-  if (error) {
-    resolver.reject(new Error(error));
+  layoutResolvers.delete(message.requestId);
+  if (message.error) {
+    resolver.reject(new Error(message.error));
   } else {
-    resolver.resolve(positions);
+    resolver.resolve(message.positions ?? {});
   }
 }
 
-function handleLayoutError(err) {
+function handleLayoutError(err: ErrorEvent) {
   for (const [id, resolver] of layoutResolvers) {
     resolver.reject(err);
     layoutResolvers.delete(id);
@@ -391,21 +475,21 @@ const layoutSettings = reactive({ ...LAYOUT_DEFAULTS });
 
 const layoutIterationsModel = computed({
   get: () => [layoutSettings.layoutIterations],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     layoutSettings.layoutIterations = clampNumber(Math.round(value?.[0] ?? layoutSettings.layoutIterations), LAYOUT_ITERATIONS_MIN, LAYOUT_ITERATIONS_MAX);
   },
 });
 
 const layoutSpacingModel = computed({
   get: () => [layoutSettings.layoutSpacing],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     layoutSettings.layoutSpacing = clampNumber(Math.round(value?.[0] ?? layoutSettings.layoutSpacing), LAYOUT_SPACING_MIN, LAYOUT_SPACING_MAX);
   },
 });
 
 const edgeCurvatureModel = computed({
   get: () => [layoutSettings.edgeCurvature],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     const next = clampNumber(value?.[0] ?? layoutSettings.edgeCurvature, EDGE_CURVATURE_MIN, EDGE_CURVATURE_MAX);
     layoutSettings.edgeCurvature = Number(next.toFixed(2));
   },
@@ -415,7 +499,7 @@ const edgeCurvatureLabel = computed(() => layoutSettings.edgeCurvature.toFixed(2
 
 const communitySeparationModel = computed({
   get: () => [layoutSettings.communitySeparation],
-  set: (value) => {
+  set: (value: number[] | undefined) => {
     const next = clampNumber(value?.[0] ?? layoutSettings.communitySeparation, COMMUNITY_SEPARATION_MIN, COMMUNITY_SEPARATION_MAX);
     layoutSettings.communitySeparation = Number(next.toFixed(1));
   },
@@ -468,10 +552,11 @@ async function loadLayoutSettings() {
 }
 
 function persistLayoutSettings() {
-  configRepository.setInt("VRCX_MutualGraphLayoutIterations", layoutSettings.layoutIterations);
-  configRepository.setInt("VRCX_MutualGraphLayoutSpacing", layoutSettings.layoutSpacing);
-  configRepository.setFloat("VRCX_MutualGraphEdgeCurvature", layoutSettings.edgeCurvature);
-  configRepository.setFloat("VRCX_MutualGraphCommunitySeparation", layoutSettings.communitySeparation);
+  const saveFailed = logFailure("Saving mutual graph layout settings failed:");
+  void configRepository.setInt("VRCX_MutualGraphLayoutIterations", layoutSettings.layoutIterations).catch(saveFailed);
+  void configRepository.setInt("VRCX_MutualGraphLayoutSpacing", layoutSettings.layoutSpacing).catch(saveFailed);
+  void configRepository.setFloat("VRCX_MutualGraphEdgeCurvature", layoutSettings.edgeCurvature).catch(saveFailed);
+  void configRepository.setFloat("VRCX_MutualGraphCommunitySeparation", layoutSettings.communitySeparation).catch(saveFailed);
 }
 
 function resetLayoutSettings() {
@@ -482,21 +567,21 @@ function resetLayoutSettings() {
 
 const isFetching = computed({
   get: () => status.isFetching,
-  set: (val) => {
-    status.isFetching = val;
+  set: (isActive: boolean) => {
+    status.isFetching = isActive;
   },
 });
 const hasFetched = computed({
   get: () => status.hasFetched,
-  set: (val) => {
-    status.hasFetched = val;
+  set: (isLoaded: boolean) => {
+    status.hasFetched = isLoaded;
   },
 });
 
 const graphNodeCount = ref(0);
 const isLoadingSnapshot = ref(false);
 const totalFriends = computed(() => friends.value.size);
-const isOptOut = computed(() => Boolean(currentUser.value?.hasSharedConnectionsOptOut));
+const isOptOut = computed(() => currentUser.value.hasSharedConnectionsOptOut);
 const graphReady = computed(() => graphNodeCount.value > 0);
 const fetchButtonDisabled = computed(() => isFetching.value || isOptOut.value || totalFriends.value === 0 || isLoadingSnapshot.value);
 const fetchButtonLabel = computed(() =>
@@ -506,14 +591,14 @@ const progressPercent = computed(() => (totalFriends.value ? Math.min(100, Math.
 
 const canvasBackground = computed(() => "transparent");
 
-const selectedFriendId = ref(null);
+const selectedFriendId = ref<string | null>(null);
 
-const contextMenuNodeId = ref(null);
-const graphMeta = ref(new Map());
+const contextMenuNodeId = ref<string | null>(null);
+const graphMeta = ref<Map<string, MutualNodeMeta>>(new Map());
 const isRefreshingNode = ref(false);
 
 const EXCLUDED_FRIENDS_KEY = "VRCX_MutualGraphExcludedFriends";
-const excludedFriendIds = useLocalStorage(EXCLUDED_FRIENDS_KEY, []);
+const excludedFriendIds = useLocalStorage<string[]>(EXCLUDED_FRIENDS_KEY, []);
 
 watch(excludedFriendIds, async () => {
   if (lastMutualMap) {
@@ -527,35 +612,41 @@ watch(excludedFriendIds, async () => {
 
 const excludePickerGroups = computed(() => {
   if (!lastMutualMap) return [];
-  const currentUserId = currentUser.value?.id;
-  const seen = new Set();
-  const items = [];
+  const currentUserId = currentUser.value.id;
+  const seen = new Set<string>();
+  const items: PickerItem[] = [];
   for (const [friendId, { mutuals }] of lastMutualMap.entries()) {
     if (friendId === currentUserId || seen.has(friendId)) continue;
     seen.add(friendId);
-    const cached = cachedUsers.get(friendId);
-    const displayName = cached?.displayName || friendId;
-    items.push({ value: friendId, label: displayName, search: displayName, user: cached || null });
+    const displayName = firstNonEmpty([cachedUsers.get(friendId)?.displayName], friendId);
+    items.push({ value: friendId, label: displayName, search: displayName });
     for (const mutual of mutuals) {
-      if (!mutual?.id || mutual.id === currentUserId || seen.has(mutual.id)) continue;
+      if (!mutual.id || mutual.id === currentUserId || seen.has(mutual.id)) continue;
       seen.add(mutual.id);
-      const mc = cachedUsers.get(mutual.id);
-      const mName = mc?.displayName || mutual.displayName || mutual.id;
-      items.push({ value: mutual.id, label: mName, search: mName, user: mc || null });
+      const mutualName = firstNonEmpty([cachedUsers.get(mutual.id)?.displayName, mutual.displayName], mutual.id);
+      items.push({ value: mutual.id, label: mutualName, search: mutualName });
     }
   }
   items.sort((a, b) => a.label.localeCompare(b.label));
   return [{ key: "friends", label: t("side_panel.friends"), items }];
 });
 
-function navigateToFriend(friendId) {
+function pickerUsers(item: { value: string | number }): VrcxUser[] {
+  const user = cachedUsers.get(String(item.value));
+  return user ? [user] : [];
+}
+
+function navigateToFriend(friendValue: unknown) {
+  const friendId = typeof friendValue === "string" && friendValue ? friendValue : null;
   selectedFriendId.value = friendId;
   if (!friendId || !currentGraph || !sigmaInstance) return;
   if (!currentGraph.hasNode(friendId)) return;
   const nodeDisplayData = sigmaInstance.getNodeDisplayData(friendId);
   if (!nodeDisplayData) return;
   const camera = sigmaInstance.getCamera();
-  camera.animate({ x: nodeDisplayData.x, y: nodeDisplayData.y, ratio: 0.15 }, { duration: 300 });
+  void camera
+    .animate({ x: nodeDisplayData.x, y: nodeDisplayData.y, ratio: 0.15 }, { duration: 300 })
+    .catch(logFailure("Animating the mutual graph camera failed:"));
 }
 
 function setMutualGraphHeight() {
@@ -567,20 +658,22 @@ function setMutualGraphHeight() {
 }
 
 onMounted(() => {
-  loadLayoutSettings();
-  nextTick(() => {
-    if (!graphContainerRef.value) return;
+  void loadLayoutSettings().catch(logFailure("Loading mutual graph layout settings failed:"));
+  void nextTick(() => {
+    const graphContainer = graphContainerRef.value;
+    const mutualGraph = mutualGraphRef.value;
+    if (!graphContainer || !mutualGraph) return;
 
     resizeObserver = new ResizeObserver(() => {
-      if (sigmaInstance?.refresh) sigmaInstance.refresh();
+      sigmaInstance?.refresh();
     });
-    resizeObserver.observe(graphContainerRef.value);
+    resizeObserver.observe(graphContainer);
     mutualGraphResizeObserver = new ResizeObserver(() => setMutualGraphHeight());
-    mutualGraphResizeObserver.observe(mutualGraphRef.value);
+    mutualGraphResizeObserver.observe(mutualGraph);
     setMutualGraphHeight();
 
     if (currentGraph) renderGraph(currentGraph);
-  });
+  }).catch(logFailure("Mounting mutual graph failed:"));
 });
 
 onBeforeUnmount(() => {
@@ -610,40 +703,46 @@ onBeforeUnmount(() => {
 watch(
   () => watchState.isFriendsLoaded,
   (isFriendsLoaded) => {
-    if (isFriendsLoaded) loadGraphFromDatabase();
+    if (isFriendsLoaded) void loadGraphFromDatabase().catch(logFailure("Loading the mutual graph from the database failed:"));
   },
   { immediate: true }
 );
 
-function showStatusMessage(message, type = "info") {
+function showStatusMessage(message: string, type: "info" | "success" | "warning" | "error" = "info") {
   if (!message) return;
-  const toastFn = toast[type] ?? toast;
-  toastFn(message, { duration: 4000 });
+  toast[type](message, { duration: 4000 });
 }
 
-function truncateLabelText(text) {
+function truncateLabelText(text: string) {
   if (!text) return "Unknown";
   return text.length > MAX_LABEL_NAME_LENGTH ? `${text.slice(0, MAX_LABEL_NAME_LENGTH)}…` : text;
 }
 
-function clampNumber(value, min, max) {
+function firstNonEmpty(values: (string | null | undefined)[], fallback: string) {
+  for (const value of values) {
+    if (value) return value;
+  }
+  return fallback;
+}
+
+function clampNumber(value: number, min: number, max: number) {
   const normalized = Number.isFinite(value) ? value : min;
   return Math.min(max, Math.max(min, normalized));
 }
 
-function serializeGraph(graph) {
-  const nodes = [];
+function serializeGraph(graph: MutualGraph) {
+  const nodes: { id: string; attributes: MutualNodeAttributes }[] = [];
   graph.forEachNode((id, attributes) => {
     nodes.push({ id, attributes: { ...attributes } });
   });
-  const edges = [];
+  const edges: { key: string; source: string; target: string; attributes: MutualEdgeAttributes }[] = [];
   graph.forEachEdge((key, attributes, source, target) => {
     edges.push({ key, source, target, attributes: { ...attributes } });
   });
   return { nodes, edges };
 }
 
-async function runLayout(graph, { reinitialize } = {}) {
+async function runLayout(graph: MutualGraph, { reinitialize }: { reinitialize?: boolean } = {}) {
   const spacing = clampNumber(layoutSettings.layoutSpacing, LAYOUT_SPACING_MIN, LAYOUT_SPACING_MAX);
   const deltaSpacing = spacing - lastLayoutSpacing;
   lastLayoutSpacing = spacing;
@@ -653,7 +752,7 @@ async function runLayout(graph, { reinitialize } = {}) {
   const id = ++layoutRequestId;
 
   const task = layoutQueue.then(async () => {
-    const positions = await new Promise((resolve, reject) => {
+    const positions = await new Promise<LayoutPositions>((resolve, reject) => {
       layoutResolvers.set(id, { resolve, reject });
       worker.postMessage({
         requestId: id,
@@ -675,11 +774,11 @@ async function runLayout(graph, { reinitialize } = {}) {
     }
   });
 
-  layoutQueue = task.catch(() => {});
+  layoutQueue = task.catch(logFailure("Mutual graph layout failed:"));
   return task;
 }
 
-function applyEdgeCurvature(graph) {
+function applyEdgeCurvature(graph: MutualGraph) {
   const curvature = clampNumber(layoutSettings.edgeCurvature, EDGE_CURVATURE_MIN, EDGE_CURVATURE_MAX);
 
   graph.forEachEdge((edge) => {
@@ -687,21 +786,25 @@ function applyEdgeCurvature(graph) {
   });
 }
 
-function applyCommunitySeparation(graph) {
+function applyCommunitySeparation(graph: MutualGraph) {
   const separation = layoutSettings.communitySeparation;
   if (separation <= 0) return;
 
-  const communities = new Map();
+  const communities = new Map<number, LayoutCommunity>();
   graph.forEachNode((node, attrs) => {
     const cid = attrs.community;
-    if (cid === undefined) return;
-    if (!communities.has(cid)) communities.set(cid, { nodes: [], cx: 0, cy: 0 });
-    communities.get(cid).nodes.push({ node, x: attrs.x, y: attrs.y });
+    if (cid === undefined || attrs.x === undefined || attrs.y === undefined) return;
+    let community = communities.get(cid);
+    if (!community) {
+      community = { nodes: [], cx: 0, cy: 0 };
+      communities.set(cid, community);
+    }
+    community.nodes.push({ node, x: attrs.x, y: attrs.y });
   });
 
   for (const [, data] of communities) {
-    let sx = 0,
-      sy = 0;
+    let sx = 0;
+    let sy = 0;
     for (const n of data.nodes) {
       sx += n.x;
       sy += n.y;
@@ -710,9 +813,9 @@ function applyCommunitySeparation(graph) {
     data.cy = sy / data.nodes.length;
   }
 
-  let gcx = 0,
-    gcy = 0,
-    total = 0;
+  let gcx = 0;
+  let gcy = 0;
+  let total = 0;
   for (const [, data] of communities) {
     gcx += data.cx * data.nodes.length;
     gcy += data.cy * data.nodes.length;
@@ -736,50 +839,52 @@ function applyCommunitySeparation(graph) {
   }
 }
 
-function scheduleLayoutUpdate({ runLayout: shouldRunLayout }) {
+function scheduleLayoutUpdate({ runLayout: shouldRunLayout }: { runLayout: boolean }) {
   if (!currentGraph) return;
   if (pendingLayoutUpdate) clearTimeout(pendingLayoutUpdate);
-  pendingLayoutUpdate = setTimeout(async () => {
+  pendingLayoutUpdate = setTimeout(() => {
     pendingLayoutUpdate = null;
-    try {
-      applyEdgeCurvature(currentGraph);
-      if (shouldRunLayout) {
-        await runLayout(currentGraph, { reinitialize: false });
-        applyCommunitySeparation(currentGraph);
-      }
-      renderGraph(currentGraph);
-    } catch (err) {
-      console.error("[MutualNetworkGraph] Layout update failed", err);
-    }
+    void applyScheduledLayout(shouldRunLayout).catch(logFailure("[MutualNetworkGraph] Layout update failed"));
   }, 100);
 }
 
-function assignCommunitiesAndColors(graph) {
+async function applyScheduledLayout(shouldRunLayout: boolean) {
+  const graph = currentGraph;
+  if (!graph) return;
+  applyEdgeCurvature(graph);
+  if (shouldRunLayout) {
+    await runLayout(graph, { reinitialize: false });
+    applyCommunitySeparation(graph);
+  }
+  renderGraph(graph);
+}
+
+function assignCommunitiesAndColors(graph: MutualGraph) {
   const communities = louvain(graph);
   const ids = Array.from(new Set(Object.values(communities)));
   ids.sort((a, b) => String(a).localeCompare(String(b)));
-  const idToIndex = new Map(ids.map((id, i) => [id, i]));
+  const idToIndex = new Map<number, number>(ids.map((id, i): [number, number] => [id, i]));
 
   graph.forEachNode((node) => {
     const communityId = communities[node];
-    const idx = idToIndex.get(communityId) ?? 0;
+    const idx = communityId === undefined ? 0 : (idToIndex.get(communityId) ?? 0);
     graph.setNodeAttribute(node, "community", communityId);
     graph.setNodeAttribute(node, "color", COLORS_PALETTE[idx % COLORS_PALETTE.length]);
   });
 }
 
-async function buildGraphFromMutualMap(mutualMap, meta = null) {
-  const graph = new Graph({
+async function buildGraphFromMutualMap(mutualMap: MutualMap, meta: Map<string, MutualNodeMeta> | null = null): Promise<MutualGraph> {
+  const graph: MutualGraph = new Graph<MutualNodeAttributes, MutualEdgeAttributes>({
     type: "undirected",
     multi: false,
     allowSelfLoops: false,
   });
 
   const excludeSet = new Set(excludedFriendIds.value);
-  const nodeDegree = new Map();
-  const nodeNames = new Map();
+  const nodeDegree = new Map<string, number>();
+  const nodeNames = new Map<string, string>();
 
-  function ensureNode(id, name) {
+  function ensureNode(id: string, name: string | null | undefined) {
     if (!id || excludeSet.has(id)) return;
     if (!graph.hasNode(id)) {
       graph.addNode(id);
@@ -788,43 +893,41 @@ async function buildGraphFromMutualMap(mutualMap, meta = null) {
     if (name && !nodeNames.get(id)) nodeNames.set(id, name);
   }
 
-  function addEdge(source, target) {
+  function addEdge(source: string, target: string) {
     if (!source || !target || source === target) return;
     if (excludeSet.has(source) || excludeSet.has(target)) return;
-    const [a, b] = [source, target].sort();
+    const [a, b]: [string, string] = source < target ? [source, target] : [target, source];
     const key = `${a}__${b}`;
     if (graph.hasEdge(key)) return;
     graph.addEdgeWithKey(key, a, b, { size: 0.75 });
-    nodeDegree.set(a, (nodeDegree.get(a) || 0) + 1);
-    nodeDegree.set(b, (nodeDegree.get(b) || 0) + 1);
+    nodeDegree.set(a, (nodeDegree.get(a) ?? 0) + 1);
+    nodeDegree.set(b, (nodeDegree.get(b) ?? 0) + 1);
   }
 
   for (const [friendId, { friend, mutuals }] of mutualMap.entries()) {
-    const friendRef = friend?.ref || cachedUsers.get(friendId);
-    const friendName = friendRef?.displayName;
-    ensureNode(friendId, friendName || friendId);
+    const friendRef = friend.ref ?? cachedUsers.get(friendId);
+    ensureNode(friendId, firstNonEmpty([friendRef?.displayName], friendId));
 
     for (const mutual of mutuals) {
-      if (!mutual?.id) continue;
-      const cached = cachedUsers.get(mutual.id);
-      const label = cached?.displayName || mutual.displayName || mutual.id;
+      if (!mutual.id) continue;
+      const label = firstNonEmpty([cachedUsers.get(mutual.id)?.displayName, mutual.displayName], mutual.id);
       ensureNode(mutual.id, label);
       addEdge(friendId, mutual.id);
     }
   }
 
   const nodeIds = graph.nodes();
-  const maxDegree = nodeIds.reduce((max, id) => Math.max(max, nodeDegree.get(id) || 0), 0);
+  const maxDegree = nodeIds.reduce((max, id) => Math.max(max, nodeDegree.get(id) ?? 0), 0);
 
   nodeIds.forEach((id) => {
-    const degree = nodeDegree.get(id) || 0;
+    const degree = nodeDegree.get(id) ?? 0;
     const size = 4 + (maxDegree ? (degree / maxDegree) * 18 : 0);
-    const label = truncateLabelText(nodeNames.get(id) || id);
-    const attrs = { label, size };
-    if (meta?.has(id)) {
-      const m = meta.get(id);
-      attrs.optedOut = m.optedOut;
-      attrs.lastFetchedAt = m.lastFetchedAt;
+    const label = truncateLabelText(firstNonEmpty([nodeNames.get(id)], id));
+    const attrs: Partial<MutualNodeAttributes> = { label, size };
+    const nodeMeta = meta?.get(id);
+    if (nodeMeta) {
+      attrs.isOptedOut = nodeMeta.isOptedOut;
+      attrs.lastFetchedAt = nodeMeta.lastFetchedAt;
     }
     graph.mergeNodeAttributes(id, attrs);
   });
@@ -840,40 +943,48 @@ async function buildGraphFromMutualMap(mutualMap, meta = null) {
   return graph;
 }
 
-function renderGraph(graph, forceRecreate = false) {
-  if (!graphContainerRef.value) return;
+function markLabelsDirty(sigma: Sigma<MutualNodeAttributes, MutualEdgeAttributes>) {
+  const labelRenderer: unknown = Reflect.get(sigma, "labelRenderer");
+  if (typeof labelRenderer === "object" && labelRenderer !== null && "labelsDirty" in labelRenderer) {
+    labelRenderer.labelsDirty = true;
+  }
+}
+
+function renderGraph(graph: MutualGraph, shouldRecreate = false) {
   const container = graphContainerRef.value;
+  if (!container) return;
   const { width, height } = container.getBoundingClientRect();
   if (!width || !height) {
-    if (pendingRender) return;
+    if (pendingRender !== null) return;
     pendingRender = requestAnimationFrame(() => {
       pendingRender = null;
-      renderGraph(graph, forceRecreate);
+      renderGraph(graph, shouldRecreate);
     });
     return;
   }
 
-  const DEFAULT_LABEL_THRESHOLD = 10;
+  const defaultLabelThreshold = 10;
 
   const labelColor = isDarkMode.value ? "#ffffff" : "#000000";
-  const EDGE_BASE = isDarkMode.value ? "#334155" : "#cbd5e1";
-  const EDGE_ACTIVE = isDarkMode.value ? "#bac1c9" : "#475569";
-  const NODE_FADED = isDarkMode.value ? "rgba(148,163,184,0.04)" : "rgba(100,116,139,0.06)";
-  const LABEL_BACKGROUND = isDarkMode.value ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.7)";
+  const edgeBase = isDarkMode.value ? "#334155" : "#cbd5e1";
+  const edgeActive = isDarkMode.value ? "#bac1c9" : "#475569";
+  const nodeFaded = isDarkMode.value ? "rgba(148,163,184,0.04)" : "rgba(100,116,139,0.06)";
+  const labelBackground = isDarkMode.value ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.7)";
 
-  let cameraState = null;
+  let cameraState: SigmaCameraState | null = null;
 
-  if (sigmaInstance && forceRecreate) {
+  if (sigmaInstance && shouldRecreate) {
     try {
-      const cam = sigmaInstance.getCamera?.();
-      cameraState = cam?.getState?.() || null;
-    } catch {}
+      cameraState = sigmaInstance.getCamera().getState();
+    } catch (error: unknown) {
+      console.warn("[MutualNetworkGraph] Could not read the camera state", error);
+    }
     sigmaInstance.kill();
     sigmaInstance = null;
   }
 
   hoveredNode = null;
-  hoveredNeighbors = new Set();
+  hoveredNeighbors = new Set<string>();
 
   if (sigmaInstance) {
     sigmaInstance.setGraph(graph);
@@ -881,7 +992,7 @@ function renderGraph(graph, forceRecreate = false) {
     return;
   }
 
-  sigmaInstance = new Sigma(graph, container, {
+  const sigma = new Sigma<MutualNodeAttributes, MutualEdgeAttributes>(graph, container, {
     primitives: {
       nodes: {
         layers: [NODE_BORDER_LAYER],
@@ -897,21 +1008,21 @@ function renderGraph(graph, forceRecreate = false) {
       allowInvalidContainer: true,
       renderLabels: true,
       itemSizesReference: "screen",
-      labelRenderedSizeThreshold: DEFAULT_LABEL_THRESHOLD,
+      labelRenderedSizeThreshold: defaultLabelThreshold,
     },
     nodeReducer: (node, data, attrs) => {
-      const res = {
+      const res: NodeReducerResult = {
         labelColor,
-        labelBackgroundColor: LABEL_BACKGROUND,
+        labelBackgroundColor: labelBackground,
         labelBackgroundPadding: 2,
       };
 
-      if (attrs.optedOut) {
+      if (attrs.isOptedOut) {
         res.borderColor = "#9ca3af";
       }
 
       if (!hoveredNode) {
-        res.color = attrs.optedOut ? "#d1d5db" : data.color;
+        res.color = attrs.isOptedOut ? "#d1d5db" : data.color;
         res.zIndex = 1;
         return res;
       }
@@ -921,9 +1032,9 @@ function renderGraph(graph, forceRecreate = false) {
         res.size = (attrs.size || 4) * 1.2;
         res.label = `${data.label} (${hoveredNeighbors.size})`;
         res.labelColor = "#111827";
-        res.labelBackgroundColor = null;
+        res.labelBackgroundColor = "";
         res.labelVisibility = "visible";
-        res.labelAttachment = attrs.lastFetchedAt ? "lastFetched" : null;
+        res.labelAttachment = attrs.lastFetchedAt ? "lastFetched" : "";
         res.zIndex = 3;
         return res;
       }
@@ -934,68 +1045,87 @@ function renderGraph(graph, forceRecreate = false) {
         return res;
       }
 
-      res.color = NODE_FADED;
+      res.color = nodeFaded;
       res.size = 0.7;
       res.labelVisibility = "hidden";
       res.zIndex = 0;
       return res;
     },
-    edgeReducer: (edge, data, attrs, state, graphState, g) => {
+    edgeReducer: (edge, _data, _attrs, _state, _graphState, graphView) => {
       if (!hoveredNode) {
-        return { color: EDGE_BASE };
+        return { color: edgeBase };
       }
-      const [s, t] = g.extremities(edge);
+      const [s, t] = graphView.extremities(edge);
       if (s === hoveredNode || t === hoveredNode) {
-        return { color: EDGE_ACTIVE };
+        return { color: edgeActive };
       }
       return { visibility: "hidden" };
     },
   });
+  sigmaInstance = sigma;
 
   if (cameraState) {
     try {
-      sigmaInstance.getCamera().setState(cameraState);
-    } catch {}
+      sigma.getCamera().setState(cameraState);
+    } catch (error: unknown) {
+      console.warn("[MutualNetworkGraph] Could not restore the camera state", error);
+    }
   }
 
-  sigmaInstance.on("beforeRender", () => {
-    if (hoveredNode) sigmaInstance.labelRenderer.labelsDirty = true;
+  sigma.on("beforeRender", () => {
+    if (hoveredNode) markLabelsDirty(sigma);
   });
 
-  sigmaInstance.on("enterNode", ({ node }) => {
+  sigma.on("enterNode", ({ node }) => {
     hoveredNode = node;
-    hoveredNeighbors = new Set(sigmaInstance.getGraph().neighbors(node));
-    sigmaInstance.refresh();
+    hoveredNeighbors = new Set(sigma.getGraph().neighbors(node));
+    sigma.refresh();
   });
 
-  sigmaInstance.on("leaveNode", () => {
+  sigma.on("leaveNode", () => {
     hoveredNode = null;
-    hoveredNeighbors = new Set();
-    sigmaInstance.refresh();
+    hoveredNeighbors = new Set<string>();
+    sigma.refresh();
   });
 
-  sigmaInstance.on("clickNode", ({ node }) => {
+  sigma.on("clickNode", ({ node }) => {
     if (node) showUserDialog(node);
   });
 
-  sigmaInstance.on("rightClickNode", ({ node }) => {
-    contextMenuNodeId.value = node || null;
+  sigma.on("rightClickNode", ({ node }) => {
+    contextMenuNodeId.value = node;
   });
 
-  sigmaInstance.on("rightClickStage", () => {
+  sigma.on("rightClickStage", () => {
     contextMenuNodeId.value = null;
   });
 }
 
-async function applyGraph(mutualMap) {
+async function applyGraph(mutualMap: MutualMap) {
   lastMutualMap = mutualMap;
   const graph = await buildGraphFromMutualMap(mutualMap, graphMeta.value);
   currentGraph = graph;
   renderGraph(graph);
 }
 
+function buildMutualMap(snapshot: Map<string, string[]>): MutualMap {
+  const mutualMap: MutualMap = new Map();
+  snapshot.forEach((mutualIds, friendId) => {
+    if (!friendId) return;
+    const friendEntry = friends.value.get(friendId);
+    const fallbackRef = friendEntry?.ref ?? cachedUsers.get(friendId);
+    const normalizedMutuals = mutualIds.filter((id) => id !== "usr_00000000-0000-0000-0000-000000000000");
+
+    mutualMap.set(friendId, {
+      friend: friendEntry ?? { id: friendId, ref: fallbackRef },
+      mutuals: normalizedMutuals.map((id) => ({ id })),
+    });
+  });
+  return mutualMap;
+}
+
 async function loadGraphFromDatabase() {
-  if (!watchState.isLoggedIn || !currentUser.value?.id) return;
+  if (!watchState.isLoggedIn || !currentUser.value.id) return;
   if (!watchState.isFriendsLoaded) return;
   if (isFetching.value || isLoadingSnapshot.value) return;
   if (hasFetched.value && !status.needsRefetch && currentGraph) return;
@@ -1004,9 +1134,11 @@ async function loadGraphFromDatabase() {
 
   try {
     const [snapshot, meta] = await Promise.all([database.getMutualGraphSnapshot(), database.getMutualGraphMeta()]);
-    graphMeta.value = meta;
+    graphMeta.value = new Map(
+      Array.from(meta, ([id, entry]): [string, MutualNodeMeta] => [id, { lastFetchedAt: entry.lastFetchedAt, isOptedOut: entry.optedOut }])
+    );
 
-    if (!snapshot || snapshot.size === 0) {
+    if (snapshot.size === 0) {
       if (totalFriends.value === 0) {
         showStatusMessage(t("view.charts.mutual_friend.status.no_friends_to_process"), "info");
         return;
@@ -1015,27 +1147,14 @@ async function loadGraphFromDatabase() {
         promptEnableMutualFriendsSharing();
         return;
       }
-      await promptInitialFetch();
+      promptInitialFetch();
       return;
     }
 
-    const mutualMap = new Map();
-    snapshot.forEach((mutualIds, friendId) => {
-      if (!friendId) return;
-      const friendEntry = friends.value?.get ? friends.value.get(friendId) : undefined;
-      const fallbackRef = friendEntry?.ref || cachedUsers.get(friendId);
-
-      let normalizedMutuals = Array.isArray(mutualIds) ? mutualIds : [];
-      normalizedMutuals = normalizedMutuals.filter((id) => id != "usr_00000000-0000-0000-0000-000000000000");
-
-      mutualMap.set(friendId, {
-        friend: friendEntry || (fallbackRef ? { id: friendId, ref: fallbackRef } : { id: friendId }),
-        mutuals: normalizedMutuals.map((id) => ({ id })),
-      });
-    });
+    const mutualMap = buildMutualMap(snapshot);
 
     if (!mutualMap.size) {
-      await promptInitialFetch();
+      promptInitialFetch();
       return;
     }
 
@@ -1051,10 +1170,10 @@ async function loadGraphFromDatabase() {
   }
 }
 
-async function promptInitialFetch() {
+function promptInitialFetch() {
   if (isFetching.value || hasFetched.value || !totalFriends.value) return;
 
-  modalStore
+  void modalStore
     .confirm({
       description: t("view.charts.mutual_friend.prompt.message"),
       title: t("view.charts.mutual_friend.prompt.title"),
@@ -1064,11 +1183,12 @@ async function promptInitialFetch() {
     .then(async ({ ok }) => {
       if (!ok) return;
       await startFetch();
-    });
+    })
+    .catch(logFailure("Showing the mutual friends prompt failed:"));
 }
 
 function promptEnableMutualFriendsSharing() {
-  modalStore
+  void modalStore
     .confirm({
       description: t("view.charts.mutual_friend.enable_sharing_prompt.message"),
       title: t("view.charts.mutual_friend.enable_sharing_prompt.title"),
@@ -1077,10 +1197,10 @@ function promptEnableMutualFriendsSharing() {
     })
     .then(({ ok }) => {
       if (!ok) return;
-      userStore.toggleSharedConnectionsOptOut();
+      void userStore.toggleSharedConnectionsOptOut().catch(logFailure("Toggling the shared connections opt-out failed:"));
       promptInitialFetch();
     })
-    .catch(() => {});
+    .catch(logFailure("Showing the mutual friends sharing prompt failed:"));
 }
 
 async function startFetch() {
@@ -1098,8 +1218,8 @@ function cancelFetch() {
   chartsStore.requestMutualGraphCancel();
 }
 
-function onNodeMenuOpenChange(open) {
-  if (!open) {
+function onNodeMenuOpenChange(isOpen: boolean) {
+  if (!isOpen) {
     contextMenuNodeId.value = null;
   }
 }
@@ -1125,7 +1245,7 @@ async function handleNodeMenuRefresh() {
   contextMenuNodeId.value = null;
   if (!nodeId || isRefreshingNode.value) return;
 
-  const isFriend = friends.value?.has(nodeId);
+  const isFriend = friends.value.has(nodeId);
 
   if (!isFriend) {
     try {
@@ -1149,17 +1269,16 @@ async function handleNodeMenuRefresh() {
       toast.warning(t("view.charts.mutual_friend.context_menu.user_opted_out"), { duration: 5000 });
       graphMeta.value.set(nodeId, {
         lastFetchedAt: new Date().toISOString(),
-        optedOut: true,
+        isOptedOut: true,
       });
     } else if (result.success) {
-      const cached = cachedUsers.get(nodeId);
-      const name = cached?.displayName || nodeId;
+      const name = firstNonEmpty([cachedUsers.get(nodeId)?.displayName], nodeId);
       toast.success(t("view.charts.mutual_friend.context_menu.refresh_success", { name }), {
         duration: 3000,
       });
       graphMeta.value.set(nodeId, {
         lastFetchedAt: new Date().toISOString(),
-        optedOut: false,
+        isOptedOut: false,
       });
     } else {
       toast.error(t("view.charts.mutual_friend.context_menu.refresh_error"), { duration: 4000 });
@@ -1167,20 +1286,8 @@ async function handleNodeMenuRefresh() {
     }
 
     const snapshot = await database.getMutualGraphSnapshot();
-    if (snapshot && snapshot.size > 0) {
-      const mutualMap = new Map();
-      snapshot.forEach((mutualIds, fId) => {
-        if (!fId) return;
-        const friendEntry = friends.value?.get ? friends.value.get(fId) : undefined;
-        const fallbackRef = friendEntry?.ref || cachedUsers.get(fId);
-        let normalizedMutuals = Array.isArray(mutualIds) ? mutualIds : [];
-        normalizedMutuals = normalizedMutuals.filter((id) => id != "usr_00000000-0000-0000-0000-000000000000");
-        mutualMap.set(fId, {
-          friend: friendEntry || (fallbackRef ? { id: fId, ref: fallbackRef } : { id: fId }),
-          mutuals: normalizedMutuals.map((id) => ({ id })),
-        });
-      });
-      await applyGraph(mutualMap);
+    if (snapshot.size > 0) {
+      await applyGraph(buildMutualMap(snapshot));
     }
   } catch (err) {
     console.error("[MutualNetworkGraph] Refresh node error", err);

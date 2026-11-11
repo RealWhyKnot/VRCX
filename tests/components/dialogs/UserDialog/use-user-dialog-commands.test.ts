@@ -1,17 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref } from "vue";
+import type { Ref } from "vue";
 import { useUserDialogCommands } from "../../../../src/components/dialogs/UserDialog/use-user-dialog-commands";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
+import { createDefaultUserRef } from "../../../../src/shared/utils/user-transforms";
+
+const mocks = vi.hoisted(() => ({
+  deleteFavorite: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  sendFriendRequest: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  cancelFriendRequest: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  deleteFriend: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  sendPlayerModeration: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  deletePlayerModeration: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  addFriendLogHistory: vi.fn<(...args: unknown[]) => void>(),
+}));
 
 vi.mock("../../../../src/api/favorite", () => ({
   favoriteRequest: {
-    deleteFavorite: vi.fn(),
+    deleteFavorite: mocks.deleteFavorite,
   },
 }));
 vi.mock("../../../../src/api/friend", () => ({
   friendRequest: {
-    sendFriendRequest: vi.fn(),
-    cancelFriendRequest: vi.fn(),
-    deleteFriend: vi.fn(),
+    sendFriendRequest: mocks.sendFriendRequest,
+    cancelFriendRequest: mocks.cancelFriendRequest,
+    deleteFriend: mocks.deleteFriend,
   },
 }));
 vi.mock("../../../../src/api/notification", () => ({
@@ -24,8 +38,8 @@ vi.mock("../../../../src/api/notification", () => ({
 }));
 vi.mock("../../../../src/api/player-moderation", () => ({
   playerModerationRequest: {
-    sendPlayerModeration: vi.fn(),
-    deletePlayerModeration: vi.fn(),
+    sendPlayerModeration: mocks.sendPlayerModeration,
+    deletePlayerModeration: mocks.deletePlayerModeration,
   },
 }));
 vi.mock("../../../../src/api/world", () => ({
@@ -36,13 +50,13 @@ vi.mock("../../../../src/shared/utils/app-actions", () => ({
   copyToClipboard: vi.fn(),
 }));
 vi.mock("../../../../src/shared/utils/location-parser", async (importOriginal) => ({
-  ...(await importOriginal()),
+  ...(await importOriginal<Record<string, unknown>>()),
   parseLocation: vi.fn(() => ({ worldId: "wrld_test", tag: "wrld_test~123" })),
 }));
 
 vi.mock("../../../../src/services/database", () => ({
   database: {
-    addFriendLogHistory: vi.fn(),
+    addFriendLogHistory: mocks.addFriendLogHistory,
   },
 }));
 
@@ -53,13 +67,11 @@ vi.mock("../../../../src/composables/use-recent-actions", () => ({
   }),
 }));
 
-const { favoriteRequest } = await import("../../../../src/api/favorite");
-const { friendRequest } = await import("../../../../src/api/friend");
-const { playerModerationRequest } = await import("../../../../src/api/player-moderation");
-const { database } = await import("../../../../src/services/database");
+type CommandDeps = Parameters<typeof useUserDialogCommands>[1];
 
-function createMockUserDialog() {
-  return ref({
+function createMockUserDialog(): Ref<UserDialogState> {
+  return ref<UserDialogState>({
+    ...createUserDialogState(),
     visible: true,
     id: "usr_test123",
     ref: {
@@ -68,7 +80,7 @@ function createMockUserDialog() {
       fallbackAvatar: "avtr_fallback",
       location: "wrld_test~123",
     },
-    $avatarInfo: { ownerId: "usr_owner" },
+    $avatarInfo: { ownerId: "usr_owner", avatarName: "", fileCreatedAt: "" },
     isFriend: true,
     isBlock: false,
     isMute: false,
@@ -81,50 +93,73 @@ function createMockUserDialog() {
   });
 }
 
-function createMockDeps(overrides = {}) {
+function createMockDeps(overrides: Partial<CommandDeps> = {}): CommandDeps {
+  const currentUserState: CurrentUserState = {
+    ...createCurrentUserState(),
+    id: "usr_current",
+    isBoopingEnabled: true,
+  };
   return {
-    t: vi.fn((key) => key),
-    toast: Object.assign(vi.fn(), {
-      success: vi.fn(),
-      error: vi.fn(),
-    }),
+    t: vi.fn((key: string) => key),
+    toast: Object.assign(
+      vi.fn((message: string) => message),
+      {
+        success: vi.fn((message: string) => message),
+        error: vi.fn((message: string) => message),
+      }
+    ),
     modalStore: {
       confirm: vi.fn(() => Promise.resolve({ ok: true })),
     },
-    currentUser: ref({ id: "usr_current", isBoopingEnabled: true }),
-    cachedUsers: new Map([["usr_test123", { id: "usr_test123", displayName: "TestUser" }]]),
+    currentUser: ref(currentUserState),
+    cachedUsers: new Map([["usr_test123", createDefaultUserRef({ id: "usr_test123", displayName: "TestUser" })]]),
     friendLogTable: ref({ data: [] }),
-    lastLocation: ref({ location: "wrld_test~123" }),
+    lastLocation: ref({
+      date: null,
+      location: "wrld_test~123",
+      name: "",
+      playerList: new Map(),
+      friendList: new Map(),
+    }),
     lastLocationDestination: ref("wrld_dest~456"),
-    inviteGroupDialog: ref({ groupId: "", userId: "", visible: false }),
+    inviteGroupDialog: ref({
+      visible: false,
+      loading: false,
+      groupId: "",
+      groupName: "",
+      userId: "",
+      userIds: [],
+      userObject: {},
+    }),
     showUserDialog: vi.fn(),
     showFavoriteDialog: vi.fn(),
     showAvatarDialog: vi.fn(),
-    showAvatarAuthorDialog: vi.fn(),
+    showAvatarAuthorDialog: vi.fn(() => Promise.resolve()),
     showModerateGroupDialog: vi.fn(),
     showSendBoopDialog: vi.fn(),
     showModerationReportDialog: vi.fn(),
     showGalleryPage: vi.fn(),
     getFriendRequest: vi.fn(() => ""),
     handleFriendDelete: vi.fn(),
-    applyPlayerModeration: vi.fn((json) => json),
+    applyPlayerModeration: vi.fn((json: { targetUserId: string; sourceUserId: string; type: string }) => json),
     handlePlayerModerationDelete: vi.fn(),
     refreshInviteMessageTableData: vi.fn(),
     clearInviteImageUpload: vi.fn(),
     instanceStore: {
-      showPreviousInstancesListDialog: vi.fn(),
+      showPreviousInstancesListDialog: vi.fn(() => Promise.resolve()),
     },
     useNotificationStore: vi.fn(() => ({
       handleNotificationAccept: vi.fn(),
       handleNotificationHide: vi.fn(),
     })),
+    showEditProfileDialog: vi.fn(),
     ...overrides,
   };
 }
 
 describe("useUserDialogCommands", () => {
-  let userDialog;
-  let deps;
+  let userDialog: Ref<UserDialogState>;
+  let deps: CommandDeps;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -166,7 +201,7 @@ describe("useUserDialogCommands", () => {
     });
 
     it("Show Fallback Avatar Details: should toast error when no fallback", () => {
-      userDialog.value.ref.fallbackAvatar = null;
+      userDialog.value.ref.fallbackAvatar = "";
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Show Fallback Avatar Details");
       expect(deps.toast.error).toHaveBeenCalledWith("message.user.no_fallback_avatar");
@@ -221,7 +256,7 @@ describe("useUserDialogCommands", () => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
       });
       await vi.waitFor(() => {
-        expect(favoriteRequest.deleteFavorite).toHaveBeenCalledWith({
+        expect(mocks.deleteFavorite).toHaveBeenCalledWith({
           objectId: "usr_test123",
         });
       });
@@ -234,39 +269,39 @@ describe("useUserDialogCommands", () => {
       await vi.waitFor(() => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
       });
-      expect(favoriteRequest.deleteFavorite).not.toHaveBeenCalled();
+      expect(mocks.deleteFavorite).not.toHaveBeenCalled();
     });
 
     it("Send Friend Request: should confirm then send", async () => {
-      friendRequest.sendFriendRequest.mockResolvedValue({
+      mocks.sendFriendRequest.mockResolvedValue({
         params: { userId: "usr_test123" },
         json: { success: true },
       });
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Send Friend Request");
       await vi.waitFor(() => {
-        expect(friendRequest.sendFriendRequest).toHaveBeenCalledWith({
+        expect(mocks.sendFriendRequest).toHaveBeenCalledWith({
           userId: "usr_test123",
         });
       });
     });
 
     it("Cancel Friend Request: should confirm then cancel", async () => {
-      friendRequest.cancelFriendRequest.mockResolvedValue({
+      mocks.cancelFriendRequest.mockResolvedValue({
         params: { userId: "usr_test123" },
         json: {},
       });
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Cancel Friend Request");
       await vi.waitFor(() => {
-        expect(friendRequest.cancelFriendRequest).toHaveBeenCalledWith({
+        expect(mocks.cancelFriendRequest).toHaveBeenCalledWith({
           userId: "usr_test123",
         });
       });
     });
 
     it("Moderation Block: should confirm then send moderation", async () => {
-      playerModerationRequest.sendPlayerModeration.mockResolvedValue({
+      mocks.sendPlayerModeration.mockResolvedValue({
         json: {
           targetUserId: "usr_test123",
           sourceUserId: "usr_current",
@@ -276,7 +311,7 @@ describe("useUserDialogCommands", () => {
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Moderation Block");
       await vi.waitFor(() => {
-        expect(playerModerationRequest.sendPlayerModeration).toHaveBeenCalledWith({
+        expect(mocks.sendPlayerModeration).toHaveBeenCalledWith({
           moderated: "usr_test123",
           type: "block",
         });
@@ -284,11 +319,11 @@ describe("useUserDialogCommands", () => {
     });
 
     it("Moderation Unblock: should confirm then delete moderation", async () => {
-      playerModerationRequest.deletePlayerModeration.mockResolvedValue({});
+      mocks.deletePlayerModeration.mockResolvedValue({});
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Moderation Unblock");
       await vi.waitFor(() => {
-        expect(playerModerationRequest.deletePlayerModeration).toHaveBeenCalledWith({
+        expect(mocks.deletePlayerModeration).toHaveBeenCalledWith({
           moderated: "usr_test123",
           type: "block",
         });
@@ -307,11 +342,11 @@ describe("useUserDialogCommands", () => {
     });
 
     it("Unfriend: should confirm then delete friend", async () => {
-      friendRequest.deleteFriend.mockResolvedValue({});
+      mocks.deleteFriend.mockResolvedValue({});
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Unfriend");
       await vi.waitFor(() => {
-        expect(friendRequest.deleteFriend).toHaveBeenCalledWith({ userId: "usr_test123" }, "dialog.user.actions.unfriend_success_msg");
+        expect(mocks.deleteFriend).toHaveBeenCalledWith({ userId: "usr_test123" }, "dialog.user.actions.unfriend_success_msg");
       });
     });
   });
@@ -329,27 +364,27 @@ describe("useUserDialogCommands", () => {
 
   describe("handleSendFriendRequest (internal)", () => {
     it("should add friend log and update dialog state on success", async () => {
-      friendRequest.sendFriendRequest.mockResolvedValue({
+      mocks.sendFriendRequest.mockResolvedValue({
         params: { userId: "usr_test123" },
         json: { success: true },
       });
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Send Friend Request");
       await vi.waitFor(() => {
-        expect(database.addFriendLogHistory).toHaveBeenCalled();
+        expect(mocks.addFriendLogHistory).toHaveBeenCalled();
       });
       expect(userDialog.value.isFriend).toBe(true);
     });
 
     it("should set outgoingRequest when not success", async () => {
-      friendRequest.sendFriendRequest.mockResolvedValue({
+      mocks.sendFriendRequest.mockResolvedValue({
         params: { userId: "usr_test123" },
         json: { success: false },
       });
       const { userDialogCommand } = useUserDialogCommands(userDialog, deps);
       userDialogCommand("Send Friend Request");
       await vi.waitFor(() => {
-        expect(database.addFriendLogHistory).toHaveBeenCalled();
+        expect(mocks.addFriendLogHistory).toHaveBeenCalled();
       });
       expect(userDialog.value.outgoingRequest).toBe(true);
     });
@@ -362,7 +397,7 @@ describe("useUserDialogCommands", () => {
         sourceUserId: "usr_current",
         type: "block",
       }));
-      playerModerationRequest.sendPlayerModeration.mockResolvedValue({
+      mocks.sendPlayerModeration.mockResolvedValue({
         json: {
           targetUserId: "usr_test123",
           sourceUserId: "usr_current",
@@ -382,7 +417,7 @@ describe("useUserDialogCommands", () => {
         sourceUserId: "usr_current",
         type: "mute",
       }));
-      playerModerationRequest.sendPlayerModeration.mockResolvedValue({
+      mocks.sendPlayerModeration.mockResolvedValue({
         json: {
           targetUserId: "usr_test123",
           sourceUserId: "usr_current",

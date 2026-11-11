@@ -56,7 +56,7 @@ function toLocalDate(date: Date, dateFormat: string): string {
   });
 }
 
-function formatDateFilter(dateStr: string | null | undefined, format: string): string {
+function formatDateFilter(dateStr: string | number | null | undefined, format: string): string {
   const appearance = useAppearanceSettingsStore();
   const { dtIsoFormat: isIsoFormat, dtHour12: isHour12, currentCulture } = appearance;
 

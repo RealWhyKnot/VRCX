@@ -104,7 +104,9 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore } from "../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../stores/favorite-types";
 import { useUserStore } from "../../stores/user";
+import { logFailure } from "../../stores/log-failure";
 import {
   addLocalWorldFavorite,
   removeLocalWorldFavorite,
@@ -138,20 +140,20 @@ const {
 } = favoriteStore;
 const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 
-const groups = ref([]);
+const groups = ref<FavoriteGroupSlot[]>([]);
 const loading = ref(false);
 
 const isVisible = computed({
   get: () => favoriteDialog.value.visible,
-  set: (v) => {
-    favoriteDialog.value.visible = v;
+  set: (isOpen: boolean) => {
+    favoriteDialog.value.visible = isOpen;
   },
 });
 
 watch(
   () => favoriteDialog.value.visible,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       initFavoriteDialog();
     }
   }
@@ -167,10 +169,10 @@ function initFavoriteDialog() {
   }
 }
 
-function addFavorite(group) {
+function addFavorite(group: FavoriteGroupSlot) {
   const D = favoriteDialog.value;
   loading.value = true;
-  favoriteRequest
+  void favoriteRequest
     .addFavorite({
       type: group.type,
       favoriteId: D.objectId,
@@ -182,6 +184,7 @@ function addFavorite(group) {
     })
     .finally(() => {
       loading.value = false;
-    });
+    })
+    .catch(logFailure("Adding the favorite failed:"));
 }
 </script>

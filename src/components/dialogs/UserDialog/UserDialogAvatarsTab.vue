@@ -30,7 +30,7 @@
         <Input v-model="avatarSearchQuery" class="h-8 w-40 mr-2" :placeholder="t('dialog.user.avatars.search_placeholder')" @click.stop />
         <template v-if="userDialog.ref.id === currentUser.id">
           <span class="mr-1">{{ t("dialog.user.avatars.sort_by") }}</span>
-          <Select :model-value="userDialog.avatarSorting" :disabled="userDialog.isWorldsLoading" @update:model-value="changeUserDialogAvatarSorting">
+          <Select :model-value="userDialog.avatarSorting" :disabled="userDialog.isWorldsLoading" @update:model-value="selectUserDialogAvatarSorting">
             <SelectTrigger size="sm" @click.stop>
               <SelectValue :placeholder="t(`dialog.user.avatars.sort_by_${userDialog.avatarSorting}`)" />
             </SelectTrigger>
@@ -44,7 +44,7 @@
           <Select
             :model-value="userDialog.avatarReleaseStatus"
             :disabled="userDialog.isWorldsLoading"
-            @update:model-value="(value) => (userDialog.avatarReleaseStatus = value)"
+            @update:model-value="selectUserDialogAvatarReleaseStatus"
           >
             <SelectTrigger size="sm" @click.stop>
               <SelectValue :placeholder="t(`dialog.user.avatars.${userDialog.avatarReleaseStatus}`)" />
@@ -155,8 +155,8 @@ watch(
   }
 );
 
-function setUserDialogAvatars(userId) {
-  const avatars = new Set();
+function setUserDialogAvatars(userId: string) {
+  const avatars = new Set<string>();
   userDialogAvatars.value.forEach((avatar) => {
     avatars.add(avatar.id);
   });
@@ -168,15 +168,15 @@ function setUserDialogAvatars(userId) {
   sortUserDialogAvatars(userDialog.value.avatars);
 }
 
-async function setUserDialogAvatarsRemote(userId) {
+async function setUserDialogAvatarsRemote(userId: string) {
   if (avatarRemoteDatabase.value && userId !== currentUser.value.id) {
     userDialog.value.isAvatarsLoading = true;
     const data = await lookupAvatars("authorId", userId);
-    const avatars = new Set();
+    const avatars = new Set<string>();
     userDialogAvatars.value.forEach((avatar) => {
       avatars.add(avatar.id);
     });
-    if (data && typeof data === "object") {
+    if (Array.isArray(data)) {
       data.forEach((avatar) => {
         if (avatar.id && !avatars.has(avatar.id)) {
           if (avatar.authorId === userId) {
@@ -192,11 +192,23 @@ async function setUserDialogAvatarsRemote(userId) {
   sortUserDialogAvatars(userDialog.value.avatars);
 }
 
-function changeUserDialogAvatarSorting(sortOption) {
+function changeUserDialogAvatarSorting(sortOption: string) {
   const D = userDialog.value;
   D.avatarSorting = sortOption;
   sortUserDialogAvatars(D.avatars);
   sortUserDialogLicensedAvatars(D.licensedAvatars);
+}
+
+function selectUserDialogAvatarSorting(value: unknown) {
+  if (typeof value === "string") {
+    changeUserDialogAvatarSorting(value);
+  }
+}
+
+function selectUserDialogAvatarReleaseStatus(value: unknown) {
+  if (typeof value === "string") {
+    userDialog.value.avatarReleaseStatus = value;
+  }
 }
 
 defineExpose({ setUserDialogAvatars, setUserDialogAvatarsRemote });

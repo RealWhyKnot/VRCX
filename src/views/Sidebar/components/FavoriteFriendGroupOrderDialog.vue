@@ -32,6 +32,7 @@ import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import { DragDropProvider } from "@dnd-kit/vue";
+import type { DragEndEvent } from "@dnd-kit/vue";
 import { isSortable } from "@dnd-kit/vue/sortable";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
@@ -41,7 +42,12 @@ import { useFavoriteStore } from "../../../stores/favorite";
 
 import SortableGroupItem from "./SortableGroupItem.vue";
 
-const isOpen = defineModel("open", { type: Boolean, default: false });
+type GroupOrderItem = {
+  key: string;
+  displayName: string;
+};
+
+const isOpen = defineModel<boolean>("open", { default: false });
 
 const { t } = useI18n();
 
@@ -52,8 +58,8 @@ const { setSidebarFavoriteGroupOrder } = appearanceStore;
 const favoriteStore = useFavoriteStore();
 const { favoriteFriendGroups, localFriendFavoriteGroups } = storeToRefs(favoriteStore);
 
-const allGroupItems = computed(() => {
-  const items = [];
+const allGroupItems = computed<GroupOrderItem[]>(() => {
+  const items: GroupOrderItem[] = [];
   for (const group of favoriteFriendGroups.value) {
     items.push({ key: group.key, displayName: group.displayName });
   }
@@ -70,35 +76,37 @@ const selectedGroupKeys = computed(() => {
   return sidebarFavoriteGroups.value;
 });
 
-const localOrder = ref([]);
+const localOrder = ref<GroupOrderItem[]>([]);
 
 function buildOrderedList() {
   const selected = new Set(selectedGroupKeys.value);
   const persistedOrder = sidebarFavoriteGroupOrder.value;
-  const itemMap = new Map(allGroupItems.value.map((g) => [g.key, g]));
+  const itemMap = new Map(allGroupItems.value.map((g): [string, GroupOrderItem] => [g.key, g]));
 
-  const ordered = [];
+  const ordered: GroupOrderItem[] = [];
   for (const key of persistedOrder) {
-    if (selected.has(key) && itemMap.has(key)) {
-      ordered.push(itemMap.get(key));
+    const item = itemMap.get(key);
+    if (selected.has(key) && item) {
+      ordered.push(item);
       selected.delete(key);
     }
   }
   for (const key of selectedGroupKeys.value) {
-    if (selected.has(key) && itemMap.has(key)) {
-      ordered.push(itemMap.get(key));
+    const item = itemMap.get(key);
+    if (selected.has(key) && item) {
+      ordered.push(item);
     }
   }
   return ordered;
 }
 
-watch(isOpen, (open) => {
-  if (open) {
+watch(isOpen, (isOpenNow) => {
+  if (isOpenNow) {
     localOrder.value = buildOrderedList();
   }
 });
 
-function onDragEnd(event) {
+function onDragEnd(event: DragEndEvent) {
   if (event.canceled) return;
   const { source } = event.operation;
   if (isSortable(source)) {
@@ -106,7 +114,7 @@ function onDragEnd(event) {
     if (initialIndex !== index) {
       const newOrder = [...localOrder.value];
       const [removed] = newOrder.splice(initialIndex, 1);
-      newOrder.splice(index, 0, removed);
+      if (removed) newOrder.splice(index, 0, removed);
       localOrder.value = newOrder;
     }
   }

@@ -24,7 +24,7 @@ vi.mock("../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -43,7 +43,7 @@ vi.mock("../../src/services/database", () => ({
     {
       get: (_target, prop) => {
         if (prop === "__esModule") return false;
-        return vi.fn().mockResolvedValue(null);
+        return vi.fn(() => Promise.resolve(null));
       },
     }
   ),
@@ -51,13 +51,13 @@ vi.mock("../../src/services/database", () => ({
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? "{}"),
+    getString: vi.fn((_key: string, defaultValue?: string) => defaultValue ?? "{}"),
     setString: vi.fn(),
-    getBool: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? false),
+    getBool: vi.fn((_key: string, isDefaultValue?: boolean) => isDefaultValue ?? false),
     setBool: vi.fn(),
-    getInt: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? 0),
+    getInt: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setInt: vi.fn(),
-    getFloat: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? 0),
+    getFloat: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setFloat: vi.fn(),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn(),
@@ -75,7 +75,7 @@ vi.mock("../../src/services/watch-state", () => ({
 
 import * as avatarCoordinatorModule from "../../src/coordinators/avatar-coordinator";
 vi.mock("../../src/coordinators/avatar-coordinator", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("../../src/coordinators/avatar-coordinator")>();
   return { ...actual, showAvatarAuthorDialog: vi.fn() };
 });
 
@@ -96,7 +96,15 @@ const stubs = {
   },
 };
 
-function mountAvatarInfo(props = {}, storeOverrides = {}) {
+type AvatarInfoTestProps = {
+  imageurl?: string;
+  userid?: string;
+  hintownerid?: string;
+  hintavatarname?: string | Record<string, unknown>;
+  avatartags?: string[];
+};
+
+function mountAvatarInfo(props: AvatarInfoTestProps = {}, storeOverrides: Record<string, Record<string, unknown>> = {}) {
   const pinia = createTestingPinia({
     createSpy: vi.fn,
     stubActions: true,

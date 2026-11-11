@@ -2,14 +2,16 @@ import { isRealInstance } from "./instance.ts";
 
 type FriendLocationEntry = {
   id: string;
-  ref?: {
-    location?: string;
-    travelingToLocation?: string;
-  };
+  ref?:
+    | {
+        location?: string | undefined;
+        travelingToLocation?: string | undefined;
+      }
+    | undefined;
 };
 
 type LastLocationSnapshot = {
-  friendList: ReadonlySet<string>;
+  friendList: Pick<ReadonlySet<string>, "has">;
   location: string;
 };
 
@@ -23,7 +25,7 @@ type LocationTextFlags = {
 
 type LocationTextOptions = {
   hint?: string | null;
-  worldName?: string | null;
+  worldName?: string | null | undefined;
   accessTypeLabel: string;
   t: (key: string) => string;
 };

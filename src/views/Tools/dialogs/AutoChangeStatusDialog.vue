@@ -45,7 +45,7 @@
               :model-value="autoStateChangeGroups"
               :disabled="!autoStateChangeEnabled || !autoStateChangeNoFriends"
               multiple
-              @update:model-value="setAutoStateChangeGroups"
+              @update:model-value="(value) => setAutoStateChangeGroups(toStringList(value))"
             >
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.settings.general.automation.auto_change_status_groups_placeholder')" />
@@ -76,7 +76,7 @@
               :model-value="autoStateChangeInstanceTypes"
               :disabled="!autoStateChangeEnabled"
               multiple
-              @update:model-value="setAutoStateChangeInstanceTypes"
+              @update:model-value="(value) => setAutoStateChangeInstanceTypes(toStringList(value))"
             >
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.settings.general.automation.instance_type_placeholder')" />
@@ -93,7 +93,11 @@
         <Field>
           <FieldLabel>{{ t("view.settings.general.automation.alone_status") }}</FieldLabel>
           <FieldContent>
-            <Select :model-value="autoStateChangeAloneStatus" :disabled="!autoStateChangeEnabled" @update:model-value="setAutoStateChangeAloneStatus">
+            <Select
+              :model-value="autoStateChangeAloneStatus"
+              :disabled="!autoStateChangeEnabled"
+              @update:model-value="(value) => setAutoStateChangeAloneStatus(String(value))"
+            >
               <SelectTrigger size="sm">
                 <SelectValue />
               </SelectTrigger>
@@ -118,7 +122,7 @@
               :maxlength="32"
               :placeholder="t('view.settings.general.automation.status_description_placeholder')"
               size="sm"
-              @update:model-value="setAutoStateChangeAloneDesc"
+              @update:model-value="(value) => setAutoStateChangeAloneDesc(String(value))"
             />
           </FieldContent>
         </Field>
@@ -126,7 +130,11 @@
         <Field>
           <FieldLabel>{{ t("view.settings.general.automation.company_status") }}</FieldLabel>
           <FieldContent>
-            <Select :model-value="autoStateChangeCompanyStatus" :disabled="!autoStateChangeEnabled" @update:model-value="setAutoStateChangeCompanyStatus">
+            <Select
+              :model-value="autoStateChangeCompanyStatus"
+              :disabled="!autoStateChangeEnabled"
+              @update:model-value="(value) => setAutoStateChangeCompanyStatus(String(value))"
+            >
               <SelectTrigger size="sm">
                 <SelectValue />
               </SelectTrigger>
@@ -151,7 +159,7 @@
               :maxlength="32"
               :placeholder="t('view.settings.general.automation.status_description_placeholder')"
               size="sm"
-              @update:model-value="setAutoStateChangeCompanyDesc"
+              @update:model-value="(value) => setAutoStateChangeCompanyDesc(String(value))"
             />
           </FieldContent>
         </Field>
@@ -201,7 +209,7 @@
               :model-value="autoAcceptInviteGroups"
               :disabled="autoAcceptInviteRequests !== 'Selected Favorites'"
               multiple
-              @update:model-value="setAutoAcceptInviteGroups"
+              @update:model-value="(value) => setAutoAcceptInviteGroups(toStringList(value))"
             >
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.settings.general.automation.auto_accept_invite_groups_placeholder')" />
@@ -232,7 +240,7 @@
               :model-value="autoAcceptInviteStatuses"
               :disabled="autoAcceptInviteRequests === 'Off'"
               multiple
-              @update:model-value="setAutoAcceptInviteStatuses"
+              @update:model-value="(value) => setAutoAcceptInviteStatuses(toStringList(value))"
             >
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.settings.general.automation.auto_accept_invite_statuses_placeholder')" />
@@ -281,13 +289,18 @@ import { accessTypeLocaleKeyMap } from "../../../shared/constants/access-type";
 
 import SimpleSwitch from "../../Settings/components/SimpleSwitch.vue";
 
-defineProps({
-  isAutoChangeStatusDialogVisible: {
-    type: Boolean,
-  },
-});
+withDefaults(
+  defineProps<{
+    isAutoChangeStatusDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isAutoChangeStatusDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const generalSettingsStore = useGeneralSettingsStore();
@@ -329,13 +342,21 @@ const {
 
 const instanceTypes = computed(() => ["invite", "invite+", "friends", "friends+", "public", "groupPublic", "groupPlus", "groupOnly"]);
 
-const instanceTypeToMapKey = {
-  groupOnly: "groupMembers",
-};
+const instanceTypeToMapKey = new Map<string, string>([["groupOnly", "groupMembers"]]);
 
-function translateAccessType(accessTypeNameRaw) {
-  const mapKey = instanceTypeToMapKey[accessTypeNameRaw] || accessTypeNameRaw;
-  const key = accessTypeLocaleKeyMap[mapKey];
+const accessTypeLocaleKeys = new Map<string, string>(Object.entries(accessTypeLocaleKeyMap));
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function toStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter(isString) : [];
+}
+
+function translateAccessType(accessTypeNameRaw: string) {
+  const mapKey = instanceTypeToMapKey.get(accessTypeNameRaw) ?? accessTypeNameRaw;
+  const key = accessTypeLocaleKeys.get(mapKey);
   if (!key) {
     return accessTypeNameRaw;
   }
@@ -346,9 +367,9 @@ function translateAccessType(accessTypeNameRaw) {
   return t(key);
 }
 
-function handleAutoStateChangeNoFriendsRadio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== autoStateChangeNoFriends.value) {
+function handleAutoStateChangeNoFriendsRadio(value: unknown) {
+  const isNoFriendsSelected = value === "true";
+  if (isNoFriendsSelected !== autoStateChangeNoFriends.value) {
     setAutoStateChangeNoFriends();
   }
 }
@@ -360,16 +381,16 @@ const autoAcceptInviteMode = computed(() => {
   return autoAcceptInviteRequests.value;
 });
 
-function handleAutoAcceptInviteSwitch(enabled) {
-  if (enabled) {
+function handleAutoAcceptInviteSwitch(isEnabled: boolean) {
+  if (isEnabled) {
     setAutoAcceptInviteRequests(autoAcceptInviteMode.value);
   } else {
     setAutoAcceptInviteRequests("Off");
   }
 }
 
-function handleAutoAcceptInviteModeChange(value) {
-  setAutoAcceptInviteRequests(value);
+function handleAutoAcceptInviteModeChange(value: unknown) {
+  setAutoAcceptInviteRequests(String(value));
 }
 
 function closeDialog() {

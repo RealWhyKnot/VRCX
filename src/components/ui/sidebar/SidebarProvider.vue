@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { TooltipProvider } from "reka-ui";
@@ -6,59 +7,55 @@ import { cn } from "@/lib/utils";
 
 import { SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME, SIDEBAR_KEYBOARD_SHORTCUT, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON, provideSidebarContext } from "./utils";
 
-const props = defineProps({
-  defaultOpen: {
-    type: Boolean,
-    default: () => !defaultDocument?.cookie.includes(`${SIDEBAR_COOKIE_NAME}=false`),
-  },
-  open: {
-    type: Boolean,
-    default: undefined,
-  },
-  width: {
-    type: [String, Number],
-    default: undefined,
-  },
-  widthIcon: {
-    type: [String, Number],
-    default: undefined,
-  },
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    defaultOpen?: boolean;
+    open?: boolean | undefined;
+    width?: string | number | undefined;
+    widthIcon?: string | number | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    defaultOpen: () => !defaultDocument?.cookie.includes(`${SIDEBAR_COOKIE_NAME}=false`),
+    open: undefined,
+    width: undefined,
+    widthIcon: undefined,
+    class: undefined,
+  }
+);
 
-const emits = defineEmits(["update:open"]);
+const emits = defineEmits<{ "update:open": [value: boolean] }>();
 
 const isMobile = useMediaQuery("(max-width: 768px)");
 const openMobile = ref(false);
 
-let open;
-if (props.open === undefined) {
-  open = useVModel(props, "open", emits, {
-    defaultValue: props.defaultOpen ?? false,
-    passive: true,
-  });
-} else {
-  open = useVModel(props, "open", emits, {
-    defaultValue: props.defaultOpen ?? false,
-    passive: false,
-  });
-}
+const open =
+  props.open === undefined
+    ? useVModel(props, "open", emits, {
+        defaultValue: props.defaultOpen,
+        passive: true,
+      })
+    : useVModel(props, "open", emits, {
+        defaultValue: props.defaultOpen,
+        passive: false,
+      });
 
-function setOpen(value) {
-  open.value = value;
+function setOpen(isOpen: boolean) {
+  open.value = isOpen;
 
   document.cookie = `${SIDEBAR_COOKIE_NAME}=${open.value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 }
 
-function setOpenMobile(value) {
-  openMobile.value = value;
+function setOpenMobile(isOpen: boolean) {
+  openMobile.value = isOpen;
 }
 
 function toggleSidebar() {
-  isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value);
+  if (isMobile.value) {
+    setOpenMobile(!openMobile.value);
+  } else {
+    setOpen(!open.value);
+  }
 }
 
 useEventListener("keydown", (event) => {
@@ -70,7 +67,7 @@ useEventListener("keydown", (event) => {
 
 const state = computed(() => (open.value ? "expanded" : "collapsed"));
 
-const normalizeCssSize = (value) => {
+const normalizeCssSize = (value: string | number | null | undefined) => {
   if (value === null || value === undefined) {
     return undefined;
   }

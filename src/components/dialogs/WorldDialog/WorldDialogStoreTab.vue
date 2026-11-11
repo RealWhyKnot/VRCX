@@ -36,19 +36,21 @@ import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
+import type { ProductListing } from "vrchat";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { useWorldStore } from "../../../stores/world";
 import { AppDebug } from "@/services/app-config";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
 import { miscRequest } from "../../../api/misc";
+import type { Json } from "../../../types/vrcx";
 
 const { worldDialog } = storeToRefs(useWorldStore());
 const { showFullscreenImageDialog } = useGalleryStore();
 
 const isLoading = ref(false);
 
-function getListingImageUrl(listing) {
+function getListingImageUrl(listing: Json<ProductListing>) {
   if (listing.imageUrl) {
     return listing.imageUrl;
   }

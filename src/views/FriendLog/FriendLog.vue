@@ -1,5 +1,5 @@
 <template>
-  <div ref="friendLogRef" class="x-container x-container--auto-height">
+  <div class="x-container x-container--auto-height">
     <DataTableLayout
       :table="table"
       :loading="friendLogTable.loading"
@@ -10,11 +10,7 @@
     >
       <template #toolbar>
         <div class="mt-0 mx-0 mb-2" style="display: flex; align-items: center">
-          <Select
-            multiple
-            :model-value="Array.isArray(friendLogTable.filters?.[0]?.value) ? friendLogTable.filters[0].value : []"
-            @update:model-value="handleFriendLogFilterChange"
-          >
+          <Select multiple :model-value="friendLogTypeFilter" @update:model-value="handleFriendLogFilterChange">
             <SelectTrigger class="w-full" style="flex: 1">
               <SelectValue :placeholder="t('view.friend_log.filter_placeholder')" />
             </SelectTrigger>
@@ -30,7 +26,7 @@
               </SelectGroup>
             </SelectContent>
           </Select>
-          <InputGroupField v-model="friendLogTable.filters[1].value" class="ml-2" :placeholder="t('view.friend_log.search_placeholder')" style="flex: 0.4" />
+          <InputGroupField v-model="friendLogSearch" class="ml-2" :placeholder="t('view.friend_log.search_placeholder')" style="flex: 0.4" />
         </div>
       </template>
     </DataTableLayout>
@@ -38,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
@@ -53,7 +49,7 @@ import SelectValue from "../../components/ui/select/SelectValue.vue";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFriendStore } from "../../stores/friend";
 import { useModalStore } from "../../stores/modal";
-import { useVrcxStore } from "../../stores/vrcx";
+import type { FriendLogHistoryRow } from "../../stores/friend-types";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
 import { createColumns } from "./columns.tsx";
@@ -64,86 +60,101 @@ import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import { configRepository } from "../../services/config";
 
 const appearanceSettingsStore = useAppearanceSettingsStore();
-const vrcxStore = useVrcxStore();
 const modalStore = useModalStore();
 const { hideUnfriends } = storeToRefs(appearanceSettingsStore);
 const { friendLogTable } = storeToRefs(useFriendStore());
 
-const friendLogRef = ref(null);
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+const friendLogTypeFilter = computed(() => toStringArray(friendLogTable.value.filters[0]?.value));
+
+const friendLogSearch = computed({
+  get: () => {
+    const value = friendLogTable.value.filters[1]?.value;
+    return typeof value === "string" ? value : "";
+  },
+  set: (value: string) => {
+    const filter = friendLogTable.value.filters[1];
+    if (filter) filter.value = value;
+  },
+});
 
 const friendLogDisplayData = computed(() => {
   const data = friendLogTable.value.data;
-  const typeFilter = friendLogTable.value.filters?.[0]?.value ?? [];
-  const searchFilter = friendLogTable.value.filters?.[1]?.value ?? "";
-  const hideUnfriendsFilter = friendLogTable.value.filters?.[2]?.value;
-  const typeSet = Array.isArray(typeFilter) ? new Set(typeFilter.map((value) => String(value).toLowerCase())) : null;
-  const searchValue = String(searchFilter).trim().toLowerCase();
+  const typeSet = new Set(friendLogTypeFilter.value.map((value) => value.toLowerCase()));
+  const isHideUnfriendsFilter = friendLogTable.value.filters[2]?.value === true;
+  const searchValue = friendLogSearch.value.trim().toLowerCase();
 
   const filtered = data.filter((row) => {
-    if (hideUnfriendsFilter && row.type === "Unfriend") {
+    if (isHideUnfriendsFilter && row.type === "Unfriend") {
       return false;
     }
-    if (typeSet && typeSet.size > 0) {
-      const rowType = String(row.type ?? "").toLowerCase();
-      if (!typeSet.has(rowType)) {
-        return false;
-      }
+    if (typeSet.size > 0 && !typeSet.has((row.type ?? "").toLowerCase())) {
+      return false;
     }
-    if (searchValue) {
-      const displayName = row.displayName;
-      if (displayName === undefined || displayName === null || !String(displayName).toLowerCase().includes(searchValue)) {
-        return false;
-      }
+    if (searchValue && !(row.displayName ?? "").toLowerCase().includes(searchValue)) {
+      return false;
     }
     return true;
   });
 
   return filtered.slice().sort((a, b) => {
-    const aTime = typeof a?.created_at === "string" ? a.created_at : "";
-    const bTime = typeof b?.created_at === "string" ? b.created_at : "";
-    const aTs = dayjs(aTime).valueOf();
-    const bTs = dayjs(bTime).valueOf();
+    const aTs = dayjs(a.created_at ?? "").valueOf();
+    const bTs = dayjs(b.created_at ?? "").valueOf();
     if (Number.isFinite(aTs) && Number.isFinite(bTs) && aTs !== bTs) {
       return bTs - aTs;
     }
-
-    const aId = typeof a?.rowId === "number" ? a.rowId : 0;
-    const bId = typeof b?.rowId === "number" ? b.rowId : 0;
-    return bId - aId;
+    return (b.rowId ?? 0) - (a.rowId ?? 0);
   });
 });
 
 watch(
   () => hideUnfriends.value,
-  (newValue) => {
-    friendLogTable.value.filters[2].value = newValue;
+  (isHidden) => {
+    const filter = friendLogTable.value.filters[2];
+    if (filter) filter.value = isHidden;
   },
   { immediate: true }
 );
 
 const { t } = useI18n();
 function saveTableFilters() {
-  configRepository.setString("VRCX_friendLogTableFilters", JSON.stringify(friendLogTable.value.filters[0].value));
+  configRepository.setString("VRCX_friendLogTableFilters", JSON.stringify(toStringArray(friendLogTable.value.filters[0]?.value))).catch(logFriendLogError);
 }
 
-function handleFriendLogFilterChange(value) {
-  friendLogTable.value.filters[0].value = Array.isArray(value) ? value : [];
+function handleFriendLogFilterChange(value: unknown) {
+  const filter = friendLogTable.value.filters[0];
+  if (filter) {
+    filter.value = toStringArray(value);
+  }
   saveTableFilters();
 }
 
-function deleteFriendLogPrompt(row) {
+function logFriendLogError(error: unknown) {
+  console.error(error);
+}
+
+function isDeletableFriendLogRow(row: FriendLogHistoryRow): row is FriendLogHistoryRow & { created_at: string; type: string; userId: string } {
+  return row.created_at !== null && row.type !== null && row.userId !== null;
+}
+
+function deleteFriendLogPrompt(row: FriendLogHistoryRow) {
   modalStore
     .confirm({
       description: t("confirm.delete_log"),
       title: "Confirm",
     })
-    .then(({ ok }) => ok && deleteFriendLog(row))
-    .catch(() => {});
+    .then(({ ok }) => (ok ? deleteFriendLog(row) : undefined))
+    .catch(logFriendLogError);
 }
 
-function deleteFriendLog(row) {
+function deleteFriendLog(row: FriendLogHistoryRow) {
   removeFromArray(friendLogTable.value.data, row);
-  database.deleteFriendLogHistory(row);
+  if (isDeletableFriendLogRow(row)) {
+    database.deleteFriendLogHistory(row);
+  }
 }
 
 const columns = createColumns({
@@ -159,7 +170,7 @@ const { table, pagination } = useVrcxVueTable({
     return friendLogDisplayData.value;
   },
   columns,
-  getRowId: (row) => `${row.type}:${row.rowId ?? row.userId ?? row.created_at ?? ""}`,
+  getRowId: (row) => `${row.type ?? ""}:${row.rowId ?? row.userId ?? row.created_at ?? ""}`,
   initialSorting: [],
   initialPagination: {
     pageIndex: 0,
@@ -174,7 +185,7 @@ const totalItems = computed(() => {
   return table.getFilteredRowModel().rows.length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,

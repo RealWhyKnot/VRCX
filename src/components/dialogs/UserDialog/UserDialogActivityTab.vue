@@ -81,7 +81,7 @@
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="h in 24" :key="h - 1" :value="String(h - 1)"> {{ String(h - 1).padStart(2, "0") }}:00 </SelectItem>
+                <SelectItem v-for="hour in 24" :key="hour - 1" :value="String(hour - 1)"> {{ String(hour - 1).padStart(2, "0") }}:00 </SelectItem>
               </SelectContent>
             </Select>
             <span class="text-xs text-muted-foreground">–</span>
@@ -90,7 +90,7 @@
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="h in 24" :key="h - 1" :value="String(h - 1)"> {{ String(h - 1).padStart(2, "0") }}:00 </SelectItem>
+                <SelectItem v-for="hour in 24" :key="hour - 1" :value="String(hour - 1)"> {{ String(hour - 1).padStart(2, "0") }}:00 </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -167,7 +167,7 @@
         <div v-else class="flex flex-col gap-0.5">
           <button
             v-for="(world, index) in sortedTopWorlds"
-            :key="world.worldId"
+            :key="world.worldId ?? index"
             type="button"
             class="group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent/50 cursor-pointer"
             :class="index === 0 ? 'bg-primary/4' : ''"
@@ -179,7 +179,7 @@
             <Avatar class="rounded-sm size-8 mt-0.5 shrink-0">
               <AvatarImage
                 v-if="getWorldThumbnail(world.worldId)"
-                :src="getWorldThumbnail(world.worldId)"
+                :src="getWorldThumbnail(world.worldId) ?? ''"
                 loading="lazy"
                 decoding="async"
                 class="rounded-sm object-cover"
@@ -206,7 +206,7 @@
                   class="h-full rounded-full transition-all duration-500"
                   :class="isDarkMode ? 'bg-white/45' : 'bg-black/25'"
                   :style="{
-                    width: getTopWorldBarWidth(topWorldsSortBy === 'time' ? world.totalTime : world.visitCount),
+                    width: getTopWorldBarWidth(topWorldsSortBy === 'time' ? world.totalTime : (world.visitCount ?? 0)),
                   }"
                 />
               </div>
@@ -219,12 +219,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import Button from "@/components/ui/button/Button.vue";
-import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
@@ -248,8 +247,30 @@ import { useActivityStore } from "../../../stores/activity";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
+import { logError } from "../../../stores/notification/errors";
+import type { OverlapViewSummary } from "../../../stores/activity-types";
+import type { ActivitySession } from "../../../types/activity";
 import { buildHeatmapOption, toHeatmapSeriesData } from "./activity/build-heatmap-option";
 import DailyPlaytime from "./activity/DailyPlaytime.vue";
+
+type ActivityTopWorld = {
+  worldId: string | null;
+  worldName: string | null;
+  visitCount: number | null;
+  totalTime: number;
+};
+
+type HeatmapView = {
+  rawBuckets: number[];
+  normalizedBuckets: number[];
+};
+
+type TopWorldsSection = {
+  userId: string;
+  rangeDays: number;
+  sortBy: string;
+  period: string;
+};
 
 const { t, locale } = useI18n();
 const { userDialog, currentUser } = storeToRefs(useUserStore());
@@ -260,7 +281,7 @@ const worldStore = useWorldStore();
 
 const isLoading = ref(false);
 const currentRangeDays = ref(30);
-const cachedSessions = ref([]);
+const cachedSessions = ref<ActivitySession[]>([]);
 const filteredEventCount = ref(0);
 const peakDayText = ref("");
 const peakTimeText = ref("");
@@ -271,26 +292,26 @@ const overlapPercent = ref(0);
 const bestOverlapTime = ref("");
 const topWorldsLoading = ref(false);
 const topWorldsLoadingVisible = ref(false);
-const topWorlds = ref([]);
+const topWorlds = ref<ActivityTopWorld[]>([]);
 const topWorldsSortBy = ref("count");
 const excludeHomeWorldEnabled = ref(false);
 const excludeHoursEnabled = ref(false);
 const excludeStartHour = ref("1");
 const excludeEndHour = ref("6");
-const mainHeatmapView = ref({
+const mainHeatmapView = ref<HeatmapView>({
   rawBuckets: [],
   normalizedBuckets: [],
 });
-const overlapHeatmapView = ref({
+const overlapHeatmapView = ref<HeatmapView>({
   rawBuckets: [],
   normalizedBuckets: [],
 });
 const isRestoringSettings = ref(false);
 
-let topWorldsLoadingTimer = null;
-let overlapLoadingTimer = null;
-let overlapRenderTimer = null;
-const pendingWorldThumbnailFetches = new Set();
+let topWorldsLoadingTimer: ReturnType<typeof setTimeout> | undefined;
+let overlapLoadingTimer: ReturnType<typeof setTimeout> | undefined;
+let overlapRenderTimer: ReturnType<typeof setTimeout> | undefined;
+const pendingWorldThumbnailFetches = new Set<string>();
 const TOP_WORLDS_LOADING_DELAY = 150;
 const OVERLAP_LOADING_DELAY = 120;
 const OVERLAP_RENDER_DELAY = 80;
@@ -304,7 +325,7 @@ const currentHomeWorldId = computed(() => {
   return parseLocation(homeLocation).worldId || homeLocation;
 });
 const sortedTopWorlds = computed(() => topWorlds.value);
-const dayLabels = computed(() => [
+const dayLabels = computed<string[]>(() => [
   t("dialog.user.activity.days.sun"),
   t("dialog.user.activity.days.mon"),
   t("dialog.user.activity.days.tue"),
@@ -315,7 +336,7 @@ const dayLabels = computed(() => [
 ]);
 const displayDayLabels = computed(() => {
   const start = weekStartsOn.value;
-  return Array.from({ length: 7 }, (_, index) => dayLabels.value[(start + index) % 7]);
+  return Array.from({ length: 7 }, (_, index) => dayLabels.value[(start + index) % 7] ?? "");
 });
 const hourLabels = Array.from({ length: 24 }, (_, index) => `${String(index).padStart(2, "0")}:00`);
 const ACTIVITY_SELF_TOP_WORLDS_SORT_KEY = "VRCX_activitySelfTopWorldsSortBy";
@@ -323,7 +344,7 @@ const ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY = "VRCX_activitySelfExcludeHomeWorld"
 
 async function applySettingsAndRefresh() {
   isRestoringSettings.value = true;
-  const [sortBy, excludeHomeWorld, overlapExcludeEnabled, overlapExcludeStart, overlapExcludeEnd] = await Promise.all([
+  const [sortBy, isExcludeHomeWorld, isOverlapExcludeEnabled, overlapExcludeStart, overlapExcludeEnd] = await Promise.all([
     configRepository.getString(ACTIVITY_SELF_TOP_WORLDS_SORT_KEY, "count"),
     configRepository.getBool(ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY, false),
     configRepository.getBool("VRCX_overlapExcludeEnabled", false),
@@ -331,10 +352,10 @@ async function applySettingsAndRefresh() {
     configRepository.getString("VRCX_overlapExcludeEnd", "6"),
   ]);
   topWorldsSortBy.value = ["time", "count"].includes(sortBy) ? sortBy : "count";
-  excludeHomeWorldEnabled.value = excludeHomeWorld;
-  excludeHoursEnabled.value = overlapExcludeEnabled;
-  excludeStartHour.value = String(overlapExcludeStart);
-  excludeEndHour.value = String(overlapExcludeEnd);
+  excludeHomeWorldEnabled.value = isExcludeHomeWorld;
+  excludeHoursEnabled.value = isOverlapExcludeEnabled;
+  excludeStartHour.value = overlapExcludeStart;
+  excludeEndHour.value = overlapExcludeEnd;
   await nextTick();
   isRestoringSettings.value = false;
   await refreshData();
@@ -358,36 +379,36 @@ function resetActivityState() {
   clearOverlapLoadingTimer();
   clearOverlapRenderTimer();
   clearTimeout(topWorldsLoadingTimer);
-  topWorldsLoadingTimer = null;
+  topWorldsLoadingTimer = undefined;
 }
 
 function clearOverlapLoadingTimer() {
-  if (overlapLoadingTimer !== null) {
+  if (overlapLoadingTimer !== undefined) {
     clearTimeout(overlapLoadingTimer);
-    overlapLoadingTimer = null;
+    overlapLoadingTimer = undefined;
   }
 }
 
 function clearOverlapRenderTimer() {
-  if (overlapRenderTimer !== null) {
+  if (overlapRenderTimer !== undefined) {
     clearTimeout(overlapRenderTimer);
-    overlapRenderTimer = null;
+    overlapRenderTimer = undefined;
   }
 }
 
-function beginOverlapLoading(requestId) {
+function beginOverlapLoading(requestId: number) {
   isOverlapLoading.value = true;
   isOverlapLoadingVisible.value = false;
   clearOverlapLoadingTimer();
   overlapLoadingTimer = setTimeout(() => {
-    overlapLoadingTimer = null;
+    overlapLoadingTimer = undefined;
     if (requestId === userActivity.value.activeOverlapRequestId && isOverlapLoading.value) {
       isOverlapLoadingVisible.value = true;
     }
   }, OVERLAP_LOADING_DELAY);
 }
 
-function finishOverlapLoading(requestId) {
+function finishOverlapLoading(requestId: number) {
   if (requestId !== userActivity.value.activeOverlapRequestId) {
     return;
   }
@@ -399,12 +420,12 @@ function finishOverlapLoading(requestId) {
 function scheduleOverlapChartRender() {
   clearOverlapRenderTimer();
   overlapRenderTimer = setTimeout(() => {
-    overlapRenderTimer = null;
+    overlapRenderTimer = undefined;
     renderOverlapChart();
   }, OVERLAP_RENDER_DELAY);
 }
 
-function applyOverlapView(overlapView) {
+function applyOverlapView(overlapView: OverlapViewSummary) {
   overlapHeatmapView.value = {
     rawBuckets: overlapView.rawBuckets,
     normalizedBuckets: overlapView.normalizedBuckets,
@@ -414,27 +435,27 @@ function applyOverlapView(overlapView) {
   bestOverlapTime.value = overlapView.bestOverlapTime;
 }
 
-function scheduleTopWorldsLoading(requestId) {
+function scheduleTopWorldsLoading(requestId: number) {
   clearTimeout(topWorldsLoadingTimer);
   topWorldsLoadingTimer = setTimeout(() => {
-    topWorldsLoadingTimer = null;
+    topWorldsLoadingTimer = undefined;
     if (requestId === userActivity.value.activeTopWorldsRequestId) {
       topWorldsLoadingVisible.value = true;
     }
   }, TOP_WORLDS_LOADING_DELAY);
 }
 
-function finishTopWorldsLoading(requestId) {
+function finishTopWorldsLoading(requestId: number) {
   if (requestId !== userActivity.value.activeTopWorldsRequestId) {
     return;
   }
   clearTimeout(topWorldsLoadingTimer);
-  topWorldsLoadingTimer = null;
+  topWorldsLoadingTimer = undefined;
   topWorldsLoadingVisible.value = false;
   topWorldsLoading.value = false;
 }
 
-async function loadTopWorldsSection({ userId, rangeDays, sortBy, period }) {
+async function loadTopWorldsSection({ userId, rangeDays, sortBy, period }: TopWorldsSection) {
   const requestId = ++userActivity.value.activeTopWorldsRequestId;
   topWorldsLoading.value = true;
   scheduleTopWorldsLoading(requestId);
@@ -457,7 +478,9 @@ async function loadTopWorldsSection({ userId, rangeDays, sortBy, period }) {
     }
 
     topWorlds.value = result;
-    void fetchMissingTopWorldThumbnails(topWorlds.value);
+    fetchMissingTopWorldThumbnails(topWorlds.value).catch((err: unknown) => {
+      console.error(err);
+    });
   } finally {
     finishTopWorldsLoading(requestId);
   }
@@ -469,7 +492,7 @@ async function refreshTopWorldsOnly() {
     return;
   }
 
-  const rangeDays = parseInt(userDialog.value.activityPeriodDays, 10) === 0 ? 3650 : parseInt(userDialog.value.activityPeriodDays, 10) || 30;
+  const rangeDays = Number(userDialog.value.activityPeriodDays) === 0 ? 3650 : Number(userDialog.value.activityPeriodDays) || 30;
   await loadTopWorldsSection({
     userId,
     rangeDays,
@@ -478,7 +501,7 @@ async function refreshTopWorldsOnly() {
   });
 }
 
-async function refreshData({ silent = false, forceRefresh = false } = {}) {
+async function refreshData({ silent = false, forceRefresh = false }: { silent?: boolean; forceRefresh?: boolean } = {}) {
   const userId = userDialog.value.id;
   if (!userId) {
     return;
@@ -491,7 +514,7 @@ async function refreshData({ silent = false, forceRefresh = false } = {}) {
   }
 
   try {
-    const rangeDays = parseInt(userDialog.value.activityPeriodDays, 10) === 0 ? 3650 : parseInt(userDialog.value.activityPeriodDays, 10) || 30;
+    const rangeDays = Number(userDialog.value.activityPeriodDays) === 0 ? 3650 : Number(userDialog.value.activityPeriodDays) || 30;
     const activityView = await activityStore.loadActivityView({
       userId,
       isSelf: isSelf.value,
@@ -515,7 +538,7 @@ async function refreshData({ silent = false, forceRefresh = false } = {}) {
     if (isSelf.value) {
       currentRangeDays.value = rangeDays;
       const cache = await activityStore.getCache(userId, true);
-      cachedSessions.value = cache.sessions || [];
+      cachedSessions.value = cache.sessions;
     }
 
     if (isSelf.value) {
@@ -541,8 +564,8 @@ async function refreshData({ silent = false, forceRefresh = false } = {}) {
       forceRefresh,
       excludeHours: {
         enabled: excludeHoursEnabled.value,
-        startHour: parseInt(excludeStartHour.value, 10),
-        endHour: parseInt(excludeEndHour.value, 10),
+        startHour: Number(excludeStartHour.value),
+        endHour: Number(excludeEndHour.value),
       },
     });
     if (requestId !== userActivity.value.activeRequestId || userDialog.value.id !== userId) {
@@ -557,7 +580,7 @@ async function refreshData({ silent = false, forceRefresh = false } = {}) {
   }
 }
 
-async function onPeriodChange(period) {
+async function onPeriodChange(period: string) {
   userDialog.value.activityPeriodDays = period;
   await refreshData();
 }
@@ -572,7 +595,7 @@ async function refreshOverlapOnly() {
   beginOverlapLoading(requestId);
 
   try {
-    const rangeDays = parseInt(userDialog.value.activityPeriodDays, 10) === 0 ? 3650 : parseInt(userDialog.value.activityPeriodDays, 10) || 30;
+    const rangeDays = Number(userDialog.value.activityPeriodDays) === 0 ? 3650 : Number(userDialog.value.activityPeriodDays) || 30;
     const overlapView = await activityStore.loadOverlapView({
       currentUserId: currentUser.value.id,
       targetUserId: userId,
@@ -581,8 +604,8 @@ async function refreshOverlapOnly() {
       forceRefresh: false,
       excludeHours: {
         enabled: excludeHoursEnabled.value,
-        startHour: parseInt(excludeStartHour.value, 10),
-        endHour: parseInt(excludeEndHour.value, 10),
+        startHour: Number(excludeStartHour.value),
+        endHour: Number(excludeEndHour.value),
       },
     });
     if (requestId !== userActivity.value.activeOverlapRequestId || userDialog.value.id !== userId) {
@@ -594,9 +617,9 @@ async function refreshOverlapOnly() {
   }
 }
 
-async function onExcludeToggle(value) {
-  excludeHoursEnabled.value = value;
-  await configRepository.setBool("VRCX_overlapExcludeEnabled", value);
+async function onExcludeToggle(isEnabled: boolean) {
+  excludeHoursEnabled.value = isEnabled;
+  await configRepository.setBool("VRCX_overlapExcludeEnabled", isEnabled);
   await refreshOverlapOnly();
 }
 
@@ -606,16 +629,16 @@ async function onExcludeRangeChange() {
   await refreshOverlapOnly();
 }
 
-async function onExcludeHomeWorldToggle(value) {
-  excludeHomeWorldEnabled.value = value;
-  await configRepository.setBool(ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY, value);
+async function onExcludeHomeWorldToggle(isEnabled: boolean) {
+  excludeHomeWorldEnabled.value = isEnabled;
+  await configRepository.setBool(ACTIVITY_SELF_EXCLUDE_HOME_WORLD_KEY, isEnabled);
   await refreshTopWorldsOnly();
 }
 
-async function fetchMissingTopWorldThumbnails(worlds) {
+async function fetchMissingTopWorldThumbnails(worlds: ActivityTopWorld[]) {
   const missingWorldIds = worlds
     .map((world) => world.worldId)
-    .filter((worldId) => {
+    .filter((worldId): worldId is string => {
       if (!worldId || pendingWorldThumbnailFetches.has(worldId)) {
         return false;
       }
@@ -639,44 +662,46 @@ async function fetchMissingTopWorldThumbnails(worlds) {
   topWorlds.value = [...topWorlds.value];
 }
 
-function getWorldThumbnail(worldId) {
-  const cached = worldStore.cachedWorlds.get(worldId);
+function getWorldThumbnail(worldId: string | null) {
+  const cached = worldId === null ? undefined : worldStore.cachedWorlds.get(worldId);
   if (!cached?.thumbnailImageUrl) {
     return null;
   }
   return cached.thumbnailImageUrl.replace("256", "128");
 }
 
-function openWorld(worldId) {
-  showWorldDialog(worldId);
+function openWorld(worldId: string | null) {
+  if (worldId) {
+    showWorldDialog(worldId);
+  }
 }
 
-function formatWorldTime(ms) {
+function formatWorldTime(ms: number) {
   if (!ms || ms <= 0) {
     return "0m";
   }
   return timeToText(ms);
 }
 
-function getTopWorldBarWidth(value) {
+function getTopWorldBarWidth(value: number) {
   if (sortedTopWorlds.value.length === 0) {
     return "0%";
   }
   const key = topWorldsSortBy.value === "count" ? "visitCount" : "totalTime";
-  const maxVal = Math.max(...sortedTopWorlds.value.map((world) => world[key] || 0), 0);
+  const maxVal = Math.max(...sortedTopWorlds.value.map((world) => world[key] ?? 0), 0);
   if (maxVal <= 0) {
     return "0%";
   }
   return `${Math.max((value / maxVal) * 100, 8)}%`;
 }
 
-const activityChartRef = ref(null);
-const overlapChartRef = ref(null);
-let activityChart = null;
-let overlapChart = null;
-let activityResizeObserver = null;
-let overlapResizeObserver = null;
-let easterEggTimer = null;
+const activityChartRef = ref<HTMLDivElement | null>(null);
+const overlapChartRef = ref<HTMLDivElement | null>(null);
+let activityChart: echarts.ECharts | null = null;
+let overlapChart: echarts.ECharts | null = null;
+let activityResizeObserver: ResizeObserver | null = null;
+let overlapResizeObserver: ResizeObserver | null = null;
+let easterEggTimer: ReturnType<typeof setTimeout> | undefined;
 
 function ensureActivityChart() {
   if (!activityChart && activityChartRef.value) {
@@ -773,14 +798,14 @@ function rebuildCharts() {
   nextTick(() => {
     renderActivityChart();
     renderOverlapChart();
-  });
+  }).catch(logError);
 }
 
 function onChartRightClick() {
   toast(t("dialog.user.activity.chart_hint"), { position: "bottom-center", icon: h(Tractor) });
   clearTimeout(easterEggTimer);
   easterEggTimer = setTimeout(() => {
-    easterEggTimer = null;
+    easterEggTimer = undefined;
   }, 5000);
 }
 
@@ -790,7 +815,7 @@ function onOverlapChartRightClick() {
   }
 }
 
-async function loadOnlineFrequency(userId) {
+async function loadOnlineFrequency(userId: string) {
   if (!userId || userDialog.value.id !== userId) {
     return;
   }
@@ -805,7 +830,7 @@ async function loadOnlineFrequency(userId) {
 
 watch(
   () => userDialog.value.id,
-  async () => {
+  () => {
     rebuildCharts();
   }
 );
@@ -817,7 +842,9 @@ watch(
       return;
     }
     if (userDialog.value.visible && userDialog.value.activeTab === "Activity") {
-      void onPeriodChange(period);
+      onPeriodChange(period).catch((err: unknown) => {
+        console.error(err);
+      });
     }
   }
 );
@@ -827,22 +854,28 @@ watch(
     if (isRestoringSettings.value) {
       return;
     }
-    void configRepository.setString(ACTIVITY_SELF_TOP_WORLDS_SORT_KEY, topWorldsSortBy.value);
-    void refreshTopWorldsOnly();
+    configRepository.setString(ACTIVITY_SELF_TOP_WORLDS_SORT_KEY, topWorldsSortBy.value).catch((err: unknown) => {
+      console.error(err);
+    });
+    refreshTopWorldsOnly().catch((err: unknown) => {
+      console.error(err);
+    });
   }
 );
 watch(
   () => currentUser.value.homeLocation,
   () => {
     if (excludeHomeWorldEnabled.value) {
-      void refreshTopWorldsOnly();
+      refreshTopWorldsOnly().catch((err: unknown) => {
+        console.error(err);
+      });
     }
   }
 );
 watch(
   () => mainHeatmapView.value,
   () => {
-    nextTick(() => renderActivityChart());
+    nextTick(() => renderActivityChart()).catch(logError);
   },
   { deep: true }
 );

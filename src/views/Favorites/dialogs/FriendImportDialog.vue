@@ -116,36 +116,52 @@ import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { storeToRefs } from "pinia";
-import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { useFavoriteStore } from "../../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 import { useGalleryStore } from "../../../stores/gallery";
-import { useUserStore } from "../../../stores/user";
+import { logFailure } from "../../../stores/log-failure";
 import { addLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../../api/favorite";
 import { userRequest } from "../../../api/user";
 import { createColumns } from "./friend-import-columns.tsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
+import type { VrcxUser } from "../../../types/vrcx";
+
+type FriendImportDialogState = {
+  loading: boolean;
+  progress: number;
+  progressTotal: number;
+  input: string;
+  userIdList: Set<string>;
+  errors: string;
+  friendImportFavoriteGroup: FavoriteGroupSlot | null;
+  friendImportLocalFavoriteGroup: string | null;
+  importProgress: number;
+  importProgressTotal: number;
+};
 
 const { userImage, userImageFull } = useUserDisplay();
 const { t } = useI18n();
 
-const emit = defineEmits(["update:friendImportDialogInput"]);
+const emit = defineEmits<{
+  "update:friendImportDialogInput": [value: string];
+}>();
 
 const { favoriteFriendGroups, friendImportDialogInput, friendImportDialogVisible, localFriendFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { showFullscreenImageDialog } = useGalleryStore();
 const { getCachedFavoritesByObjectId, localFriendFavGroupLength } = useFavoriteStore();
 
-const friendImportDialog = ref({
+const friendImportDialog = ref<FriendImportDialogState>({
   loading: false,
   progress: 0,
   progressTotal: 0,
   input: "",
-  userIdList: new Set(),
+  userIdList: new Set<string>(),
   errors: "",
   friendImportFavoriteGroup: null,
   friendImportLocalFavoriteGroup: null,
@@ -156,14 +172,14 @@ const friendImportDialog = ref({
 const friendImportFavoriteGroupSelection = ref("");
 const friendImportLocalFavoriteGroupSelection = ref("");
 
-const friendImportTable = ref({
+const friendImportTable = ref<{ data: VrcxUser[]; layout: string }>({
   data: [],
   layout: "table",
 });
 
 const tableStyle = { maxHeight: "400px" };
 
-const rows = computed(() => (Array.isArray(friendImportTable.value?.data) ? friendImportTable.value.data.slice() : []));
+const rows = computed(() => friendImportTable.value.data.slice());
 
 const columns = computed(() =>
   createColumns({
@@ -181,68 +197,75 @@ const { table } = useVrcxVueTable({
     return rows.value;
   },
   columns: columns.value,
-  getRowId: (row) => String(row?.id ?? ""),
+  getRowId: (row) => row.id,
   enablePagination: false,
   enableSorting: false,
 });
+
+const isLoading = () => friendImportDialog.value.loading;
 
 const isVisible = computed({
   get() {
     return friendImportDialogVisible.value;
   },
-  set(value) {
-    friendImportDialogVisible.value = value;
+  set(isOpen: boolean) {
+    friendImportDialogVisible.value = isOpen;
   },
 });
 
 watch(
   () => friendImportDialogVisible.value,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       clearFriendImportTable();
       resetFriendImport();
       friendImportFavoriteGroupSelection.value = friendImportDialog.value.friendImportFavoriteGroup?.name ?? "";
       if (friendImportDialogInput.value) {
         friendImportDialog.value.input = friendImportDialogInput.value;
-        processFriendImportList();
+        void processFriendImportList().catch(logFailure("Friend import list"));
         emit("update:friendImportDialogInput", "");
       }
     }
   }
 );
 
-function handleFriendImportGroupSelect(value) {
-  friendImportFavoriteGroupSelection.value = value;
-  const group = favoriteFriendGroups.value.find((g) => g.name === value) || null;
+function handleFriendImportGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  friendImportFavoriteGroupSelection.value = selectedValue;
+  const group = favoriteFriendGroups.value.find((g) => g.name === selectedValue) ?? null;
   if (group) {
     selectFriendImportGroup(group);
   }
 }
 
-function handleFriendImportLocalGroupSelect(value) {
-  friendImportLocalFavoriteGroupSelection.value = value;
-  selectFriendImportLocalGroup(value || null);
+function handleFriendImportLocalGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  friendImportLocalFavoriteGroupSelection.value = selectedValue;
+  selectFriendImportLocalGroup(selectedValue || null);
 }
 
 function cancelFriendImport() {
   friendImportDialog.value.loading = false;
 }
-function deleteItemFriendImport(ref) {
-  removeFromArray(friendImportTable.value.data, ref);
-  friendImportDialog.value.userIdList.delete(ref.id);
+
+function deleteItemFriendImport(item: VrcxUser) {
+  removeFromArray(friendImportTable.value.data, item);
+  friendImportDialog.value.userIdList.delete(item.id);
 }
+
 function clearFriendImportTable() {
   friendImportTable.value.data = [];
-  friendImportDialog.value.userIdList = new Set();
+  friendImportDialog.value.userIdList = new Set<string>();
 }
-function selectFriendImportGroup(group) {
+
+function selectFriendImportGroup(group: FavoriteGroupSlot | null) {
   friendImportDialog.value.friendImportLocalFavoriteGroup = null;
   friendImportDialog.value.friendImportFavoriteGroup = group;
   friendImportFavoriteGroupSelection.value = group?.name ?? "";
   friendImportLocalFavoriteGroupSelection.value = "";
 }
 
-function selectFriendImportLocalGroup(group) {
+function selectFriendImportLocalGroup(group: string | null) {
   friendImportDialog.value.friendImportFavoriteGroup = null;
   friendImportDialog.value.friendImportLocalFavoriteGroup = group;
   friendImportFavoriteGroupSelection.value = "";
@@ -251,75 +274,70 @@ function selectFriendImportLocalGroup(group) {
 
 async function importFriendImportTable() {
   const D = friendImportDialog.value;
-  D.loading = true;
   if (!D.friendImportFavoriteGroup && !D.friendImportLocalFavoriteGroup) {
     return;
   }
-  const data = [...friendImportTable.value.data].reverse();
+  D.loading = true;
+  const data = [...friendImportTable.value.data];
   D.importProgressTotal = data.length;
-  let ref = null;
+  let current: VrcxUser | null = null;
   try {
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (!D.loading || !isVisible.value) {
+    for (const item of data) {
+      if (!isLoading() || !isVisible.value) {
         break;
       }
-      ref = data[i];
+      current = item;
       if (D.friendImportFavoriteGroup) {
-        if (getCachedFavoritesByObjectId(ref.id)) {
+        if (getCachedFavoritesByObjectId(item.id)) {
           throw new Error("Friend is already in favorites");
         }
-        await addFavoriteUser(ref, D.friendImportFavoriteGroup, false);
+        await addFavoriteUser(item, D.friendImportFavoriteGroup);
       } else if (D.friendImportLocalFavoriteGroup) {
-        addLocalFriendFavorite(ref.id, D.friendImportLocalFavoriteGroup);
+        addLocalFriendFavorite(item.id, D.friendImportLocalFavoriteGroup);
       }
-      removeFromArray(friendImportTable.value.data, ref);
-      D.userIdList.delete(ref.id);
+      removeFromArray(friendImportTable.value.data, item);
+      D.userIdList.delete(item.id);
       D.importProgress++;
     }
   } catch (err) {
-    D.errors = `Name: ${ref?.displayName}\nUserId: ${ref?.id}\n${err}\n\n`;
+    D.errors = `Name: ${current?.displayName ?? ""}\nUserId: ${current?.id}\n${String(err)}\n\n`;
   } finally {
     D.importProgress = 0;
     D.importProgressTotal = 0;
     D.loading = false;
   }
 }
-function addFavoriteUser(ref, group, message) {
-  return favoriteRequest
-    .addFavorite({
-      type: group.type,
-      favoriteId: ref.id,
-      tags: group.name,
-    })
-    .then((args) => {
-      if (message) {
-        toast.success("Friend added to favorites");
-      }
-      return args;
-    });
+
+function addFavoriteUser(user: VrcxUser, group: FavoriteGroupSlot) {
+  return favoriteRequest.addFavorite({
+    type: group.type,
+    favoriteId: user.id,
+    tags: group.name,
+  });
 }
+
 async function processFriendImportList() {
   const D = friendImportDialog.value;
   D.loading = true;
   const regexFriendId = /usr_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
-  let match = [];
-  const userIdList = new Set();
-  while ((match = regexFriendId.exec(D.input)) !== null) {
+  const userIdList = new Set<string>();
+  let match = regexFriendId.exec(D.input);
+  while (match !== null) {
     userIdList.add(match[0]);
+    match = regexFriendId.exec(D.input);
   }
   D.input = "";
   D.errors = "";
   D.progress = 0;
   D.progressTotal = userIdList.size;
   const data = Array.from(userIdList);
-  for (let i = 0; i < data.length; ++i) {
+  for (const userId of data) {
     if (!isVisible.value) {
       resetFriendImport();
     }
-    if (!D.loading || !isVisible.value) {
+    if (!isLoading() || !isVisible.value) {
       break;
     }
-    const userId = data[i];
     if (!D.userIdList.has(userId)) {
       try {
         const args = await userRequest.getUser({
@@ -328,7 +346,7 @@ async function processFriendImportList() {
         friendImportTable.value.data.push(args.ref);
         D.userIdList.add(userId);
       } catch (err) {
-        D.errors = D.errors.concat(`UserId: ${userId}\n${err}\n\n`);
+        D.errors = D.errors.concat(`UserId: ${userId}\n${String(err)}\n\n`);
       }
     }
     D.progress++;
@@ -337,6 +355,7 @@ async function processFriendImportList() {
   D.progress = 0;
   D.progressTotal = 0;
 }
+
 function resetFriendImport() {
   friendImportDialog.value.input = "";
   friendImportDialog.value.errors = "";

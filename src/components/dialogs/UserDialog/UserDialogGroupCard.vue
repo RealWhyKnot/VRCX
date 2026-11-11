@@ -2,7 +2,7 @@
   <div class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-41.75 hover:rounded-[25px_5px_5px_25px]" @click="handleViewDetails">
     <div class="relative inline-block flex-none size-9 mr-2.5">
       <Avatar class="size-9">
-        <AvatarImage :src="group.iconUrl" class="object-cover" />
+        <AvatarImage :src="group.iconUrl ?? ''" class="object-cover" />
         <AvatarFallback>
           <Users class="size-4 text-muted-foreground" />
         </AvatarFallback>
@@ -36,19 +36,25 @@ import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
+import type { UserDialogGroup } from "../../../stores/user-state";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  group: {
-    type: Object,
-    required: true,
-  },
+const props = defineProps<{
+  group: UserDialogGroup;
+}>();
+
+const memberVisibility = computed(() => {
+  if (props.group.memberVisibility) {
+    return props.group.memberVisibility;
+  }
+  if (props.group.myMember?.visibility) {
+    return props.group.myMember.visibility;
+  }
+  return "visible";
 });
 
-const memberVisibility = computed(() => props.group?.memberVisibility || props.group?.myMember?.visibility || "visible");
-
 function handleViewDetails() {
-  showGroupDialog(props.group.id);
+  showGroupDialog(props.group.id ?? "");
 }
 </script>

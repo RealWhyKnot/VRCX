@@ -27,9 +27,9 @@ const {
   alertChecked,
 } = storeToRefs(modalStore);
 
-const actionRef = ref(null);
+const actionRef = ref<{ $el: unknown } | null>(null);
 
-function onEscapeKeyDown(event) {
+function onEscapeKeyDown(event: Event) {
   if (!alertDismissible.value) {
     event.preventDefault();
     return;
@@ -37,7 +37,7 @@ function onEscapeKeyDown(event) {
   modalStore.handleDismiss();
 }
 
-function onPointerDownOutside(event) {
+function onPointerDownOutside(event: Event) {
   if (!alertDismissible.value) {
     event.preventDefault();
     return;
@@ -45,7 +45,7 @@ function onPointerDownOutside(event) {
   modalStore.handleDismiss();
 }
 
-function onInteractOutside(event) {
+function onInteractOutside(event: Event) {
   if (!alertDismissible.value) {
     event.preventDefault();
     return;
@@ -53,11 +53,12 @@ function onInteractOutside(event) {
   modalStore.handleDismiss();
 }
 
-watch(alertOpen, async (newVal) => {
-  if (newVal) {
+watch(alertOpen, async (isOpen) => {
+  if (isOpen) {
     await nextTick();
     await nextTick();
-    actionRef.value?.$el?.focus?.();
+    const focusTarget = actionRef.value?.$el;
+    if (focusTarget instanceof HTMLElement) focusTarget.focus();
   }
 });
 </script>

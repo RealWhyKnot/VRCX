@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full min-h-0 flex-col gap-2">
     <div class="flex items-center gap-2">
-      <Button class="rounded-full" variant="outline" size="icon-sm" :disabled="loading" @click="$emit('refresh')">
+      <Button class="rounded-full" variant="outline" size="icon-sm" :disabled="loading" @click="emit('refresh')">
         <Spinner v-if="loading" />
         <RefreshCw v-else />
       </Button>
@@ -16,8 +16,8 @@
           </SelectItem>
         </SelectContent>
       </Select>
-      <InputGroupField v-model="tableData.filters[0].value" clearable size="sm" class="flex-1" :placeholder="t('dialog.group.members.search')" />
-      <Button size="sm" variant="outline" @click="$emit('export')">{{ t("dialog.group_member_moderation.export_logs") }}</Button>
+      <InputGroupField v-model="searchText" clearable size="sm" class="flex-1" :placeholder="t('dialog.group.members.search')" />
+      <Button size="sm" variant="outline" @click="emit('export')">{{ t("dialog.group_member_moderation.export_logs") }}</Button>
     </div>
     <DataTableLayout
       auto-height
@@ -43,46 +43,48 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
 import { getAuditLogTypeName } from "./group-moderation-utils";
-import { createColumns } from "./group-member-moderation-logs-columns.tsx";
+import { createColumns, type GroupLogsColumnContext } from "./group-member-moderation-logs-columns.tsx";
+import type { ModerationLogRow } from "./group-moderation-types";
+import { useGroupTableSearch } from "./use-group-table-search";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-const props = defineProps({
-  loading: { type: Boolean, default: false },
-  tableData: { type: Object, required: true },
-  auditLogTypes: { type: Array, default: () => [] },
-  pageSizes: { type: Array, required: true },
-  columnContext: {
-    type: Object,
-    required: true,
-  },
-  handlePageChange: { type: Function, required: true },
-});
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean;
+    tableData: GroupMemberModerationTable<ModerationLogRow>;
+    auditLogTypes?: string[];
+    pageSizes: number[];
+    columnContext: GroupLogsColumnContext;
+    handlePageChange: (page: number) => void;
+  }>(),
+  {
+    loading: false,
+    auditLogTypes: () => [],
+  }
+);
 
-const emit = defineEmits(["refresh", "export"]);
+const emit = defineEmits<{
+  refresh: [];
+  export: [];
+}>();
 
 const { t } = useI18n();
 
-const selectedAuditLogTypes = ref([]);
+const selectedAuditLogTypes = ref<string[]>([]);
 
 defineExpose({ selectedAuditLogTypes });
 
-const logsSearch = computed(() =>
-  String(props.tableData.filters?.[0]?.value ?? "")
-    .trim()
-    .toLowerCase()
-);
+const { searchText, searchQuery } = useGroupTableSearch(() => props.tableData.filters);
 
 const filteredRows = computed(() => {
-  const rows = Array.isArray(props.tableData.data) ? props.tableData.data : [];
-  const q = logsSearch.value;
+  const rows = props.tableData.data;
+  const q = searchQuery.value;
   if (!q) {
     return rows;
   }
-  return rows.filter((r) => {
-    const desc = (r?.description ?? "").toString().toLowerCase();
-    return desc.includes(q);
-  });
+  return rows.filter((r) => (r.description ?? "").toLowerCase().includes(q));
 });
 
 const columns = computed(() => createColumns(props.columnContext));
@@ -93,8 +95,8 @@ const { table: tanstackTable } = useVrcxVueTable({
     return filteredRows.value;
   },
   columns,
-  getRowId: (row) => String(row?.id ?? `${row?.created_at ?? ""}:${row?.eventType ?? ""}`),
-  initialPagination: { pageIndex: props.tableData.pageIndex ?? 0, pageSize: props.tableData.pageSize ?? 15 },
+  getRowId: (row) => row.id,
+  initialPagination: { pageIndex: props.tableData.pageIndex, pageSize: props.tableData.pageSize },
   tableOptions: {
     autoResetPageIndex: false,
   },

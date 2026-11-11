@@ -8,7 +8,11 @@
 
       <div class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
         <div v-for="listing in freeStoreItemDialog.listings" :key="listing.id" class="flex items-center gap-3">
-          <img :src="listing.imageUrl || getFileImageUrl(listing.imageId)" loading="lazy" class="size-12 shrink-0 rounded object-cover" />
+          <img
+            :src="listing.imageUrl || (listing.imageId ? getFileImageUrl(listing.imageId) : '')"
+            loading="lazy"
+            class="size-12 shrink-0 rounded object-cover"
+          />
           <div class="min-w-0">
             <div class="truncate text-sm">{{ listing.displayName }}</div>
             <div v-if="listing.subtitle" class="truncate text-xs text-muted-foreground">
@@ -47,6 +51,7 @@ import { useI18n } from "vue-i18n";
 import { marketplaceRequest } from "../../api/marketplace";
 import { AppDebug } from "../../services/app-config";
 import { useNotificationStore } from "../../stores/notification";
+import { logFailure } from "../../stores/log-failure";
 import { useNotificationsSettingsStore } from "../../stores/settings/notifications";
 import { useUserStore } from "../../stores/user";
 
@@ -60,7 +65,7 @@ const userStore = useUserStore();
 const dontShowAgain = ref(false);
 const isClaiming = ref(false);
 
-function getFileImageUrl(fileId) {
+function getFileImageUrl(fileId: string) {
   return `${AppDebug.endpointDomain}/file/${fileId}/1/`;
 }
 
@@ -95,6 +100,6 @@ async function claimListings() {
   }
   isClaiming.value = false;
   closeDialog();
-  userStore.getAllProductPurchases();
+  void userStore.getAllProductPurchases().catch(logFailure("Loading product purchases failed:"));
 }
 </script>

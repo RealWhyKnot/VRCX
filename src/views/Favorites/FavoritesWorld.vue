@@ -20,9 +20,9 @@
         @import="handleWorldImportClick"
         @export="handleWorldExportClick"
       />
-      <ResizablePanelGroup ref="splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
+      <ResizablePanelGroup :ref="splitter.splitterGroupRef" direction="horizontal" class="flex-1 min-h-0 favorites-splitter" @layout="handleLayout">
         <ResizablePanel
-          ref="splitterPanelRef"
+          :ref="splitter.splitterPanelRef"
           :default-size="splitterDefaultSize"
           :min-size="splitterMinSize"
           :max-size="splitterMaxSize"
@@ -192,7 +192,7 @@
                 </div>
                 <InputGroupField
                   v-else
-                  ref="newLocalGroupInput"
+                  :ref="localGroups.newLocalGroupInput"
                   v-model="newLocalGroupName"
                   size="sm"
                   class="w-full"
@@ -233,7 +233,7 @@
                 <span v-else>No Group Selected</span>
               </template>
             </FavoritesContentHeader>
-            <div ref="worldFavoritesContainerRef" class="flex-1 min-h-0">
+            <div :ref="worldCardScaling.containerRef" class="flex-1 min-h-0">
               <template v-if="isSearchActive">
                 <div class="h-full pr-2 overflow-auto">
                   <template v-if="worldFavoriteSearchResults.length">
@@ -279,10 +279,10 @@
                       <template v-for="item in localVirtualItems" :key="String(item.virtualItem.key)">
                         <div
                           v-if="item.row"
-                          :ref="localVirtualizer.measureElement"
+                          :ref="measureLocalRow"
                           class="favorites-card-virtual-row"
                           :data-index="item.virtualItem.index"
-                          :style="{ transform: `translateY(${item.virtualItem.start}px)` }"
+                          :style="{ '--favorites-virtual-start': `${item.virtualItem.start}px` }"
                         >
                           <div class="favorites-card-virtual-row-grid">
                             <FavoritesWorldItem
@@ -316,7 +316,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { Ellipsis, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
@@ -339,6 +339,8 @@ import DropdownMenuTrigger from "../../components/ui/dropdown-menu/DropdownMenuT
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useFavoriteStore } from "../../stores/favorite";
 import { useModalStore } from "../../stores/modal";
+import type { FavoriteGroupSlot, FavoriteObjectCtx, LocalFavoriteEntry } from "../../stores/favorite-types";
+import { logFailure } from "../../stores/log-failure";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
@@ -349,13 +351,7 @@ import { useFavoritesCardScaling } from "./composables/use-favorites-card-scalin
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
 import { useFavoritesSplitter } from "./composables/use-favorites-splitter.ts";
-import {
-  renameLocalWorldFavoriteGroup,
-  removeLocalWorldFavorite,
-  newLocalWorldFavoriteGroup,
-  refreshFavorites,
-  getLocalWorldFavorites,
-} from "../../coordinators/favorite-coordinator";
+import { renameLocalWorldFavoriteGroup, newLocalWorldFavoriteGroup, refreshFavorites, getLocalWorldFavorites } from "../../coordinators/favorite-coordinator";
 
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
@@ -363,11 +359,55 @@ import FavoritesWorldItem from "./components/FavoritesWorldItem.vue";
 import WorldExportDialog from "./dialogs/WorldExportDialog.vue";
 
 import * as workerTimers from "worker-timers";
+import "./favorites-layout.css";
+import "./favorites-world-layout.css";
+
+type WorldFavoriteDetails = {
+  name?: string | null;
+  authorName?: string | null;
+  thumbnailImageUrl?: string | null;
+  releaseStatus?: string | null;
+  occupants?: number | null;
+};
+
+type WorldFavoriteEntry = WorldFavoriteDetails & {
+  id: string;
+  deleted?: boolean;
+  ref?: WorldFavoriteDetails | null;
+};
+
+type WorldSearchEntry = {
+  id: string;
+  name: string;
+  authorName?: string | null;
+  tags?: string[];
+};
+
+type LocalVirtualItem = {
+  key: string;
+  favorite: WorldFavoriteEntry;
+};
+
+type LocalVirtualRow = {
+  type: string;
+  key: string;
+  items: LocalVirtualItem[];
+};
+
+type RefreshToken = {
+  cancelled: boolean;
+  resolve: (() => void) | null;
+};
 
 const WORLD_GROUP_PLACEHOLDERS = Array.from({ length: 4 }, (_, index) => ({
   key: `world:worlds${index + 1}`,
   displayName: `Group ${index + 1}`,
 }));
+
+const WORLD_FAVORITES_LOG_LABEL = "World favorites view";
+
+const worldGroupVisibilityOptions = ["public", "friends", "private"] as const;
+type WorldGroupVisibility = (typeof worldGroupVisibilityOptions)[number];
 
 const { t } = useI18n();
 const { sortFavorites } = storeToRefs(useAppearanceSettingsStore());
@@ -385,14 +425,7 @@ const {
 } = storeToRefs(favoriteStore);
 const { showWorldImportDialog, localWorldFavGroupLength, deleteLocalWorldFavoriteGroup, handleFavoriteGroup, localWorldFavoritesList } = favoriteStore;
 
-const {
-  cardScale: worldCardScale,
-  cardSpacing: worldCardSpacing,
-  slider: worldCardScaleSlider,
-  spacingSlider: worldCardSpacingSlider,
-  containerRef: worldFavoritesContainerRef,
-  gridStyle: worldFavoritesGridStyle,
-} = useFavoritesCardScaling({
+const worldCardScaling = useFavoritesCardScaling({
   configKey: "VRCX_FavoritesWorldCardScale",
   spacingConfigKey: "VRCX_FavoritesWorldCardSpacing",
   min: 0.6,
@@ -409,45 +442,44 @@ const {
   baseActionMargin: 8,
   baseCheckboxMargin: 10,
 });
+const {
+  cardScale: worldCardScale,
+  cardSpacing: worldCardSpacing,
+  slider: worldCardScaleSlider,
+  spacingSlider: worldCardSpacingSlider,
+  gridStyle: worldFavoritesGridStyle,
+} = worldCardScaling;
 
 const worldCardScalePercent = computed(() => Math.round(worldCardScale.value * 100));
 const worldCardSpacingPercent = computed(() => Math.round(worldCardSpacing.value * 100));
 const worldCardScaleValue = computed({
   get: () => [worldCardScale.value],
-  set: (value) => {
-    const next = value?.[0];
-    if (typeof next === "number") {
+  set: (value: number[]) => {
+    const next = value[0];
+    if (next !== undefined) {
       worldCardScale.value = next;
     }
   },
 });
 const worldCardSpacingValue = computed({
   get: () => [worldCardSpacing.value],
-  set: (value) => {
-    const next = value?.[0];
-    if (typeof next === "number") {
+  set: (value: number[]) => {
+    const next = value[0];
+    if (next !== undefined) {
       worldCardSpacing.value = next;
     }
   },
 });
 
-const worldGroupVisibilityOptions = ref(["public", "friends", "private"]);
-const {
-  splitterGroupRef,
-  splitterPanelRef,
-  defaultSize: splitterDefaultSize,
-  minSize: splitterMinSize,
-  maxSize: splitterMaxSize,
-  handleLayout,
-  setDragging: splitterSetDragging,
-} = useFavoritesSplitter({ configKey: "VRCX_FavoritesWorldSplitter" });
+const splitter = useFavoritesSplitter({ configKey: "VRCX_FavoritesWorldSplitter" });
+const { defaultSize: splitterDefaultSize, minSize: splitterMinSize, maxSize: splitterMaxSize, handleLayout, setDragging: splitterSetDragging } = splitter;
 const worldExportDialogVisible = ref(false);
 const worldFavoriteSearch = ref("");
-const worldFavoriteSearchResults = ref([]);
+const worldFavoriteSearchResults = ref<WorldSearchEntry[]>([]);
 const worldGroupPlaceholders = WORLD_GROUP_PLACEHOLDERS;
 const refreshingLocalFavorites = ref(false);
-const worker = ref(null);
-const refreshCancelToken = ref(null);
+const worker = ref<ReturnType<typeof workerTimers.setTimeout> | null>(null);
+const refreshCancelToken = ref<RefreshToken | null>(null);
 const worldEditMode = ref(false);
 const worldToolbarMenuOpen = ref(false);
 const worldSortMode = ref("none");
@@ -505,16 +537,36 @@ function handleWorldExportClick() {
   showExportDialog();
 }
 
+function isWorldRecord(value: unknown): value is WorldFavoriteEntry {
+  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string";
+}
+
+function isWorldSearchEntry(value: unknown): value is WorldSearchEntry {
+  return typeof value === "object" && value !== null && "id" in value && "name" in value && typeof value.id === "string" && typeof value.name === "string";
+}
+
+function toWorldFavoriteEntry(favorite: FavoriteObjectCtx): WorldFavoriteEntry {
+  return {
+    id: favorite.id,
+    name: favorite.name,
+    deleted: favorite.deleted ?? false,
+    ref: isWorldRecord(favorite.ref) ? favorite.ref : null,
+  };
+}
+
+function toLocalWorldEntry(entry: LocalFavoriteEntry): WorldFavoriteEntry {
+  return isWorldRecord(entry) ? entry : { id: entry.id };
+}
+
 const groupedWorldFavorites = computed(() => {
-  const grouped = {};
+  const grouped = new Map<string, WorldFavoriteEntry[]>();
   favoriteWorlds.value.forEach((world) => {
     if (!world.groupKey) {
       return;
     }
-    if (!grouped[world.groupKey]) {
-      grouped[world.groupKey] = [];
-    }
-    grouped[world.groupKey].push(world);
+    const group = grouped.get(world.groupKey) ?? [];
+    group.push(toWorldFavoriteEntry(world));
+    grouped.set(world.groupKey, group);
   });
   return grouped;
 });
@@ -524,53 +576,50 @@ const flattenedLocalWorldFavorites = computed(() => {
 });
 
 const searchableWorldEntries = computed(() => {
-  const seen = new Set();
-  const entries = [];
-  const pushIfNew = (ref) => {
-    if (!ref?.id || seen.has(ref.id)) {
+  const seen = new Set<string>();
+  const entries: WorldSearchEntry[] = [];
+  const pushIfNew = (candidate: unknown) => {
+    if (!isWorldSearchEntry(candidate) || !candidate.id || seen.has(candidate.id)) {
       return;
     }
-    seen.add(ref.id);
-    entries.push(ref);
+    seen.add(candidate.id);
+    entries.push(candidate);
   };
-  flattenedLocalWorldFavorites.value.forEach(pushIfNew);
+  flattenedLocalWorldFavorites.value.forEach((entry) => pushIfNew(entry));
   favoriteWorlds.value.forEach((favorite) => {
     pushIfNew(favorite.ref);
   });
   return entries;
 });
 
-const currentRemoteFavorites = computed(() => {
+const currentRemoteFavorites = computed<WorldFavoriteEntry[]>(() => {
   if (!activeRemoteGroup.value) {
     return [];
   }
-  const list = groupedWorldFavorites.value[activeRemoteGroup.value.key] || [];
+  const list = groupedWorldFavorites.value.get(activeRemoteGroup.value.key) ?? [];
   if (worldSortMode.value === "players") {
     return list.toSorted((a, b) => (b.ref?.occupants ?? 0) - (a.ref?.occupants ?? 0));
   }
   return list;
 });
 
-const currentLocalFavorites = computed(() => {
+const currentLocalFavorites = computed<WorldFavoriteEntry[]>(() => {
   if (!activeLocalGroupName.value) {
     return [];
   }
-  const list = localWorldFavorites.value[activeLocalGroupName.value] || [];
+  const list = (localWorldFavorites.value[activeLocalGroupName.value] ?? []).map((entry) => toLocalWorldEntry(entry));
   if (worldSortMode.value === "players") {
     return list.toSorted((a, b) => (b.occupants ?? 0) - (a.occupants ?? 0));
   }
   return list;
 });
 
-const localFavoritesViewportRef = ref(null);
+const localFavoritesViewportRef = ref<HTMLDivElement | null>(null);
 
-const getFavoritesGridMetrics = (count = 1, options = {}) => {
-  const styleFn = worldFavoritesGridStyle.value;
-  const styles = typeof styleFn === "function" ? styleFn(count, options) : {};
-  const columnsRaw = styles["--favorites-grid-columns"] ?? 1;
-  const gapRaw = styles["--favorites-card-gap"] ?? 12;
-  const columns = Math.max(1, Number(columnsRaw) || 1);
-  const gap = Number(String(gapRaw).replace("px", "")) || 0;
+const getFavoritesGridMetrics = (count = 1, options: { matchMaxColumnWidth?: boolean } = {}) => {
+  const styles = worldFavoritesGridStyle.value(count, options);
+  const columns = Math.max(1, Number(styles["--favorites-grid-columns"]) || 1);
+  const gap = Number(styles["--favorites-card-gap"].replace("px", "")) || 0;
 
   return {
     columns,
@@ -579,21 +628,20 @@ const getFavoritesGridMetrics = (count = 1, options = {}) => {
   };
 };
 
-const chunkLocalFavorites = (favorites = []) => {
-  const items = Array.isArray(favorites) ? favorites : [];
-  if (!items.length) {
+const chunkLocalFavorites = (favorites: WorldFavoriteEntry[]): LocalVirtualRow[] => {
+  if (!favorites.length) {
     return [];
   }
-  const { columns } = getFavoritesGridMetrics(items.length, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns || 1);
-  const rows = [];
+  const { columns } = getFavoritesGridMetrics(favorites.length, { matchMaxColumnWidth: true });
+  const safeColumns = Math.max(1, columns);
+  const rows: LocalVirtualRow[] = [];
 
-  for (let index = 0; index < items.length; index += safeColumns) {
+  for (let index = 0; index < favorites.length; index += safeColumns) {
     rows.push({
       type: "cards",
       key: `local:${activeLocalGroupName.value}:${index}`,
-      items: items.slice(index, index + safeColumns).map((favorite) => ({
-        key: favorite.id ?? favorite.worldId ?? favorite.name ?? `${activeLocalGroupName.value}:${index}`,
+      items: favorites.slice(index, index + safeColumns).map((favorite) => ({
+        key: favorite.id,
         favorite,
       })),
     });
@@ -604,13 +652,13 @@ const chunkLocalFavorites = (favorites = []) => {
 
 const localVirtualRows = computed(() => chunkLocalFavorites(currentLocalFavorites.value));
 
-const estimateLocalRowSize = (row) => {
+const estimateLocalRowSize = (row: LocalVirtualRow | undefined) => {
   if (!row) {
     return 120;
   }
-  const itemCount = Array.isArray(row.items) ? row.items.length : 0;
+  const itemCount = row.items.length;
   const { columns, gap } = getFavoritesGridMetrics(itemCount, { matchMaxColumnWidth: true });
-  const safeColumns = Math.max(1, columns || 1);
+  const safeColumns = Math.max(1, columns);
   const rows = Math.max(1, Math.ceil(itemCount / safeColumns));
   const baseCardHeight = 220;
   const rowGap = Math.max(0, gap);
@@ -622,34 +670,39 @@ const localVirtualizer = useVirtualizer(
   computed(() => ({
     count: localVirtualRows.value.length,
     getScrollElement: () => localFavoritesViewportRef.value,
-    estimateSize: (index) => estimateLocalRowSize(localVirtualRows.value[index]),
+    estimateSize: (index: number) => estimateLocalRowSize(localVirtualRows.value[index]),
     overscan: 8,
   }))
 );
 
-const localVirtualItems = computed(() => {
-  const items = localVirtualizer.value?.getVirtualItems?.() ?? [];
-  return items.map((virtualItem) => ({
+const localVirtualItems = computed(() =>
+  localVirtualizer.value.getVirtualItems().map((virtualItem) => ({
     virtualItem,
     row: localVirtualRows.value[virtualItem.index],
-  }));
-});
+  }))
+);
 
 const localVirtualContainerStyle = computed(() => ({
   ...getFavoritesGridMetrics(currentLocalFavorites.value.length, { matchMaxColumnWidth: true }).styles,
-  height: `${localVirtualizer.value?.getTotalSize?.() ?? 0}px`,
+  "--favorites-virtual-height": `${localVirtualizer.value.getTotalSize()}px`,
 }));
 
-const getLocalRowItems = (row) => (row && Array.isArray(row.items) ? row.items : []);
+const getLocalRowItems = (row: LocalVirtualRow | undefined) => row?.items ?? [];
 
-function handleSortValueChange(value) {
+function measureLocalRow(node: unknown) {
+  if (node instanceof Element) {
+    localVirtualizer.value.measureElement(node);
+  }
+}
+
+function handleSortValueChange(value: string) {
   if (value === "players") {
     worldSortMode.value = "players";
     return;
   }
   worldSortMode.value = "none";
-  const next = value === "date";
-  if (next !== sortFavorites.value) {
+  const isDateSort = value === "date";
+  if (isDateSort !== sortFavorites.value) {
     setSortFavorites();
   }
 }
@@ -669,7 +722,7 @@ watch(
   () => {
     remoteGroupsResolved.value = favoriteWorldGroups.value.length > 0;
     if (!hasUserSelectedWorldGroup.value) {
-      const preferredKey = favoriteWorldGroups.value[0]?.key || worldGroupPlaceholders[0]?.key || null;
+      const preferredKey = favoriteWorldGroups.value[0]?.key ?? worldGroupPlaceholders[0]?.key ?? null;
       if (preferredKey) {
         selectGroup("remote", preferredKey);
       }
@@ -679,8 +732,8 @@ watch(
   { immediate: true }
 );
 
-watch(isSearchActive, (active) => {
-  if (active && worldEditMode.value) {
+watch(isSearchActive, (isActive) => {
+  if (isActive && worldEditMode.value) {
     worldEditMode.value = false;
   }
 });
@@ -692,23 +745,21 @@ watch(worldSearchMode, () => {
 });
 
 watch([currentLocalFavorites, worldCardScale, worldCardSpacing, activeLocalGroupName], () => {
-  nextTick(() => {
-    localVirtualizer.value?.measure?.();
-  });
+  void nextTick(() => {
+    localVirtualizer.value.measure();
+  }).catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 });
 
 watch(
   () => worldEditMode.value,
-  (value) => {
-    if (!value) {
+  (isEditMode) => {
+    if (!isEditMode) {
       clearSelectedWorlds();
     }
   }
 );
 
-onMounted(() => {});
-
-function handleGroupClick(type, key) {
+function handleGroupClick(type: string, key: string) {
   if (hasSearchInput.value) {
     worldFavoriteSearch.value = "";
     doSearchWorldFavorites("");
@@ -716,21 +767,14 @@ function handleGroupClick(type, key) {
   selectGroup(type, key, { userInitiated: true });
 }
 
-function formatVisibility(value) {
-  if (!value) {
-    return "";
-  }
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
+const localGroups = useFavoritesLocalGroups({
+  createGroup: newLocalWorldFavoriteGroup,
+  selectGroup,
+});
+const { isCreatingLocalGroup, newLocalGroupName, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } = localGroups;
 
-const { isCreatingLocalGroup, newLocalGroupName, newLocalGroupInput, startLocalGroupCreation, cancelLocalGroupCreation, handleLocalGroupCreationConfirm } =
-  useFavoritesLocalGroups({
-    createGroup: newLocalWorldFavoriteGroup,
-    selectGroup,
-  });
-
-function toggleWorldSelection(id, value) {
-  if (value) {
+function toggleWorldSelection(id: string, isChecked: boolean) {
+  if (isChecked) {
     if (!selectedFavoriteWorlds.value.includes(id)) {
       selectedFavoriteWorlds.value.push(id);
     }
@@ -779,14 +823,16 @@ function showWorldBulkUnfavoriteSelectionConfirm() {
         bulkUnfavoriteSelectedWorlds([...selectedFavoriteWorlds.value]);
       }
     })
-    .catch(() => {});
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function bulkUnfavoriteSelectedWorlds(ids) {
+function bulkUnfavoriteSelectedWorlds(ids: string[]) {
   ids.forEach((id) => {
-    favoriteRequest.deleteFavorite({
-      objectId: id,
-    });
+    void favoriteRequest
+      .deleteFavorite({
+        objectId: id,
+      })
+      .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
   });
   selectedFavoriteWorlds.value = [];
   worldEditMode.value = false;
@@ -798,32 +844,34 @@ function showExportDialog() {
 
 function handleRefreshFavorites() {
   refreshFavorites();
-  getLocalWorldFavorites();
+  void getLocalWorldFavorites().catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function changeWorldGroupVisibility(group, visibility, menuKey = null) {
+function changeWorldGroupVisibility(group: FavoriteGroupSlot, visibility: WorldGroupVisibility, menuKey: string | null = null) {
   const params = {
     type: group.type,
     group: group.name,
     visibility,
   };
-  favoriteRequest.saveFavoriteGroup(params).then((args) => {
-    handleFavoriteGroup({
-      json: args.json,
-      params: {
-        favoriteGroupId: args.json.id,
-      },
-    });
-    toast.success(t("message.group.visibility_updated"));
-    if (menuKey) {
-      handleGroupMenuVisible(menuKey, false);
-    }
-    refreshFavorites();
-    return args;
-  });
+  void favoriteRequest
+    .saveFavoriteGroup(params)
+    .then((args) => {
+      handleFavoriteGroup({
+        json: args.json,
+        params: {
+          favoriteGroupId: args.json.id,
+        },
+      });
+      toast.success(t("message.group.visibility_updated"));
+      if (menuKey) {
+        handleGroupMenuVisible(menuKey, false);
+      }
+      refreshFavorites();
+    })
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function promptLocalWorldFavoriteGroupRename(group) {
+function promptLocalWorldFavoriteGroupRename(group: string) {
   modalStore
     .prompt({
       title: t("prompt.local_favorite_group_rename.header"),
@@ -838,17 +886,17 @@ function promptLocalWorldFavoriteGroupRename(group) {
       if (!ok) return;
       if (value) {
         renameLocalWorldFavoriteGroup(value, group);
-        nextTick(() => {
+        void nextTick(() => {
           if (localWorldFavoriteGroups.value.includes(value)) {
             selectGroup("local", value, { userInitiated: true });
           }
-        });
+        }).catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
       }
     })
-    .catch(() => {});
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function promptLocalWorldFavoriteGroupDelete(group) {
+function promptLocalWorldFavoriteGroupDelete(group: string) {
   modalStore
     .confirm({
       description: t("confirm.delete_group", { name: group }),
@@ -859,10 +907,10 @@ function promptLocalWorldFavoriteGroupDelete(group) {
         deleteLocalWorldFavoriteGroup(group);
       }
     })
-    .catch(() => {});
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function clearFavoriteGroup(ctx) {
+function clearFavoriteGroup(ctx: FavoriteGroupSlot) {
   modalStore
     .confirm({
       description: t("confirm.clear_group"),
@@ -870,65 +918,60 @@ function clearFavoriteGroup(ctx) {
     })
     .then(({ ok }) => {
       if (ok) {
-        favoriteRequest.clearFavoriteGroup({
-          type: ctx.type,
-          group: ctx.name,
-        });
+        void favoriteRequest
+          .clearFavoriteGroup({
+            type: ctx.type,
+            group: ctx.name,
+          })
+          .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
       }
     })
-    .catch(() => {});
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
-function doSearchWorldFavorites(searchInput) {
+function doSearchWorldFavorites(searchInput?: string) {
   const search = (searchInput ?? worldFavoriteSearch.value).trim().toLowerCase();
   if (search.length < 3) {
     worldFavoriteSearchResults.value = [];
     return;
   }
   const isTagMode = worldSearchMode.value === "tag";
-  const filtered = searchableWorldEntries.value.filter((ref) => {
-    if (!ref || typeof ref.id === "undefined" || typeof ref.name === "undefined") {
-      return false;
-    }
+  worldFavoriteSearchResults.value = searchableWorldEntries.value.filter((entry) => {
     if (isTagMode) {
-      if (Array.isArray(ref.tags)) {
-        return ref.tags.some((tag) => tag.startsWith("author_tag_") && tag.substring(11).toLowerCase().includes(search));
-      }
-      return false;
+      return (entry.tags ?? []).some((tag) => tag.startsWith("author_tag_") && tag.substring(11).toLowerCase().includes(search));
     }
-    const authorName = ref.authorName || "";
-    return ref.name.toLowerCase().includes(search) || authorName.toLowerCase().includes(search);
+    const authorName = entry.authorName ?? "";
+    return entry.name.toLowerCase().includes(search) || authorName.toLowerCase().includes(search);
   });
-  worldFavoriteSearchResults.value = filtered;
 }
 const searchWorldFavorites = debounce(doSearchWorldFavorites, 200);
 
-function handleVisibilitySelection(group, visibility) {
+function handleVisibilitySelection(group: FavoriteGroupSlot, visibility: WorldGroupVisibility) {
   const menuKey = remoteGroupMenuKey(group.key);
   changeWorldGroupVisibility(group, visibility, menuKey);
 }
 
-function handleRemoteRename(group) {
+function handleRemoteRename(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   changeFavoriteGroupName(group);
 }
 
-function handleRemoteClear(group) {
+function handleRemoteClear(group: FavoriteGroupSlot) {
   handleGroupMenuVisible(remoteGroupMenuKey(group.key), false);
   clearFavoriteGroup(group);
 }
 
-function handleLocalRename(groupName) {
+function handleLocalRename(groupName: string) {
   handleGroupMenuVisible(localGroupMenuKey(groupName), false);
   promptLocalWorldFavoriteGroupRename(groupName);
 }
 
-function handleLocalDelete(groupName) {
+function handleLocalDelete(groupName: string) {
   handleGroupMenuVisible(localGroupMenuKey(groupName), false);
   promptLocalWorldFavoriteGroupDelete(groupName);
 }
 
-function changeFavoriteGroupName(group) {
+function changeFavoriteGroupName(group: FavoriteGroupSlot) {
   const currentName = group.displayName || group.name;
   modalStore
     .prompt({
@@ -946,7 +989,7 @@ function changeFavoriteGroupName(group) {
       if (!newName || newName === currentName) {
         return;
       }
-      favoriteRequest
+      void favoriteRequest
         .saveFavoriteGroup({
           type: group.type,
           group: group.name,
@@ -961,9 +1004,10 @@ function changeFavoriteGroupName(group) {
           });
           toast.success(t("prompt.change_favorite_group_name.message.success"));
           refreshFavorites();
-        });
+        })
+        .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
     })
-    .catch(() => {});
+    .catch(logFailure(WORLD_FAVORITES_LOG_LABEL));
 }
 
 async function refreshLocalWorldFavorites() {
@@ -971,14 +1015,15 @@ async function refreshLocalWorldFavorites() {
     return;
   }
   refreshingLocalFavorites.value = true;
-  const token = {
+  const token: RefreshToken = {
     cancelled: false,
     resolve: null,
   };
   refreshCancelToken.value = token;
+  const isRefreshCancelled = () => token.cancelled;
   try {
     for (const worldId of localWorldFavoritesList) {
-      if (token.cancelled) {
+      if (isRefreshCancelled()) {
         break;
       }
       try {
@@ -988,10 +1033,10 @@ async function refreshLocalWorldFavorites() {
       } catch (err) {
         console.error(err);
       }
-      if (token.cancelled) {
+      if (isRefreshCancelled()) {
         break;
       }
-      await new Promise((resolve) => {
+      await new Promise<void>((resolve) => {
         token.resolve = resolve;
         worker.value = workerTimers.setTimeout(() => {
           worker.value = null;
@@ -1017,9 +1062,7 @@ function cancelLocalWorldRefresh() {
   }
   if (refreshCancelToken.value) {
     refreshCancelToken.value.cancelled = true;
-    if (typeof refreshCancelToken.value.resolve === "function") {
-      refreshCancelToken.value.resolve();
-    }
+    refreshCancelToken.value.resolve?.();
   }
   if (worker.value) {
     workerTimers.clearTimeout(worker.value);
@@ -1032,51 +1075,3 @@ onBeforeUnmount(() => {
   cancelLocalWorldRefresh();
 });
 </script>
-
-<style>
-@import "./favorites-layout.css";
-
-.favorites-content__scroll--local {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-.favorites-content__scroll--local::-webkit-scrollbar {
-  width: 10px;
-}
-
-.favorites-content__scroll--local::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.favorites-content__scroll--local::-webkit-scrollbar-thumb {
-  background-color: var(--border);
-  border-radius: var(--rounded-full);
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-.favorites-card-virtual {
-  width: 100%;
-  position: relative;
-  box-sizing: border-box;
-}
-
-.favorites-card-virtual-row {
-  width: 100%;
-  position: absolute;
-  left: 0;
-  top: 0;
-  box-sizing: border-box;
-  padding-bottom: var(--favorites-card-gap, 12px);
-}
-
-.favorites-card-virtual-row-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--favorites-grid-columns, 1), minmax(var(--favorites-card-min-width, 260px), var(--favorites-card-target-width, 1fr)));
-  gap: var(--favorites-card-gap, 12px);
-  justify-content: start;
-  padding: 4px 2px 0;
-  box-sizing: border-box;
-}
-</style>

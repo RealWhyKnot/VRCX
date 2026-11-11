@@ -6,13 +6,7 @@
       </DialogHeader>
       <TabsUnderline default-value="csv" :items="exportFriendsTabs" :unmount-on-hide="false" class="mt-2.5">
         <template #csv>
-          <InputGroupTextareaField
-            v-model="exportFriendsListCsv"
-            :rows="15"
-            readonly
-            input-class="resize-none mt-4"
-            @click="$event.target.tagName === 'TEXTAREA' && $event.target.select()"
-          />
+          <InputGroupTextareaField v-model="exportFriendsListCsv" :rows="15" readonly input-class="resize-none mt-4" @click="selectTextareaOnClick" />
         </template>
         <template #json>
           <InputGroupTextareaField
@@ -21,7 +15,7 @@
             readonly
             style="margin-top: 16px"
             input-class="resize-none"
-            @click="$event.target.tagName === 'TEXTAREA' && $event.target.select()"
+            @click="selectTextareaOnClick"
           />
         </template>
       </TabsUnderline>
@@ -41,18 +35,16 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useUserStore } from "../../../stores/user";
+import { escapeCsvField } from "./csv-field";
+import type { FriendContext } from "../../../stores/friend-types";
 
-const props = defineProps({
-  friends: {
-    type: Map,
-    required: true,
-  },
-  isExportFriendsListDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
-const emit = defineEmits(["update:isExportFriendsListDialogVisible"]);
+const props = defineProps<{
+  friends: Map<string, FriendContext>;
+  isExportFriendsListDialogVisible: boolean;
+}>();
+const emit = defineEmits<{
+  "update:isExportFriendsListDialogVisible": [value: boolean];
+}>();
 
 const { currentUser } = storeToRefs(useUserStore());
 
@@ -69,15 +61,22 @@ const isVisible = computed({
   get() {
     return props.isExportFriendsListDialogVisible;
   },
-  set(value) {
-    emit("update:isExportFriendsListDialogVisible", value);
+  set(isOpen: boolean) {
+    emit("update:isExportFriendsListDialogVisible", isOpen);
   },
 });
 
+function selectTextareaOnClick(event: MouseEvent) {
+  const target = event.target;
+  if (target instanceof HTMLTextAreaElement) {
+    target.select();
+  }
+}
+
 watch(
   () => props.isExportFriendsListDialogVisible,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       initExportFriendsListDialog();
     }
   }
@@ -89,18 +88,12 @@ function initExportFriendsListDialog() {
     return;
   }
   const lines = ["UserID,DisplayName,Memo"];
-  const _ = function (str) {
-    if (/[\x00-\x1f,"]/.test(str)) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-  const friendsList = [];
+  const friendsList: string[] = [];
   for (const userId of friends) {
     const ref = props.friends.get(userId);
-    const name = (typeof ref !== "undefined" && ref.name) || "";
-    const memo = (ref?.ref?.$memo || "").replace(/\n/g, " ");
-    lines.push(`${_(userId)},${_(name)},${_(memo)}`);
+    const name = ref?.name ?? "";
+    const memo = (ref?.ref?.$memo ?? "").replace(/\n/g, " ");
+    lines.push(`${escapeCsvField(userId)},${escapeCsvField(name)},${escapeCsvField(memo)}`);
     friendsList.push(userId);
   }
   exportFriendsListJson.value = JSON.stringify({ friends: friendsList }, null, 4);

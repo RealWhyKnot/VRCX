@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { cn } from "@/lib/utils";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 </script>
 
 <template>

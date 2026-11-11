@@ -38,12 +38,7 @@
             <div class="mr-2" style="flex: none; display: flex; align-items: center">
               <ToggleGroup type="single" variant="outline" size="sm" :model-value="sessionsViewMode" class="mr-2" @update:model-value="handleViewModeChange">
                 <TooltipWrapper side="bottom" :content="t('view.game_log.sessions.switch_to_sessions')">
-                  <ToggleGroupItem
-                    value="sessions"
-                    class="px-2"
-                    :class="sessionsViewMode === 'sessions' && 'bg-accent text-accent-foreground'"
-                    :aria-label="t('view.game_log.sessions.switch_to_sessions')"
-                  >
+                  <ToggleGroupItem value="sessions" class="px-2" :aria-label="t('view.game_log.sessions.switch_to_sessions')">
                     <Logs class="size-4" />
                   </ToggleGroupItem>
                 </TooltipWrapper>
@@ -117,7 +112,7 @@ import SelectGroup from "@/components/ui/select/SelectGroup.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { Logs, Star, Table2 } from "lucide-vue-next";
 import Toggle from "@/components/ui/toggle/Toggle.vue";
 import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
@@ -129,6 +124,8 @@ import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useGameLogStore } from "../../stores/gameLog";
 import { useModalStore } from "../../stores/modal";
 import { useVrcxStore } from "../../stores/vrcx";
+import { logFailure } from "../../stores/log-failure";
+import type { GameLogEntry } from "../../stores/gameLog/types";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
@@ -143,39 +140,49 @@ const appearanceSettingsStore = useAppearanceSettingsStore();
 const vrcxStore = useVrcxStore();
 const modalStore = useModalStore();
 
-function getGameLogCreatedAt(row) {
-  if (typeof row?.created_at === "string" && row.created_at.length > 0) {
-    return row.created_at;
-  }
-  if (typeof row?.createdAt === "string" && row.createdAt.length > 0) {
-    return row.createdAt;
-  }
-  if (typeof row?.dt === "string" && row.dt.length > 0) {
-    return row.dt;
-  }
-  return "";
+function readNonEmptyText(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function getGameLogCreatedAt(row: GameLogEntry): string {
+  return (
+    readNonEmptyText(row.created_at) ??
+    readNonEmptyText("createdAt" in row ? row.createdAt : undefined) ??
+    readNonEmptyText("dt" in row ? row.dt : undefined) ??
+    ""
+  );
 }
 
 const { t } = useI18n();
 
-const gameLogRef = ref(null);
-
-function deleteGameLogEntryPrompt(row) {
-  modalStore
+function deleteGameLogEntryPrompt(row: GameLogEntry) {
+  void modalStore
     .confirm({
       description: t("confirm.delete_log"),
       title: t("common.actions.confirm"),
     })
-    .then(({ ok }) => ok && deleteGameLogEntry(row))
-    .catch(() => {});
+    .then(({ ok }) => {
+      if (ok) {
+        deleteGameLogEntry(row);
+      }
+    })
+    .catch(logFailure("Failed to confirm game log deletion:"));
 }
 
-function deleteGameLogEntry(row) {
+function deleteGameLogEntry(row: GameLogEntry) {
   const index = gameLogTableData.value.findIndex((entry) => entry === row);
   if (index !== -1) {
     gameLogTableData.value = [...gameLogTableData.value.slice(0, index), ...gameLogTableData.value.slice(index + 1)];
   }
-  database.deleteGameLogEntry(row);
+  database.deleteGameLogEntry({
+    type: row.type,
+    created_at: row.created_at,
+    videoUrl: row.videoUrl ?? null,
+    location: row.location ?? null,
+    data: row.data ?? null,
+    message: row.message ?? null,
+    resourceUrl: row.resourceUrl ?? null,
+  });
 }
 
 const columns = createColumns({
@@ -184,15 +191,15 @@ const columns = createColumns({
   onDeletePrompt: deleteGameLogEntryPrompt,
 });
 
-function handleGameLogFilterChange(value) {
-  gameLogTable.value.filter = Array.isArray(value) ? value : [];
-  gameLogTableLookup();
+function handleGameLogFilterChange(value: unknown) {
+  gameLogTable.value.filter = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  void gameLogTableLookup().catch(logFailure("Failed to look up game log table:"));
 }
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-function getGameLogRowId(row) {
-  return `row:${row.rowId}:${row?.type ?? ""}`;
+function getGameLogRowId(row: GameLogEntry) {
+  return `row:${row.rowId}:${row.type}`;
 }
 
 const { table, pagination } = useVrcxVueTable({
@@ -218,7 +225,7 @@ const totalItems = computed(() => {
   return length > max && length < max + 51 ? max : length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pagination.value = {
     ...pagination.value,
     pageIndex: 0,
@@ -226,9 +233,9 @@ const handlePageSizeChange = (size) => {
   };
 };
 
-function handleViewModeChange(mode) {
+function handleViewModeChange(mode: unknown) {
   if (mode === "sessions" || mode === "table") {
-    setSessionsViewMode(mode);
+    void setSessionsViewMode(mode).catch(logFailure("Failed to change sessions view mode:"));
   }
 }
 </script>

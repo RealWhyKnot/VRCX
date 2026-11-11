@@ -1,11 +1,15 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
+import type { Avatar } from "vrchat";
 
 import { useSearchStore } from "../../../stores/search";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { marketplaceRequest } from "../../../api/marketplace";
+import type { Json, MarketplaceAvatarSearchParams } from "../../../types/vrcx";
 
-function createDefaultSearchMarketplaceParams() {
+type MarketplaceSearchPage = { results?: Json<Avatar>[]; hasNext?: boolean };
+
+function createDefaultSearchMarketplaceParams(): MarketplaceAvatarSearchParams {
   return {
     n: 50,
     offset: 0,
@@ -20,8 +24,8 @@ function createDefaultSearchMarketplaceParams() {
 export function useSearchMarketplace() {
   const { searchText } = storeToRefs(useSearchStore());
 
-  const searchMarketplaceParams = ref(createDefaultSearchMarketplaceParams());
-  const searchMarketplaceResults = ref([]);
+  const searchMarketplaceParams = ref<MarketplaceAvatarSearchParams>(createDefaultSearchMarketplaceParams());
+  const searchMarketplaceResults = ref<Json<Avatar>[]>([]);
   const searchMarketplaceHasNext = ref(false);
   const isSearchMarketplaceLoading = ref(false);
 
@@ -33,13 +37,11 @@ export function useSearchMarketplace() {
     await moreSearchMarketplace();
   }
 
-  async function moreSearchMarketplace(go) {
+  async function moreSearchMarketplace(go?: number) {
     const params = searchMarketplaceParams.value;
     if (go) {
-      params.offset += params.n * go;
-      if (params.offset < 0) {
-        params.offset = 0;
-      }
+      const offset = params.offset + params.n * go;
+      params.offset = offset < 0 ? 0 : offset;
     }
     isSearchMarketplaceLoading.value = true;
     await marketplaceRequest
@@ -48,8 +50,9 @@ export function useSearchMarketplace() {
         isSearchMarketplaceLoading.value = false;
       })
       .then((args) => {
-        const map = new Map();
-        for (const json of args.json.results ?? []) {
+        const page: MarketplaceSearchPage = args.json;
+        const map = new Map<string, Json<Avatar>>();
+        for (const json of page.results ?? []) {
           map.set(json.id, {
             ...json,
             name: replaceBioSymbols(json.name),
@@ -57,7 +60,7 @@ export function useSearchMarketplace() {
           });
         }
         searchMarketplaceResults.value = Array.from(map.values());
-        searchMarketplaceHasNext.value = Boolean(args.json.hasNext);
+        searchMarketplaceHasNext.value = Boolean(page.hasNext);
         return args;
       });
   }

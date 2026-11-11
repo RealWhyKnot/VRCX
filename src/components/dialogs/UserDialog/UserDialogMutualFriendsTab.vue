@@ -17,7 +17,7 @@
         <Select
           :model-value="userDialogMutualFriendSortingKey"
           :disabled="userDialog.isMutualFriendsLoading"
-          @update:model-value="setUserDialogMutualFriendSortingByKey"
+          @update:model-value="selectMutualFriendSortingKey"
         >
           <SelectTrigger size="sm" @click.stop>
             <SelectValue />
@@ -45,7 +45,7 @@
                 <User class="size-4 text-muted-foreground" />
               </AvatarFallback>
             </Avatar>
-            <IconFrame :icon-frame="user.iconFrame" />
+            <IconFrame :icon-frame="user.iconFrame ?? ''" />
           </div>
           <div class="flex-1 overflow-hidden">
             <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName"></span>
@@ -80,6 +80,7 @@ import { database } from "../../../services/database";
 import { processBulk } from "../../../services/request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { useUserStore } from "../../../stores/user";
+import type { UserSorting } from "../../../stores/user-state";
 import { userDialogMutualFriendSortingOptions } from "../../../shared/constants/user";
 import { userRequest } from "../../../api/user";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
@@ -97,12 +98,18 @@ const { selectedKey: userDialogMutualFriendSortingKey, selectByKey: setUserDialo
   setUserDialogMutualFriendSorting
 );
 
+function selectMutualFriendSortingKey(value: unknown) {
+  if (typeof value === "string") {
+    setUserDialogMutualFriendSortingByKey(value);
+  }
+}
+
 const searchQuery = ref("");
 const filteredMutualFriends = computed(() => {
   const friends = userDialog.value.mutualFriends;
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return friends;
-  return friends.filter((u) => (u.displayName || "").toLowerCase().includes(query));
+  return friends.filter((u) => (u.displayName ?? "").toLowerCase().includes(query));
 });
 watch(
   () => userDialog.value.id,
@@ -111,7 +118,7 @@ watch(
   }
 );
 
-async function setUserDialogMutualFriendSorting(sortOrder) {
+function setUserDialogMutualFriendSorting(sortOrder: UserSorting) {
   const D = userDialog.value;
   D.mutualFriendSorting = sortOrder;
   switch (sortOrder.value) {
@@ -127,7 +134,7 @@ async function setUserDialogMutualFriendSorting(sortOrder) {
   }
 }
 
-async function getUserMutualFriends(userId) {
+function getUserMutualFriends(userId: string) {
   userDialog.value.mutualFriends = [];
   if (currentUser.value.hasSharedConnectionsOptOut) {
     return;
@@ -139,7 +146,7 @@ async function getUserMutualFriends(userId) {
     offset: 0,
   };
   processBulk({
-    fn: userRequest.getMutualFriends,
+    fn: (params) => userRequest.getMutualFriends(params),
     N: -1,
     params,
     handle: (args) => {
@@ -156,13 +163,17 @@ async function getUserMutualFriends(userId) {
       }
       setUserDialogMutualFriendSorting(userDialog.value.mutualFriendSorting);
     },
-    done: (success) => {
+    done: (isSuccess) => {
       userDialog.value.isMutualFriendsLoading = false;
-      if (success) {
+      if (isSuccess) {
         const mutualIds = userDialog.value.mutualFriends.map((u) => u.id);
-        database.updateMutualsForFriend(userId, mutualIds);
+        void database.updateMutualsForFriend(userId, mutualIds).catch((err: unknown) => {
+          console.error(err);
+        });
       }
     },
+  }).catch((err: unknown) => {
+    console.error(err);
   });
 }
 

@@ -1,18 +1,35 @@
 <script setup lang="ts">
 import { TooltipProvider } from "reka-ui";
+import { computed } from "vue";
 
-const props = defineProps({
-  delayDuration: { type: Number, required: false, default: 0 },
-  skipDelayDuration: { type: Number, required: false },
-  disableHoverableContent: { type: Boolean, required: false },
-  disableClosingTrigger: { type: Boolean, required: false },
-  disabled: { type: Boolean, required: false },
-  ignoreNonKeyboardFocus: { type: Boolean, required: false, default: true },
-});
+const props = withDefaults(
+  defineProps<{
+    delayDuration?: number;
+    skipDelayDuration?: number | undefined;
+    disableHoverableContent?: boolean;
+    disableClosingTrigger?: boolean;
+    disabled?: boolean;
+    ignoreNonKeyboardFocus?: boolean;
+  }>(),
+  {
+    delayDuration: 0,
+    skipDelayDuration: undefined,
+    ignoreNonKeyboardFocus: true,
+  }
+);
+
+const delegatedProps = computed(() => ({
+  delayDuration: props.delayDuration,
+  ...(props.skipDelayDuration === undefined ? {} : { skipDelayDuration: props.skipDelayDuration }),
+  disableHoverableContent: props.disableHoverableContent,
+  disableClosingTrigger: props.disableClosingTrigger,
+  disabled: props.disabled,
+  ignoreNonKeyboardFocus: props.ignoreNonKeyboardFocus,
+}));
 </script>
 
 <template>
-  <TooltipProvider v-bind="props">
+  <TooltipProvider v-bind="delegatedProps">
     <slot />
   </TooltipProvider>
 </template>

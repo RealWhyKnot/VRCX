@@ -8,9 +8,10 @@
         <InputGroupAction
           v-for="(provider, index) in avatarRemoteDatabaseProviderList"
           :key="index"
-          v-model="avatarRemoteDatabaseProviderList[index]"
+          :model-value="provider"
           class="mt-1.5"
           size="sm"
+          @update:model-value="(value) => setAvatarProvider(index, value)"
           @change="saveAvatarProviderList"
         >
           <template #actions>
@@ -46,14 +47,9 @@ const avatarProviderStore = useAvatarProviderStore();
 const { avatarRemoteDatabaseProviderList } = storeToRefs(avatarProviderStore);
 const { saveAvatarProviderList, removeAvatarProvider } = avatarProviderStore;
 
-defineProps({
-  isAvatarProviderDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
+defineProps<{ isAvatarProviderDialogVisible: boolean }>();
 
-const emit = defineEmits(["update:isAvatarProviderDialogVisible"]);
+const emit = defineEmits<{ "update:isAvatarProviderDialogVisible": [value: boolean] }>();
 
 function closeDialog() {
   emit("update:isAvatarProviderDialogVisible", false);
@@ -61,5 +57,11 @@ function closeDialog() {
 
 function addProvider() {
   avatarRemoteDatabaseProviderList.value.push("");
+}
+
+function setAvatarProvider(index: number, value: unknown) {
+  if (typeof value === "string") {
+    avatarRemoteDatabaseProviderList.value[index] = value;
+  }
 }
 </script>

@@ -13,10 +13,31 @@ import { languageClass, statusClass } from "../../shared/utils/user";
 import { openExternalLink } from "../../shared/utils/app-actions";
 import { sortStatus } from "../../shared/utils/friend";
 import { timeToText } from "../../shared/utils/base/format";
+import type { Ref } from "vue";
+import type { VrcxUser } from "../../types/vrcx";
+import type { VrcxColumn } from "./vrcx-column";
 
 const { t } = i18n.global;
 
-const sortButton = ({ column, label, descFirst = false }) => {
+type FriendProfile = { bioLinks: string[] };
+
+type SortableColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+type FriendRow = { original: VrcxUser };
+
+type FriendColumnsContext = {
+  randomUserColours: Ref<boolean>;
+  selectedFriends: Ref<Set<string>>;
+  onToggleFriendSelection: (id: string) => void;
+  onConfirmDeleteFriend: (id: string) => void;
+  userImage: (user: VrcxUser, isIcon: boolean) => string;
+  friendProfiles: Ref<Map<string | null, FriendProfile>>;
+};
+
+const sortButton = ({ column, label, descFirst = false }: { column: SortableColumn; label: string | (() => string); descFirst?: boolean }) => {
   const resolvedLabel = typeof label === "function" ? label() : label;
   return (
     <Button
@@ -38,43 +59,54 @@ const sortButton = ({ column, label, descFirst = false }) => {
   );
 };
 
-const compareNumbers = (a, b) => (a ?? 0) - (b ?? 0);
+const compareNumbers = (a: number | null | undefined, b: number | null | undefined) => (a ?? 0) - (b ?? 0);
+const textOrEmpty = (value: string | undefined) => value ?? "";
+const statusOrOffline = (status: VrcxUser["status"] | undefined) => status ?? "offline";
 
-const sortAlphabetically = (a, b) => {
+const sortAlphabetically = (a: string | null | undefined, b: string | null | undefined) => {
   if (!a || !b) {
     if (!a && !b) return 0;
     return !a ? -1 : 1;
   }
-  return String(a).toLowerCase().localeCompare(String(b).toLowerCase());
+  return a.toLowerCase().localeCompare(b.toLowerCase());
 };
 
-const sortLanguages = (a, b) => {
+const sortLanguages = (a: { value: string }[] | undefined, b: { value: string }[] | undefined) => {
   const as = Array.isArray(a) ? a.map((i) => i.value).sort() : [];
   const bs = Array.isArray(b) ? b.map((i) => i.value).sort() : [];
   return JSON.stringify(as).localeCompare(JSON.stringify(bs));
 };
 
-const withFriendNumber = (rowA, rowB, result) => {
+const withFriendNumber = (rowA: FriendRow, rowB: FriendRow, result: number) => {
   if (result !== 0) {
     return result;
   }
-  return compareNumbers(rowA.original?.$friendNumber, rowB.original?.$friendNumber);
+  return compareNumbers(rowA.original.$friendNumber, rowB.original.$friendNumber);
 };
 
-const sortByNumber = (selector) => (rowA, rowB) => withFriendNumber(rowA, rowB, compareNumbers(selector(rowA.original), selector(rowB.original)));
+const sortByNumber = (selector: (row: VrcxUser) => number | null | undefined) => (rowA: FriendRow, rowB: FriendRow) =>
+  withFriendNumber(rowA, rowB, compareNumbers(selector(rowA.original), selector(rowB.original)));
 
-const sortByString = (selector) => (rowA, rowB) => withFriendNumber(rowA, rowB, sortAlphabetically(selector(rowA.original), selector(rowB.original)));
+const sortByString = (selector: (row: VrcxUser) => string | null | undefined) => (rowA: FriendRow, rowB: FriendRow) =>
+  withFriendNumber(rowA, rowB, sortAlphabetically(selector(rowA.original), selector(rowB.original)));
 
-const sortByStatus = (rowA, rowB) => {
-  const a = rowA.original?.status ?? "offline";
-  const b = rowB.original?.status ?? "offline";
+const sortByStatus = (rowA: FriendRow, rowB: FriendRow) => {
+  const a = statusOrOffline(rowA.original.status);
+  const b = statusOrOffline(rowB.original.status);
   return withFriendNumber(rowA, rowB, sortStatus(a, b));
 };
 
-const sortByLanguages = (rowA, rowB) => withFriendNumber(rowA, rowB, sortLanguages(rowA.original?.$languages, rowB.original?.$languages));
+const sortByLanguages = (rowA: FriendRow, rowB: FriendRow) => withFriendNumber(rowA, rowB, sortLanguages(rowA.original.$languages, rowB.original.$languages));
 
-export const createColumns = ({ randomUserColours, selectedFriends, onToggleFriendSelection, onConfirmDeleteFriend, userImage, friendProfiles }) => {
-  const cols = [];
+export const createColumns = ({
+  randomUserColours,
+  selectedFriends,
+  onToggleFriendSelection,
+  onConfirmDeleteFriend,
+  userImage,
+  friendProfiles,
+}: FriendColumnsContext): VrcxColumn<VrcxUser>[] => {
+  const cols: VrcxColumn<VrcxUser>[] = [];
 
   cols.push(
     {
@@ -99,18 +131,18 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         tdClass: "p-0",
       },
       cell: ({ row }) => {
-        const id = row.original?.id;
-        const checked = selectedFriends?.value?.has?.(id);
+        const id = row.original.id;
+        const isChecked = selectedFriends.value.has(id);
         return (
-          <div class="flex items-center justify-center" onClick={(event) => event.stopPropagation()}>
-            <Checkbox modelValue={checked} onUpdate:modelValue={() => onToggleFriendSelection?.(id)} />
+          <div class="flex items-center justify-center" onClick={(event: MouseEvent) => event.stopPropagation()}>
+            <Checkbox modelValue={isChecked} onUpdate:modelValue={() => onToggleFriendSelection(id)} />
           </div>
         );
       },
     },
     {
       id: "friendNumber",
-      accessorFn: (row) => row?.$friendNumber,
+      accessorFn: (row) => row.$friendNumber,
       header: ({ column }) =>
         sortButton({
           column,
@@ -119,12 +151,12 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 100,
       meta: { label: () => t("table.friendList.no") },
-      sortFn: sortByNumber((row) => row?.$friendNumber ?? 0),
-      cell: ({ row }) => <span>{row.original?.$friendNumber || ""}</span>,
+      sortFn: sortByNumber((row) => row.$friendNumber),
+      cell: ({ row }) => <span>{row.original.$friendNumber || ""}</span>,
     },
     {
       id: "avatar",
-      accessorFn: (row) => row?.photo,
+      accessorFn: (row) => ("photo" in row ? row.photo : undefined),
       header: () => t("table.friendList.avatar"),
       size: 90,
       enableSorting: false,
@@ -145,7 +177,7 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
     },
     {
       id: "displayName",
-      accessorFn: (row) => row?.displayName,
+      accessorFn: (row) => row.displayName,
       header: ({ column }) =>
         sortButton({
           column,
@@ -153,19 +185,19 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 200,
       meta: { label: () => t("table.friendList.displayName") },
-      sortFn: sortByString((row) => row?.displayName ?? ""),
+      sortFn: sortByString((row) => row.displayName),
       cell: ({ row }) => {
-        const style = randomUserColours?.value ? { color: row.original?.$userColour } : null;
+        const style = randomUserColours.value ? { color: row.original.$userColour } : null;
         return (
           <span class="name" style={style}>
-            {row.original?.displayName ?? ""}
+            {row.original.displayName}
           </span>
         );
       },
     },
     {
       id: "rank",
-      accessorFn: (row) => row?.$trustSortNum,
+      accessorFn: (row) => row.$trustSortNum,
       header: ({ column }) =>
         sortButton({
           column,
@@ -173,21 +205,21 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 140,
       meta: { label: () => t("table.friendList.rank") },
-      sortFn: sortByNumber((row) => row?.$trustSortNum ?? 0),
+      sortFn: sortByNumber((row) => row.$trustSortNum),
       cell: ({ row }) => {
-        if (randomUserColours?.value) {
-          return <span class={row.original?.$trustClass}>{row.original?.$trustLevel ?? ""}</span>;
+        if (randomUserColours.value) {
+          return <span class={row.original.$trustClass}>{row.original.$trustLevel}</span>;
         }
         return (
-          <span class="name" style={{ color: row.original?.$userColour }}>
-            {row.original?.$trustLevel ?? ""}
+          <span class="name" style={{ color: row.original.$userColour }}>
+            {row.original.$trustLevel}
           </span>
         );
       },
     },
     {
       id: "status",
-      accessorFn: (row) => row?.status,
+      accessorFn: (row) => row.status,
       header: ({ column }) =>
         sortButton({
           column,
@@ -200,18 +232,18 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         label: () => t("table.friendList.status"),
       },
       cell: ({ row }) => {
-        const status = row.original?.status;
+        const status = row.original.status;
         return (
           <span class="flex items-center">
             {status && status !== "offline" ? <i class={["x-user-status", statusClass(status), "mr-1"]}></i> : null}
-            <span>{row.original?.statusDescription ?? ""}</span>
+            <span>{textOrEmpty(row.original.statusDescription)}</span>
           </span>
         );
       },
     },
     {
       id: "language",
-      accessorFn: (row) => row?.$languages,
+      accessorFn: (row) => row.$languages,
       header: ({ column }) =>
         sortButton({
           column,
@@ -222,7 +254,7 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
       sortFn: sortByLanguages,
       cell: ({ row }) => (
         <div class="flex items-center">
-          {(row.original?.$languages ?? []).map((item) => (
+          {row.original.$languages.map((item) => (
             <TooltipWrapper key={item.key} side="top" content={`${item.value} (${item.key})`}>
               <span class={["flags", "inline-block", "mr-1", languageClass(item.key)]}></span>
             </TooltipWrapper>
@@ -238,12 +270,12 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
       meta: { label: () => t("table.friendList.bioLink") },
       cell: ({ row }) => (
         <div class="flex items-center">
-          {(friendProfiles.value.get(row.original?.id)?.bioLinks ?? []).filter(Boolean).map((link, index) => (
-            <TooltipWrapper key={index} content={String(link)}>
+          {(friendProfiles.value.get(row.original.id)?.bioLinks ?? []).filter(Boolean).map((link, index) => (
+            <TooltipWrapper key={index} content={link}>
               <img
                 src={getFaviconUrl(link)}
                 class="h-4 w-4 mr-1 align-middle cursor-pointer"
-                onClick={(event) => {
+                onClick={(event: MouseEvent) => {
                   event.stopPropagation();
                   openExternalLink(link);
                 }}
@@ -256,14 +288,14 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
     },
     {
       id: "joinCount",
-      accessorFn: (row) => row?.$joinCount,
+      accessorFn: (row) => row.$joinCount,
       header: ({ column }) =>
         sortButton({
           column,
           label: () => t("table.friendList.joinCount"),
         }),
       size: 120,
-      sortFn: sortByNumber((row) => row?.$joinCount ?? 0),
+      sortFn: sortByNumber((row) => row.$joinCount),
       meta: {
         class: "text-right",
         label: () => t("table.friendList.joinCount"),
@@ -271,26 +303,26 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
     },
     {
       id: "timeTogether",
-      accessorFn: (row) => row?.$timeSpent,
+      accessorFn: (row) => row.$timeSpent,
       header: ({ column }) =>
         sortButton({
           column,
           label: () => t("table.friendList.timeTogether"),
         }),
       size: 140,
-      sortFn: sortByNumber((row) => row?.$timeSpent ?? 0),
+      sortFn: sortByNumber((row) => row.$timeSpent),
       meta: {
         class: "text-right",
         label: () => t("table.friendList.timeTogether"),
       },
       cell: ({ row }) => {
-        const time = row.original?.$timeSpent;
+        const time = row.original.$timeSpent;
         return time ? <span>{timeToText(time)}</span> : null;
       },
     },
     {
       id: "lastSeen",
-      accessorFn: (row) => row?.$lastSeen,
+      accessorFn: (row) => row.$lastSeen,
       header: ({ column }) =>
         sortButton({
           column,
@@ -298,34 +330,34 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 170,
       meta: { label: () => t("table.friendList.lastSeen") },
-      sortFn: sortByString((row) => row?.$lastSeen ?? ""),
+      sortFn: sortByString((row) => row.$lastSeen),
       cell: ({ row }) => {
-        const text = formatDateFilter(row.original?.$lastSeen, "long");
+        const text = formatDateFilter(row.original.$lastSeen, "long");
         return <span>{text === "-" ? "" : text}</span>;
       },
     },
     {
       id: "mutualFriends",
-      accessorFn: (row) => row?.$mutualCount,
+      accessorFn: (row) => row.$mutualCount,
       header: ({ column }) =>
         sortButton({
           column,
           label: () => t("table.friendList.mutualFriends"),
         }),
       size: 120,
-      sortFn: sortByNumber((row) => row?.$mutualCount ?? 0),
+      sortFn: sortByNumber((row) => row.$mutualCount),
       meta: {
         class: "text-right",
         label: () => t("table.friendList.mutualFriends"),
       },
       cell: ({ row }) => {
-        const count = row.original?.$mutualCount;
-        const optedOut = row.original?.$mutualOptedOut;
-        if (!count && !optedOut) return null;
+        const count = row.original.$mutualCount;
+        const isOptedOut = row.original.$mutualOptedOut;
+        if (!count && !isOptedOut) return null;
         return (
           <span class="inline-flex items-center gap-1">
             {count || null}
-            {optedOut ? (
+            {isOptedOut ? (
               <TooltipWrapper side="top" content={t("table.friendList.mutualOptedOut")}>
                 <EyeOff class="h-3.5 w-3.5 text-muted-foreground" />
               </TooltipWrapper>
@@ -336,7 +368,7 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
     },
     {
       id: "lastActivity",
-      accessorFn: (row) => row?.last_activity,
+      accessorFn: (row) => row.last_activity,
       header: ({ column }) =>
         sortButton({
           column,
@@ -344,12 +376,12 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 200,
       meta: { label: () => t("table.friendList.lastActivity") },
-      sortFn: sortByString((row) => row?.last_activity ?? ""),
-      cell: ({ row }) => <span>{formatDateFilter(row.original?.last_activity, "long")}</span>,
+      sortFn: sortByString((row) => row.last_activity),
+      cell: ({ row }) => <span>{formatDateFilter(row.original.last_activity, "long")}</span>,
     },
     {
       id: "lastLogin",
-      accessorFn: (row) => row?.last_login,
+      accessorFn: (row) => row.last_login,
       header: ({ column }) =>
         sortButton({
           column,
@@ -357,12 +389,12 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 200,
       meta: { label: () => t("table.friendList.lastLogin") },
-      sortFn: sortByString((row) => row?.last_login ?? ""),
-      cell: ({ row }) => <span>{formatDateFilter(row.original?.last_login, "long")}</span>,
+      sortFn: sortByString((row) => row.last_login),
+      cell: ({ row }) => <span>{formatDateFilter(row.original.last_login, "long")}</span>,
     },
     {
       id: "dateJoined",
-      accessorFn: (row) => row?.date_joined,
+      accessorFn: (row) => row.date_joined,
       header: ({ column }) =>
         sortButton({
           column,
@@ -370,8 +402,8 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
         }),
       size: 120,
       meta: { label: () => t("table.friendList.dateJoined") },
-      sortFn: sortByString((row) => row?.date_joined ?? ""),
-      cell: ({ row }) => <span>{row.original?.date_joined ?? ""}</span>,
+      sortFn: sortByString((row) => row.date_joined),
+      cell: ({ row }) => <span>{textOrEmpty(row.original.date_joined)}</span>,
     },
     {
       id: "unfriend",
@@ -385,9 +417,9 @@ export const createColumns = ({ randomUserColours, selectedFriends, onToggleFrie
       cell: ({ row }) => (
         <UserMinus
           class="h-4 w-4 text-destructive inline-block"
-          onClick={(event) => {
+          onClick={(event: MouseEvent) => {
             event.stopPropagation();
-            onConfirmDeleteFriend?.(row.original?.id);
+            onConfirmDeleteFriend(row.original.id);
           }}
         />
       ),

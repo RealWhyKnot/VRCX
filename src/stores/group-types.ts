@@ -17,6 +17,10 @@ export type GroupPostEntry = Json<GroupPost>;
 
 export type GroupRoleTemplate = Json<GroupRoleTemplateValues> & { value?: string };
 
+export type GroupMemberEntry = Json<GroupMember> & {
+  user?: (NonNullable<Json<GroupMember>["user"]> & { $userColour?: string | undefined }) | null | undefined;
+};
+
 export type GroupEditSource = VrcxGroup & {
   roleTemplate?: string;
   roleTemplates?: GroupRoleTemplate[];
@@ -48,9 +52,9 @@ export type GroupDialogState = {
   posts: GroupPostEntry[];
   postsFiltered: GroupPostEntry[];
   calendar: Json<CalendarEvent>[];
-  members: Json<GroupMember>[];
+  members: GroupMemberEntry[];
   memberSearch: string;
-  memberSearchResults: Json<GroupMember>[];
+  memberSearchResults: GroupMemberEntry[];
   instances: InstanceRoom[];
   memberRoles: Json<GroupRole>[];
   lastVisit: string;
@@ -106,9 +110,9 @@ export type GroupEventEditDialogState = {
   platforms: string[];
   languages: string[];
   sendCreationNotification: boolean;
-  hostEarlyJoinMinutes: number;
-  guestEarlyJoinMinutes: number;
-  closeInstanceAfterEndMinutes: number;
+  hostEarlyJoinMinutes: number | string;
+  guestEarlyJoinMinutes: number | string;
+  closeInstanceAfterEndMinutes: number | string;
   seriesId: Json<CalendarEvent>["seriesId"];
   recurrence: Json<CalendarEvent>["recurrence"];
 };

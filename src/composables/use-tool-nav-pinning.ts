@@ -17,19 +17,7 @@ import {
 } from "../components/nav-menu/nav-config-utils";
 import { normalizeHiddenKeys, sanitizeLayout } from "../components/nav-menu/nav-menu-utils";
 import { dispatchNavLayoutUpdated, NAV_LAYOUT_UPDATED_EVENT } from "../components/nav-menu/nav-layout-events";
-
-type NavItemEntry = { type: "item"; key: string };
-
-type NavFolderEntry = {
-  type: "folder";
-  id?: string;
-  nameKey?: string;
-  name?: string;
-  icon?: string;
-  items?: string[];
-};
-
-type NavLayoutEntry = NavItemEntry | NavFolderEntry;
+import type { NavDefinition, NavLayoutEntry, NavLayoutFolderEntry } from "../components/nav-menu/nav-menu-types";
 
 type NavConfig = {
   layout: NavLayoutEntry[];
@@ -77,7 +65,7 @@ function insertToolNavItem(layout: NavLayoutEntry[], navKey: string, t: Translat
     if (entry.type === "item") {
       return entry.key === navKey;
     }
-    return entry.items?.includes(navKey) ?? false;
+    return entry.items.includes(navKey);
   });
 
   if (isAlreadyInLayout) {
@@ -96,7 +84,7 @@ function insertToolNavItem(layout: NavLayoutEntry[], navKey: string, t: Translat
     return nextLayout;
   }
 
-  const folderWithTools = nextLayout.find((entry) => entry.type === "folder" && (entry.items ?? []).some((key) => key.startsWith("tool-")));
+  const folderWithTools = nextLayout.find((entry) => entry.type === "folder" && entry.items.some((key) => key.startsWith("tool-")));
 
   if (folderWithTools) {
     return nextLayout.map((entry) => {
@@ -106,12 +94,12 @@ function insertToolNavItem(layout: NavLayoutEntry[], navKey: string, t: Translat
 
       return {
         ...entry,
-        items: [...(entry.items ?? []), navKey],
+        items: [...entry.items, navKey],
       };
     });
   }
 
-  const toolsFolder: NavFolderEntry = {
+  const toolsFolder: NavLayoutFolderEntry = {
     type: "folder",
     id: "default-folder-tools-shortcuts",
     nameKey: "nav_tooltip.tools",
@@ -136,7 +124,7 @@ function removeToolNavItem(layout: NavLayoutEntry[], navKey: string): NavLayoutE
         return entry.key === navKey ? null : entry;
       }
 
-      const nextItems = (entry.items ?? []).filter((key) => key !== navKey);
+      const nextItems = entry.items.filter((key) => key !== navKey);
       if (!nextItems.length) {
         return null;
       }
@@ -153,16 +141,16 @@ export function useToolNavPinning() {
   const dashboardStore = useDashboardStore();
   const pinnedToolKeysRef = ref(new Set<string>());
 
-  const buildDefinitions = (): unknown[] => [navDefinitions, dashboardStore.getDashboardNavDefinitions()].flat();
+  const buildDefinitions = (): NavDefinition[] => [navDefinitions, dashboardStore.getDashboardNavDefinitions()].flat();
 
-  const buildDefaultLayout = (): unknown => insertDashboardEntries(createBaseDefaultNavLayout(t), dashboardStore.getDashboardNavDefinitions());
+  const buildDefaultLayout = (): NavLayoutEntry[] => insertDashboardEntries(createBaseDefaultNavLayout(t), dashboardStore.getDashboardNavDefinitions());
 
-  const buildSanitizeDefinitions = (layout: NavLayoutEntry[] = [], hiddenKeys: string[] = []): unknown => {
+  const buildSanitizeDefinitions = (layout: NavLayoutEntry[] = [], hiddenKeys: string[] = []): NavDefinition[] => {
     return buildNavDefinitionsForLayout(navDefinitions, dashboardStore.getDashboardNavDefinitions(), layout, hiddenKeys);
   };
 
   const loadConfig = async (): Promise<NavConfig> => {
-    const stored: unknown = await loadStoredNavConfig(configRepository, buildDefaultLayout(), {
+    const stored = await loadStoredNavConfig(configRepository, buildDefaultLayout(), {
       configKey: NAV_CONFIG_KEY,
       filterHiddenKey: (key: unknown) => typeof key !== "string" || !key.startsWith("tool-"),
     });
@@ -188,9 +176,9 @@ export function useToolNavPinning() {
     const nextLayout = insertToolNavItem(layout, navKey, t, options.placement);
     const nextHiddenKeys = hiddenKeys.filter((key) => key !== navKey);
     const definitions = buildSanitizeDefinitions(nextLayout, nextHiddenKeys);
-    const definitionMap: unknown = createNavDefinitionMap(buildDefinitions());
-    const normalizedHiddenKeys: unknown = normalizeHiddenKeys(nextHiddenKeys, definitionMap);
-    const sanitizedLayout: unknown = sanitizeLayout(nextLayout, normalizedHiddenKeys, definitionMap, definitions, t, generateNavFolderId);
+    const definitionMap = createNavDefinitionMap(buildDefinitions());
+    const normalizedHiddenKeys = normalizeHiddenKeys(nextHiddenKeys, definitionMap);
+    const sanitizedLayout = sanitizeLayout(nextLayout, normalizedHiddenKeys, definitionMap, definitions, t, generateNavFolderId);
 
     await configRepository.setString(
       NAV_CONFIG_KEY,
@@ -211,9 +199,9 @@ export function useToolNavPinning() {
     const nextLayout = removeToolNavItem(layout, navKey);
     const nextHiddenKeys = hiddenKeys.filter((key) => key !== navKey);
     const definitions = buildSanitizeDefinitions(nextLayout, nextHiddenKeys);
-    const definitionMap: unknown = createNavDefinitionMap(buildDefinitions());
-    const normalizedHiddenKeys: unknown = normalizeHiddenKeys(nextHiddenKeys, definitionMap);
-    const sanitizedLayout: unknown = sanitizeLayout(nextLayout, normalizedHiddenKeys, definitionMap, definitions, t, generateNavFolderId);
+    const definitionMap = createNavDefinitionMap(buildDefinitions());
+    const normalizedHiddenKeys = normalizeHiddenKeys(nextHiddenKeys, definitionMap);
+    const sanitizedLayout = sanitizeLayout(nextLayout, normalizedHiddenKeys, definitionMap, definitions, t, generateNavFolderId);
 
     await configRepository.setString(
       NAV_CONFIG_KEY,

@@ -11,7 +11,7 @@
             <User class="size-5 text-muted-foreground" />
           </AvatarFallback>
         </Avatar>
-        <IconFrame :enabled="sidebarCosmetics" :icon-frame="friend.ref.iconFrame" />
+        <IconFrame :enabled="sidebarCosmetics" :icon-frame="friend.ref.iconFrame ?? ''" />
       </div>
       <div class="flex-1 overflow-hidden h-9 flex flex-col justify-between">
         <span v-if="!hideNicknames && friend.$nickName" class="block truncate font-medium leading-[18px]" :style="{ color: friend.ref.$userColour }">
@@ -62,17 +62,18 @@ import IconFrame from "@/components/IconFrame.vue";
 
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useFriendStore } from "../../../stores/friend";
+import type { FriendContext } from "../../../stores/friend-types";
 import { useUserDisplay } from "../../../composables/use-user-display";
 
 import "@/styles/status-icon.css";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { confirmDeleteFriend } from "../../../coordinators/friend-relationship-coordinator";
 
-const props = defineProps({
-  friend: { type: Object, required: true },
-  isGroupByInstance: Boolean,
-  isFavorite: Boolean,
-});
+const props = defineProps<{
+  friend: FriendContext;
+  isGroupByInstance?: boolean | undefined;
+  isFavorite?: boolean | undefined;
+}>();
 
 const { hideNicknames, sidebarCosmetics } = storeToRefs(useAppearanceSettingsStore());
 const { isRefreshFriendsLoading } = storeToRefs(useFriendStore());
@@ -87,8 +88,8 @@ const friendStatusClass = computed(() => {
   return userStatusClass(props.friend.ref, props.friend.pendingOffline);
 });
 
-const epoch = computed(() => (isFriendTraveling.value ? props.friend.ref?.$travelingToTime : props.friend.ref?.$location_at));
+const epoch = computed(() => (isFriendTraveling.value ? props.friend.ref?.$travelingToTime : props.friend.ref?.$location_at) ?? 0);
 
-const locationProp = computed(() => props.friend.ref?.location || "");
-const travelingProp = computed(() => props.friend.ref?.travelingToLocation || "");
+const locationProp = computed(() => props.friend.ref?.location ?? "");
+const travelingProp = computed(() => props.friend.ref?.travelingToLocation ?? "");
 </script>

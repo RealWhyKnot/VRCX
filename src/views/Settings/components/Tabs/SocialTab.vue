@@ -44,7 +44,7 @@
 
     <SettingsGroup :title="t('view.settings.social.favorites.header')">
       <SettingsItem :label="t('view.settings.general.favorites.header')" :description="t('view.settings.general.favorites.header_tooltip')">
-        <Select :model-value="localFavoriteFriendsGroups" multiple @update:model-value="setLocalFavoriteFriendsGroups">
+        <Select :model-value="localFavoriteFriendsGroups" multiple @update:model-value="handleLocalFavoriteFriendsGroupsChange">
           <SelectTrigger class="w-48">
             <SelectValue :placeholder="t('view.settings.general.favorites.group_placeholder')" />
           </SelectTrigger>
@@ -103,4 +103,10 @@ const { recentActionCooldownEnabled, recentActionCooldownMinutes, localFavoriteF
 const { setRecentActionCooldownEnabled, setRecentActionCooldownMinutes, setLocalFavoriteFriendsGroups, setAutoDeclineFriendRequests } = generalSettingsStore;
 
 const { favoriteFriendGroups, localFriendFavoriteGroups } = storeToRefs(favoriteStore);
+
+function handleLocalFavoriteFriendsGroupsChange(value: unknown) {
+  if (Array.isArray(value)) {
+    setLocalFavoriteFriendsGroups(value.filter((group): group is string => typeof group === "string"));
+  }
+}
 </script>

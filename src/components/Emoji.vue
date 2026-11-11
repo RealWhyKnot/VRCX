@@ -3,7 +3,7 @@
     <div
       v-if="image.frames"
       class="avatar absolute top-0 left-0"
-      :style="generateEmojiStyle(imageUrl, image.framesOverTime, image.frames, image.loopStyle, effectiveSize)"
+      :style="generateEmojiStyle(imageUrl, image.framesOverTime ?? 0, image.frames, image.loopStyle, effectiveSize)"
     ></div>
     <Avatar v-else class="rounded w-full h-full">
       <AvatarImage :src="imageUrl" class="object-cover" />
@@ -25,16 +25,26 @@ import AvatarImage from "./ui/avatar/AvatarImage.vue";
 import { extractFileId } from "../shared/utils/file-utils";
 import { generateEmojiStyle } from "../shared/utils/gallery";
 import { useGalleryStore } from "../stores/gallery";
+import type { GalleryFile } from "../stores/gallery-types";
+import { logFailure } from "../stores/log-failure";
+
+defineOptions({ name: "EmojiImage" });
 
 const { getCachedEmoji } = useGalleryStore();
 const { emojiTable } = useGalleryStore();
 
-const props = defineProps({
-  imageUrl: { type: String, default: "" },
-  size: { type: Number, default: 0 },
-});
+const props = withDefaults(
+  defineProps<{
+    imageUrl?: string;
+    size?: number;
+  }>(),
+  {
+    imageUrl: "",
+    size: 0,
+  }
+);
 
-const containerRef = ref(null);
+const containerRef = ref<HTMLDivElement | null>(null);
 const observedWidth = ref(0);
 
 useResizeObserver(containerRef, (entries) => {
@@ -53,15 +63,12 @@ const effectiveSize = computed(() => {
 
 const sizeStyle = computed(() => {
   if (props.size > 0) {
-    return { width: props.size + "px", height: props.size + "px" };
+    return { width: `${props.size}px`, height: `${props.size}px` };
   }
   return {};
 });
 
-const image = ref({
-  frames: null,
-  framesOverTime: null,
-  loopStyle: null,
+const image = ref<Partial<GalleryFile>>({
   versions: [],
 });
 
@@ -80,6 +87,6 @@ async function update() {
 watch(() => props.imageUrl, update);
 
 onMounted(() => {
-  update();
+  void update().catch(logFailure("Failed to load emoji:"));
 });
 </script>

@@ -127,7 +127,8 @@ import { AppDebug } from "@/services/app-config";
 import { commaNumber } from "@/shared/utils/base/string";
 import { useGalleryStore } from "@/stores/gallery";
 import { useUserStore } from "@/stores/user";
-import { useStoreShelves } from "./composables/use-store-shelves";
+import { logError } from "@/stores/vrcx-messages";
+import { useStoreShelves, type StoreListing } from "./composables/use-store-shelves";
 
 const { t } = useI18n();
 const router = useRouter();
@@ -138,26 +139,26 @@ const { searchText, filteredStoreShelves, isStoreShelvesLoading, purchasingListi
   useStoreShelves();
 
 onActivated(() => {
-  getStoreShelves();
+  void getStoreShelves().catch(logError);
 });
 
 function goBack() {
-  router.push({ name: "tools" });
+  void router.push({ name: "tools" }).catch(logError);
 }
 
-function getFileImageUrl(fileId) {
+function getFileImageUrl(fileId: string | null | undefined) {
   return `${AppDebug.endpointDomain}/file/${fileId}/1/`;
 }
 
-function getListingDaysLeft(listing) {
-  const expireTime = Date.parse(listing.whenToExpire);
+function getListingDaysLeft(listing: StoreListing) {
+  const expireTime = listing.whenToExpire ? Date.parse(listing.whenToExpire) : Number.NaN;
   if (!Number.isFinite(expireTime) || expireTime <= Date.now()) {
     return null;
   }
   return Math.ceil((expireTime - Date.now()) / 86400000);
 }
 
-function formatListingPrice(listing) {
+function formatListingPrice(listing: StoreListing) {
   if (!listing.priceTokens) {
     return t("view.tools.marketplace.free");
   }

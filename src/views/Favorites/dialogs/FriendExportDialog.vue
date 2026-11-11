@@ -26,7 +26,7 @@
           <SelectGroup>
             <SelectItem :value="FRIEND_EXPORT_NONE_VALUE">{{ t("dialog.gallery_select.none") }}</SelectItem>
             <SelectItem v-for="group in localFriendFavoriteGroups" :key="group" :value="group">
-              {{ group }} ({{ localFriendFavorites[group].length }})
+              {{ group }} ({{ localFriendFavGroupLength(group) }})
             </SelectItem>
           </SelectGroup>
         </SelectContent>
@@ -56,26 +56,27 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore } from "../../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 import { useUserStore } from "../../../stores/user";
 import { formatCsvField } from "../../../shared/utils/csv";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  friendExportDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = defineProps<{
+  friendExportDialogVisible: boolean;
+}>();
 
-const emit = defineEmits(["update:friendExportDialogVisible"]);
+const emit = defineEmits<{
+  "update:friendExportDialogVisible": [value: boolean];
+}>();
 
 const { favoriteFriends, favoriteFriendGroups, localFriendFavorites, localFriendFavoriteGroups, localFriendFavoritesList } = storeToRefs(useFavoriteStore());
+const { localFriendFavGroupLength } = useFavoriteStore();
 const { cachedUsers } = storeToRefs(useUserStore());
 
 const friendExportContent = ref("");
-const friendExportFavoriteGroup = ref(null);
-const friendExportLocalFavoriteGroup = ref(null);
+const friendExportFavoriteGroup = ref<FavoriteGroupSlot | null>(null);
+const friendExportLocalFavoriteGroup = ref<string | null>(null);
 
 const FRIEND_EXPORT_ALL_VALUE = "__all__";
 const FRIEND_EXPORT_NONE_VALUE = "__none__";
@@ -87,15 +88,15 @@ const isDialogVisible = computed({
   get() {
     return props.friendExportDialogVisible;
   },
-  set(value) {
-    emit("update:friendExportDialogVisible", value);
+  set(isOpen: boolean) {
+    emit("update:friendExportDialogVisible", isOpen);
   },
 });
 
 watch(
   () => props.friendExportDialogVisible,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       showFriendExportDialog();
     }
   }
@@ -107,35 +108,37 @@ function showFriendExportDialog() {
   updateFriendExportDialog();
 }
 
-function handleFriendExportGroupSelect(value) {
-  friendExportFavoriteGroupSelection.value = value;
-  if (value === FRIEND_EXPORT_ALL_VALUE) {
+function handleFriendExportGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  friendExportFavoriteGroupSelection.value = selectedValue;
+  if (selectedValue === FRIEND_EXPORT_ALL_VALUE) {
     selectFriendExportGroup(null);
     return;
   }
-  const group = favoriteFriendGroups.value.find((g) => g.name === value) || null;
+  const group = favoriteFriendGroups.value.find((g) => g.name === selectedValue) ?? null;
   selectFriendExportGroup(group);
 }
 
-function handleFriendExportLocalGroupSelect(value) {
-  friendExportLocalFavoriteGroupSelection.value = value;
-  if (value === FRIEND_EXPORT_NONE_VALUE) {
+function handleFriendExportLocalGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  friendExportLocalFavoriteGroupSelection.value = selectedValue;
+  if (selectedValue === FRIEND_EXPORT_NONE_VALUE) {
     selectFriendExportLocalGroup(null);
     return;
   }
-  selectFriendExportLocalGroup(value);
+  selectFriendExportLocalGroup(selectedValue);
 }
 
-function handleCopyFriendExportData(event) {
-  if (event.target.tagName === "TEXTAREA") {
+function handleCopyFriendExportData(event: MouseEvent) {
+  if (event.target instanceof HTMLTextAreaElement) {
     event.target.select();
   }
-  navigator.clipboard
+  void navigator.clipboard
     .writeText(friendExportContent.value)
     .then(() => {
       toast.success("Copied successfully!", { duration: 2000 });
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Copy failed:", err);
       toast.error("Copy failed!");
     });
@@ -169,8 +172,7 @@ function updateFriendExportDialog() {
     favoriteFriends.value.forEach((ref) => {
       lines.push(`${formatCsvField(ref.id)},${formatCsvField(ref.name)}`);
     });
-    for (let i = 0; i < localFriendFavoritesList.value.length; ++i) {
-      const userId = localFriendFavoritesList.value[i];
+    for (const userId of localFriendFavoritesList.value) {
       const ref = cachedUsers.value.get(userId);
       if (typeof ref !== "undefined") {
         lines.push(`${formatCsvField(ref.id)},${formatCsvField(ref.displayName)}`);
@@ -180,7 +182,7 @@ function updateFriendExportDialog() {
   friendExportContent.value = lines.reverse().join("\n");
 }
 
-function selectFriendExportGroup(group) {
+function selectFriendExportGroup(group: FavoriteGroupSlot | null) {
   friendExportFavoriteGroup.value = group;
   friendExportLocalFavoriteGroup.value = null;
   friendExportFavoriteGroupSelection.value = group?.name ?? FRIEND_EXPORT_ALL_VALUE;
@@ -188,7 +190,7 @@ function selectFriendExportGroup(group) {
   updateFriendExportDialog();
 }
 
-function selectFriendExportLocalGroup(groupName) {
+function selectFriendExportLocalGroup(groupName: string | null) {
   friendExportLocalFavoriteGroup.value = groupName;
   friendExportFavoriteGroup.value = null;
   friendExportFavoriteGroupSelection.value = FRIEND_EXPORT_ALL_VALUE;

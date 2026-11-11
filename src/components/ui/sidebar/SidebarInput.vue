@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Input from "@/components/ui/input/Input.vue";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    class: undefined,
+  }
+);
 </script>
 
 <template>

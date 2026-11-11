@@ -43,9 +43,12 @@ import { useI18n } from "vue-i18n";
 import { instanceRequest } from "../../../api/instance";
 import { notificationRequest } from "../../../api/notification";
 import { useGalleryStore } from "../../../stores/gallery";
+import { logFailure } from "../../../stores/log-failure";
 import { useUserStore } from "../../../stores/user";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { recordRecentAction } from "../../../composables/use-recent-actions";
+import type { SendInviteDialogState } from "../UserDialog/use-user-dialog-commands";
+import type { InviteDialogState } from "./invite-dialog-types";
 
 const { t } = useI18n();
 
@@ -53,26 +56,24 @@ const { uploadImage } = storeToRefs(useGalleryStore());
 const { clearInviteImageUpload } = useGalleryStore();
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  isSendInviteConfirmDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-  sendInviteDialog: {
-    type: Object,
-    required: true,
-  },
-  inviteDialog: {
-    type: Object,
-    required: false,
-    default: () => ({}),
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isSendInviteConfirmDialogVisible: boolean;
+    sendInviteDialog: SendInviteDialogState;
+    inviteDialog?: Partial<InviteDialogState> | undefined;
+  }>(),
+  {
+    inviteDialog: () => ({}),
+  }
+);
 
-const emit = defineEmits(["update:isSendInviteConfirmDialogVisible", "closeInviteDialog"]);
+const emit = defineEmits<{
+  "update:isSendInviteConfirmDialogVisible": [value: boolean];
+  closeInviteDialog: [];
+}>();
 
 const i18nPrefix = computed(() => {
-  const messageType = props.sendInviteDialog?.messageSlot?.messageType;
+  const messageType = props.sendInviteDialog.messageSlot?.messageType;
   return messageType === "request" ? "invite_request_message" : "invite_message";
 });
 
@@ -80,86 +81,93 @@ function cancelInviteConfirm() {
   emit("update:isSendInviteConfirmDialogVisible", false);
 }
 
-function sendInviteConfirm() {
+function dispatchInvite(slot: number) {
   const D = props.sendInviteDialog;
   const J = props.inviteDialog;
-  const messageType = D.messageSlot.messageType;
-  const slot = D.messageSlot.slot;
-  if (J?.visible) {
+  const messageType = D.messageSlot?.messageType;
+  if (J.visible) {
+    const pendingUserIds = J.userIds ?? [];
+    const worldId = J.worldId ?? "";
+    const worldName = J.worldName ?? "";
     const inviteLoop = () => {
-      if (J.userIds.length > 0) {
-        const receiverUserId = J.userIds.shift();
-        if (receiverUserId === currentUser.value.id) {
-          const L = parseLocation(J.worldId);
-          instanceRequest
-            .selfInvite({
-              instanceId: L.instanceId,
-              worldId: L.worldId,
-            })
-            .then(() => {
-              recordRecentAction(receiverUserId, "Invite");
-            })
-            .finally(inviteLoop);
-        } else if (uploadImage.value) {
-          notificationRequest
-            .sendInvitePhoto(
-              {
-                instanceId: J.worldId,
-                worldId: J.worldId,
-                worldName: J.worldName,
-                messageSlot: slot,
-              },
-              receiverUserId
-            )
-            .then(() => {
-              recordRecentAction(receiverUserId, "Invite Photo");
-            })
-            .finally(inviteLoop);
-        } else {
-          notificationRequest
-            .sendInvite(
-              {
-                instanceId: J.worldId,
-                worldId: J.worldId,
-                worldName: J.worldName,
-                messageSlot: slot,
-              },
-              receiverUserId
-            )
-            .then(() => {
-              recordRecentAction(receiverUserId, "Invite Message");
-            })
-            .finally(inviteLoop);
-        }
-      } else {
+      const receiverUserId = pendingUserIds.shift();
+      if (receiverUserId === undefined) {
         J.loading = false;
         J.visible = false;
         toast.success("Invite message sent");
+        return;
+      }
+      if (receiverUserId === currentUser.value.id) {
+        const L = parseLocation(worldId);
+        void instanceRequest
+          .selfInvite({
+            instanceId: L.instanceId,
+            worldId: L.worldId,
+          })
+          .then(() => {
+            recordRecentAction(receiverUserId, "Invite");
+          })
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the self invite failed:"));
+      } else if (uploadImage.value) {
+        void notificationRequest
+          .sendInvitePhoto(
+            {
+              instanceId: worldId,
+              worldId,
+              worldName,
+              messageSlot: slot,
+            },
+            receiverUserId
+          )
+          .then(() => {
+            recordRecentAction(receiverUserId, "Invite Photo");
+          })
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the invite photo failed:"));
+      } else {
+        void notificationRequest
+          .sendInvite(
+            {
+              instanceId: worldId,
+              worldId,
+              worldName,
+              messageSlot: slot,
+            },
+            receiverUserId
+          )
+          .then(() => {
+            recordRecentAction(receiverUserId, "Invite Message");
+          })
+          .finally(inviteLoop)
+          .catch(logFailure("Sending the invite failed:"));
       }
     };
     inviteLoop();
   } else if (messageType === "message") {
+    const instanceId = D.params.instanceId;
+    if (instanceId === undefined) {
+      return;
+    }
     D.params.messageSlot = slot;
     if (uploadImage.value) {
       notificationRequest
-        .sendInvitePhoto(D.params, D.userId)
-        .then((args) => {
+        .sendInvitePhoto({ ...D.params, instanceId }, D.userId)
+        .then(() => {
           recordRecentAction(D.userId, "Invite Photo");
           toast.success("Invite photo message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     } else {
       notificationRequest
-        .sendInvite(D.params, D.userId)
-        .then((args) => {
+        .sendInvite({ ...D.params, instanceId }, D.userId)
+        .then(() => {
           recordRecentAction(D.userId, "Invite Message");
           toast.success("Invite message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     }
@@ -168,27 +176,32 @@ function sendInviteConfirm() {
     if (uploadImage.value) {
       notificationRequest
         .sendRequestInvitePhoto(D.params, D.userId)
-        .then((args) => {
+        .then(() => {
           recordRecentAction(D.userId, "Request Invite Photo");
           toast.success("Request invite photo message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           clearInviteImageUpload();
           console.error(err);
         });
     } else {
       notificationRequest
         .sendRequestInvite(D.params, D.userId)
-        .then((args) => {
+        .then(() => {
           recordRecentAction(D.userId, "Request Invite Message");
           toast.success("Request invite message sent");
-          return args;
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error(err);
         });
     }
+  }
+}
+
+function sendInviteConfirm() {
+  const slot = props.sendInviteDialog.messageSlot?.slot;
+  if (slot !== undefined) {
+    dispatchInvite(slot);
   }
   cancelInviteConfirm();
   emit("closeInviteDialog");

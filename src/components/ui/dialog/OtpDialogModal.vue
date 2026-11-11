@@ -20,7 +20,7 @@ const { otpOpen, otpTitle, otpDescription, otpOkText, otpCancelText, otpDismissi
 
 const otpValue = ref("");
 
-function onComplete(value) {
+function onComplete(value: string) {
   modalStore.handleOtpOk(value);
 }
 
@@ -29,7 +29,7 @@ function onSubmit() {
   modalStore.handleOtpOk(otpValue.value);
 }
 
-function onEscapeKeyDown(event) {
+function onEscapeKeyDown(event: Event) {
   if (!otpDismissible.value) {
     event.preventDefault();
     return;
@@ -37,7 +37,7 @@ function onEscapeKeyDown(event) {
   modalStore.handleOtpDismiss(otpValue.value);
 }
 
-function onPointerDownOutside(event) {
+function onPointerDownOutside(event: Event) {
   if (!otpDismissible.value) {
     event.preventDefault();
     return;
@@ -45,7 +45,7 @@ function onPointerDownOutside(event) {
   modalStore.handleOtpDismiss(otpValue.value);
 }
 
-function onInteractOutside(event) {
+function onInteractOutside(event: Event) {
   if (!otpDismissible.value) {
     event.preventDefault();
     return;
@@ -57,12 +57,12 @@ function handleCancel() {
   modalStore.handleOtpCancel(otpValue.value);
 }
 
-function stripNonAlphanumeric(value) {
-  return value.replace(/[^a-z0-9]/gi, "");
+function stripNonAlphanumeric(value: string | undefined) {
+  return (value ?? "").replace(/[^a-z0-9]/gi, "");
 }
 
-watch(otpOpen, (open) => {
-  if (open) {
+watch(otpOpen, (isOpen) => {
+  if (isOpen) {
     otpValue.value = "";
   }
 });

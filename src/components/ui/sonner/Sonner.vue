@@ -1,37 +1,59 @@
 <script setup lang="ts">
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-vue-next";
+import type { ToasterProps } from "vue-sonner";
 import { Toaster as Sonner } from "vue-sonner";
 import { cn } from "@/lib/utils";
+import { computed } from "vue";
 
-const props = defineProps({
-  id: { type: String, required: false },
-  invert: { type: Boolean, required: false },
-  theme: { type: String, required: false },
-  position: { type: String, required: false },
-  closeButtonPosition: {
-    type: String,
-    required: false,
-  },
-  hotkey: { type: Array, required: false },
-  richColors: { type: Boolean, required: false },
-  expand: { type: Boolean, required: false },
-  duration: { type: Number, required: false },
-  gap: { type: Number, required: false },
-  visibleToasts: { type: Number, required: false },
-  closeButton: { type: Boolean, required: false },
-  toastOptions: { type: Object, required: false },
-  class: { type: String, required: false },
-  style: { type: Object, required: false },
-  offset: { type: [Object, String, Number], required: false },
-  mobileOffset: { type: [Object, String, Number], required: false },
-  dir: { type: String, required: false },
-  swipeDirections: {
-    type: Array,
-    required: false,
-  },
-  icons: { type: Object, required: false },
-  containerAriaLabel: { type: String, required: false },
-});
+defineOptions({ name: "UiSonner" });
+
+const props = defineProps<{
+  id?: ToasterProps["id"];
+  invert?: boolean;
+  theme?: ToasterProps["theme"];
+  position?: ToasterProps["position"];
+  closeButtonPosition?: ToasterProps["closeButtonPosition"];
+  hotkey?: ToasterProps["hotkey"];
+  richColors?: boolean;
+  expand?: boolean;
+  duration?: ToasterProps["duration"];
+  gap?: ToasterProps["gap"];
+  visibleToasts?: ToasterProps["visibleToasts"];
+  closeButton?: boolean;
+  toastOptions?: ToasterProps["toastOptions"];
+  class?: ToasterProps["class"];
+  style?: ToasterProps["style"];
+  offset?: ToasterProps["offset"];
+  mobileOffset?: ToasterProps["mobileOffset"];
+  dir?: ToasterProps["dir"];
+  swipeDirections?: ToasterProps["swipeDirections"];
+  icons?: ToasterProps["icons"];
+  containerAriaLabel?: ToasterProps["containerAriaLabel"];
+}>();
+
+const toasterProps = computed(() => ({
+  ...(props.id === undefined ? {} : { id: props.id }),
+  invert: props.invert,
+  ...(props.theme === undefined ? {} : { theme: props.theme }),
+  ...(props.position === undefined ? {} : { position: props.position }),
+  ...(props.closeButtonPosition === undefined ? {} : { closeButtonPosition: props.closeButtonPosition }),
+  ...(props.hotkey === undefined ? {} : { hotkey: props.hotkey }),
+  richColors: props.richColors,
+  expand: props.expand,
+  ...(props.duration === undefined ? {} : { duration: props.duration }),
+  ...(props.gap === undefined ? {} : { gap: props.gap }),
+  ...(props.visibleToasts === undefined ? {} : { visibleToasts: props.visibleToasts }),
+  closeButton: props.closeButton,
+  ...(props.toastOptions === undefined ? {} : { toastOptions: props.toastOptions }),
+  ...(props.class === undefined ? {} : { class: props.class }),
+  ...(props.style === undefined ? {} : { style: props.style }),
+  ...(props.offset === undefined ? {} : { offset: props.offset }),
+  ...(props.mobileOffset === undefined ? {} : { mobileOffset: props.mobileOffset }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  ...(props.swipeDirections === undefined ? {} : { swipeDirections: props.swipeDirections }),
+  ...(props.icons === undefined ? {} : { icons: props.icons }),
+  ...(props.containerAriaLabel === undefined ? {} : { containerAriaLabel: props.containerAriaLabel }),
+}));
 </script>
 
 <template>
@@ -43,7 +65,7 @@ const props = defineProps({
       '--normal-border': 'var(--border)',
       '--border-radius': 'var(--radius)',
     }"
-    v-bind="props"
+    v-bind="toasterProps"
   >
     <template #success-icon>
       <CircleCheckIcon class="size-4" />

@@ -64,6 +64,8 @@ import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { saveUserMemo } from "../../../coordinators/memo-coordinator";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useUserStore } from "../../../stores/user";
+import type { VrcxUser } from "../../../types/vrcx";
+import type { UpdateUserNoteRequest } from "vrchat";
 
 const { userDialog } = storeToRefs(useUserStore());
 const { cachedUsers } = useUserStore();
@@ -71,29 +73,33 @@ const { hideUserNotes, hideUserMemos } = storeToRefs(useAppearanceSettingsStore(
 
 const { t } = useI18n();
 
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = defineProps<{
+  visible: boolean;
+}>();
 
-const emit = defineEmits(["update:visible"]);
+const emit = defineEmits<{
+  "update:visible": [value: boolean];
+}>();
 
 const note = ref("");
 const memo = ref("");
 
 watch(
   () => props.visible,
-  (val) => {
-    if (!val) return;
+  (isVisible) => {
+    if (!isVisible) return;
     note.value = userDialog.value.note;
     memo.value = userDialog.value.memo;
   }
 );
 
+function logRejection(message: string) {
+  return (error: unknown) => {
+    console.error(message, error);
+  };
+}
+
 function saveChanges() {
-  cleanNote(note.value);
   checkNote(userDialog.value.ref, note.value);
   onUserMemoChange();
   emit("update:visible", false);
@@ -103,50 +109,38 @@ function cancel() {
   emit("update:visible", false);
 }
 
-function checkNote(ref, note) {
-  if (ref.note !== note) {
-    addNote(ref.id, note);
+function checkNote(user: Partial<VrcxUser>, noteValue: string) {
+  if (user.note !== noteValue) {
+    void addNote(user.id ?? "", noteValue).catch(logRejection("Failed to save note:"));
   }
 }
 
-async function addNote(userId, note) {
+async function addNote(userId: string, noteValue: string) {
   const args = await miscRequest.saveNote({
     targetUserId: userId,
-    note,
+    note: noteValue,
   });
   handleNoteChange(args);
 }
 
-function handleNoteChange(args) {
-  let _note = "";
-  let targetUserId = "";
-  if (typeof args.json !== "undefined") {
-    _note = replaceBioSymbols(args.json.note);
-  }
-  if (typeof args.params !== "undefined") {
-    targetUserId = args.params.targetUserId;
-  }
+function handleNoteChange(args: { json: unknown; params: UpdateUserNoteRequest }) {
+  const noteText = replaceBioSymbols(typeof args.json === "object" && args.json !== null && "note" in args.json ? args.json.note : undefined);
+  const targetUserId = args.params.targetUserId;
   if (targetUserId === userDialog.value.id) {
-    if (_note === args.params.note) {
-      userDialog.value.note = _note;
+    if (noteText === args.params.note) {
+      userDialog.value.note = noteText;
     } else {
-      userRequest.getUser({ userId: targetUserId });
+      void userRequest.getUser({ userId: targetUserId }).catch(logRejection("Failed to reload user:"));
     }
   }
-  const ref = cachedUsers.get(targetUserId);
-  if (typeof ref !== "undefined") {
-    ref.note = _note;
+  const cachedUser = cachedUsers.get(targetUserId);
+  if (typeof cachedUser !== "undefined") {
+    cachedUser.note = noteText;
   }
 }
 
 function onUserMemoChange() {
   const D = userDialog.value;
-  saveUserMemo(D.id, memo.value);
-}
-
-function cleanNote(note) {
-  if (!note.value) return;
-
-  note.value = note.value?.replace(/[\r\n]/g, "");
+  void saveUserMemo(D.id, memo.value).catch(logRejection("Failed to save memo:"));
 }
 </script>

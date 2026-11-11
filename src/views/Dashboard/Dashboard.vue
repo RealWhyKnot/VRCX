@@ -88,17 +88,18 @@ import ResizableHandle from "@/components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "@/components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "@/components/ui/resizable/ResizablePanelGroup.vue";
 import { useDashboardStore } from "@/stores/dashboard";
+import { logFailure } from "@/stores/log-failure";
 import { useModalStore } from "@/stores/modal";
 
 import DashboardEditToolbar from "./components/DashboardEditToolbar.vue";
 import DashboardRow from "./components/DashboardRow.vue";
+import { isDashboardRow, type DashboardPanelValue, type DashboardRowValue } from "./types";
 
-const props = defineProps({
-  id: {
-    type: String,
-    required: true,
-  },
-});
+defineOptions({ name: "DashboardView" });
+
+const props = defineProps<{
+  id: string;
+}>();
 
 const router = useRouter();
 const { t } = useI18n();
@@ -107,13 +108,19 @@ const modalStore = useModalStore();
 
 const isEditing = ref(false);
 const showAddRowOptions = ref(false);
-const editRows = ref([]);
+const editRows = ref<DashboardRowValue[]>([]);
 const editName = ref("");
 
-const dashboard = computed(() => dashboardStore.getDashboard(props.id));
-const displayRows = computed(() => (isEditing.value ? editRows.value : dashboard.value?.rows || []));
+const dashboard = computed(() => {
+  const found = dashboardStore.getDashboard(props.id);
+  return found && "rows" in found ? found : null;
+});
+const displayRows = computed(() => (isEditing.value ? editRows.value : (dashboard.value?.rows ?? [])));
 
-const cloneRows = (rows) => JSON.parse(JSON.stringify(Array.isArray(rows) ? rows : []));
+const cloneRows = (rows: unknown): DashboardRowValue[] => {
+  const parsed: unknown = JSON.parse(JSON.stringify(Array.isArray(rows) ? rows : []));
+  return Array.isArray(parsed) ? parsed.filter(isDashboardRow) : [];
+};
 
 watch(
   () => props.id,
@@ -127,14 +134,14 @@ watch(
   dashboard,
   (value) => {
     if (!value) {
-      router.replace({ name: "feed" });
+      void router.replace({ name: "feed" }).catch(logFailure("Failed to open feed"));
     }
   },
   { immediate: true }
 );
 
-watch(isEditing, (editing) => {
-  if (!editing || !dashboard.value) {
+watch(isEditing, (isNowEditing) => {
+  if (!isNowEditing || !dashboard.value) {
     showAddRowOptions.value = false;
     return;
   }
@@ -157,13 +164,13 @@ const handleAddRowAreaClick = () => {
   showAddRowOptions.value = !showAddRowOptions.value;
 };
 
-const handleAddRow = (panelCount, direction = "horizontal") => {
-  const panels = Array(panelCount).fill(null);
+const handleAddRow = (panelCount: number, direction: DashboardRowValue["direction"] = "horizontal") => {
+  const panels: null[] = Array.from({ length: panelCount }, () => null);
   editRows.value.push({ panels, direction });
   showAddRowOptions.value = false;
 };
 
-const handleRemovePanel = (rowIndex, panelIndex) => {
+const handleRemovePanel = (rowIndex: number, panelIndex: number) => {
   const row = editRows.value[rowIndex];
   if (!row) return;
   if (row.panels.length <= 1) {
@@ -173,25 +180,36 @@ const handleRemovePanel = (rowIndex, panelIndex) => {
   }
 };
 
-const handleUpdatePanel = (rowIndex, panelIndex, panelValue) => {
-  if (!editRows.value[rowIndex]?.panels) {
+const handleUpdatePanel = (rowIndex: number, panelIndex: number, panelValue: DashboardPanelValue | null) => {
+  const row = editRows.value[rowIndex];
+  if (!row) {
     return;
   }
-  editRows.value[rowIndex].panels[panelIndex] = panelValue;
+  row.panels[panelIndex] = panelValue;
 };
 
-const handleLiveUpdatePanel = async (rowIndex, panelIndex, panelValue) => {
-  if (!dashboard.value?.rows?.[rowIndex]?.panels) return;
-  const rows = JSON.parse(JSON.stringify(dashboard.value.rows));
-  rows[rowIndex].panels[panelIndex] = panelValue;
+const handleLiveUpdatePanel = async (rowIndex: number, panelIndex: number, panelValue: DashboardPanelValue | null) => {
+  if (!dashboard.value?.rows[rowIndex]?.panels) return;
+  const rows = cloneRows(dashboard.value.rows);
+  const row = rows[rowIndex];
+  if (!row) return;
+  row.panels[panelIndex] = panelValue;
   await dashboardStore.updateDashboard(props.id, { rows });
+};
+
+const resolveSavedName = () => {
+  const trimmedName = editName.value.trim();
+  if (trimmedName !== "") return trimmedName;
+  const savedName = dashboard.value?.name;
+  if (savedName === undefined || savedName === "") return "Dashboard";
+  return savedName;
 };
 
 const handleSave = async () => {
   const isFirstSave = dashboardStore.dashboards.length === 1 && (!dashboard.value?.rows || dashboard.value.rows.length === 0);
 
   await dashboardStore.updateDashboard(props.id, {
-    name: editName.value.trim() || dashboard.value?.name || "Dashboard",
+    name: resolveSavedName(),
     rows: editRows.value,
   });
   isEditing.value = false;
@@ -215,6 +233,6 @@ const handleDelete = async () => {
     return;
   }
   await dashboardStore.deleteDashboard(props.id);
-  router.replace({ name: "feed" });
+  void router.replace({ name: "feed" }).catch(logFailure("Failed to open feed"));
 };
 </script>

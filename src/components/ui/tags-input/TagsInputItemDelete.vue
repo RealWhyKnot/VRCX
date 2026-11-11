@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { TagsInputItemDelete, useForwardProps } from "reka-ui";
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import { TagsInputItemDelete } from "reka-ui";
 import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
-
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
-  <TagsInputItemDelete v-bind="forwardedProps" :class="cn('flex rounded bg-transparent mr-1', props.class)">
+  <TagsInputItemDelete v-bind="delegatedProps" :class="cn('flex rounded bg-transparent mr-1', props.class)">
     <slot>
       <X class="w-4 h-4" />
     </slot>

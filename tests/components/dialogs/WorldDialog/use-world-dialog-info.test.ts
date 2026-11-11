@@ -1,35 +1,63 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useWorldDialogInfo } from "../../../../src/components/dialogs/WorldDialog/use-world-dialog-info";
+import type { WorldDialogState } from "../../../../src/stores/world";
+
+const mocks = vi.hoisted(() => ({
+  setWorldMemo: vi.fn(),
+  deleteWorldMemo: vi.fn(),
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("../../../../src/shared/utils/base/string", () => ({
-  commaNumber: vi.fn((n) => n?.toLocaleString()),
+  commaNumber: vi.fn((n: number | undefined) => n?.toLocaleString()),
 }));
 vi.mock("../../../../src/shared/utils/avatar", () => ({
   compareUnityVersion: vi.fn(() => true),
 }));
 vi.mock("../../../../src/coordinators/date-coordinator", () => ({
-  formatDateFilter: vi.fn((d) => d),
+  formatDateFilter: vi.fn((d: string) => d),
 }));
 vi.mock("../../../../src/shared/utils/base/format", () => ({
-  timeToText: vi.fn((ms) => `${Math.floor(ms / 1000)}s`),
+  timeToText: vi.fn((ms: number) => `${Math.floor(ms / 1000)}s`),
 }));
 
 vi.mock("../../../../src/services/database", () => ({
   database: {
-    setWorldMemo: vi.fn(),
-    deleteWorldMemo: vi.fn(),
+    setWorldMemo: mocks.setWorldMemo,
+    deleteWorldMemo: mocks.deleteWorldMemo,
   },
 }));
 
-const { database } = await import("../../../../src/services/database");
 const { compareUnityVersion } = await import("../../../../src/shared/utils/avatar");
 
-function createWorldDialog(overrides = {}) {
-  return ref({
+function createWorldDialog(overrides: Partial<WorldDialogState> = {}) {
+  return ref<WorldDialogState>({
     id: "wrld_123",
+    visible: true,
+    loading: false,
+    activeTab: "Info",
+    lastActiveTab: "Info",
     memo: "",
     timeSpent: 60000,
+    $location: {},
+    isFavorite: false,
+    avatarScalingDisabled: false,
+    focusViewDisabled: false,
+    rooms: [],
+    inCache: false,
+    cacheSize: "",
+    cacheLocked: false,
+    cachePath: "",
+    fileAnalysis: {},
+    lastVisit: "",
+    visitCount: 0,
+    isPC: false,
+    isQuest: false,
+    isIos: false,
+    hasPersistData: false,
+    rating: null,
+    listings: [],
     ref: {
       name: "Test World",
       description: "A test world",
@@ -61,7 +89,7 @@ function createWorldDialog(overrides = {}) {
 
 function createDeps(overrides = {}) {
   return {
-    t: vi.fn((key) => key),
+    t: vi.fn((key: string) => key),
     toast: {
       success: vi.fn(),
       error: vi.fn(),
@@ -74,7 +102,7 @@ function createDeps(overrides = {}) {
 describe("useWorldDialogInfo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    compareUnityVersion.mockReturnValue(true);
+    vi.mocked(compareUnityVersion).mockReturnValue(true);
   });
 
   describe("memo computed", () => {
@@ -164,7 +192,7 @@ describe("useWorldDialogInfo", () => {
     });
 
     test("skips packages filtered by compareUnityVersion", () => {
-      compareUnityVersion.mockReturnValue(false);
+      vi.mocked(compareUnityVersion).mockReturnValue(false);
       const worldDialog = createWorldDialog();
       const { worldDialogPlatform } = useWorldDialogInfo(worldDialog, createDeps());
 
@@ -178,6 +206,8 @@ describe("useWorldDialogInfo", () => {
           platform: "ios",
           unityVersion: "2022.3.6f1",
           unitySortNumber: 20220306,
+          variant: "standard",
+          created_at: "2024-05-15T00:00:00Z",
         },
       ];
       const { worldDialogPlatform } = useWorldDialogInfo(worldDialog, createDeps());
@@ -199,7 +229,7 @@ describe("useWorldDialogInfo", () => {
 
     test("returns null when no unityPackages", () => {
       const worldDialog = createWorldDialog();
-      worldDialog.value.ref.unityPackages = undefined;
+      delete worldDialog.value.ref.unityPackages;
       const { worldDialogPlatformCreatedAt } = useWorldDialogInfo(worldDialog, createDeps());
 
       expect(worldDialogPlatformCreatedAt.value).toBeNull();
@@ -210,6 +240,8 @@ describe("useWorldDialogInfo", () => {
       worldDialog.value.ref.unityPackages = [
         {
           platform: "standalonewindows",
+          unityVersion: "2022.3.6f1",
+          unitySortNumber: 20220306,
           variant: "custom",
           created_at: "2024-05-15T00:00:00Z",
         },
@@ -227,7 +259,7 @@ describe("useWorldDialogInfo", () => {
 
       onWorldMemoChange();
 
-      expect(database.setWorldMemo).toHaveBeenCalledWith(
+      expect(mocks.setWorldMemo).toHaveBeenCalledWith(
         expect.objectContaining({
           worldId: "wrld_123",
           memo: "test memo",
@@ -241,7 +273,7 @@ describe("useWorldDialogInfo", () => {
 
       onWorldMemoChange();
 
-      expect(database.deleteWorldMemo).toHaveBeenCalledWith("wrld_123");
+      expect(mocks.deleteWorldMemo).toHaveBeenCalledWith("wrld_123");
     });
   });
 
@@ -251,7 +283,7 @@ describe("useWorldDialogInfo", () => {
     beforeEach(() => {
       Object.defineProperty(navigator, "clipboard", {
         value: {
-          writeText: vi.fn().mockResolvedValue(undefined),
+          writeText: mocks.writeText,
         },
         writable: true,
         configurable: true,
@@ -273,7 +305,7 @@ describe("useWorldDialogInfo", () => {
 
       copyWorldId();
       await vi.waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith("wrld_123");
+        expect(mocks.writeText).toHaveBeenCalledWith("wrld_123");
       });
     });
 
@@ -284,7 +316,7 @@ describe("useWorldDialogInfo", () => {
 
       copyWorldUrl();
       await vi.waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
+        expect(mocks.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
       });
     });
 
@@ -295,7 +327,7 @@ describe("useWorldDialogInfo", () => {
 
       copyWorldName();
       await vi.waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Test World");
+        expect(mocks.writeText).toHaveBeenCalledWith("Test World");
       });
     });
 

@@ -21,7 +21,7 @@
         <Button @click="refreshInviteMessageTableData('response')">{{ t("dialog.invite_response_message.refresh") }}</Button>
       </DialogFooter>
       <EditAndSendInviteResponseDialog
-        :edit-and-send-invite-response-dialog="editAndSendInviteResponseDialog"
+        v-model:edit-and-send-invite-response-dialog="editAndSendInviteResponseDialog"
         :send-invite-response-dialog="sendInviteResponseDialog"
         @close-response-confirm-dialog="closeResponseConfirmDialog"
         @close-invite-dialog="closeInviteDialog"
@@ -53,6 +53,7 @@ import { useGalleryStore } from "../../../stores/gallery";
 import { useInviteStore } from "../../../stores/invite";
 import { useUserStore } from "../../../stores/user";
 import { createColumns } from "./send-invite-response-columns.tsx";
+import type { InviteMessageRow, InviteResponseSelection } from "./send-invite-response-columns.tsx";
 
 import EditAndSendInviteResponseDialog from "./EditAndSendInviteResponseDialog.vue";
 import SendInviteResponseConfirmDialog from "./SendInviteResponseConfirmDialog.vue";
@@ -66,29 +67,26 @@ const galleryStore = useGalleryStore();
 const { inviteImageUpload } = galleryStore;
 const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  sendInviteResponseDialog: {
-    type: Object,
-    default: () => ({}),
-  },
-  sendInviteResponseDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = defineProps<{
+  sendInviteResponseDialog: InviteResponseSelection;
+  sendInviteResponseDialogVisible: boolean;
+}>();
 
 const editAndSendInviteResponseDialog = ref({
   visible: false,
   newMessage: "",
 });
 
-const emit = defineEmits(["update:sendInviteResponseDialogVisible", "update:sendInviteResponseDialog"]);
+const emit = defineEmits<{
+  "update:sendInviteResponseDialogVisible": [value: boolean];
+  "update:sendInviteResponseDialog": [value: InviteResponseSelection];
+}>();
 
 const sendInviteResponseConfirmDialog = ref({
   visible: false,
 });
 
-const inviteResponseRows = computed(() => inviteResponseMessageTable.value?.data ?? []);
+const inviteResponseRows = computed(() => inviteResponseMessageTable.value.data);
 const inviteResponseColumns = computed(() =>
   createColumns({
     onEdit: showEditAndSendInviteResponseDialog,
@@ -101,13 +99,13 @@ const { table: inviteResponseTable } = useVrcxVueTable({
     return inviteResponseRows.value;
   },
   columns: inviteResponseColumns,
-  getRowId: (row) => String(row?.slot ?? ""),
+  getRowId: (row) => String(row.slot),
   enablePagination: false,
   initialSorting: [{ id: "slot", desc: false }],
 });
 
-function handleInviteResponseRowClick(row) {
-  showSendInviteResponseConfirmDialog(row?.original);
+function handleInviteResponseRowClick(row: { original: InviteMessageRow }) {
+  showSendInviteResponseConfirmDialog(row.original);
 }
 
 function closeInviteDialog() {
@@ -123,7 +121,7 @@ function closeResponseConfirmDialog() {
   editAndSendInviteResponseDialog.value.visible = false;
 }
 
-function showEditAndSendInviteResponseDialog(row) {
+function showEditAndSendInviteResponseDialog(row: InviteMessageRow) {
   emit("update:sendInviteResponseDialog", { ...props.sendInviteResponseDialog, messageSlot: row });
   editAndSendInviteResponseDialog.value = {
     newMessage: row.message,
@@ -131,7 +129,7 @@ function showEditAndSendInviteResponseDialog(row) {
   };
 }
 
-function showSendInviteResponseConfirmDialog(row) {
+function showSendInviteResponseConfirmDialog(row: InviteMessageRow) {
   emit("update:sendInviteResponseDialog", { ...props.sendInviteResponseDialog, messageSlot: row });
   sendInviteResponseConfirmDialog.value.visible = true;
 }

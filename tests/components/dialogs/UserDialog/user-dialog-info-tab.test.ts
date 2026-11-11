@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { flushPromises, shallowMount } from "@vue/test-utils";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
+import { createDefaultUserRef } from "../../../../src/shared/utils/user-transforms";
 
 vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
@@ -8,12 +11,12 @@ vi.mock("vue-i18n", async () => {
     useI18n: () => {
       const { ref } = vue;
       return {
-        t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+        t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key),
         locale: ref("en"),
       };
     },
     createI18n: () => ({
-      global: { t: (key) => key },
+      global: { t: (key: string) => key },
       install: vi.fn(),
     }),
   };
@@ -38,7 +41,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref } = vue;
   return {
     ...actual,
@@ -66,13 +69,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn().mockImplementation((_k: string, fallback?: string) => fallback ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_k: string, isFallback?: boolean) => isFallback ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -104,7 +107,12 @@ import { useLocationStore } from "../../../../src/stores/location";
 import { useModalStore } from "../../../../src/stores/modal";
 import { useUserStore } from "../../../../src/stores/user";
 
-function mountComponent(overrides = {}) {
+type MountOverrides = {
+  userDialog?: Partial<UserDialogState>;
+  currentUser?: Partial<CurrentUserState>;
+};
+
+function mountComponent(overrides: MountOverrides = {}) {
   const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
 
   const appearanceSettingsStore = useAppearanceSettingsStore(pinia);
@@ -116,83 +124,81 @@ function mountComponent(overrides = {}) {
   const advancedSettingsStore = useAdvancedSettingsStore(pinia);
   advancedSettingsStore.$patch({
     bioLanguage: "en",
-    translationApi: "",
+    translationApi: false,
     translationApiType: "google",
   });
   const advancedSettings = advancedSettingsStore;
   advancedSettings.translateText = vi.fn().mockResolvedValue("");
 
   const userStore = useUserStore(pinia);
-  userStore.$patch({
-    userDialog: {
+  const userDialog: Partial<UserDialogState> = {
+    id: "usr_target",
+    friend: {
+      state: "online",
+      ref: createDefaultUserRef({ location: "wrld_test:123" }),
+    },
+    ref: {
       id: "usr_target",
-      friend: {
-        state: "online",
-        ref: {
-          location: "wrld_test:123",
-        },
-      },
-      ref: {
-        id: "usr_target",
-        location: "wrld_test:123",
-        travelingToLocation: "",
-        profilePicOverride: "",
-        currentAvatarImageUrl: "",
-        currentAvatarTags: [],
-        bio: "",
-        bioLinks: [],
-        state: "online",
-        $online_for: 1000,
-        last_login: "2025-01-01T00:00:00.000Z",
-        last_activity: "2025-01-01T00:00:00.000Z",
-        date_joined: "2020-01-01",
-        allowAvatarCopying: true,
-        displayName: "Target",
-      },
-      $location: {
-        tag: "wrld_test:123",
-        shortName: "Test",
-        userId: "",
-        user: null,
-      },
-      instance: {
-        ref: {},
-        friendCount: 0,
-      },
-      users: [
-        {
-          id: "usr_friend_1",
-          displayName: "Friend A",
-          $userColour: "#ffffff",
-          location: "traveling",
-          $travelingToTime: Date.now(),
-          $location_at: Date.now(),
-        },
-      ],
-      note: "",
-      memo: "",
-      isRepresentedGroupLoading: false,
-      representedGroup: null,
-      lastSeen: "2025-01-01T00:00:00.000Z",
-      joinCount: 0,
-      timeSpent: 0,
-      dateFriendedInfo: [],
-      unFriended: false,
-      dateFriended: "2025-01-01T00:00:00.000Z",
-      $homeLocationName: "",
-      ...overrides.userDialog,
-    },
-    currentUser: {
-      id: "usr_me",
+      location: "wrld_test:123",
+      travelingToLocation: "",
+      profilePicOverride: "",
+      currentAvatarImageUrl: "",
+      currentAvatarTags: [],
+      bio: "",
+      bioLinks: [],
+      state: "online",
+      $online_for: 1000,
+      last_login: "2025-01-01T00:00:00.000Z",
+      last_activity: "2025-01-01T00:00:00.000Z",
+      date_joined: "2020-01-01",
       allowAvatarCopying: true,
-      isBoopingEnabled: true,
-      hasSharedConnectionsOptOut: false,
-      hasDiscordFriendsOptOut: false,
-      homeLocation: "",
-      ...overrides.currentUser,
+      displayName: "Target",
     },
-    currentUserCredits: null,
-  });
+    $location: {
+      tag: "wrld_test:123",
+      shortName: "Test",
+      userId: "",
+    },
+    instance: {
+      ...createUserDialogState().instance,
+      ref: {},
+      friendCount: 0,
+    },
+    users: [
+      createDefaultUserRef({
+        id: "usr_friend_1",
+        displayName: "Friend A",
+        $userColour: "#ffffff",
+        location: "traveling",
+        $travelingToTime: Date.now(),
+        $location_at: Date.now(),
+      }),
+    ],
+    note: "",
+    memo: "",
+    isRepresentedGroupLoading: false,
+    representedGroup: createUserDialogState().representedGroup,
+    lastSeen: "2025-01-01T00:00:00.000Z",
+    joinCount: 0,
+    timeSpent: 0,
+    dateFriendedInfo: [],
+    unFriended: false,
+    dateFriended: "2025-01-01T00:00:00.000Z",
+    $homeLocationName: "",
+    ...overrides.userDialog,
+  };
+  const currentUser: Partial<CurrentUserState> = {
+    id: "usr_me",
+    allowAvatarCopying: true,
+    isBoopingEnabled: true,
+    hasSharedConnectionsOptOut: false,
+    hasDiscordFriendsOptOut: false,
+    homeLocation: "",
+    ...overrides.currentUser,
+  };
+  userStore.userDialog = { ...createUserDialogState(), ...userDialog };
+  userStore.currentUser = { ...createCurrentUserState(), ...currentUser };
+  userStore.$patch({ currentUserCredits: null });
 
   const locationStore = useLocationStore(pinia);
   locationStore.$patch({

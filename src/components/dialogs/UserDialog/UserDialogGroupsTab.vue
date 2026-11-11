@@ -15,7 +15,7 @@
         <template v-if="!userDialogGroupEditMode">
           <Input v-model="groupSearchQuery" class="h-8 w-40 mr-2" :placeholder="t('dialog.user.groups.search_placeholder')" @click.stop />
           <span style="margin-right: 6px">{{ t("dialog.user.groups.sort_by") }}</span>
-          <Select :model-value="userDialogGroupSortingKey" :disabled="userDialog.isGroupsLoading" @update:model-value="setUserDialogGroupSortingByKey">
+          <Select :model-value="userDialogGroupSortingKey" :disabled="userDialog.isGroupsLoading" @update:model-value="selectUserDialogGroupSorting">
             <SelectTrigger size="sm" @click.stop>
               <SelectValue />
             </SelectTrigger>
@@ -71,10 +71,13 @@
               v-for="group in userDialogGroupEditGroups"
               :key="group.id"
               class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-full hover:rounded-[25px_5px_5px_25px]"
-              @click="showGroupDialog(group.id)"
+              @click="showGroupDialog(group.id ?? '')"
             >
               <div style="margin-left: 6px; margin-right: 6px; transform: scale(0.8); transform-origin: left center" @click.stop>
-                <Checkbox :model-value="userDialogGroupEditSelectedGroupIds.includes(group.id)" @update:model-value="() => toggleGroupSelection(group.id)" />
+                <Checkbox
+                  :model-value="userDialogGroupEditSelectedGroupIds.includes(group.id ?? '')"
+                  @update:model-value="() => toggleGroupSelection(group.id ?? '')"
+                />
               </div>
 
               <div style="margin-right: 3px; margin-left: 6px" @click.stop>
@@ -83,7 +86,7 @@
                   variant="outline"
                   :aria-label="t('dialog.vrcx_updater.download')"
                   style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0"
-                  @click="moveGroupTop(group.id)"
+                  @click="moveGroupTop(group.id ?? '')"
                 >
                   <DownloadIcon class="size-3.5 shrink-0" style="transform: rotate(180deg)" />
                 </Button>
@@ -92,7 +95,7 @@
                   variant="outline"
                   :aria-label="t('dialog.vrcx_updater.download')"
                   style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0; margin-top: 4px"
-                  @click="moveGroupBottom(group.id)"
+                  @click="moveGroupBottom(group.id ?? '')"
                 >
                   <DownloadIcon class="size-3.5 shrink-0" />
                 </Button>
@@ -102,7 +105,7 @@
                   size="icon-sm"
                   variant="outline"
                   style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0"
-                  @click="moveGroupUp(group.id)"
+                  @click="moveGroupUp(group.id ?? '')"
                 >
                   <ArrowUp class="size-3.5 shrink-0" />
                 </Button>
@@ -110,14 +113,14 @@
                   size="icon-sm"
                   variant="outline"
                   style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0; margin-top: 4px"
-                  @click="moveGroupDown(group.id)"
+                  @click="moveGroupDown(group.id ?? '')"
                 >
                   <ArrowDown class="size-3.5 shrink-0" />
                 </Button>
               </div>
               <div class="relative inline-block flex-none size-9 mr-2.5">
                 <Avatar class="size-9">
-                  <AvatarImage :src="group.iconUrl" class="object-cover" />
+                  <AvatarImage :src="group.iconUrl ?? ''" class="object-cover" />
                   <AvatarFallback>
                     <Users class="size-4 text-muted-foreground" />
                   </AvatarFallback>
@@ -131,7 +134,7 @@
                   </TooltipWrapper>
                   <TooltipWrapper v-if="group.myMember?.visibility !== 'visible'" side="top">
                     <template #content>
-                      <span>{{ t("dialog.group.members.visibility") }} {{ group.myMember.visibility }}</span>
+                      <span>{{ t("dialog.group.members.visibility") }} {{ group.myMember?.visibility }}</span>
                     </template>
                     <Eye style="margin-right: 6px" />
                   </TooltipWrapper>
@@ -142,7 +145,7 @@
                 v-if="group.myMember?.visibility"
                 :model-value="group.myMember.visibility"
                 :disabled="group.privacy !== 'default'"
-                @update:model-value="(value) => setGroupVisibility(group.id, value)"
+                @update:model-value="(value) => selectGroupVisibility(group.id ?? '', value)"
               >
                 <SelectTrigger size="sm" @click.stop>
                   <SelectValue
@@ -181,7 +184,7 @@
                   variant="outline"
                   style="margin-left: 6px"
                   :aria-label="isSoleGroupOwner(group, currentUser.id) ? t('dialog.group.actions.delete') : t('dialog.user.groups.leave_group_tooltip')"
-                  @click.stop="leaveGroup(group.id)"
+                  @click.stop="leaveGroup(group.id ?? '')"
                 >
                   <Trash2 v-if="isSoleGroupOwner(group, currentUser.id)" />
                   <LogOut v-else />
@@ -193,7 +196,7 @@
                   variant="outline"
                   style="margin-left: 6px"
                   :aria-label="isSoleGroupOwner(group, currentUser.id) ? t('dialog.group.actions.delete') : t('dialog.user.groups.leave_group_tooltip')"
-                  @click.stop="leaveGroupPrompt(group.id)"
+                  @click.stop="leaveGroupPrompt(group.id ?? '')"
                 >
                   <Trash2 v-if="isSoleGroupOwner(group, currentUser.id)" />
                   <LogOut v-else />
@@ -204,7 +207,7 @@
         </template>
         <template v-else-if="groupSearchActive">
           <div class="flex flex-wrap items-start" style="margin-top: 8px">
-            <UserDialogGroupCard v-for="group in allFilteredGroups" :key="group.id" :group="group" :can-manage="currentUser.id === userDialog.id" />
+            <UserDialogGroupCard v-for="group in allFilteredGroups" :key="group.id ?? ''" :group="group" :can-manage="currentUser.id === userDialog.id" />
           </div>
         </template>
         <template v-else>
@@ -226,7 +229,7 @@
           <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
             <UserDialogGroupCard
               v-for="group in userDialog.userGroups.ownGroups"
-              :key="group.id"
+              :key="group.id ?? ''"
               :group="group"
               :can-manage="currentUser.id === userDialog.id"
             />
@@ -237,7 +240,7 @@
             <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
               <UserDialogGroupCard
                 v-for="group in userDialog.userGroups.mutualGroups"
-                :key="group.id"
+                :key="group.id ?? ''"
                 :group="group"
                 :can-manage="currentUser.id === userDialog.id"
               />
@@ -260,7 +263,7 @@
             <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
               <UserDialogGroupCard
                 v-for="group in userDialog.userGroups.remainingGroups"
-                :key="group.id"
+                :key="group.id ?? ''"
                 :group="group"
                 :can-manage="currentUser.id === userDialog.id"
               />
@@ -273,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, DownloadIcon, Eye, LogOut, Plus, RefreshCw, Tag, ToolCase, Trash2, Users } from "lucide-vue-next";
+import { ArrowDown, ArrowUp, DownloadIcon, Eye, LogOut, Plus, RefreshCw, Tag, Trash2, Users } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
@@ -295,6 +298,7 @@ import UserDialogGroupCard from "./UserDialogGroupCard.vue";
 import { useAuthStore } from "../../../stores/auth";
 import { useGroupStore } from "../../../stores/group";
 import { useUiStore } from "../../../stores/ui";
+import { logError } from "../../../stores/notification/errors";
 import { useUserStore } from "../../../stores/user";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { applyGroup, saveCurrentUserGroups } from "../../../coordinators/group-coordinator";
@@ -311,6 +315,9 @@ import { groupRequest } from "../../../api/group";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { userDialogGroupSortingOptions } from "../../../shared/constants/user";
 import { moveGroupInOrder, normalizeGroupOrder } from "../../../shared/utils/group-order";
+import type { UserDialogGroup, UserSorting } from "../../../stores/user-state";
+import type { VrcxGroup } from "../../../types/vrcx";
+import type { GroupUserVisibility } from "vrchat";
 
 const { t } = useI18n();
 
@@ -322,9 +329,9 @@ const { cachedConfig } = storeToRefs(useAuthStore());
 const { shiftHeld } = storeToRefs(useUiStore());
 
 const userDialogGroupEditMode = ref(false);
-const userDialogGroupEditGroups = ref([]);
+const userDialogGroupEditGroups = ref<VrcxGroup[]>([]);
 const userDialogGroupAllSelected = ref(false);
-const userDialogGroupEditSelectedGroupIds = ref([]);
+const userDialogGroupEditSelectedGroupIds = ref<string[]>([]);
 
 const { selectedKey: userDialogGroupSortingKey, selectByKey: setUserDialogGroupSortingByKey } = useOptionKeySelect(
   userDialogGroupSortingOptions,
@@ -334,7 +341,7 @@ const { selectedKey: userDialogGroupSortingKey, selectByKey: setUserDialogGroupS
 
 const groupSearchQuery = ref("");
 const groupSearchActive = computed(() => groupSearchQuery.value.trim().length > 0);
-const maxOwnedGroups = computed(() => Number(cachedConfig.value?.constants?.GROUPS?.MAX_OWNED ?? 5));
+const maxOwnedGroups = computed(() => cachedConfig.value.constants?.GROUPS.MAX_OWNED ?? 5);
 const isOwnedGroupLimitReached = computed(() => userDialog.value.userGroups.ownGroups.length >= maxOwnedGroups.value);
 const canCreateGroup = computed(
   () =>
@@ -347,11 +354,12 @@ const createGroupTooltip = computed(() => {
   if (isOwnedGroupLimitReached.value) {
     return t("dialog.user.groups.create_limit_reached");
   }
+  return undefined;
 });
 const allFilteredGroups = computed(() => {
   const query = groupSearchQuery.value.trim().toLowerCase();
   if (!query) return [];
-  return userDialog.value.userGroups.groups.filter((g) => (g.name || "").toLowerCase().includes(query));
+  return userDialog.value.userGroups.groups.filter((g) => (g.name ?? "").toLowerCase().includes(query));
 });
 
 watch(
@@ -361,17 +369,23 @@ watch(
   }
 );
 
-async function setUserDialogGroupSorting(sortOrder) {
+function selectUserDialogGroupSorting(value: unknown) {
+  if (typeof value === "string") {
+    setUserDialogGroupSortingByKey(value);
+  }
+}
+
+function setUserDialogGroupSorting(sortOrder: UserSorting) {
   const D = userDialog.value;
   if (D.groupSorting.value === sortOrder.value) {
     return;
   }
   D.groupSorting = sortOrder;
-  await sortCurrentUserGroups();
+  sortCurrentUserGroups().catch(logError);
 }
 
-async function getUserGroups(userId) {
-  exitEditModeCurrentUserGroups();
+async function getUserGroups(userId: string) {
+  exitEditModeCurrentUserGroups().catch(logError);
   userDialog.value.isGroupsLoading = true;
   userDialog.value.userGroups = {
     groups: [],
@@ -388,18 +402,17 @@ async function getUserGroups(userId) {
   if (userId === currentUser.value.id) {
     currentUserGroups.value.clear();
     args.json.forEach((group) => {
-      const ref = applyGroup(group);
-      if (!currentUserGroups.value.has(group.id)) {
-        currentUserGroups.value.set(group.id, ref);
+      const ref = applyGroup({ ...group, privacy: toGroupPrivacy(group.privacy) });
+      if (!currentUserGroups.value.has(group.id ?? "")) {
+        currentUserGroups.value.set(group.id ?? "", ref);
       }
     });
 
     saveCurrentUserGroups();
   }
   userDialog.value.userGroups.groups = args.json;
-  for (let i = 0; i < args.json.length; ++i) {
-    const group = args.json[i];
-    if (!group?.id) {
+  for (const group of args.json) {
+    if (!group.id) {
       console.error("getUserGroups, group ID is missing", group);
       continue;
     }
@@ -428,9 +441,22 @@ async function getUserGroups(userId) {
   userDialog.value.isGroupsLoading = false;
 }
 
-function sortGroupsByInGame(a, b) {
-  const aIndex = inGameGroupOrder.value.indexOf(a?.id);
-  const bIndex = inGameGroupOrder.value.indexOf(b?.id);
+const groupUserVisibilityValues = ["visible", "friends", "hidden"] as const satisfies readonly GroupUserVisibility[];
+
+function toGroupUserVisibility(value: unknown): GroupUserVisibility | undefined {
+  return groupUserVisibilityValues.find((option) => option === value);
+}
+
+function toGroupPrivacy(value: string | null | undefined): "default" | "private" | undefined {
+  if (value === "default" || value === "private") {
+    return value;
+  }
+  return undefined;
+}
+
+function sortGroupsByInGame(a: UserDialogGroup, b: UserDialogGroup) {
+  const aIndex = inGameGroupOrder.value.indexOf(a.id ?? "");
+  const bIndex = inGameGroupOrder.value.indexOf(b.id ?? "");
   if (aIndex === -1 && bIndex === -1) {
     return 0;
   }
@@ -446,7 +472,7 @@ function sortGroupsByInGame(a, b) {
 async function sortCurrentUserGroups() {
   const D = userDialog.value;
 
-  let sortMethod = () => 0;
+  let sortMethod: (a: UserDialogGroup, b: UserDialogGroup) => number = () => 0;
 
   switch (D.groupSorting.value) {
     case "alphabetical":
@@ -479,7 +505,7 @@ async function editModeCurrentUserGroups() {
   userDialogGroupEditGroups.value = Array.from(currentUserGroups.value.values());
   inGameGroupOrder.value = normalizeGroupOrder(
     inGameGroupOrder.value,
-    userDialogGroupEditGroups.value.map((group) => group.id)
+    userDialogGroupEditGroups.value.map((group) => group.id ?? "")
   );
   userDialogGroupEditGroups.value.sort(sortGroupsByInGame);
   userDialogGroupEditMode.value = true;
@@ -488,7 +514,7 @@ async function editModeCurrentUserGroups() {
 async function saveInGameGroupOrder() {
   userDialogGroupEditGroups.value.sort(sortGroupsByInGame);
   try {
-    await AppApi.SetVRChatRegistryKey(`VRC_GROUP_ORDER_${currentUser.value.id}`, JSON.stringify(inGameGroupOrder.value), 3);
+    await window.AppApi.SetVRChatRegistryKey(`VRC_GROUP_ORDER_${currentUser.value.id}`, JSON.stringify(inGameGroupOrder.value), 3);
   } catch (err) {
     console.error(err);
     toast.error("Failed to save in-game group order");
@@ -496,47 +522,60 @@ async function saveInGameGroupOrder() {
 }
 
 function selectAllGroups() {
-  const allSelected = userDialogGroupEditSelectedGroupIds.value.length === userDialogGroupEditGroups.value.length;
+  const isAllSelected = userDialogGroupEditSelectedGroupIds.value.length === userDialogGroupEditGroups.value.length;
 
-  userDialogGroupEditSelectedGroupIds.value = allSelected ? [] : userDialogGroupEditGroups.value.map((g) => g.id);
-  userDialogGroupAllSelected.value = !allSelected;
+  userDialogGroupEditSelectedGroupIds.value = isAllSelected ? [] : userDialogGroupEditGroups.value.map((g) => g.id ?? "");
+  userDialogGroupAllSelected.value = !isAllSelected;
 
   userDialogGroupEditMode.value = false;
   nextTick(() => {
     userDialogGroupEditMode.value = true;
-  });
+  }).catch(logError);
 }
 
 const bulkGroupActionValue = ref("");
 
-function handleBulkGroupAction(value) {
+function handleBulkGroupAction(value: unknown) {
+  if (typeof value !== "string") {
+    return;
+  }
   bulkGroupActionValue.value = value;
 
   if (value === "leave") {
     bulkLeaveGroups();
-  } else if (typeof value === "string" && value.startsWith("visibility:")) {
-    const newVisibility = value.slice("visibility:".length);
+  } else if (value.startsWith("visibility:")) {
+    const newVisibility = toGroupUserVisibility(value.slice("visibility:".length));
     bulkSetVisibility(newVisibility);
   }
 
   nextTick(() => {
     bulkGroupActionValue.value = "";
-  });
+  }).catch(logError);
 }
 
-async function bulkSetVisibility(newVisibility) {
+function bulkSetVisibility(newVisibility: GroupUserVisibility | undefined) {
+  if (!newVisibility) {
+    return;
+  }
   for (const groupId of userDialogGroupEditSelectedGroupIds.value) {
-    setGroupVisibility(groupId, newVisibility);
+    setGroupVisibility(groupId, newVisibility).catch(logError);
+  }
+}
+
+function selectGroupVisibility(groupId: string, value: unknown) {
+  const visibility = toGroupUserVisibility(value);
+  if (visibility) {
+    setGroupVisibility(groupId, visibility).catch(logError);
   }
 }
 
 function bulkLeaveGroups() {
   for (const groupId of userDialogGroupEditSelectedGroupIds.value) {
-    leaveGroup(groupId);
+    leaveGroup(groupId).catch(logError);
   }
 }
 
-function toggleGroupSelection(groupId) {
+function toggleGroupSelection(groupId: string) {
   const index = userDialogGroupEditSelectedGroupIds.value.indexOf(groupId);
   if (index === -1) {
     userDialogGroupEditSelectedGroupIds.value.push(groupId);
@@ -545,29 +584,29 @@ function toggleGroupSelection(groupId) {
   }
 }
 
-function moveGroupUp(groupId) {
+function moveGroupUp(groupId: string) {
   const index = inGameGroupOrder.value.indexOf(groupId);
   if (moveGroupInOrder(inGameGroupOrder.value, groupId, index - 1)) {
-    saveInGameGroupOrder();
+    saveInGameGroupOrder().catch(logError);
   }
 }
 
-function moveGroupDown(groupId) {
+function moveGroupDown(groupId: string) {
   const index = inGameGroupOrder.value.indexOf(groupId);
   if (moveGroupInOrder(inGameGroupOrder.value, groupId, index + 1)) {
-    saveInGameGroupOrder();
+    saveInGameGroupOrder().catch(logError);
   }
 }
 
-function moveGroupTop(groupId) {
+function moveGroupTop(groupId: string) {
   if (moveGroupInOrder(inGameGroupOrder.value, groupId, 0)) {
-    saveInGameGroupOrder();
+    saveInGameGroupOrder().catch(logError);
   }
 }
 
-function moveGroupBottom(groupId) {
+function moveGroupBottom(groupId: string) {
   if (moveGroupInOrder(inGameGroupOrder.value, groupId, inGameGroupOrder.value.length - 1)) {
-    saveInGameGroupOrder();
+    saveInGameGroupOrder().catch(logError);
   }
 }
 

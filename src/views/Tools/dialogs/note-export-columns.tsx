@@ -3,10 +3,36 @@ import { Trash2 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import { i18n } from "@/plugins/i18n";
+import type { useUserDisplay } from "../../../composables/use-user-display";
+import type { FriendContext } from "../../../stores/friend-types";
+import type { ToolsTableColumn } from "./tools-table-types";
 
 const { t } = i18n.global;
 
-export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage, onShowUser, onRemove }) => [
+type UserDisplay = ReturnType<typeof useUserDisplay>;
+
+export type NoteExportRow = {
+  id: string;
+  name: string;
+  memo: string;
+  ref: NonNullable<FriendContext["ref"]>;
+};
+
+type NoteExportColumnContext = {
+  userImage: UserDisplay["userImage"];
+  userImageFull: UserDisplay["userImageFull"];
+  onShowFullscreenImage: (url: string) => void;
+  onShowUser: (userId: string) => void;
+  onRemove: (row: NoteExportRow) => void;
+};
+
+export const createColumns = ({
+  userImage,
+  userImageFull,
+  onShowFullscreenImage,
+  onShowUser,
+  onRemove,
+}: NoteExportColumnContext): ToolsTableColumn<NoteExportRow>[] => [
   {
     id: "image",
     header: () => t("table.import.image"),
@@ -14,9 +40,8 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
     size: 70,
     cell: ({ row }) => {
       const original = row.original;
-      const ref = original?.ref;
-      const thumb = userImage?.(ref);
-      const full = userImageFull?.(ref);
+      const thumb = userImage(original.ref);
+      const full = userImageFull(original.ref);
 
       return (
         <img
@@ -26,7 +51,7 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
           onClick={(e) => {
             e.stopPropagation();
             if (full) {
-              onShowFullscreenImage?.(full);
+              onShowFullscreenImage(full);
             }
           }}
         />
@@ -44,10 +69,10 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
           class="cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            onShowUser?.(original?.id);
+            onShowUser(original.id);
           }}
         >
-          {original?.name}
+          {original.name}
         </span>
       );
     },
@@ -64,8 +89,8 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
       const original = row.original;
       return (
         <InputGroupTextareaField
-          modelValue={original?.memo ?? ""}
-          onUpdate:modelValue={(value) => {
+          modelValue={original.memo}
+          onUpdate:modelValue={(value: string) => {
             original.memo = value;
           }}
           maxlength={256}
@@ -92,7 +117,7 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
           variant="ghost"
           onClick={(e) => {
             e.stopPropagation();
-            onRemove?.(original);
+            onRemove(original);
           }}
         >
           <Trash2 />

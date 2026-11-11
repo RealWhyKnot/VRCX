@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import Popover from "@/components/ui/popover/Popover.vue";
 import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
@@ -10,26 +10,35 @@ import "vue3-colorpicker/style.css";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  modelValue: { type: String, required: true },
-  label: { type: String, default: null },
-  disableAlpha: { type: Boolean, default: true },
-  presets: { type: Array, default: () => [] },
-  clearable: { type: Boolean, default: false },
-  emptyValue: {
-    type: String,
-    default: (e) => (Array.isArray(e.presets) && e.presets.length ? String(e.presets[0]) : "#000000"),
-  },
-  cols: { type: Number, default: 6 },
-  disabled: { type: Boolean, default: false },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: string;
+    label?: string | null;
+    disableAlpha?: boolean;
+    presets?: string[];
+    clearable?: boolean;
+    emptyValue?: string;
+    cols?: number;
+    disabled?: boolean;
+  }>(),
+  {
+    label: null,
+    disableAlpha: true,
+    presets: () => [],
+    clearable: false,
+    emptyValue: (props) => (Array.isArray(props.presets) && props.presets.length ? String(props.presets[0]) : "#000000"),
+    cols: 6,
+    disabled: false,
+  }
+);
 
-const emit = defineEmits(["update:modelValue", "change"]);
+const emit = defineEmits<{
+  "update:modelValue": [value: string];
+  change: [value: string];
+}>();
 
-function normalizeHex(v) {
-  const s = String(v || "")
-    .trim()
-    .toLowerCase();
+function normalizeHex(v: string | null | undefined) {
+  const s = (v ?? "").trim().toLowerCase();
   if (/^#[0-9a-f]{6}$/.test(s)) return s;
   return "#ffffff";
 }
@@ -44,16 +53,14 @@ const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(1, props.cols)}, minmax(0, 1fr))`,
 }));
 
-const contentBodyRef = ref(null);
-
-function setColor(color) {
+function setColor(color: string) {
   if (props.disabled) return;
   emit("update:modelValue", color);
   emit("change", color);
 }
 
-function onInput(val) {
-  setColor(String(val || ""));
+function onInput(val: unknown) {
+  setColor(typeof val === "string" ? val : "");
 }
 
 function clear() {
@@ -86,7 +93,7 @@ function clear() {
     </PopoverTrigger>
 
     <PopoverContent class="w-auto p-0 z-10000" align="start">
-      <div ref="contentBodyRef" :class="[{ 'disable-alpha': disableAlpha }]">
+      <div :class="[{ 'disable-alpha': disableAlpha }]">
         <div v-if="hasPresets" class="mt-3 pl-3 pb-3 grid gap-2 border-b" :style="gridStyle">
           <button
             v-for="color in presets"

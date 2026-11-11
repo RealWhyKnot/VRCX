@@ -6,7 +6,14 @@
       </DialogHeader>
 
       <div>
-        <InputGroupAction v-for="(domain, index) in urlList" :key="index" v-model="urlList[index]" class="mt-1.5" size="sm">
+        <InputGroupAction
+          v-for="(url, index) in urlList"
+          :key="index"
+          :model-value="url"
+          class="mt-1.5"
+          size="sm"
+          @update:model-value="(value) => setUrl(index, value)"
+        >
           <template #actions>
             <Button variant="ghost" @click="urlList.splice(index, 1)"><Trash2 /></Button>
           </template>
@@ -39,33 +46,39 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { worldRequest } from "../../../api/world";
+import { logError } from "../../../stores/vrcx-messages";
+import type { WorldAllowedDomainsState } from "./use-world-dialog-commands";
 
-const props = defineProps({
-  worldAllowedDomainsDialog: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  worldAllowedDomainsDialog: WorldAllowedDomainsState;
+}>();
 
-const emit = defineEmits(["update:worldAllowedDomainsDialog"]);
+defineEmits<{
+  "update:worldAllowedDomainsDialog": [value: WorldAllowedDomainsState];
+}>();
 
 const { t } = useI18n();
 
-const urlList = ref([]);
+const urlList = ref<string[]>([]);
+
+function setUrl(index: number, value: string | number) {
+  urlList.value[index] = String(value);
+}
 
 const isVisible = computed({
   get() {
     return props.worldAllowedDomainsDialog.visible;
   },
-  set(val) {
-    props.worldAllowedDomainsDialog.visible = val;
+  set(isVisible: boolean) {
+    const D = props.worldAllowedDomainsDialog;
+    D.visible = isVisible;
   },
 });
 
 watch(
   () => props.worldAllowedDomainsDialog.visible,
-  (val) => {
-    if (val) {
+  (isVisible) => {
+    if (isVisible) {
       urlList.value = props.worldAllowedDomainsDialog.urlList;
     }
   }
@@ -73,15 +86,15 @@ watch(
 
 function saveWorldAllowedDomains() {
   const D = props.worldAllowedDomainsDialog;
-  worldRequest
+  void worldRequest
     .saveWorld({
       id: D.worldId,
       urlList: urlList.value,
     })
-    .then((args) => {
+    .then(() => {
       toast.success("Allowed Video Player Domains updated");
-      return args;
-    });
+    })
+    .catch(logError);
   D.visible = false;
 }
 </script>

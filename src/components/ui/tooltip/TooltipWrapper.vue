@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TooltipContentProps } from "reka-ui";
 import { computed, useAttrs, useSlots } from "vue";
 
 import Tooltip from "./Tooltip.vue";
@@ -9,35 +10,42 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const props = defineProps({
-  content: { type: [String, Number], required: false },
-  side: { type: null, required: false },
-  align: { type: null, required: false },
-  sideOffset: { type: Number, required: false },
-  delayDuration: {
-    type: Number,
-    required: false,
-    default() {
-      100;
-    },
-  },
-  skipDelayDuration: {
-    type: Number,
-    required: false,
-    default() {
-      100;
-    },
-  },
-  disableHoverableContent: { type: Boolean, required: false },
-  ignoreNonKeyboardFocus: { type: Boolean, required: false, default: true },
-  disabled: { type: Boolean, required: false },
-  triggerAsChild: { type: Boolean, required: false, default: true },
-  contentClass: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    content?: string | number | undefined;
+    side?: TooltipContentProps["side"] | undefined;
+    align?: TooltipContentProps["align"] | undefined;
+    sideOffset?: number | undefined;
+    delayDuration?: number | undefined;
+    skipDelayDuration?: number | undefined;
+    disableHoverableContent?: boolean;
+    ignoreNonKeyboardFocus?: boolean;
+    disabled?: boolean;
+    triggerAsChild?: boolean;
+    contentClass?: string | string[] | Record<string, boolean> | undefined;
+  }>(),
+  {
+    content: undefined,
+    side: undefined,
+    align: undefined,
+    sideOffset: undefined,
+    delayDuration: undefined,
+    skipDelayDuration: undefined,
+    ignoreNonKeyboardFocus: true,
+    triggerAsChild: true,
+    contentClass: undefined,
+  }
+);
 
 const attrs = useAttrs();
 const slots = useSlots();
-const hasContent = computed(() => Boolean(slots.content) || props.content !== undefined);
+const hasContent = computed(() => Boolean(slots["content"]) || props.content !== undefined);
+
+const contentProps = computed(() => ({
+  ...(props.side === undefined ? {} : { side: props.side }),
+  ...(props.align === undefined ? {} : { align: props.align }),
+  ...(props.sideOffset === undefined ? {} : { sideOffset: props.sideOffset }),
+}));
 </script>
 
 <template>
@@ -50,7 +58,7 @@ const hasContent = computed(() => Boolean(slots.content) || props.content !== un
     <TooltipTrigger :as-child="triggerAsChild" v-bind="attrs">
       <slot />
     </TooltipTrigger>
-    <TooltipContent v-if="hasContent" :side="side" :align="align" :side-offset="sideOffset" :class="['max-w-screen', contentClass]">
+    <TooltipContent v-if="hasContent" v-bind="contentProps" :class="['max-w-screen', contentClass]">
       <slot name="content">
         <span v-if="content !== undefined" class="whitespace-pre-wrap">{{ content }}</span>
       </slot>

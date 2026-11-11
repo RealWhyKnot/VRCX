@@ -87,38 +87,56 @@ import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { useUserDisplay } from "@/composables/use-user-display";
 import { useModalStore } from "@/stores/modal";
 import { debounce } from "@/shared/utils/common";
+import type { GroupTransferDialogState } from "./group-dialog-types";
+
+type TransferCandidate = NonNullable<Awaited<ReturnType<typeof groupRequest.getGroupMembersSearch>>["json"]["results"]>[number];
+type TransferRequirements = Awaited<ReturnType<typeof groupRequest.checkTransferGroup>>["json"]["requirements"];
 
 const MIN_SEARCH_LENGTH = 3;
-const TRANSFER_REQUIREMENT_LABELS = {
-  groupNotMonetized: "dialog.group.transfer.requirements.group_not_monetized",
-  hasVRCPlus: "dialog.group.transfer.requirements.has_vrc_plus",
-  hasVerifiedEmail: "dialog.group.transfer.requirements.has_verified_email",
-  targetCanOwnMoreGroups: "dialog.group.transfer.requirements.can_own_more_groups",
-  targetIsGroupMember: "dialog.group.transfer.requirements.is_group_member",
-};
 
-const props = defineProps({
-  dialogData: {
-    type: Object,
-    required: true,
-  },
-});
-const emit = defineEmits(["close"]);
+const props = defineProps<{
+  dialogData: GroupTransferDialogState;
+}>();
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
 const modalStore = useModalStore();
 const { userImage } = useUserDisplay();
 
+function failedTransferRequirementLabels(requirements: TransferRequirements) {
+  const labels: string[] = [];
+  if (!requirements.groupNotMonetized) {
+    labels.push(t("dialog.group.transfer.requirements.group_not_monetized"));
+  }
+  if (!requirements.hasVRCPlus) {
+    labels.push(t("dialog.group.transfer.requirements.has_vrc_plus"));
+  }
+  if (!requirements.hasVerifiedEmail) {
+    labels.push(t("dialog.group.transfer.requirements.has_verified_email"));
+  }
+  if (!requirements.targetCanOwnMoreGroups) {
+    labels.push(t("dialog.group.transfer.requirements.can_own_more_groups"));
+  }
+  if (!requirements.targetIsGroupMember) {
+    labels.push(t("dialog.group.transfer.requirements.is_group_member"));
+  }
+  return labels;
+}
+
 const searchText = ref("");
-const searchResults = ref([]);
-const selectedMember = ref(null);
+const searchResults = ref<TransferCandidate[]>([]);
+const selectedMember = ref<TransferCandidate | null>(null);
 const searching = ref(false);
 const checkingMember = ref(false);
 const submitting = ref(false);
 let searchRequestId = 0;
 let memberCheckRequestId = 0;
 
-const searchGroupMembersDebounced = debounce(searchGroupMembers, 200);
+const searchGroupMembersDebounced = debounce((query: string, requestId: number) => {
+  searchGroupMembers(query, requestId).catch((err: unknown) => console.error(err));
+}, 200);
 
 watch(
   () => props.dialogData.visible,
@@ -154,7 +172,7 @@ function handleSearchInput() {
   searchGroupMembersDebounced(searchText.value, searchRequestId);
 }
 
-async function searchGroupMembers(query, requestId) {
+async function searchGroupMembers(query: string, requestId: number) {
   if (requestId !== searchRequestId) {
     return;
   }
@@ -171,7 +189,7 @@ async function searchGroupMembers(query, requestId) {
       return;
     }
 
-    searchResults.value = args.json.results.filter((member) => member.userId !== props.dialogData.ownerId);
+    searchResults.value = (args.json.results ?? []).filter((member) => member.userId !== props.dialogData.ownerId);
   } finally {
     if (requestId === searchRequestId) {
       searching.value = false;
@@ -179,7 +197,11 @@ async function searchGroupMembers(query, requestId) {
   }
 }
 
-async function selectMember(member) {
+function transferDisplayName(member: TransferCandidate) {
+  return (member.user?.displayName ?? "") || member.userId;
+}
+
+async function selectMember(member: TransferCandidate) {
   if (checkingMember.value || submitting.value) {
     return;
   }
@@ -198,15 +220,13 @@ async function selectMember(member) {
       return;
     }
 
-    const failedRequirements = Object.entries(json.requirements)
-      .filter(([, requirementMet]) => !requirementMet)
-      .map(([requirement]) => t(TRANSFER_REQUIREMENT_LABELS[requirement]));
+    const failedRequirements = failedTransferRequirementLabels(json.requirements);
 
     if (failedRequirements.length > 0) {
       await modalStore.alert({
         title: t("dialog.group.transfer.requirements_title"),
         description: t("dialog.group.transfer.requirements_description", {
-          displayName: member.user?.displayName || member.userId,
+          displayName: transferDisplayName(member),
           requirements: failedRequirements.join("; "),
         }),
       });
@@ -227,7 +247,7 @@ async function confirmTransfer() {
     return;
   }
 
-  const displayName = member.user?.displayName || member.userId;
+  const displayName = transferDisplayName(member);
   submitting.value = true;
   try {
     const { ok } = await modalStore.confirm({
@@ -260,8 +280,8 @@ function closeDialog() {
   }
 }
 
-function handleOpenChange(open) {
-  if (!open) {
+function handleOpenChange(isOpen: boolean) {
+  if (!isOpen) {
     closeDialog();
   }
 }

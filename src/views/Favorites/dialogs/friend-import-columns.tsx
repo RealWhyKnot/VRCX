@@ -2,10 +2,26 @@ import { Trash2 } from "lucide-vue-next";
 
 import Button from "../../../components/ui/button/Button.vue";
 import { i18n } from "../../../plugins/i18n";
+import type { VrcxUser } from "../../../types/vrcx";
+import type { VrcxColumn } from "../../FriendList/vrcx-column";
 
 const { t } = i18n.global;
 
-export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage, onShowUser, onDelete }) => [
+type FriendImportColumnHandlers = {
+  userImage: (user: VrcxUser) => string;
+  userImageFull: (user: VrcxUser) => string | undefined;
+  onShowFullscreenImage: (imageUrl: string) => void;
+  onShowUser: (userId: string) => void;
+  onDelete: (user: VrcxUser) => void;
+};
+
+export const createColumns = ({
+  userImage,
+  userImageFull,
+  onShowFullscreenImage,
+  onShowUser,
+  onDelete,
+}: FriendImportColumnHandlers): VrcxColumn<VrcxUser>[] => [
   {
     id: "image",
     header: () => t("table.import.image"),
@@ -13,18 +29,18 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
     size: 70,
     cell: ({ row }) => {
       const original = row.original;
-      const thumb = userImage?.(original);
-      const full = userImageFull?.(original);
+      const thumb = userImage(original);
+      const full = userImageFull(original);
 
       return (
         <img
           class="friends-list-avatar"
           src={thumb}
           loading="lazy"
-          onClick={(e) => {
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
             if (full) {
-              onShowFullscreenImage?.(full);
+              onShowFullscreenImage(full);
             }
           }}
         />
@@ -43,13 +59,13 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
       return (
         <span
           class="cursor-pointer"
-          title={original?.displayName}
-          onClick={(e) => {
+          title={original.displayName}
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
-            onShowUser?.(original?.id);
+            onShowUser(original.id);
           }}
         >
-          {original?.displayName}
+          {original.displayName}
         </span>
       );
     },
@@ -68,9 +84,9 @@ export const createColumns = ({ userImage, userImageFull, onShowFullscreenImage,
         <Button
           size="icon-sm"
           variant="ghost"
-          onClick={(e) => {
+          onClick={(e: MouseEvent) => {
             e.stopPropagation();
-            onDelete?.(original);
+            onDelete(original);
           }}
         >
           <Trash2 />

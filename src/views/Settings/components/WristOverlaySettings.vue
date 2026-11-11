@@ -54,13 +54,7 @@
       </SettingsItem>
 
       <SettingsItem :label="t('view.settings.wrist_overlay.steamvr_wrist_overlay.display_overlay_on')">
-        <Select
-          :model-value="overlayHand"
-          @update:model-value="
-            setOverlayHand($event);
-            saveOpenVROption();
-          "
-        >
+        <Select :model-value="overlayHand" @update:model-value="handleOverlayHandChange">
           <SelectTrigger size="sm">
             <SelectValue />
           </SelectTrigger>
@@ -165,7 +159,7 @@ import { useWristOverlaySettingsStore } from "@/stores/settings/wrist-overlay";
 import SettingsGroup from "./SettingsGroup.vue";
 import SettingsItem from "./SettingsItem.vue";
 
-const emit = defineEmits(["open-feed-filters"]);
+const emit = defineEmits<{ "open-feed-filters": [] }>();
 const { t } = useI18n();
 
 const notificationsSettingsStore = useNotificationsSettingsStore();
@@ -201,11 +195,18 @@ const {
 
 const { saveOpenVROption } = useVrStore();
 
-function handleOverlayButtonRadio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== overlaybutton.value) {
+function handleOverlayButtonRadio(value: unknown) {
+  const isEnabled = value === "true";
+  if (isEnabled !== overlaybutton.value) {
     setOverlaybutton();
     saveOpenVROption();
   }
+}
+
+function handleOverlayHandChange(value: unknown) {
+  if (typeof value === "string") {
+    setOverlayHand(value);
+  }
+  saveOpenVROption();
 }
 </script>

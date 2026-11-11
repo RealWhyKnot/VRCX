@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-10 py-2">
     <SettingsGroup :title="t('view.settings.appearance.appearance.header')">
       <SettingsItem :label="t('view.settings.appearance.appearance.language')">
-        <Select :model-value="appLanguage" @update:model-value="changeAppLanguage">
+        <Select :model-value="appLanguage" @update:model-value="handleAppLanguageChange">
           <SelectTrigger size="sm">
             <SelectValue :placeholder="appLanguageDisplayName" />
           </SelectTrigger>
@@ -128,7 +128,7 @@
             :max="1"
             :format-options="{ maximumFractionDigits: 2 }"
             class="w-32"
-            @update:model-value="setProfileBackgroundOpacity"
+            @update:model-value="handleProfileBackgroundOpacityChange"
           >
             <NumberFieldContent>
               <NumberFieldDecrement />
@@ -401,7 +401,11 @@
         <div class="flex flex-col gap-2 py-2">
           <div v-for="colorEntry in trustColorEntries" :key="colorEntry.key" class="flex items-center gap-3">
             <span :class="colorEntry.tagClass">{{ t(colorEntry.labelKey) }}</span>
-            <ColorPickerButton :model-value="trustColor[colorEntry.key]" :presets="colorEntry.presets" @change="updateTrustColor(colorEntry.key, $event)" />
+            <ColorPickerButton
+              :model-value="trustColor[colorEntry.key] ?? ''"
+              :presets="colorEntry.presets"
+              @change="updateTrustColor(colorEntry.key, $event)"
+            />
           </div>
         </div>
       </div>
@@ -449,6 +453,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { CheckIcon, ChevronDown } from "lucide-vue-next";
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { useVrStore } from "@/stores/vr";
+import { logError } from "@/stores/notification/errors";
 
 import Switch from "@/components/ui/switch/Switch.vue";
 import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
@@ -503,7 +508,7 @@ const {
   showNewDashboardButton,
 } = storeToRefs(appearanceSettingsStore);
 
-const appLanguageDisplayName = computed(() => getLanguageName(String(appLanguage.value)));
+const appLanguageDisplayName = computed(() => getLanguageName(appLanguage.value));
 
 const {
   setDisplayVRCProfileThemes,
@@ -610,24 +615,25 @@ const FONT_FAMILY_REGEX = /^\s*(([-_\p{L}][\p{L}\p{N}_\s-]*)|'[^']+'|"[^"]+")\s*
 const customFontDialogOpen = ref(false);
 const customFontInput = ref("");
 
-function handleSelectWesternFont(key) {
+function handleSelectWesternFont(key: string) {
   setAppFontFamily(key);
 }
 
-function handleSelectCjkFont(key) {
+function handleSelectCjkFont(key: string) {
   if (appFontFamily.value === "custom") {
     setAppFontFamily(APP_FONT_DEFAULT_KEY);
   }
   setAppCjkFontPack(key);
 }
 
+const fontConfigByKey: Record<string, { readonly cssName: string } | undefined> = APP_FONT_CONFIG;
+
 function handleSelectCustomFont() {
   const cssVarValue = getComputedStyle(document.documentElement).getPropertyValue("--font-western-primary").trim();
-  const currentKey = String(appFontFamily.value || APP_FONT_DEFAULT_KEY)
-    .trim()
-    .toLowerCase();
-  const fallbackFont = APP_FONT_CONFIG[currentKey]?.cssName || APP_FONT_CONFIG[APP_FONT_DEFAULT_KEY].cssName;
-  customFontInput.value = customFontFamily.value?.trim() || cssVarValue || fallbackFont;
+  const currentKey = (appFontFamily.value === "" ? APP_FONT_DEFAULT_KEY : appFontFamily.value).trim().toLowerCase();
+  const fallbackFont = fontConfigByKey[currentKey]?.cssName ?? APP_FONT_CONFIG[APP_FONT_DEFAULT_KEY].cssName;
+  const customValue = customFontFamily.value.trim();
+  customFontInput.value = [customValue, cssVarValue, fallbackFont].find((candidate) => candidate !== "") ?? "";
   customFontDialogOpen.value = true;
 }
 
@@ -644,7 +650,7 @@ function saveCustomFont() {
 
 const zoomLevel = ref(100);
 const isLinux = computed(() => isLinuxHost());
-let cleanupWheel = null;
+let cleanupWheel: (() => void) | null = null;
 
 onBeforeUnmount(() => {
   if (cleanupWheel) {
@@ -652,40 +658,40 @@ onBeforeUnmount(() => {
   }
 });
 
-initGetZoomLevel();
+void initGetZoomLevel().catch(logError);
 
-function handleSortFavoritesRadio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== sortFavorites.value) {
+function handleSortFavoritesRadio(value: unknown) {
+  const isEnabled = value === "true";
+  if (isEnabled !== sortFavorites.value) {
     saveSortFavoritesOption();
   }
 }
 
-function handleInstanceUsersSortAlphabeticalRadio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== instanceUsersSortAlphabetical.value) {
+function handleInstanceUsersSortAlphabeticalRadio(value: unknown) {
+  const isEnabled = value === "true";
+  if (isEnabled !== instanceUsersSortAlphabetical.value) {
     setInstanceUsersSortAlphabetical();
   }
 }
 
-function handleDtHour12Radio(value) {
-  const nextValue = value === "true";
-  if (nextValue !== dtHour12.value) {
+function handleDtHour12Radio(value: unknown) {
+  const isEnabled = value === "true";
+  if (isEnabled !== dtHour12.value) {
     setDtHour12();
     updateVRConfigVars();
   }
 }
 
-function handleWeekStartsOnChange(value) {
+function handleWeekStartsOnChange(value: unknown) {
   setWeekStartsOn(Number(value));
 }
 
 const tablePageSizesModel = computed({
   get: () => tablePageSizes.value.map(String),
-  set: (values) => {
-    const rawLength = Array.isArray(values) ? values.length : 0;
-    setTablePageSizes(values);
-    if (rawLength && rawLength !== tablePageSizes.value.length) {
+  set: (values: unknown) => {
+    const rawValues: readonly unknown[] = Array.isArray(values) ? values : [];
+    setTablePageSizes(rawValues.map((value) => Number(value)));
+    if (rawValues.length > 0 && rawValues.length !== tablePageSizes.value.length) {
       toast.error(t("view.settings.appearance.appearance.table_page_sizes_error"));
     }
   },
@@ -700,8 +706,7 @@ const tablePageSizesSearchTerm = ref("");
 const { contains } = useFilter({ sensitivity: "base" });
 
 const tablePageSizeOptions = computed(() => {
-  const current = Array.isArray(tablePageSizes.value) ? tablePageSizes.value : [];
-  const merged = new Set([...TABLE_PAGE_SIZE_SUGGESTIONS, ...current].map((v) => String(v)));
+  const merged = new Set([...TABLE_PAGE_SIZE_SUGGESTIONS, ...tablePageSizes.value].map((v) => String(v)));
   return Array.from(merged).sort((a, b) => Number(a) - Number(b));
 });
 
@@ -719,23 +724,35 @@ watch(tablePageSizesSearchTerm, (value) => {
 });
 
 async function initGetZoomLevel() {
-  const handleWheel = (event) => {
+  const handleWheel = (event: WheelEvent) => {
     if (event.ctrlKey) {
-      getZoomLevel();
+      void getZoomLevel().catch(logError);
     }
   };
   window.addEventListener("wheel", handleWheel);
   cleanupWheel = () => {
     window.removeEventListener("wheel", handleWheel);
   };
-  getZoomLevel();
+  await getZoomLevel();
 }
 
 async function getZoomLevel() {
-  zoomLevel.value = ((await AppApi.GetZoom()) + 10) * 10;
+  zoomLevel.value = ((await window.AppApi.GetZoom()) + 10) * 10;
 }
 
 function setZoomLevel() {
-  AppApi.SetZoom(zoomLevel.value / 10 - 10);
+  void window.AppApi.SetZoom(zoomLevel.value / 10 - 10).catch(logError);
+}
+
+function handleAppLanguageChange(value: unknown) {
+  if (typeof value === "string") {
+    void changeAppLanguage(value).catch(logError);
+  }
+}
+
+function handleProfileBackgroundOpacityChange(value: unknown) {
+  if (typeof value === "number") {
+    setProfileBackgroundOpacity(value);
+  }
 }
 </script>

@@ -1,11 +1,25 @@
 import { nextTick, ref } from "vue";
 
-export function useFavoritesLocalGroups(options = {}) {
+import { isFocusTarget, resolveElementTarget } from "./element-target.ts";
+
+type LocalGroupsOptions = {
+  createGroup?: (name: string) => void;
+  selectGroup?: (type: string, key: string, options: { userInitiated: boolean }) => unknown;
+};
+
+function focusLocalGroupInput(value: unknown) {
+  const element = resolveElementTarget(value);
+  if (isFocusTarget(element)) {
+    element.focus();
+  }
+}
+
+export function useFavoritesLocalGroups(options: LocalGroupsOptions = {}) {
   const { createGroup, selectGroup = () => true } = options;
 
   const isCreatingLocalGroup = ref(false);
   const newLocalGroupName = ref("");
-  const newLocalGroupInput = ref(null);
+  const newLocalGroupInput = ref<unknown>(null);
 
   function startLocalGroupCreation() {
     if (isCreatingLocalGroup.value) {
@@ -13,10 +27,9 @@ export function useFavoritesLocalGroups(options = {}) {
     }
     isCreatingLocalGroup.value = true;
     newLocalGroupName.value = "";
-    nextTick(() => {
-      const el = newLocalGroupInput.value?.$el ?? newLocalGroupInput.value;
-      el?.focus?.();
-    });
+    void nextTick(() => {
+      focusLocalGroupInput(newLocalGroupInput.value);
+    }).catch((error: unknown) => console.error(error));
   }
 
   function cancelLocalGroupCreation() {
@@ -32,9 +45,9 @@ export function useFavoritesLocalGroups(options = {}) {
     }
     createGroup?.(name);
     cancelLocalGroupCreation();
-    nextTick(() => {
+    void nextTick(() => {
       selectGroup("local", name, { userInitiated: true });
-    });
+    }).catch((error: unknown) => console.error(error));
   }
 
   return {

@@ -19,7 +19,7 @@ vi.mock("../../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -45,13 +45,13 @@ vi.mock("../../../src/services/database", () => ({
 vi.mock("../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn().mockImplementation((_k: string, d: string | undefined) => d ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_k: string, isFallback: boolean | undefined) => isFallback ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_k: string, d: number | undefined) => d ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_k: string, d: number | undefined) => d ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -72,21 +72,21 @@ vi.mock("vee-validate", () => ({
   Field: {
     name: "VeeField",
     props: ["name"],
-    setup(_props, { slots }) {
+    setup(_props: Record<string, unknown>, { slots }: { slots: Record<string, ((scope: unknown) => unknown) | undefined> }) {
       return () =>
-        slots.default?.({
-          field: { value: "", onChange: () => {}, onBlur: () => {} },
+        slots["default"]?.({
+          field: { value: "", onChange: vi.fn(), onBlur: vi.fn() },
           errors: [],
         });
     },
   },
   useForm: vi.fn(() => ({
-    handleSubmit: (fn) => fn,
+    handleSubmit: (fn: unknown) => fn,
     resetForm: vi.fn(),
     values: {},
   })),
 }));
-vi.mock("@vee-validate/zod", () => ({ toTypedSchema: vi.fn((s) => s) }));
+vi.mock("@vee-validate/zod", () => ({ toTypedSchema: vi.fn((s: unknown) => s) }));
 
 import Login from "../../../src/views/Login/Login.vue";
 import en from "../../../src/localization/en.json";

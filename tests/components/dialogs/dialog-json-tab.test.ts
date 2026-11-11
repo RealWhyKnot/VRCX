@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
 import { ref } from "vue";
+import type * as AppActions from "../../../src/shared/utils/app-actions";
+import type * as VueRouter from "vue-router";
 
 const { mockDownloadAndSaveJson } = vi.hoisted(() => ({
   mockDownloadAndSaveJson: vi.fn(),
 }));
 vi.mock("../../../src/shared/utils/app-actions", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof AppActions>();
   return {
     ...actual,
     downloadAndSaveJson: mockDownloadAndSaveJson,
@@ -37,7 +39,7 @@ vi.mock("../../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof VueRouter>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -62,13 +64,13 @@ vi.mock("../../../src/services/database", () => ({
 vi.mock("../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_k: string, d?: string) => d ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_k: string, isDefault?: boolean) => isDefault ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_k: string, d?: number) => d ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_k: string, d?: number) => d ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -98,7 +100,15 @@ const i18n = createI18n({
   messages: { en },
 });
 
-function mountComponent(props = {}, storeOverrides = {}) {
+type JsonTabTestProps = {
+  dialogId?: string;
+  dialogRef?: unknown;
+  treeData?: Record<string, unknown>;
+  treeDataKey?: string | number | null;
+  fileAnalysis?: Record<string, unknown> | null;
+};
+
+function mountComponent(props: JsonTabTestProps = {}, storeOverrides = {}) {
   const pinia = createTestingPinia({
     createSpy: vi.fn,
     stubActions: false,
@@ -189,7 +199,7 @@ describe("DialogJsonTab.vue", () => {
         name: "VueJsonPretty",
       });
       expect(jsonComponents).toHaveLength(2);
-      expect(jsonComponents[1].props("data")).toEqual({
+      expect(jsonComponents[1]?.props("data")).toEqual({
         size: 1024,
         format: "vrca",
       });
@@ -201,7 +211,7 @@ describe("DialogJsonTab.vue", () => {
       const wrapper = mountComponent();
       const buttons = wrapper.findAll("button");
 
-      await buttons[0].trigger("click");
+      await buttons[0]?.trigger("click");
       expect(wrapper.emitted("refresh")).toHaveLength(1);
     });
 
@@ -213,7 +223,7 @@ describe("DialogJsonTab.vue", () => {
       });
       const buttons = wrapper.findAll("button");
 
-      await buttons[1].trigger("click");
+      await buttons[1]?.trigger("click");
       expect(mockDownloadAndSaveJson).toHaveBeenCalledWith("usr_test123", dialogRef);
     });
   });

@@ -24,7 +24,7 @@
         <CollapsibleContent>
           <div class="pl-20 py-0.5 pb-1">
             <div v-for="(member, idx) in event.members" :key="idx" class="px-2 py-px text-[0.8125rem] rounded hover:bg-muted/30 flex items-center gap-1">
-              <span class="cursor-pointer" @click="lookupUser(member)">
+              <span class="cursor-pointer" @click="lookupUser(toUserRef(member))">
                 {{ member.displayName }}
               </span>
               <span v-if="member.isFriend">{{ member.isFavorite ? "⭐" : "💚" }}</span>
@@ -62,7 +62,7 @@
               :key="idx"
               class="px-2 py-px text-[0.8125rem] text-muted-foreground rounded hover:bg-muted/30 flex items-center gap-1"
             >
-              <span class="cursor-pointer" @click="lookupUser(member)">
+              <span class="cursor-pointer" @click="lookupUser(toUserRef(member))">
                 {{ member.displayName }}
               </span>
               <span v-if="member.isFriend">{{ member.isFavorite ? "⭐" : "💚" }}</span>
@@ -82,7 +82,7 @@
             {{ t("view.game_log.filters.OnPlayerJoined") }}
           </Badge>
         </div>
-        <span class="flex-1 min-w-0 flex items-center gap-1 truncate cursor-pointer" @click="lookupUser(event)">
+        <span class="flex-1 min-w-0 flex items-center gap-1 truncate cursor-pointer" @click="lookupUser(toUserRef(event))">
           <LogIn class="shrink-0 text-xs" />
           {{ event.displayName }}<span v-if="event.isFriend" class="ml-1"> {{ event.isFavorite ? "⭐" : "💚" }}</span>
         </span>
@@ -99,7 +99,7 @@
             {{ t("view.game_log.filters.OnPlayerLeft") }}
           </Badge>
         </div>
-        <span class="flex-1 min-w-0 flex items-center gap-1 truncate cursor-pointer" @click="lookupUser(event)">
+        <span class="flex-1 min-w-0 flex items-center gap-1 truncate cursor-pointer" @click="lookupUser(toUserRef(event))">
           <LogOut class="shrink-0 text-xs" />
           {{ event.displayName }}<span v-if="event.isFriend" class="ml-1"> {{ event.isFavorite ? "⭐" : "💚" }}</span>
         </span>
@@ -120,12 +120,12 @@
             </div>
             <span class="flex-1 min-w-0 flex items-center gap-1 truncate">
               <Play class="shrink-0 text-xs" />
-              <span v-if="showLink" class="truncate cursor-pointer" @click="openExternalLink(event.videoUrl)">
+              <span v-if="showLink" class="truncate cursor-pointer" @click="openExternalLink(event.videoUrl ?? '')">
                 {{ videoLabel }}
               </span>
               <span v-else class="truncate">{{ videoLabel }}</span>
-              <Badge v-if="event.playCount > 1" variant="secondary" class="shrink-0 text-[0.625rem] h-4 px-1">
-                {{ t("view.game_log.sessions.play_count", { count: event.playCount }) }}
+              <Badge v-if="(event.playCount ?? 0) > 1" variant="secondary" class="shrink-0 text-[0.625rem] h-4 px-1">
+                {{ t("view.game_log.sessions.play_count", { count: event.playCount ?? 0 }) }}
               </Badge>
             </span>
             <span v-if="event.displayName" class="shrink-0 text-muted-foreground text-[0.75rem]">
@@ -134,12 +134,12 @@
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem v-if="showLink" @click="openExternalLink(event.videoUrl)">
+          <ContextMenuItem v-if="showLink" @click="openExternalLink(event.videoUrl ?? '')">
             <ExternalLink class="size-4" />
             {{ t("common.actions.open_link") }}
           </ContextMenuItem>
           <ContextMenuSeparator v-if="showLink" />
-          <ContextMenuItem @click="copyToClipboard(event.videoUrl || event.videoName)">
+          <ContextMenuItem @click="copyToClipboard((event.videoUrl || event.videoName) ?? '')">
             <Copy class="size-4" />
             {{ t("common.actions.copy") }}
           </ContextMenuItem>
@@ -166,15 +166,14 @@ import ContextMenuTrigger from "../../../components/ui/context-menu/ContextMenuT
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { lookupUser } from "../../../coordinators/user-coordinator";
+import { toUserRef } from "../columns.tsx";
+import type { GameLogSessionEvent } from "../sessions/build-game-log-sessions";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  event: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  event: GameLogSessionEvent;
+}>();
 
 const isExpanded = ref(false);
 
@@ -185,10 +184,11 @@ const showLink = computed(() => {
 
 const videoLabel = computed(() => {
   if (props.event.type !== "VideoPlay") return "";
-  return props.event.videoName || props.event.videoUrl;
+  if (props.event.videoName) return props.event.videoName;
+  return props.event.videoUrl;
 });
 
-function formatTime(dateStr) {
+function formatTime(dateStr: string) {
   return formatDateFilter(dateStr, "short");
 }
 </script>

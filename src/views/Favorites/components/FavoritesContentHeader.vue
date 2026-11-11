@@ -36,16 +36,31 @@ import Button from "@/components/ui/button/Button.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
 import { useI18n } from "vue-i18n";
 
-defineProps({
-  editMode: { type: Boolean, default: false },
-  editModeDisabled: { type: Boolean, default: false },
-  editModeVisible: { type: Boolean, default: false },
-  isAllSelected: { type: Boolean, default: false },
-  hasSelection: { type: Boolean, default: false },
-  showCopyButton: { type: Boolean, default: true },
+type FavoritesContentHeaderProps = {
+  editMode?: boolean;
+  editModeDisabled?: boolean;
+  editModeVisible?: boolean;
+  isAllSelected?: boolean;
+  hasSelection?: boolean;
+  showCopyButton?: boolean;
+};
+
+withDefaults(defineProps<FavoritesContentHeaderProps>(), {
+  editMode: false,
+  editModeDisabled: false,
+  editModeVisible: false,
+  isAllSelected: false,
+  hasSelection: false,
+  showCopyButton: true,
 });
 
-defineEmits(["update:editMode", "toggle-select-all", "clear-selection", "copy-selection", "bulk-unfavorite"]);
+defineEmits<{
+  "update:editMode": [value: boolean];
+  "toggle-select-all": [];
+  "clear-selection": [];
+  "copy-selection": [];
+  "bulk-unfavorite": [];
+}>();
 
 const { t } = useI18n();
 </script>

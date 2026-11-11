@@ -61,7 +61,7 @@ import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
-import { RefreshCw, Trash2 } from "lucide-vue-next";
+import { RefreshCw } from "lucide-vue-next";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectItem from "@/components/ui/select/SelectItem.vue";
@@ -74,9 +74,12 @@ import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
+import type { ModerationReport } from "vrchat";
+import type { Json } from "../../../types/vrcx";
+
 import { useAuthStore } from "../../../stores/auth";
-import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
+import { logError } from "../../../stores/vrcx-messages";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { moderationReportRequest } from "../../../api/moderation-report";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
@@ -86,28 +89,31 @@ import { showWorldDialog } from "../../../coordinators/world-coordinator";
 
 const PAGE_SIZE = 100;
 
-const props = defineProps({
-  isModerationReportsDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isModerationReportsDialogVisible?: boolean | undefined;
+  }>(),
+  {
+    isModerationReportsDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits<{
+  close: [];
+}>();
 
 const { t } = useI18n();
-const modalStore = useModalStore();
 const { currentUser } = storeToRefs(useUserStore());
 const { cachedConfig } = storeToRefs(useAuthStore());
 
-const reports = ref([]);
+const reports = ref<Json<ModerationReport>[]>([]);
 const hasNext = ref(false);
 const isLoading = ref(false);
 const typeFilter = ref("all");
 
 const typeOptions = computed(() => [
   { value: "all", label: t("dialog.moderation_reports.all") },
-  ...Object.keys(cachedConfig.value?.reportOptions ?? {}).map((type) => ({
+  ...Object.keys(cachedConfig.value.reportOptions ?? {}).map((type) => ({
     value: type,
     label: type.charAt(0).toUpperCase() + type.slice(1),
   })),
@@ -115,9 +121,9 @@ const typeOptions = computed(() => [
 
 watch(
   () => props.isModerationReportsDialogVisible,
-  (visible) => {
-    if (visible) {
-      loadReports(true);
+  (isVisible) => {
+    if (isVisible) {
+      void loadReports(true).catch(logError);
     }
   }
 );
@@ -126,17 +132,20 @@ function closeDialog() {
   emit("close");
 }
 
-function setTypeFilter(value) {
+function setTypeFilter(value: unknown) {
+  if (typeof value !== "string") {
+    return;
+  }
   typeFilter.value = value;
-  loadReports(true);
+  void loadReports(true).catch(logError);
 }
 
-async function loadReports(reset) {
-  if (reset) {
+async function loadReports(isReset: boolean) {
+  if (isReset) {
     reports.value = [];
     hasNext.value = false;
   }
-  const params = {
+  const params: Parameters<typeof moderationReportRequest.getModerationReports>[0] = {
     reportingUserId: currentUser.value.id,
     n: PAGE_SIZE,
     offset: reports.value.length,
@@ -154,15 +163,15 @@ async function loadReports(reset) {
   }
 }
 
-function categoryLabel(key) {
-  return cachedConfig.value?.reportCategories?.[key]?.text ?? key;
+function categoryLabel(key: string) {
+  return cachedConfig.value.reportCategories?.[key]?.text ?? key;
 }
 
-function reasonLabel(key) {
-  return cachedConfig.value?.reportReasons?.[key]?.text ?? key;
+function reasonLabel(key: string) {
+  return cachedConfig.value.reportReasons?.[key]?.text ?? key;
 }
 
-function showContent(report) {
+function showContent(report: Json<ModerationReport>) {
   switch (report.type) {
     case "user":
       showUserDialog(report.contentId);

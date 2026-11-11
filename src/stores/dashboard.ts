@@ -4,14 +4,14 @@ import { computed, ref } from "vue";
 import { configRepository } from "../services/config";
 import { DASHBOARD_NAV_KEY_PREFIX, DASHBOARD_STORAGE_KEY, DEFAULT_DASHBOARD_ICON } from "../shared/constants/dashboard";
 
-type DashboardPanel = string | { key: string; config: unknown };
+export type DashboardPanel = string | { key: string; config: unknown };
 
-type DashboardRow = {
+export type DashboardRow = {
   panels: (DashboardPanel | null)[];
   direction: "vertical" | "horizontal";
 };
 
-type Dashboard = {
+export type Dashboard = {
   id: string;
   name: string;
   icon: string;

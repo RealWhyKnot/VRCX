@@ -2,6 +2,7 @@
 import { Download, RefreshCw } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
+import type { ClassValue } from "clsx";
 import { storeToRefs } from "pinia";
 
 import VueJsonPretty from "vue-json-pretty";
@@ -10,34 +11,26 @@ import { downloadAndSaveJson } from "../../shared/utils/app-actions";
 import { useAppearanceSettingsStore } from "../../stores/settings/appearance";
 import { useI18n } from "vue-i18n";
 
-const props = defineProps({
-  treeData: {
-    type: Object,
-    default: () => ({}),
-  },
-  treeDataKey: {
-    type: [String, Number, null],
-    default: null,
-  },
-  dialogId: {
-    type: String,
-    required: true,
-  },
-  dialogRef: {
-    type: Object,
-    required: true,
-  },
-  fileAnalysis: {
-    type: Object,
-    default: null,
-  },
-  class: {
-    type: null,
-    required: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    treeData?: Record<string, unknown>;
+    treeDataKey?: string | number | null;
+    dialogId: string;
+    dialogRef: unknown;
+    fileAnalysis?: Record<string, unknown> | null;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    treeData: () => ({}),
+    treeDataKey: null,
+    fileAnalysis: null,
+    class: undefined,
+  }
+);
 
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits<{
+  refresh: [];
+}>();
 const { isDarkMode } = storeToRefs(useAppearanceSettingsStore());
 const { t } = useI18n();
 </script>
@@ -60,7 +53,7 @@ const { t } = useI18n();
     </div>
 
     <div class="min-h-0 flex-1 overflow-auto">
-      <vue-json-pretty :key="treeDataKey" :data="treeData" :deep="2" :theme="isDarkMode ? 'dark' : 'light'" show-icon />
+      <vue-json-pretty :key="treeDataKey ?? ''" :data="treeData" :deep="2" :theme="isDarkMode ? 'dark' : 'light'" show-icon />
       <template v-if="fileAnalysis && Object.keys(fileAnalysis).length">
         <br />
         <vue-json-pretty :data="fileAnalysis" :deep="2" :theme="isDarkMode ? 'dark' : 'light'" show-icon />

@@ -1,13 +1,20 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { StyleValue } from "vue";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  style: {
-    type: [String, Array, Object],
-    required: false,
-  },
-});
+defineOptions({ name: "UiTable" });
+
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    style?: StyleValue | undefined;
+  }>(),
+  {
+    class: undefined,
+    style: undefined,
+  }
+);
 </script>
 
 <template>

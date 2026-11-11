@@ -1,10 +1,30 @@
 import { describe, expect, it } from "vitest";
 
+import dayjs from "dayjs";
+
+import type { InstanceActivityEntry } from "../../../../src/views/Charts/activity-types";
 import { findMatchingDetailData, formatWorldName, generateYAxisLabel, isDetailDataFiltered } from "../../../../src/views/Charts/composables/use-chart-helpers";
+
+function makeEntry(overrides: Partial<InstanceActivityEntry> = {}): InstanceActivityEntry {
+  return {
+    id: null,
+    created_at: null,
+    type: null,
+    display_name: null,
+    location: "wrld_test:1",
+    user_id: null,
+    time: null,
+    joinTime: dayjs(0),
+    leaveTime: dayjs(0),
+    isFriend: null,
+    isFavorite: null,
+    ...overrides,
+  };
+}
 
 describe("isDetailDataFiltered", () => {
   it("returns false when both filters are enabled", () => {
-    const detailData = [{ isFriend: true }, { isFriend: false }];
+    const detailData = [makeEntry({ isFriend: true }), makeEntry({ isFriend: false })];
     expect(isDetailDataFiltered(detailData, true, true)).toBe(false);
   });
 
@@ -14,22 +34,22 @@ describe("isDetailDataFiltered", () => {
   });
 
   it("filters solo instance when isSoloInstanceVisible is false and only 1 entry", () => {
-    const detailData = [{ isFriend: false }];
+    const detailData = [makeEntry({ isFriend: false })];
     expect(isDetailDataFiltered(detailData, false, true)).toBe(true);
   });
 
   it("does not filter solo when isSoloInstanceVisible is true", () => {
-    const detailData = [{ isFriend: false }];
+    const detailData = [makeEntry({ isFriend: false })];
     expect(isDetailDataFiltered(detailData, true, true)).toBe(false);
   });
 
   it("filters no-friend instance when isNoFriendInstanceVisible is false", () => {
-    const detailData = [{ isFriend: false }, { isFriend: false }];
+    const detailData = [makeEntry({ isFriend: false }), makeEntry({ isFriend: false })];
     expect(isDetailDataFiltered(detailData, true, false)).toBe(true);
   });
 
   it("does not filter when at least one friend exists", () => {
-    const detailData = [{ isFriend: true }, { isFriend: false }];
+    const detailData = [makeEntry({ isFriend: true }), makeEntry({ isFriend: false })];
     expect(isDetailDataFiltered(detailData, true, false)).toBe(false);
   });
 });
@@ -42,28 +62,18 @@ describe("findMatchingDetailData", () => {
   });
 
   it("returns null when currentUser is null", () => {
-    expect(findMatchingDetailData({ location: "loc1" }, [], null)).toBeNull();
+    expect(findMatchingDetailData(makeEntry({ location: "loc1" }), [], null)).toBeNull();
   });
 
   it("finds matching detail data by location and joinTime", () => {
-    const joinTime = { isSame: (other) => other === 100 };
-    const activityItem = { location: "wrld_abc", joinTime: 100 };
+    const joinTime = dayjs("2025-01-01T00:00:00.000Z");
+    const activityItem = makeEntry({ location: "wrld_abc", joinTime });
     const detailData = [
       [
-        { location: "wrld_abc", user_id: "user1", joinTime },
-        {
-          location: "wrld_abc",
-          user_id: "user2",
-          joinTime: { isSame: () => false },
-        },
+        makeEntry({ location: "wrld_abc", user_id: "user1", joinTime }),
+        makeEntry({ location: "wrld_abc", user_id: "user2", joinTime: dayjs("2025-01-02T00:00:00.000Z") }),
       ],
-      [
-        {
-          location: "wrld_xyz",
-          user_id: "user1",
-          joinTime: { isSame: () => false },
-        },
-      ],
+      [makeEntry({ location: "wrld_xyz", user_id: "user1", joinTime: dayjs("2024-01-01T00:00:00.000Z") })],
     ];
 
     const result = findMatchingDetailData(activityItem, detailData, currentUser);
@@ -71,16 +81,8 @@ describe("findMatchingDetailData", () => {
   });
 
   it("returns undefined when no match is found", () => {
-    const activityItem = { location: "wrld_abc", joinTime: 100 };
-    const detailData = [
-      [
-        {
-          location: "wrld_xyz",
-          user_id: "user1",
-          joinTime: { isSame: () => false },
-        },
-      ],
-    ];
+    const activityItem = makeEntry({ location: "wrld_abc", joinTime: dayjs("2025-01-01T00:00:00.000Z") });
+    const detailData = [[makeEntry({ location: "wrld_xyz", user_id: "user1", joinTime: dayjs("2024-01-01T00:00:00.000Z") })]];
 
     const result = findMatchingDetailData(activityItem, detailData, currentUser);
     expect(result).toBeUndefined();

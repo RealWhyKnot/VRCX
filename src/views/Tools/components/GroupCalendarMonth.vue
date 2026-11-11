@@ -13,43 +13,46 @@ import CalendarPrevButton from "@/components/ui/calendar/CalendarPrevButton.vue"
 import { computed, shallowRef, watch } from "vue";
 import { fromDate, getLocalTimeZone } from "@internationalized/date";
 import { CalendarRoot } from "reka-ui";
-import { toDate } from "reka-ui/date";
+import { toDate, type DateValue, type WeekStartsOn } from "reka-ui/date";
 import { storeToRefs } from "pinia";
 
 import dayjs from "dayjs";
 
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 
-const props = defineProps({
-  modelValue: {
-    type: Date,
-    required: true,
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  eventsByDate: {
-    type: Object,
-    default: () => ({}),
-  },
-  followingByDate: {
-    type: Object,
-    default: () => ({}),
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue: Date;
+    isLoading?: boolean | undefined;
+    eventsByDate?: Map<string, readonly unknown[]> | undefined;
+    followingByDate?: Map<string, readonly unknown[]> | undefined;
+  }>(),
+  {
+    isLoading: false,
+    eventsByDate: () => new Map(),
+    followingByDate: () => new Map(),
+  }
+);
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{
+  "update:modelValue": [value: Date];
+}>();
 
 const { weekStartsOn } = storeToRefs(useAppearanceSettingsStore());
 const timeZone = getLocalTimeZone();
 
-const internalValue = shallowRef(fromDate(props.modelValue ?? new Date(), timeZone));
-const placeholder = shallowRef(fromDate(props.modelValue ?? new Date(), timeZone));
+function isWeekStartsOn(value: number): value is WeekStartsOn {
+  return Number.isInteger(value) && value >= 0 && value <= 6;
+}
+
+const weekStartsOnDay = computed<WeekStartsOn>(() => (isWeekStartsOn(weekStartsOn.value) ? weekStartsOn.value : 1));
+
+const internalValue = shallowRef<DateValue>(fromDate(props.modelValue, timeZone));
+const placeholder = shallowRef<DateValue>(fromDate(props.modelValue, timeZone));
 
 watch(
   () => props.modelValue,
-  (next) => {
+  (next: Date | undefined) => {
     if (!next) return;
     internalValue.value = fromDate(next, timeZone);
     placeholder.value = fromDate(next, timeZone);
@@ -58,21 +61,21 @@ watch(
 
 const selectedDayKey = computed(() => dayjs(props.modelValue).format("YYYY-MM-DD"));
 
-function toKey(dateValue) {
+function toKey(dateValue: DateValue) {
   return dayjs(toDate(dateValue, timeZone)).format("YYYY-MM-DD");
 }
 
-function eventCountFor(dateValue) {
+function eventCountFor(dateValue: DateValue) {
   const key = toKey(dateValue);
-  return props.eventsByDate?.[key]?.length ?? 0;
+  return props.eventsByDate.get(key)?.length ?? 0;
 }
 
-function hasFollowingFor(dateValue) {
+function hasFollowingFor(dateValue: DateValue) {
   const key = toKey(dateValue);
-  return Boolean(props.followingByDate?.[key]);
+  return props.followingByDate.has(key);
 }
 
-function onUpdateModelValue(next) {
+function onUpdateModelValue(next: DateValue | undefined) {
   if (!next) return;
   internalValue.value = next;
   const asDate = toDate(next, timeZone);
@@ -80,14 +83,14 @@ function onUpdateModelValue(next) {
   emit("update:modelValue", asDate);
 }
 
-function onUpdatePlaceholder(next) {
+function onUpdatePlaceholder(next: DateValue | undefined) {
   if (!next) return;
   placeholder.value = next;
   internalValue.value = next;
   emit("update:modelValue", toDate(next, timeZone));
 }
 
-function dayLabel(dateValue) {
+function dayLabel(dateValue: DateValue) {
   return dayjs(toDate(dateValue, timeZone)).format("D");
 }
 </script>
@@ -99,7 +102,7 @@ function dayLabel(dateValue) {
       :model-value="internalValue"
       :placeholder="placeholder"
       :prevent-deselect="true"
-      :week-starts-on="weekStartsOn"
+      :week-starts-on="weekStartsOnDay"
       class="p-4"
       @update:model-value="onUpdateModelValue"
       @update:placeholder="onUpdatePlaceholder"

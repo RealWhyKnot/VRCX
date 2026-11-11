@@ -122,11 +122,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, shallowRef, watch } from "vue";
 import { useInfiniteScroll, useIntersectionObserver } from "@vueuse/core";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { fromDate, getLocalTimeZone, today } from "@internationalized/date";
+import type { DateRange } from "reka-ui";
 import dayjs from "dayjs";
 import { CalendarRange, Star } from "lucide-vue-next";
 
@@ -146,6 +147,7 @@ import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem
 import TooltipWrapper from "../../../components/ui/tooltip/TooltipWrapper.vue";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useGameLogStore } from "../../../stores/gameLog";
+import { logFailure } from "../../../stores/log-failure";
 import GameLogSessionsSegment from "./GameLogSessionsSegment.vue";
 
 const { t, locale } = useI18n();
@@ -168,38 +170,37 @@ const sessionsDateRangeMaxDays = gameLogStore.sessionsDateRangeMaxDays;
 
 const segments = computed(() => sessionsSegments.value);
 const hasDateFilter = computed(() => !!sessionsDateFrom.value || !!sessionsDateTo.value);
-const shouldAutoFillSearchResults = computed(() => !!String(sessionsSearch.value ?? "").trim() && !hasDateFilter.value);
+const shouldAutoFillSearchResults = computed(() => sessionsSearch.value.trim() !== "" && !hasDateFilter.value);
 
-const scrollContainerRef = ref(null);
-const sentinelRef = ref(null);
+const scrollContainerRef = ref<HTMLDivElement | null>(null);
+const sentinelRef = ref<HTMLDivElement | null>(null);
 const datePopoverOpen = ref(false);
-const dateRange = ref(undefined);
+const dateRange = shallowRef<DateRange | null>(null);
 const calendarTimeZone = getLocalTimeZone();
 const todayDate = today(calendarTimeZone);
 const searchAutoFillAttempts = ref(0);
 const hasResolvedInitialLoad = ref(false);
 const showInitialSkeleton = computed(() => sessionsLoading.value && segments.value.length === 0 && !hasResolvedInitialLoad.value);
 
-function toNativeDate(dateValue) {
-  if (!dateValue || typeof dateValue.toDate !== "function") {
-    throw new TypeError("Invalid date value");
-  }
+type CalendarDateValue = { toDate: (timeZone: string) => Date };
+
+function toNativeDate(dateValue: CalendarDateValue): Date {
   return dateValue.toDate(calendarTimeZone);
 }
 
 function syncDateRangeFromStore() {
   if (!sessionsDateFrom.value && !sessionsDateTo.value) {
-    dateRange.value = undefined;
+    dateRange.value = null;
     return;
   }
 
   dateRange.value = {
-    start: sessionsDateFrom.value ? fromDate(new Date(sessionsDateFrom.value), calendarTimeZone) : null,
-    end: sessionsDateTo.value ? fromDate(new Date(sessionsDateTo.value), calendarTimeZone) : null,
+    start: sessionsDateFrom.value ? fromDate(new Date(sessionsDateFrom.value), calendarTimeZone) : undefined,
+    end: sessionsDateTo.value ? fromDate(new Date(sessionsDateTo.value), calendarTimeZone) : undefined,
   };
 }
 
-function isDateUnavailable(dateValue) {
+function isDateUnavailable(dateValue: CalendarDateValue): boolean {
   try {
     return toNativeDate(dateValue) > new Date();
   } catch {
@@ -208,14 +209,15 @@ function isDateUnavailable(dateValue) {
 }
 
 async function handleApplyDateRange() {
-  if (!dateRange.value?.start && !dateRange.value?.end) {
+  const range = dateRange.value;
+  const startValue = range?.start ?? range?.end;
+  const endValue = range?.end ?? range?.start;
+  if (!startValue || !endValue) {
     await gameLogStore.clearSessionsDateRange();
     datePopoverOpen.value = false;
     return;
   }
 
-  const startValue = dateRange.value.start ?? dateRange.value.end;
-  const endValue = dateRange.value.end ?? dateRange.value.start;
   const start = toNativeDate(startValue);
   const end = toNativeDate(endValue);
   await gameLogStore.setSessionsDateRange(dayjs(start).startOf("day").toISOString(), dayjs(end).endOf("day").toISOString());
@@ -223,16 +225,21 @@ async function handleApplyDateRange() {
 }
 
 async function handleClearDateRange() {
-  dateRange.value = undefined;
+  dateRange.value = null;
   await gameLogStore.clearSessionsDateRange();
   datePopoverOpen.value = false;
 }
 
-function handleSessionsSearchInput(value) {
-  sessionsSearch.value = value;
-  if (!String(value ?? "").trim()) {
-    gameLogStore.setSessionsSearch("");
+function handleSessionsSearchInput(value: unknown) {
+  const text = typeof value === "string" ? value : "";
+  sessionsSearch.value = text;
+  if (!text.trim()) {
+    void gameLogStore.setSessionsSearch("").catch(logFailure("Failed to clear game log sessions search:"));
   }
+}
+
+function loadMoreSegments() {
+  void gameLogStore.loadMoreSessionsSegments().catch(logFailure("Failed to load more game log sessions:"));
 }
 
 watch([sessionsDateFrom, sessionsDateTo], () => {
@@ -245,8 +252,8 @@ watch([sessionsSearch, sessionsDateFrom, sessionsDateTo], () => {
 
 watch(
   sessionsLoading,
-  (value) => {
-    if (!value) {
+  (isLoading) => {
+    if (!isLoading) {
       hasResolvedInitialLoad.value = true;
     }
   },
@@ -260,7 +267,7 @@ useIntersectionObserver(
   (entries) => {
     for (const entry of entries) {
       if (entry.isIntersecting && !sessionsLoading.value && sessionsHasMore.value) {
-        gameLogStore.loadMoreSessionsSegments();
+        loadMoreSegments();
       }
     }
   },
@@ -271,7 +278,7 @@ useInfiniteScroll(
   scrollContainerRef,
   () => {
     if (!sessionsLoading.value && sessionsHasMore.value) {
-      gameLogStore.loadMoreSessionsSegments();
+      loadMoreSegments();
     }
   },
   {
@@ -301,7 +308,7 @@ watch(
 
     if (container.scrollHeight <= container.clientHeight) {
       searchAutoFillAttempts.value += 1;
-      gameLogStore.loadMoreSessionsSegments();
+      loadMoreSegments();
     }
   },
   { flush: "post" }

@@ -1,16 +1,61 @@
 import { ref } from "vue";
+import type { Ref } from "vue";
+import type { useI18n } from "vue-i18n";
+import type { toast as vueSonnerToast } from "vue-sonner";
 
 import { avatarModerationRequest } from "../../../api/avatar-moderation";
 import { avatarRequest } from "../../../api/avatar";
 import { favoriteRequest } from "../../../api/favorite";
 import { removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
+import type { applyAvatar, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";
 import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../../coordinators/image-upload-coordinator";
 import { readFileAsBase64, withUploadTimeout } from "../../../shared/utils/image-upload";
+import { isLinuxHost } from "../../../shared/constants/platform";
+import type { AvatarRef } from "../../../shared/utils/avatar-transforms";
+import type { useAvatarStore } from "../../../stores/avatar";
+import type { useModalStore } from "../../../stores/modal";
+import type { useUiStore } from "../../../stores/ui";
+import type { useUserStore } from "../../../stores/user";
+import type { useFavoriteStore } from "../../../stores/favorite";
+import { logError } from "../../../stores/vrcx-messages";
+
+type Translate = ReturnType<typeof useI18n>["t"];
+type ModalStore = ReturnType<typeof useModalStore>;
+type AvatarDialogState = ReturnType<typeof useAvatarStore>["avatarDialog"];
+type AvatarDialogCommandState = Pick<AvatarDialogState, "id" | "visible" | "loading" | "isBlocked"> & {
+  ref: Pick<AvatarDialogState["ref"], "name" | "description" | "imageUrl" | "unityPackageUrl">;
+};
+type UserDialogState = ReturnType<typeof useUserStore>["userDialog"];
+type ConfirmOptions = Parameters<ModalStore["confirm"]>[0];
+type Toast = Pick<typeof vueSonnerToast, "success" | "error">;
+
+type CommandEntry =
+  | string
+  | (() => void)
+  | {
+      confirm?: () => ConfirmOptions;
+      handler: (id: string) => void;
+    };
+
+type AvatarDialogCommandDeps = {
+  t: Translate;
+  toast: Toast;
+  modalStore: Pick<ModalStore, "confirm" | "prompt">;
+  userDialog: Ref<Pick<UserDialogState, "id">>;
+  cachedAvatars: Pick<Map<string, AvatarRef>, "values">;
+  cachedAvatarModerations: Pick<Map<string, unknown>, "delete">;
+  showAvatarDialog: typeof showAvatarDialog;
+  showFavoriteDialog: ReturnType<typeof useFavoriteStore>["showFavoriteDialog"];
+  applyAvatarModeration: ReturnType<typeof useAvatarStore>["applyAvatarModeration"];
+  applyAvatar: typeof applyAvatar;
+  sortUserDialogAvatars: ReturnType<typeof useUserStore>["sortUserDialogAvatars"];
+  uiStore: Pick<ReturnType<typeof useUiStore>, "jumpBackDialogCrumb">;
+};
 
 export function useAvatarDialogCommands(
-  avatarDialog,
+  avatarDialog: Ref<AvatarDialogCommandState>,
   {
     t,
     toast,
@@ -24,17 +69,21 @@ export function useAvatarDialogCommands(
     applyAvatar,
     sortUserDialogAvatars,
     uiStore,
-  }
+  }: AvatarDialogCommandDeps
 ) {
   const cropDialogOpen = ref(false);
-  const cropDialogFile = ref(null);
+  const cropDialogFile = ref<File | null>(null);
   const changeAvatarImageLoading = ref(false);
 
   function showChangeAvatarImageDialog() {
-    document.getElementById("AvatarImageUploadButton").click();
+    const button = document.getElementById("AvatarImageUploadButton");
+    if (!(button instanceof HTMLElement)) {
+      throw new TypeError("AvatarImageUploadButton is missing");
+    }
+    button.click();
   }
 
-  function onFileChangeAvatarImage(e) {
+  function onFileChangeAvatarImage(e: Event) {
     const { file, clearInput } = handleImageUploadInput(e, {
       inputSelector: "#AvatarImageUploadButton",
       tooLargeMessage: () => t("message.file.too_large"),
@@ -52,24 +101,34 @@ export function useAvatarDialogCommands(
     cropDialogOpen.value = true;
   }
 
-  async function onCropConfirmAvatar(blob) {
+  async function onCropConfirmAvatar(blob: Blob | null) {
     changeAvatarImageLoading.value = true;
     try {
+      if (!blob) {
+        throw new Error("No avatar image to upload");
+      }
       await withUploadTimeout(
         (async () => {
           const base64Body = await readFileAsBase64(blob);
           const base64File = await resizeImageToFitLimits(base64Body);
-          if (isHostLinux) {
+          if (isLinuxHost()) {
             const args = await avatarRequest.uploadAvatarImage(base64File);
-            const fileUrl = args.json.versions[args.json.versions.length - 1].file.url;
+            const latestVersion = args.json.versions.at(-1);
+            if (!latestVersion) {
+              throw new Error("Avatar image upload returned no versions");
+            }
+            const latestFile = latestVersion.file;
+            if (!latestFile) {
+              throw new Error("Avatar image upload returned no file");
+            }
             await avatarRequest.saveAvatar({
               id: avatarDialog.value.id,
-              imageUrl: fileUrl,
+              imageUrl: latestFile.url,
             });
           } else {
             await uploadImageLegacy("avatar", {
               entityId: avatarDialog.value.id,
-              imageUrl: avatarDialog.value.ref.imageUrl,
+              imageUrl: avatarDialog.value.ref.imageUrl ?? "",
               base64File,
               blob,
             });
@@ -89,20 +148,20 @@ export function useAvatarDialogCommands(
     }
   }
 
-  function promptRenameAvatar(avatar) {
+  function promptRenameAvatar(avatar: AvatarDialogCommandState) {
     modalStore
       .prompt({
         title: t("prompt.rename_avatar.header"),
         description: t("prompt.rename_avatar.description"),
         confirmText: t("prompt.rename_avatar.ok"),
         cancelText: t("prompt.rename_avatar.cancel"),
-        inputValue: avatar.ref.name,
+        inputValue: avatar.ref.name ?? "",
         errorMessage: t("prompt.rename_avatar.input_error"),
       })
       .then(({ ok, value }) => {
         if (!ok) return;
         if (value && value !== avatar.ref.name) {
-          avatarRequest
+          void avatarRequest
             .saveAvatar({
               id: avatar.id,
               name: value,
@@ -111,26 +170,27 @@ export function useAvatarDialogCommands(
               applyAvatar(args.json);
               toast.success(t("prompt.rename_avatar.message.success"));
               return args;
-            });
+            })
+            .catch(logError);
         }
       })
-      .catch(() => {});
+      .catch(logError);
   }
 
-  function promptChangeAvatarDescription(avatar) {
+  function promptChangeAvatarDescription(avatar: AvatarDialogCommandState) {
     modalStore
       .prompt({
         title: t("prompt.change_avatar_description.header"),
         description: t("prompt.change_avatar_description.description"),
         confirmText: t("prompt.change_avatar_description.ok"),
         cancelText: t("prompt.change_avatar_description.cancel"),
-        inputValue: avatar.ref.description,
+        inputValue: avatar.ref.description ?? "",
         errorMessage: t("prompt.change_avatar_description.input_error"),
       })
       .then(({ ok, value }) => {
         if (!ok) return;
         if (value && value !== avatar.ref.description) {
-          avatarRequest
+          void avatarRequest
             .saveAvatar({
               id: avatar.id,
               description: value,
@@ -139,13 +199,14 @@ export function useAvatarDialogCommands(
               applyAvatar(args.json);
               toast.success(t("prompt.change_avatar_description.message.success"));
               return args;
-            });
+            })
+            .catch(logError);
         }
       })
-      .catch(() => {});
+      .catch(logError);
   }
 
-  function copyAvatarUrl(id) {
+  function copyAvatarUrl(id: string) {
     copyToClipboard(`https://vrchat.com/home/avatar/${id}`);
   }
 
@@ -160,7 +221,7 @@ export function useAvatarDialogCommands(
         copyAvatarUrl(D().id);
       },
       "Copy Avatar Name": () => {
-        copyToClipboard(D().ref.name);
+        copyToClipboard(String(D().ref.name));
       },
       "Copy Avatar ID": () => {
         copyToClipboard(D().id);
@@ -191,8 +252,8 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.favorite_tooltip"),
           }),
         }),
-        handler: (id) => {
-          favoriteRequest.deleteFavorite({ objectId: id });
+        handler: (id: string) => {
+          void favoriteRequest.deleteFavorite({ objectId: id }).catch(logError);
         },
       },
       "Select Fallback Avatar": {
@@ -202,11 +263,14 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.select_fallback"),
           }),
         }),
-        handler: (id) => {
-          avatarRequest.selectFallbackAvatar({ avatarId: id }).then((args) => {
-            toast.success(t("message.avatar.fallback_changed"));
-            return args;
-          });
+        handler: (id: string) => {
+          void avatarRequest
+            .selectFallbackAvatar({ avatarId: id })
+            .then((args) => {
+              toast.success(t("message.avatar.fallback_changed"));
+              return args;
+            })
+            .catch(logError);
         },
       },
       "Block Avatar": {
@@ -217,8 +281,8 @@ export function useAvatarDialogCommands(
           }),
           destructive: true,
         }),
-        handler: (id) => {
-          avatarModerationRequest
+        handler: (id: string) => {
+          void avatarModerationRequest
             .sendAvatarModeration({
               avatarModerationType: "block",
               targetAvatarId: id,
@@ -227,7 +291,8 @@ export function useAvatarDialogCommands(
               applyAvatarModeration(args.json);
               toast.success(t("message.avatar.blocked"));
               return args;
-            });
+            })
+            .catch(logError);
         },
       },
       "Unblock Avatar": {
@@ -237,8 +302,8 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.unblock"),
           }),
         }),
-        handler: (id) => {
-          avatarModerationRequest
+        handler: (id: string) => {
+          void avatarModerationRequest
             .deleteAvatarModeration({
               avatarModerationType: "block",
               targetAvatarId: id,
@@ -246,10 +311,11 @@ export function useAvatarDialogCommands(
             .then((args) => {
               cachedAvatarModerations.delete(args.params.targetAvatarId);
               const D = avatarDialog.value;
-              if (args.params.avatarModerationType === "block" && D.id === args.params.targetAvatarId) {
+              if (D.id === args.params.targetAvatarId) {
                 D.isBlocked = false;
               }
-            });
+            })
+            .catch(logError);
         },
       },
       "Make Public": {
@@ -259,12 +325,15 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.make_public"),
           }),
         }),
-        handler: (id) => {
-          avatarRequest.saveAvatar({ id, releaseStatus: "public" }).then((args) => {
-            applyAvatar(args.json);
-            toast.success(t("message.avatar.updated_public"));
-            return args;
-          });
+        handler: (id: string) => {
+          void avatarRequest
+            .saveAvatar({ id, releaseStatus: "public" })
+            .then((args) => {
+              applyAvatar(args.json);
+              toast.success(t("message.avatar.updated_public"));
+              return args;
+            })
+            .catch(logError);
         },
       },
       "Make Private": {
@@ -274,12 +343,15 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.make_private"),
           }),
         }),
-        handler: (id) => {
-          avatarRequest.saveAvatar({ id, releaseStatus: "private" }).then((args) => {
-            applyAvatar(args.json);
-            toast.success(t("message.avatar.updated_private"));
-            return args;
-          });
+        handler: (id: string) => {
+          void avatarRequest
+            .saveAvatar({ id, releaseStatus: "private" })
+            .then((args) => {
+              applyAvatar(args.json);
+              toast.success(t("message.avatar.updated_private"));
+              return args;
+            })
+            .catch(logError);
         },
       },
       Delete: {
@@ -290,25 +362,28 @@ export function useAvatarDialogCommands(
           }),
           destructive: true,
         }),
-        handler: (id) => {
-          avatarRequest.deleteAvatar({ avatarId: id }).then((args) => {
-            const { json } = args;
-            removeAvatarFromCache(json.id);
-            if (userDialog.value.id === json.authorId) {
-              const map = new Map();
-              for (const ref of cachedAvatars.values()) {
-                if (ref.authorId === json.authorId) {
-                  map.set(ref.id, ref);
+        handler: (id: string) => {
+          void avatarRequest
+            .deleteAvatar({ avatarId: id })
+            .then((args) => {
+              const { json } = args;
+              removeAvatarFromCache(json.id);
+              if (userDialog.value.id === json.authorId) {
+                const map = new Map<string, AvatarRef>();
+                for (const ref of cachedAvatars.values()) {
+                  if (ref.authorId === json.authorId) {
+                    map.set(ref.id, ref);
+                  }
                 }
+                const array = Array.from(map.values());
+                sortUserDialogAvatars(array);
               }
-              const array = Array.from(map.values());
-              sortUserDialogAvatars(array);
-            }
 
-            toast.success(t("message.avatar.deleted"));
-            uiStore.jumpBackDialogCrumb();
-            return args;
-          });
+              toast.success(t("message.avatar.deleted"));
+              uiStore.jumpBackDialogCrumb();
+              return args;
+            })
+            .catch(logError);
         },
       },
       "Delete Imposter": {
@@ -319,12 +394,15 @@ export function useAvatarDialogCommands(
           }),
           destructive: true,
         }),
-        handler: (id) => {
-          avatarRequest.deleteImposter({ avatarId: id }).then((args) => {
-            toast.success(t("message.avatar.impostor_deleted"));
-            showAvatarDialog(id);
-            return args;
-          });
+        handler: (id: string) => {
+          void avatarRequest
+            .deleteImposter({ avatarId: id })
+            .then((args) => {
+              toast.success(t("message.avatar.impostor_deleted"));
+              showAvatarDialog(id);
+              return args;
+            })
+            .catch(logError);
         },
       },
       "Create Imposter": {
@@ -334,11 +412,14 @@ export function useAvatarDialogCommands(
             command: t("dialog.avatar.actions.create_impostor"),
           }),
         }),
-        handler: (id) => {
-          avatarRequest.createImposter({ avatarId: id }).then((args) => {
-            toast.success(t("message.avatar.impostor_queued"));
-            return args;
-          });
+        handler: (id: string) => {
+          void avatarRequest
+            .createImposter({ avatarId: id })
+            .then((args) => {
+              toast.success(t("message.avatar.impostor_queued"));
+              return args;
+            })
+            .catch(logError);
         },
       },
       "Regenerate Imposter": {
@@ -349,42 +430,46 @@ export function useAvatarDialogCommands(
           }),
           destructive: true,
         }),
-        handler: (id) => {
-          avatarRequest
+        handler: (id: string) => {
+          void avatarRequest
             .deleteImposter({ avatarId: id })
             .then((args) => {
               showAvatarDialog(id);
               return args;
             })
             .finally(() => {
-              avatarRequest.createImposter({ avatarId: id }).then((args) => {
-                toast.success(t("message.avatar.impostor_regenerated"));
-                return args;
-              });
-            });
+              void avatarRequest
+                .createImposter({ avatarId: id })
+                .then((args) => {
+                  toast.success(t("message.avatar.impostor_regenerated"));
+                  return args;
+                })
+                .catch(logError);
+            })
+            .catch(logError);
         },
       },
     };
   }
 
-  const commandMap = buildCommandMap();
+  const commandMap = new Map<string, CommandEntry>(Object.entries(buildCommandMap()));
 
-  let componentCallbacks = {};
+  let componentCallbacks = new Map<string, () => void>();
 
-  function registerCallbacks(callbacks) {
-    componentCallbacks = callbacks;
+  function registerCallbacks(callbacks: Record<string, () => void>) {
+    componentCallbacks = new Map(Object.entries(callbacks));
   }
 
-  function avatarDialogCommand(command) {
+  function avatarDialogCommand(command: string) {
     const D = avatarDialog.value;
-    const entry = commandMap[command];
+    const entry = commandMap.get(command);
 
     if (!entry) {
       return;
     }
 
     if (typeof entry === "string") {
-      const cb = componentCallbacks[entry];
+      const cb = componentCallbacks.get(entry);
       if (cb) {
         cb();
       }
@@ -397,11 +482,14 @@ export function useAvatarDialogCommands(
     }
 
     if (entry.confirm) {
-      modalStore.confirm(entry.confirm()).then(({ ok }) => {
-        if (ok) {
-          entry.handler(D.id);
-        }
-      });
+      void modalStore
+        .confirm(entry.confirm())
+        .then(({ ok }) => {
+          if (ok) {
+            entry.handler(D.id);
+          }
+        })
+        .catch(logError);
     }
   }
 

@@ -1,11 +1,15 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
+import type { LimitedGroup, SearchGroups } from "vrchat";
 
 import { useSearchStore } from "../../../stores/search";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { groupRequest } from "../../../api/group";
+import type { Json } from "../../../types/vrcx";
 
-function createDefaultSearchGroupParams() {
+type SearchGroupParams = NonNullable<SearchGroups["query"]>;
+
+function createDefaultSearchGroupParams(): SearchGroupParams {
   return {
     n: 60,
     offset: 0,
@@ -16,8 +20,8 @@ function createDefaultSearchGroupParams() {
 export function useSearchGroup() {
   const { searchText } = storeToRefs(useSearchStore());
 
-  const searchGroupParams = ref(createDefaultSearchGroupParams());
-  const searchGroupResults = ref([]);
+  const searchGroupParams = ref<SearchGroupParams>(createDefaultSearchGroupParams());
+  const searchGroupResults = ref<Json<LimitedGroup>[]>([]);
   const isSearchGroupLoading = ref(false);
 
   async function searchGroup() {
@@ -28,13 +32,11 @@ export function useSearchGroup() {
     await moreSearchGroup();
   }
 
-  async function moreSearchGroup(go) {
+  async function moreSearchGroup(go?: number) {
     const params = searchGroupParams.value;
     if (go) {
-      params.offset += params.n * go;
-      if (params.offset < 0) {
-        params.offset = 0;
-      }
+      const offset = (params.offset ?? 0) + (params.n ?? 0) * go;
+      params.offset = offset < 0 ? 0 : offset;
     }
     isSearchGroupLoading.value = true;
     await groupRequest
@@ -43,9 +45,11 @@ export function useSearchGroup() {
         isSearchGroupLoading.value = false;
       })
       .then((args) => {
-        const map = new Map();
+        const map = new Map<string, Json<LimitedGroup>>();
         for (const json of args.json) {
-          map.set(json.id, json);
+          if (json.id !== undefined) {
+            map.set(json.id, json);
+          }
         }
         searchGroupResults.value = Array.from(map.values());
         return args;

@@ -3,17 +3,23 @@ import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  openSearch: vi.fn(),
-  markAllAsSeen: vi.fn(),
-  refreshFriends: vi.fn(),
+  openSearch: vi.fn<(...args: unknown[]) => void>(),
+  markAllAsSeen: vi.fn<() => void>(),
+  refreshFriends: vi.fn<(...args: unknown[]) => void>(),
   hasUnseen: { value: true },
   centerOpen: { value: false },
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("pinia")>();
+  return {
+    ...actual,
+    storeToRefs: <T>(store: T) => store,
+  };
+});
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("@vueuse/core", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("@vueuse/core")>();
   return {
     ...actual,
     useMagicKeys: () => ({}),
@@ -34,7 +40,7 @@ vi.mock("../../../src/stores/notification", () => ({
   useNotificationStore: () => ({
     isNotificationCenterOpen: mocks.centerOpen,
     hasUnseenNotifications: mocks.hasUnseen,
-    markAllAsSeen: (...a) => mocks.markAllAsSeen(...a),
+    markAllAsSeen: mocks.markAllAsSeen,
   }),
 }));
 vi.mock("../../../src/stores/settings/appearance", () => ({
@@ -64,14 +70,14 @@ vi.mock("../../../src/stores/favorite", () => ({
   }),
 }));
 vi.mock("../../../src/stores/quick-search", () => ({
-  useQuickSearchStore: () => ({ open: (...a) => mocks.openSearch(...a) }),
+  useQuickSearchStore: () => ({ open: mocks.openSearch }),
 }));
 vi.mock("../../../src/coordinators/friend-sync-coordinator", () => ({
-  runRefreshFriendsListFlow: (...a) => mocks.refreshFriends(...a),
+  runRefreshFriendsListFlow: mocks.refreshFriends,
 }));
 vi.mock("../../../src/views/Sidebar/sidebar-settings-utils", () => ({
-  normalizeFavoriteGroupsChange: (v) => v,
-  resolveFavoriteGroups: (v) => v,
+  normalizeFavoriteGroupsChange: (value: string[]) => value,
+  resolveFavoriteGroups: (value: string[]) => value,
 }));
 vi.mock("@/components/ui/button/Button.vue", () => ({
   default: {

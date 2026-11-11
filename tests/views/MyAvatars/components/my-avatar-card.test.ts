@@ -1,9 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import type { MyAvatar } from "../../../../src/views/MyAvatars/types";
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
@@ -100,25 +101,27 @@ vi.mock("lucide-vue-next", () => ({
 }));
 
 import MyAvatarCard from "../../../../src/views/MyAvatars/components/MyAvatarCard.vue";
+import { createDefaultAvatarRef } from "../../../../src/shared/utils/avatar-transforms";
 
-function mountCard(props = {}) {
+function mountCard(props: { avatar?: Partial<MyAvatar>; currentAvatarId?: string } = {}) {
+  const defaultAvatar: MyAvatar = {
+    ...createDefaultAvatarRef({
+      id: "avtr_1",
+      name: "Avatar One",
+      thumbnailImageUrl: "https://example.com/a.jpg",
+      releaseStatus: "public",
+      unityPackages: [],
+      updated_at: "2025-01-01T00:00:00.000Z",
+      created_at: "2024-01-01T00:00:00.000Z",
+      version: 1,
+    }),
+    $tags: [{ tag: "fun", color: null }],
+  };
   return mount(MyAvatarCard, {
     props: {
-      avatar: {
-        id: "avtr_1",
-        name: "Avatar One",
-        thumbnailImageUrl: "https://example.com/a.jpg",
-        releaseStatus: "public",
-        unityPackages: [],
-        $tags: [{ tag: "fun" }],
-        updated_at: "2025-01-01T00:00:00.000Z",
-        created_at: "2024-01-01T00:00:00.000Z",
-        version: 1,
-        ...props.avatar,
-      },
-      currentAvatarId: "",
+      avatar: Object.assign(defaultAvatar, props.avatar),
+      currentAvatarId: props.currentAvatarId ?? "",
       cardScale: 0.6,
-      ...props,
     },
   });
 }
@@ -145,16 +148,16 @@ describe("MyAvatarCard.vue", () => {
     const detailsItem = wrapper.findAll('[data-testid="ctx-item"]').find((node) => node.text().includes("dialog.avatar.actions.view_details"));
 
     expect(detailsItem).toBeTruthy();
-    await detailsItem.trigger("click");
+    await detailsItem?.trigger("click");
 
     expect(wrapper.emitted("context-action")).toBeTruthy();
-    expect(wrapper.emitted("context-action")[0]).toEqual(["details", expect.objectContaining({ id: "avtr_1" })]);
+    expect(wrapper.emitted("context-action")?.[0]).toEqual(["details", expect.objectContaining({ id: "avtr_1" })]);
   });
 
   test("disables wear action when avatar is active", () => {
     const wrapper = mountCard({ currentAvatarId: "avtr_1" });
     const wearItem = wrapper.findAll('[data-testid="ctx-item"]').find((node) => node.text().includes("view.favorite.select_avatar_tooltip"));
 
-    expect(wearItem.attributes("disabled")).toBeDefined();
+    expect(wearItem?.attributes("disabled")).toBeDefined();
   });
 });

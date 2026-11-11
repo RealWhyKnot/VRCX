@@ -2,57 +2,68 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 
-const mocks = vi.hoisted(() => ({
-  makeRef: (value) => ({ value, __v_isRef: true }),
-  onlineFriends: null,
-  allFavoriteOnlineFriends: null,
-  allFavoriteFriendIds: null,
-  activeFriends: null,
-  offlineFriends: null,
-  friendsInSameInstance: null,
-  isSidebarDivideByFriendGroup: null,
-  sidebarFavoriteGroups: null,
-  sidebarFavoriteGroupOrder: null,
-  sidebarSortMethods: null,
-  favoriteFriendGroups: null,
-  groupedByGroupKeyFavoriteFriends: null,
-  localFriendFavorites: null,
-  lastLocation: null,
-  configGetString: vi.fn(),
-  configGetBool: vi.fn(),
-  configSetString: vi.fn(),
-  configSetBool: vi.fn(),
-  virtualMeasure: vi.fn(),
-}));
+type FriendFixture = {
+  id: string;
+  state: "online" | "offline";
+  name: string;
+  ref: { location: string };
+};
 
-mocks.onlineFriends = mocks.makeRef([]);
-mocks.allFavoriteOnlineFriends = mocks.makeRef([]);
-mocks.allFavoriteFriendIds = mocks.makeRef(new Set());
-mocks.activeFriends = mocks.makeRef([]);
-mocks.offlineFriends = mocks.makeRef([]);
-mocks.friendsInSameInstance = mocks.makeRef([]);
-mocks.isSidebarDivideByFriendGroup = mocks.makeRef(false);
-mocks.sidebarFavoriteGroups = mocks.makeRef([]);
-mocks.sidebarFavoriteGroupOrder = mocks.makeRef([]);
-mocks.sidebarSortMethods = mocks.makeRef("status");
-mocks.favoriteFriendGroups = mocks.makeRef([]);
-mocks.groupedByGroupKeyFavoriteFriends = mocks.makeRef({});
-mocks.localFriendFavorites = mocks.makeRef({});
-mocks.lastLocation = mocks.makeRef({
-  location: "wrld_home:123",
-  friendList: new Map(),
+type LastLocationMock = {
+  location: string;
+  friendList: Map<string, unknown>;
+};
+
+type FriendsLocationsVm = {
+  searchTerm: string;
+  activeSegment: string;
+};
+
+const mocks = vi.hoisted(() => {
+  const makeRef = <T>(value: T) => ({ value, __v_isRef: true });
+  return {
+    onlineFriends: makeRef<FriendFixture[]>([]),
+    allFavoriteOnlineFriends: makeRef<FriendFixture[]>([]),
+    allFavoriteFriendIds: makeRef(new Set<string>()),
+    activeFriends: makeRef<FriendFixture[]>([]),
+    offlineFriends: makeRef<FriendFixture[]>([]),
+    friendsInSameInstance: makeRef<FriendFixture[][]>([]),
+    isSidebarDivideByFriendGroup: makeRef(false),
+    sidebarFavoriteGroups: makeRef<string[]>([]),
+    sidebarFavoriteGroupOrder: makeRef<string[]>([]),
+    sidebarSortMethods: makeRef("status"),
+    favoriteFriendGroups: makeRef<{ key: string; displayName: string }[]>([]),
+    groupedByGroupKeyFavoriteFriends: makeRef<Record<string, FriendFixture[]>>({}),
+    localFriendFavorites: makeRef<Record<string, string[]>>({}),
+    lastLocation: makeRef<LastLocationMock>({
+      location: "wrld_home:123",
+      friendList: new Map<string, unknown>(),
+    }),
+    configGetString: vi.fn<(key: string, defaultValue: string) => Promise<string>>(),
+    configGetBool: vi.fn<(key: string, defaultValue: boolean | null) => Promise<boolean | null>>(),
+    configSetString: vi.fn<(key: string, value: string) => Promise<void>>(),
+    configSetBool: vi.fn<(key: string, value: boolean) => Promise<void>>(),
+    virtualMeasure: vi.fn<() => void>(),
+  };
 });
 
-vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
-}));
+vi.mock("pinia", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    storeToRefs: (store: unknown) => store,
+  };
+});
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
@@ -87,32 +98,23 @@ vi.mock("../../../src/stores/location", () => ({
 
 vi.mock("../../../src/services/config.ts", () => ({
   configRepository: {
-    getString: (...args) => mocks.configGetString(...args),
-    getBool: (...args) => mocks.configGetBool(...args),
-    setString: (...args) => mocks.configSetString(...args),
-    setBool: (...args) => mocks.configSetBool(...args),
+    getString: (key: string, defaultValue: string) => mocks.configGetString(key, defaultValue),
+    getBool: (key: string, isFallback: boolean | null) => mocks.configGetBool(key, isFallback),
+    setString: (key: string, value: string) => mocks.configSetString(key, value),
+    setBool: (key: string, isEnabled: boolean) => mocks.configSetBool(key, isEnabled),
   },
 }));
 
 vi.mock("../../../src/shared/utils/location", () => ({
-  getFriendsLocations: (friends) => friends?.[0]?.ref?.location ?? "",
+  getFriendsLocations: (friends: { ref?: { location?: string } }[]) => friends[0]?.ref?.location ?? "",
 }));
 
-vi.mock("../../../src/shared/utils/common", () => ({
-  debounce: (fn, delay) => {
-    let timer = null;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
-    };
-  },
-}));
 vi.mock("../../../src/shared/utils/friend", () => ({
-  getFriendsSortFunction: () => (a, b) => String(a?.displayName ?? "").localeCompare(String(b?.displayName ?? "")),
+  getFriendsSortFunction: () => (a: FriendFixture, b: FriendFixture) => a.name.localeCompare(b.name),
 }));
 
 vi.mock("@tanstack/vue-virtual", () => ({
-  useVirtualizer: (optionsRef) => ({
+  useVirtualizer: (optionsRef: { value: { count: number } }) => ({
     value: {
       getVirtualItems: () =>
         Array.from({ length: optionsRef.value.count }, (_, index) => ({
@@ -121,8 +123,8 @@ vi.mock("@tanstack/vue-virtual", () => ({
           start: index * 64,
         })),
       getTotalSize: () => optionsRef.value.count * 64,
-      measure: (...args) => mocks.virtualMeasure(...args),
-      measureElement: vi.fn(),
+      measure: () => mocks.virtualMeasure(),
+      measureElement: vi.fn<(node: Element) => void>(),
     },
   }),
 }));
@@ -216,22 +218,32 @@ vi.mock("../../../src/components/ui/switch/Switch.vue", () => ({
 vi.mock("../../../src/views/FriendsLocations/components/FriendsLocationsCard.vue", () => ({
   default: {
     props: ["friend"],
-    template: '<div data-testid="friend-card">{{ friend.displayName }}</div>',
+    template: '<div data-testid="friend-card">{{ friend.name }}</div>',
   },
 }));
 
 import FriendsLocations from "../../../src/views/FriendsLocations/FriendsLocations.vue";
 
-function makeFriend(id, displayName, location = "wrld_1:instance") {
+function makeFriend(id: string, name: string, location = "wrld_1:instance"): FriendFixture {
   return {
     id,
-    displayName,
-    signature: "",
-    worldName: "",
+    state: "online",
+    name,
     ref: {
       location,
     },
   };
+}
+
+function isFriendsLocationsVm(value: unknown): value is FriendsLocationsVm {
+  return typeof value === "object" && value !== null && "searchTerm" in value && "activeSegment" in value;
+}
+
+function requireFriendsLocationsVm(value: unknown): FriendsLocationsVm {
+  if (!isFriendsLocationsVm(value)) {
+    throw new Error("FriendsLocations.vue did not expose its setup state");
+  }
+  return value;
 }
 
 async function flushSettings() {
@@ -258,16 +270,18 @@ describe("FriendsLocations.vue", () => {
     mocks.localFriendFavorites.value = {};
     mocks.lastLocation.value = {
       location: "wrld_home:123",
-      friendList: new Map(),
+      friendList: new Map<string, unknown>(),
     };
 
     mocks.configGetString.mockReset();
     mocks.configGetBool.mockReset();
     mocks.configSetString.mockReset();
     mocks.configSetBool.mockReset();
+    mocks.configSetString.mockResolvedValue(undefined);
+    mocks.configSetBool.mockResolvedValue(undefined);
     mocks.virtualMeasure.mockReset();
 
-    mocks.configGetString.mockImplementation((_key, defaultValue) => Promise.resolve(defaultValue ?? "1"));
+    mocks.configGetString.mockImplementation((_key, defaultValue) => Promise.resolve(defaultValue));
     mocks.configGetBool.mockResolvedValue(false);
   });
 
@@ -294,7 +308,7 @@ describe("FriendsLocations.vue", () => {
 
   test("switches to offline segment and renders offline cards", async () => {
     mocks.onlineFriends.value = [makeFriend("usr_1", "Alice")];
-    mocks.offlineFriends.value = [makeFriend("usr_3", "Carol")];
+    mocks.offlineFriends.value = [{ ...makeFriend("usr_3", "Carol"), state: "offline" }];
     const wrapper = mount(FriendsLocations);
     await flushSettings();
 
@@ -328,8 +342,9 @@ describe("FriendsLocations.vue", () => {
     await flushSettings();
     mocks.virtualMeasure.mockClear();
 
-    wrapper.vm.searchTerm = "alice";
-    wrapper.vm.activeSegment = "offline";
+    const vm = requireFriendsLocationsVm(wrapper.vm);
+    vm.searchTerm = "alice";
+    vm.activeSegment = "offline";
     await nextTick();
     await nextTick();
 

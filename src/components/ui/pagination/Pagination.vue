@@ -1,23 +1,48 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { PaginationRoot, useForwardPropsEmits } from "reka-ui";
+import type { PaginationRootEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  page: { type: Number, required: false },
-  defaultPage: { type: Number, required: false },
-  itemsPerPage: { type: Number, required: true },
-  total: { type: Number, required: false },
-  siblingCount: { type: Number, required: false },
-  disabled: { type: Boolean, required: false },
-  showEdges: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:page"]);
+defineOptions({ name: "UiPagination" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = withDefaults(
+  defineProps<{
+    page?: number | undefined;
+    defaultPage?: number | undefined;
+    itemsPerPage: number;
+    total?: number | undefined;
+    siblingCount?: number | undefined;
+    disabled?: boolean;
+    showEdges?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    page: undefined,
+    defaultPage: undefined,
+    total: undefined,
+    siblingCount: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<PaginationRootEmits>();
+
+const delegatedProps = computed(() => ({
+  ...(props.page === undefined ? {} : { page: props.page }),
+  ...(props.defaultPage === undefined ? {} : { defaultPage: props.defaultPage }),
+  itemsPerPage: props.itemsPerPage,
+  ...(props.total === undefined ? {} : { total: props.total }),
+  ...(props.siblingCount === undefined ? {} : { siblingCount: props.siblingCount }),
+  disabled: props.disabled,
+  showEdges: props.showEdges,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 

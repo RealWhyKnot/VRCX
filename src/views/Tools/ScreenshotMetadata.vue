@@ -40,7 +40,7 @@
         <SelectContent>
           <SelectGroup>
             <SelectItem v-for="type in screenshotMetadataDialog.searchTypes" :key="type" :value="type">
-              {{ t(screenshotMetadataSearchTypeLabels[type] ?? type) }}
+              {{ t(screenshotMetadataSearchTypeLabels.get(type) ?? type) }}
             </SelectItem>
           </SelectGroup>
         </SelectContent>
@@ -48,7 +48,7 @@
       <span v-if="searchViewMode === 'table' && searchResultsData.length" class="whitespace-pre-wrap text-xs">{{
         t("dialog.screenshot_metadata.result_count", { count: searchResultsData.length })
       }}</span>
-      <span v-else-if="screenshotMetadataDialog.searchIndex !== null" class="whitespace-pre-wrap text-xs">{{
+      <span v-else-if="screenshotMetadataDialog.searchIndex !== null && screenshotMetadataDialog.searchResults" class="whitespace-pre-wrap text-xs">{{
         screenshotMetadataDialog.searchIndex + 1 + "/" + screenshotMetadataDialog.searchResults.length
       }}</span>
     </div>
@@ -148,7 +148,7 @@
             <img
               class="cursor-pointer max-w-full max-h-full object-contain"
               :src="screenshotMetadataDialog.metadata.filePath"
-              @click="showFullscreenImageDialog(screenshotMetadataDialog.metadata.filePath)"
+              @click="showMetadataImageFullscreen(screenshotMetadataDialog.metadata.filePath)"
             />
             <Button
               variant="ghost"
@@ -215,11 +215,11 @@
             </h4>
             <div class="flex flex-wrap gap-1 max-h-[180px] overflow-y-auto">
               <Badge
-                v-for="user in screenshotMetadataDialog.metadata.players"
-                :key="user.id"
+                v-for="(user, index) in screenshotMetadataDialog.metadata.players"
+                :key="index"
                 variant="secondary"
                 class="cursor-pointer hover:bg-accent transition-colors"
-                @click="lookupUser(user)"
+                @click="lookupUser(toLookupRef(user))"
               >
                 {{ user.displayName }}
               </Badge>
@@ -231,7 +231,7 @@
               {{ t("dialog.screenshot_metadata.section_file_info") }}
             </h4>
             <span v-if="screenshotMetadataDialog.metadata.dateTime" class="text-sm">{{
-              formatDateFilter(screenshotMetadataDialog.metadata.dateTime, "long")
+              formatDateFilter(new Date(screenshotMetadataDialog.metadata.dateTime).toISOString(), "long")
             }}</span>
             <br />
             <span class="text-xs text-muted-foreground">
@@ -286,6 +286,8 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
+import type { AcceptableValue } from "reka-ui";
 import { isLinuxHost } from "@/shared/constants/platform";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
@@ -313,6 +315,126 @@ import { useRouter } from "vue-router";
 import { vrcPlusImageRequest } from "@/api/vrc-plus-image";
 import { lookupUser } from "@/coordinators/user-coordinator";
 
+type ScreenshotPlayer = {
+  id?: string | undefined;
+  displayName?: string | undefined;
+};
+
+type ScreenshotMetadata = {
+  sourceFile?: string | undefined;
+  filePath?: string | undefined;
+  fileName?: string | undefined;
+  previousFilePath?: string | undefined;
+  nextFilePath?: string | undefined;
+  fileResolution?: string | undefined;
+  fileSize?: string | undefined;
+  fileSizeBytes?: string | undefined;
+  creationDate?: string | undefined;
+  timestamp?: string | undefined;
+  application?: string | undefined;
+  dateTime?: number | undefined;
+  note?: string | undefined;
+  error?: string | undefined;
+  world?: { name?: string | undefined; instanceId?: string | undefined } | undefined;
+  author?: ScreenshotPlayer | undefined;
+  players?: ScreenshotPlayer[] | undefined;
+};
+
+type ScreenshotDialogState = {
+  loading: boolean;
+  search: string;
+  searchType: string;
+  searchTypes: string[];
+  searchIndex: number | null;
+  searchResults: string[] | null;
+  metadata: ScreenshotMetadata;
+  isUploading: boolean;
+};
+
+type ScreenshotSearchRow = {
+  filePath: string;
+  dateTime: number;
+  dateFormatted: string;
+  world: string;
+  playerCount: number;
+  players: number;
+  resolution: string;
+  match: string;
+  author: string;
+};
+
+type ScreenshotSortKey = "dateTime" | "world" | "match" | "author" | "players";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function readString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function readNumber(record: Record<string, unknown>, key: string): number | undefined {
+  const value = record[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+function readPlayer(value: unknown): ScreenshotPlayer {
+  if (!isRecord(value)) {
+    return {};
+  }
+  return { id: readString(value, "id"), displayName: readString(value, "displayName") };
+}
+
+function toLookupRef(player: ScreenshotPlayer): { userId?: string; displayName?: string } {
+  const ref: { userId?: string; displayName?: string } = {};
+  if (player.id !== undefined) {
+    ref.userId = player.id;
+  }
+  if (player.displayName !== undefined) {
+    ref.displayName = player.displayName;
+  }
+  return ref;
+}
+
+function readScreenshotMetadata(record: Record<string, unknown>): ScreenshotMetadata {
+  const world = record["world"];
+  const author = record["author"];
+  const players = record["players"];
+  return {
+    sourceFile: readString(record, "sourceFile"),
+    filePath: readString(record, "filePath"),
+    fileName: readString(record, "fileName"),
+    previousFilePath: readString(record, "previousFilePath"),
+    nextFilePath: readString(record, "nextFilePath"),
+    fileResolution: readString(record, "fileResolution"),
+    fileSize: readString(record, "fileSize"),
+    fileSizeBytes: readString(record, "fileSizeBytes"),
+    creationDate: readString(record, "creationDate"),
+    timestamp: readString(record, "timestamp"),
+    application: readString(record, "application"),
+    dateTime: readNumber(record, "dateTime"),
+    note: readString(record, "note"),
+    error: readString(record, "error"),
+    world: isRecord(world) ? { name: readString(world, "name"), instanceId: readString(world, "instanceId") } : undefined,
+    author: isRecord(author) ? readPlayer(author) : undefined,
+    players: Array.isArray(players) ? players.map(readPlayer) : undefined,
+  };
+}
+
+function parseJsonRecord(json: string): Record<string, unknown> | null {
+  const parsed: unknown = JSON.parse(json);
+  return isRecord(parsed) ? parsed : null;
+}
+
+function logError(error: unknown) {
+  console.error(error);
+}
+
 const router = useRouter();
 const { t } = useI18n();
 
@@ -323,7 +445,7 @@ const { currentlyDroppingFile } = storeToRefs(useVrcxStore());
 const { isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
 const { fullscreenImageDialog } = storeToRefs(useGalleryStore());
 
-const screenshotMetadataDialog = reactive({
+const screenshotMetadataDialog = reactive<ScreenshotDialogState>({
   loading: false,
   search: "",
   searchType: "Player Name",
@@ -334,17 +456,17 @@ const screenshotMetadataDialog = reactive({
   isUploading: false,
 });
 
-const screenshotMetadataSearchTypeLabels = {
-  "Player Name": "dialog.screenshot_metadata.search_types.player_name",
-  "Player ID": "dialog.screenshot_metadata.search_types.player_id",
-  "World Name": "dialog.screenshot_metadata.search_types.world_name",
-  "World ID": "dialog.screenshot_metadata.search_types.world_id",
-};
+const screenshotMetadataSearchTypeLabels = new Map<string, string>([
+  ["Player Name", "dialog.screenshot_metadata.search_types.player_name"],
+  ["Player ID", "dialog.screenshot_metadata.search_types.player_id"],
+  ["World Name", "dialog.screenshot_metadata.search_types.world_name"],
+  ["World ID", "dialog.screenshot_metadata.search_types.world_id"],
+]);
 
-const searchViewMode = ref("detail");
-const searchResultsData = ref([]);
-const selectedSearchFilePath = ref(null);
-const searchSort = reactive({ key: "dateTime", asc: false });
+const searchViewMode = ref<"detail" | "table">("detail");
+const searchResultsData = ref<ScreenshotSearchRow[]>([]);
+const selectedSearchFilePath = ref<string | null>(null);
+const searchSort = reactive<{ key: ScreenshotSortKey; asc: boolean }>({ key: "dateTime", asc: false });
 
 const searchHasMatchColumn = computed(() => {
   const type = screenshotMetadataDialog.searchType;
@@ -355,8 +477,8 @@ const sortedSearchResults = computed(() => {
   const data = [...searchResultsData.value];
   const { key, asc } = searchSort;
   data.sort((a, b) => {
-    let va = a[key];
-    let vb = b[key];
+    let va: string | number = a[key];
+    let vb: string | number = b[key];
     if (typeof va === "string") va = va.toLowerCase();
     if (typeof vb === "string") vb = vb.toLowerCase();
     if (va < vb) return asc ? -1 : 1;
@@ -366,7 +488,7 @@ const sortedSearchResults = computed(() => {
   return data;
 });
 
-function toggleSearchSort(key) {
+function toggleSearchSort(key: ScreenshotSortKey) {
   if (searchSort.key === key) {
     searchSort.asc = !searchSort.asc;
   } else {
@@ -375,7 +497,7 @@ function toggleSearchSort(key) {
   }
 }
 
-function selectSearchResult(idx) {
+function selectSearchResult(idx: number) {
   const row = sortedSearchResults.value[idx];
   if (!row) return;
   screenshotMetadataDialog.searchIndex = idx;
@@ -384,46 +506,49 @@ function selectSearchResult(idx) {
   getAndDisplayScreenshot(row.filePath, false);
 }
 
-async function loadSearchResultsMetadata(filePaths, query, searchType) {
-  const results = [];
-  const lowerQuery = String(query).toLowerCase();
+async function loadSearchResultsMetadata(filePaths: string[], query: string, searchType: number) {
+  const results: ScreenshotSearchRow[] = [];
+  const lowerQuery = query.toLowerCase();
   const promises = filePaths.map(async (filePath) => {
     try {
-      const metaJson = await AppApi.GetScreenshotMetadata(filePath);
-      const meta = JSON.parse(metaJson);
-      const extraJson = await AppApi.GetExtraScreenshotData(filePath, false);
-      const extra = JSON.parse(extraJson);
+      const meta = parseJsonRecord(await window.AppApi.GetScreenshotMetadata(filePath));
+      const extra = parseJsonRecord(await window.AppApi.GetExtraScreenshotData(filePath, false));
+      if (!meta || !extra) {
+        throw new Error("Screenshot metadata is not an object");
+      }
+      const metadata = readScreenshotMetadata(meta);
+      const extraData = readScreenshotMetadata(extra);
 
       let dateTime = 0;
       let dateFormatted = "—";
-      if (meta.timestamp) {
-        dateTime = Date.parse(meta.timestamp);
-      } else if (extra.creationDate) {
-        dateTime = Date.parse(extra.creationDate);
+      if (metadata.timestamp) {
+        dateTime = Date.parse(metadata.timestamp);
+      } else if (extraData.creationDate) {
+        dateTime = Date.parse(extraData.creationDate);
       }
       if (dateTime) {
-        dateFormatted = formatDateFilter(dateTime, "short");
+        dateFormatted = formatDateFilter(new Date(dateTime).toISOString(), "short");
       }
 
       let match = "";
       if (searchType === 0) {
-        const matched = meta.players?.filter((p) => p.displayName?.toLowerCase().includes(lowerQuery)) || [];
+        const matched = (metadata.players ?? []).filter((p) => p.displayName?.toLowerCase().includes(lowerQuery));
         match = matched.map((p) => p.displayName).join(", ");
       } else if (searchType === 1) {
-        const matched = meta.players?.find((p) => p.id === query);
-        match = matched?.displayName || "";
+        const matched = metadata.players?.find((p) => p.id === query);
+        match = matched?.displayName ?? "";
       }
 
       results.push({
         filePath,
         dateTime,
         dateFormatted,
-        world: meta.world?.name || "",
-        playerCount: meta.players?.length || 0,
-        players: meta.players?.length || 0,
-        resolution: extra.fileResolution || "",
+        world: metadata.world?.name ?? "",
+        playerCount: metadata.players?.length ?? 0,
+        players: metadata.players?.length ?? 0,
+        resolution: extraData.fileResolution ?? "",
         match,
-        author: meta.author?.displayName || "",
+        author: metadata.author?.displayName ?? "",
       });
     } catch (e) {
       console.error("Error loading metadata for", filePath, e);
@@ -442,12 +567,18 @@ onMounted(() => {
 });
 
 const keys = useMagicKeys();
-const stopPrevWatch = whenever(keys["Alt+ArrowLeft"], () => {
-  navigatePrev();
-});
-const stopNextWatch = whenever(keys["Alt+ArrowRight"], () => {
-  navigateNext();
-});
+const stopPrevWatch = whenever(
+  () => keys["Alt+ArrowLeft"]?.value === true,
+  () => {
+    navigatePrev();
+  }
+);
+const stopNextWatch = whenever(
+  () => keys["Alt+ArrowRight"]?.value === true,
+  () => {
+    navigateNext();
+  }
+);
 onUnmounted(() => {
   stopPrevWatch();
   stopNextWatch();
@@ -455,9 +586,9 @@ onUnmounted(() => {
 
 function navigatePrev() {
   const D = screenshotMetadataDialog;
+  const filesArr = D.searchResults;
 
-  if (D.searchIndex !== null) {
-    const filesArr = D.searchResults;
+  if (D.searchIndex !== null && filesArr) {
     let searchIndex = D.searchIndex;
     if (searchIndex > 0) {
       getAndDisplayScreenshot(filesArr[searchIndex - 1], false);
@@ -473,16 +604,13 @@ function navigatePrev() {
   if (D.metadata.previousFilePath) {
     getAndDisplayScreenshot(D.metadata.previousFilePath);
   }
-
-  if (fullscreenImageDialog.value.visible) {
-  }
 }
 
 function navigateNext() {
   const D = screenshotMetadataDialog;
+  const filesArr = D.searchResults;
 
-  if (D.searchIndex !== null) {
-    const filesArr = D.searchResults;
+  if (D.searchIndex !== null && filesArr) {
     let searchIndex = D.searchIndex;
     if (searchIndex < filesArr.length - 1) {
       getAndDisplayScreenshot(filesArr[searchIndex + 1], false);
@@ -498,16 +626,13 @@ function navigateNext() {
   if (D.metadata.nextFilePath) {
     getAndDisplayScreenshot(D.metadata.nextFilePath);
   }
-
-  if (fullscreenImageDialog.value.visible) {
-  }
 }
 
 function goBack() {
-  router.push({ name: "tools" });
+  void router.push({ name: "tools" }).catch(logError);
 }
 
-function handleDrop(event) {
+function handleDrop(event: DragEvent) {
   if (currentlyDroppingFile.value === null) {
     return;
   }
@@ -520,12 +645,12 @@ function handleDrop(event) {
 }
 
 async function getAndDisplayScreenshotFromFile() {
-  let filePath = "";
+  let filePath: string;
 
   if (isLinuxHost()) {
     filePath = await window.electron.openFileDialog();
   } else {
-    filePath = await AppApi.OpenFileSelectorDialog(await AppApi.GetVRChatPhotosLocation(), ".png", "PNG Files (*.png)|*.png");
+    filePath = await window.AppApi.OpenFileSelectorDialog(await window.AppApi.GetVRChatPhotosLocation(), ".png", "PNG Files (*.png)|*.png");
   }
 
   if (filePath === "") {
@@ -538,57 +663,70 @@ async function getAndDisplayScreenshotFromFile() {
 
 function getAndDisplayLastScreenshot() {
   screenshotMetadataResetSearch();
-  AppApi.GetLastScreenshot().then((path) => {
-    if (!path) {
-      return;
-    }
-    getAndDisplayScreenshot(path);
-  });
+  void window.AppApi.GetLastScreenshot()
+    .then((path) => {
+      if (!path) {
+        return;
+      }
+      getAndDisplayScreenshot(path);
+    })
+    .catch(logError);
 }
 
-function copyImageToClipboard(path) {
+function copyImageToClipboard(path: string | undefined) {
   if (!path) {
     return;
   }
-  AppApi.CopyImageToClipboard(path).then(() => {
-    toast.success("Image copied to clipboard");
-  });
+  void window.AppApi.CopyImageToClipboard(path)
+    .then(() => {
+      toast.success("Image copied to clipboard");
+    })
+    .catch(logError);
 }
 
-function openImageFolder(path) {
+function openImageFolder(path: string | undefined) {
   if (!path) {
     return;
   }
-  AppApi.OpenFolderAndSelectItem(path).then(() => {
-    toast.success("Opened image folder");
-  });
+  void window.AppApi.OpenFolderAndSelectItem(path)
+    .then(() => {
+      toast.success("Opened image folder");
+    })
+    .catch(logError);
 }
 
-function deleteMetadata(path) {
+function deleteMetadata(path: string | undefined) {
   if (!path) {
     return;
   }
-  AppApi.DeleteScreenshotMetadata(path).then((result) => {
-    if (!result) {
-      toast.error(t("message.screenshot_metadata.delete_failed"));
-      return;
-    }
-    toast.success(t("message.screenshot_metadata.deleted"));
-    const D = screenshotMetadataDialog;
-    getAndDisplayScreenshot(D.metadata.filePath, true);
-  });
+  void window.AppApi.DeleteScreenshotMetadata(path)
+    .then((isDeleted) => {
+      if (!isDeleted) {
+        toast.error(t("message.screenshot_metadata.delete_failed"));
+        return;
+      }
+      toast.success(t("message.screenshot_metadata.deleted"));
+      const D = screenshotMetadataDialog;
+      getAndDisplayScreenshot(D.metadata.filePath, true);
+    })
+    .catch(logError);
 }
+
 function uploadScreenshotToGallery() {
   const D = screenshotMetadataDialog;
-  if (D.metadata.fileSizeBytes > 10000000) {
+  const filePath = D.metadata.filePath;
+  if (!filePath) {
+    return;
+  }
+  if (Number(D.metadata.fileSizeBytes) > 10000000) {
     toast.error(t("message.file.too_large"));
     return;
   }
   D.isUploading = true;
-  AppApi.GetFileBase64(D.metadata.filePath)
+  void window.AppApi.GetFileBase64(filePath)
     .then((base64Body) => {
-      vrcPlusImageRequest
-        .uploadGalleryImage(base64Body)
+      void vrcPlusImageRequest
+        .uploadGalleryImage(base64Body ?? "")
         .then((args) => {
           handleGalleryImageAdd(args);
           toast.success(t("message.gallery.uploaded"));
@@ -596,14 +734,16 @@ function uploadScreenshotToGallery() {
         })
         .finally(() => {
           D.isUploading = false;
-        });
+        })
+        .catch(logError);
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       toast.error(t("message.gallery.failed"));
       console.error(err);
       D.isUploading = false;
     });
 }
+
 function screenshotMetadataSearch() {
   const D = screenshotMetadataDialog;
 
@@ -625,18 +765,17 @@ function screenshotMetadataSearch() {
 
       if (search.length === 0) {
         screenshotMetadataResetSearch();
-        if (D.metadata.filePath !== null) {
-          getAndDisplayScreenshot(D.metadata.filePath, true);
-        }
+        getAndDisplayScreenshot(D.metadata.filePath, true);
       }
       return;
     }
 
     const searchType = D.searchTypes.indexOf(D.searchType);
     D.loading = true;
-    AppApi.FindScreenshotsBySearch(search, searchType)
+    void window.AppApi.FindScreenshotsBySearch(search, searchType)
       .then(async (json) => {
-        const results = JSON.parse(json);
+        const parsed: unknown = JSON.parse(json);
+        const results: string[] = Array.isArray(parsed) ? parsed.filter(isString) : [];
 
         if (results.length === 0) {
           D.metadata = {};
@@ -658,11 +797,15 @@ function screenshotMetadataSearch() {
       })
       .finally(() => {
         D.loading = false;
-      });
+      })
+      .catch(logError);
   }, 500);
 }
 
-function handleSearchTypeChange(value) {
+function handleSearchTypeChange(value: AcceptableValue) {
+  if (!isString(value)) {
+    return;
+  }
   screenshotMetadataDialog.searchType = value;
   screenshotMetadataSearch();
 }
@@ -678,14 +821,17 @@ function screenshotMetadataResetSearch() {
   searchViewMode.value = "detail";
 }
 
-async function getAndDisplayScreenshot(path, needsCarouselFiles = true) {
-  const metadata = await AppApi.GetScreenshotMetadata(path);
-  displayScreenshotMetadata(metadata, needsCarouselFiles);
+function showMetadataImageFullscreen(path: string | undefined) {
+  showFullscreenImageDialog(path ?? "", "");
 }
 
-async function displayScreenshotMetadata(json, needsCarouselFiles = true) {
-  let time;
-  let date;
+function getAndDisplayScreenshot(path: string | undefined, needsCarouselFiles = true) {
+  void window.AppApi.GetScreenshotMetadata(path ?? "")
+    .then((metadata) => displayScreenshotMetadata(metadata, needsCarouselFiles))
+    .catch(logError);
+}
+
+async function displayScreenshotMetadata(json: string, needsCarouselFiles = true) {
   const D = screenshotMetadataDialog;
   D.metadata.author = {};
   D.metadata.world = {};
@@ -693,49 +839,51 @@ async function displayScreenshotMetadata(json, needsCarouselFiles = true) {
   D.metadata.creationDate = "";
   D.metadata.application = "";
 
-  let metadata = null;
+  let metadataRecord: Record<string, unknown> | null = null;
   try {
-    metadata = JSON.parse(json);
+    metadataRecord = parseJsonRecord(json);
   } catch (e) {
     console.error("Error parsing screenshot metadata JSON:", e);
   }
-  if (!metadata?.sourceFile) {
+  const sourceFile = metadataRecord ? readString(metadataRecord, "sourceFile") : undefined;
+  if (!metadataRecord || !sourceFile) {
     D.metadata = {};
     D.metadata.error = t("dialog.screenshot_metadata.invalid_file");
     return;
   }
 
   D.loading = true;
-  const extraData = await AppApi.GetExtraScreenshotData(metadata.sourceFile, needsCarouselFiles);
+  const extraData = await window.AppApi.GetExtraScreenshotData(sourceFile, needsCarouselFiles);
   D.loading = false;
-  const extraDataObj = JSON.parse(extraData);
-  Object.assign(metadata, extraDataObj);
+  const extraDataObj: unknown = JSON.parse(extraData);
+  Object.assign(metadataRecord, extraDataObj);
 
-  D.metadata = metadata;
+  D.metadata = readScreenshotMetadata(metadataRecord);
 
-  const regex = metadata.fileName?.match(
+  const regex = D.metadata.fileName?.match(
     /VRChat_((\d{3,})x(\d{3,})_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d{1,})|(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d{3})_(\d{3,})x(\d{3,}))/
   );
   if (regex) {
-    if (typeof regex[2] !== "undefined" && regex[4].length === 4) {
-      date = `${regex[4]}-${regex[5]}-${regex[6]}`;
-      time = `${regex[7]}:${regex[8]}:${regex[9]}`;
+    if (regex[2] !== undefined && regex[4]?.length === 4) {
+      const date = regex.slice(4, 7).join("-");
+      const time = regex.slice(7, 10).join(":");
       D.metadata.dateTime = Date.parse(`${date} ${time}`);
-    } else if (typeof regex[11] !== "undefined" && regex[11].length === 4) {
-      date = `${regex[11]}-${regex[12]}-${regex[13]}`;
-      time = `${regex[14]}:${regex[15]}:${regex[16]}`;
+    } else if (regex[11]?.length === 4) {
+      const date = regex.slice(11, 14).join("-");
+      const time = regex.slice(14, 17).join(":");
       D.metadata.dateTime = Date.parse(`${date} ${time}`);
     }
   }
-  if (metadata.timestamp) {
-    D.metadata.dateTime = Date.parse(metadata.timestamp);
+  if (D.metadata.timestamp) {
+    D.metadata.dateTime = Date.parse(D.metadata.timestamp);
   }
-  if (!D.metadata.dateTime) {
-    D.metadata.dateTime = Date.parse(metadata.creationDate);
+  const hasDateTime = Boolean(D.metadata.dateTime);
+  if (!hasDateTime) {
+    D.metadata.dateTime = Date.parse(D.metadata.creationDate ?? "");
   }
 
   if (fullscreenImageDialog.value.visible) {
-    showFullscreenImageDialog(D.metadata.filePath);
+    showMetadataImageFullscreen(D.metadata.filePath);
   }
 }
 </script>

@@ -205,6 +205,7 @@ import Switch from "@/components/ui/switch/Switch.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
+import { logError } from "@/stores/notification/errors";
 import { useAdvancedSettingsStore } from "@/stores/settings/advanced";
 import { useAvatarProviderStore } from "@/stores/avatar-provider";
 import { useDiscordPresenceSettingsStore } from "@/stores/settings/discord-presence";
@@ -266,17 +267,17 @@ function showTranslationApiDialog() {
   isTranslationApiDialogVisible.value = true;
 }
 
-async function changeYouTubeApi(configKey = "") {
+function changeYouTubeApi(configKey = "") {
   if (configKey === "VRCX_youtubeAPI") {
-    advancedSettingsStore.setYouTubeApi();
+    void advancedSettingsStore.setYouTubeApi().catch(logError);
   }
   updateVRLastLocation();
   updateOpenVR();
 }
 
-async function changeTranslationAPI(configKey = "") {
+function changeTranslationAPI(configKey = "") {
   if (configKey === "VRCX_translationAPI") {
-    advancedSettingsStore.setTranslationApi();
+    void advancedSettingsStore.setTranslationApi().catch(logError);
   }
 }
 </script>

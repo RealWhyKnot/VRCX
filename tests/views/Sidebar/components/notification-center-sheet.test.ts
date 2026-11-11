@@ -1,34 +1,47 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import { ref } from "vue";
 
-const mocks = vi.hoisted(() => ({
-  router: {
-    push: vi.fn(),
-  },
-  inviteStore: {
-    refreshInviteMessageTableData: vi.fn(),
-  },
-  galleryStore: {
-    clearInviteImageUpload: vi.fn(),
-  },
-  notificationStore: null,
-}));
+const mocks = await vi.hoisted(async () => {
+  const { ref } = await import("vue");
+  return {
+    router: {
+      push: vi.fn<(location: unknown) => Promise<void>>(),
+    },
+    inviteStore: {
+      refreshInviteMessageTableData: vi.fn<(tab: string) => void>(),
+    },
+    galleryStore: {
+      clearInviteImageUpload: vi.fn<() => void>(),
+    },
+    notificationStore: {
+      isNotificationCenterOpen: ref(false),
+      unseenFriendNotifications: ref<unknown[]>([]),
+      unseenGroupNotifications: ref<unknown[]>([]),
+      unseenOtherNotifications: ref<unknown[]>([]),
+      recentFriendNotifications: ref<unknown[]>([]),
+      recentGroupNotifications: ref<unknown[]>([]),
+      recentOtherNotifications: ref<unknown[]>([]),
+    },
+  };
+});
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: <T>(store: T) => store,
 }));
 
 vi.mock("vue-router", () => ({
   useRouter: () => mocks.router,
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("../../../../src/stores/invite", () => ({
   useInviteStore: () => mocks.inviteStore,
@@ -118,18 +131,17 @@ import NotificationCenterSheet from "../../../../src/views/Sidebar/components/No
 describe("NotificationCenterSheet.vue", () => {
   beforeEach(() => {
     mocks.router.push.mockReset();
+    mocks.router.push.mockResolvedValue(undefined);
     mocks.inviteStore.refreshInviteMessageTableData.mockReset();
     mocks.galleryStore.clearInviteImageUpload.mockReset();
 
-    mocks.notificationStore = {
-      isNotificationCenterOpen: ref(false),
-      unseenFriendNotifications: ref([]),
-      unseenGroupNotifications: ref([]),
-      unseenOtherNotifications: ref([]),
-      recentFriendNotifications: ref([]),
-      recentGroupNotifications: ref([]),
-      recentOtherNotifications: ref([]),
-    };
+    mocks.notificationStore.isNotificationCenterOpen.value = false;
+    mocks.notificationStore.unseenFriendNotifications.value = [];
+    mocks.notificationStore.unseenGroupNotifications.value = [];
+    mocks.notificationStore.unseenOtherNotifications.value = [];
+    mocks.notificationStore.recentFriendNotifications.value = [];
+    mocks.notificationStore.recentGroupNotifications.value = [];
+    mocks.notificationStore.recentOtherNotifications.value = [];
   });
 
   test("selects group tab when opening and only group unseen notifications exist", async () => {

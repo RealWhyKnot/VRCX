@@ -61,32 +61,39 @@
 import { Calendar, Download } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import dayjs from "dayjs";
+import type {} from "dayjs/plugin/relativeTime";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { AppDebug } from "../../../services/app-config";
+import { webApiService } from "../../../services/webapi";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import type { CalendarEvent } from "vrchat";
+import type { Json } from "../../../types/vrcx";
+
+type CalendarEventEntry = Omit<Json<CalendarEvent>, "userInterest"> & {
+  userInterest?: { createdAt?: string | null; isFollowing?: boolean; updatedAt?: string | null } | undefined;
+};
 
 const { t } = useI18n();
 
-defineProps({
-  event: {
-    type: Object,
-    required: true,
-  },
-  relativeTime: {
-    type: Boolean,
-    default: false,
-  },
-});
+withDefaults(
+  defineProps<{
+    event: CalendarEventEntry;
+    relativeTime?: boolean | undefined;
+  }>(),
+  {
+    relativeTime: false,
+  }
+);
 
-async function openCalendarEvent(event) {
+async function openCalendarEvent(event: CalendarEventEntry) {
   const content = await getCalendarIcs(event);
   if (!content) return;
-  await AppApi.OpenCalendarFile(content);
+  await window.AppApi.OpenCalendarFile(content);
 }
 
-async function getCalendarIcs(event) {
+async function getCalendarIcs(event: CalendarEventEntry): Promise<string | undefined> {
   const url = `${AppDebug.endpointDomain}/calendar/${event.ownerId}/${event.id}.ics`;
   try {
     const response = await webApiService.execute({
@@ -98,12 +105,14 @@ async function getCalendarIcs(event) {
     }
     return response.data;
   } catch (error) {
-    toast.error(`Failed to download .ics file, ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    toast.error(`Failed to download .ics file, ${message}`);
     console.error("Failed to download .ics file:", error);
+    return undefined;
   }
 }
 
-async function downloadEventIcs(event) {
+async function downloadEventIcs(event: CalendarEventEntry) {
   const content = await getCalendarIcs(event);
   if (!content) return;
   const blob = new Blob([content], { type: "text/calendar" });
@@ -116,9 +125,9 @@ async function downloadEventIcs(event) {
   URL.revokeObjectURL(link.href);
 }
 
-const formatTimeRange = (startsAt, endsAt) => `${formatDateFilter(startsAt, "time")} - ${formatDateFilter(endsAt, "time")}`;
+const formatTimeRange = (startsAt: string, endsAt: string) => `${formatDateFilter(startsAt, "time")} - ${formatDateFilter(endsAt, "time")}`;
 
-const formatRelativeTimeRange = (startsAt, endsAt) => `${dayjs(startsAt).fromNow()} - ${dayjs(endsAt).fromNow()}`;
+const formatRelativeTimeRange = (startsAt: string, endsAt: string) => `${dayjs(startsAt).fromNow()} - ${dayjs(endsAt).fromNow()}`;
 
-const capitalizeFirst = (str) => str?.charAt(0).toUpperCase() + str?.slice(1);
+const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 </script>

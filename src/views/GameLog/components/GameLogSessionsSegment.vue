@@ -12,7 +12,14 @@
           'opacity-0 pointer-events-none': segment.events.length === 0,
         }"
       />
-      <Location :location="segment.location" :hint="segment.worldName" :grouphint="segment.groupName" class="text-sm min-w-0" enable-context-menu @click.stop />
+      <Location
+        :location="segment.location ?? ''"
+        :hint="segment.worldName ?? ''"
+        :grouphint="segment.groupName ?? ''"
+        class="text-sm min-w-0"
+        enable-context-menu
+        @click.stop
+      />
       <span class="shrink-0 text-muted-foreground text-[0.6875rem]">
         {{ formatTime(segment.created_at) }}
       </span>
@@ -48,28 +55,27 @@ import { useI18n } from "vue-i18n";
 
 import Badge from "../../../components/ui/badge/Badge.vue";
 import { useGameStore } from "../../../stores/game";
+import type { SessionSegment } from "../../../stores/gameLog/types";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { timeToText } from "../../../shared/utils/base/format";
 import GameLogSessionsEvent from "./GameLogSessionsEvent.vue";
 import Location from "../../../components/Location.vue";
+import type { GameLogSessionEvent } from "../sessions/build-game-log-sessions";
 
 const { t } = useI18n();
 const gameStore = useGameStore();
 
-const props = defineProps({
-  segment: {
-    type: Object,
-    required: true,
-  },
-  isLast: {
-    type: Boolean,
-    default: false,
-  },
-  isLatest: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    segment: Omit<SessionSegment, "events"> & { events: GameLogSessionEvent[] };
+    isLast?: boolean;
+    isLatest?: boolean;
+  }>(),
+  {
+    isLast: false,
+    isLatest: false,
+  }
+);
 
 const collapsed = ref(false);
 
@@ -83,27 +89,24 @@ const durationText = computed(() => {
 const showCurrentBadge = computed(() => props.isLatest && gameStore.isGameRunning && !durationText.value);
 
 const joinCount = computed(() => {
-  if (!props.segment.events) return 0;
   let n = 0;
   for (const e of props.segment.events) {
     if (e.type === "OnPlayerJoined") n++;
-    else if (e.type === "JoinGroup") n += e.count;
+    else if (e.type === "JoinGroup") n += e.count ?? 0;
   }
   return n;
 });
 
 const leftCount = computed(() => {
-  if (!props.segment.events) return 0;
   let n = 0;
   for (const e of props.segment.events) {
     if (e.type === "OnPlayerLeft") n++;
-    else if (e.type === "LeftGroup") n += e.count;
+    else if (e.type === "LeftGroup") n += e.count ?? 0;
   }
   return n;
 });
 
 const videoCount = computed(() => {
-  if (!props.segment.events) return 0;
   let n = 0;
   for (const e of props.segment.events) {
     if (e.type === "VideoPlay") n++;
@@ -111,7 +114,7 @@ const videoCount = computed(() => {
   return n;
 });
 
-function formatTime(dateStr) {
+function formatTime(dateStr: string) {
   return formatDateFilter(dateStr, "long");
 }
 </script>

@@ -1,29 +1,25 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  as: {
-    type: null,
-    default: "a",
-  },
-  asChild: {
-    type: Boolean,
-    default: false,
-  },
-  size: {
-    type: String,
-    default: "md",
-  },
-  isActive: {
-    type: Boolean,
-    default: false,
-  },
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    as?: PrimitiveProps["as"];
+    asChild?: boolean;
+    size?: string;
+    isActive?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    as: "a",
+    asChild: false,
+    size: "md",
+    isActive: false,
+    class: undefined,
+  }
+);
 </script>
 
 <template>

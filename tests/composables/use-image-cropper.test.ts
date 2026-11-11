@@ -146,7 +146,13 @@ describe("useImageCropper", () => {
 
   test("getCroppedBlob returns null when getResult returns no coordinates", async () => {
     const { getCroppedBlob, cropperRef } = useImageCropper();
-    cropperRef.value = { getResult: () => ({}) };
+    cropperRef.value = {
+      getResult: () => ({}),
+      setCoordinates: () => undefined,
+      zoom: () => undefined,
+      rotate: () => undefined,
+      flip: () => undefined,
+    };
     const result = await getCroppedBlob();
     expect(result).toBeNull();
   });

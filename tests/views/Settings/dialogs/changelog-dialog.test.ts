@@ -8,17 +8,17 @@ const changeLogDialog = ref({
   changeLog: "## New Features\n- Feature A\n- Feature B",
 });
 
-const openExternalLinkFn = vi.fn();
+const openExternalLinkFn = vi.fn<(url: string) => void>();
 
 vi.mock("pinia", () => ({
   storeToRefs: () => ({ changeLogDialog }),
-  defineStore: (id, fn) => fn,
+  defineStore: (_id: string, setup: () => unknown) => setup,
 }));
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
+    t: (key: string) => key,
+    locale: ref("en"),
   }),
 }));
 
@@ -27,7 +27,7 @@ vi.mock("../../../../src/stores/vrcx-updater", () => ({
 }));
 
 vi.mock("../../../../src/shared/utils/app-actions", () => ({
-  openExternalLink: (...args) => openExternalLinkFn(...args),
+  openExternalLink: (url: string) => openExternalLinkFn(url),
 }));
 
 vi.mock("vue-showdown", () => ({
@@ -107,7 +107,9 @@ describe("ChangelogDialog.vue", () => {
       const wrapper = mountComponent();
       const buttons = wrapper.findAll("button");
       const closeBtn = buttons.find((b) => b.text().includes("dialog.change_log.close"));
-      expect(closeBtn).toBeTruthy();
+      if (!closeBtn) {
+        throw new Error("close button not found");
+      }
 
       await closeBtn.trigger("click");
       expect(changeLogDialog.value.visible).toBe(false);
@@ -117,7 +119,9 @@ describe("ChangelogDialog.vue", () => {
       const wrapper = mountComponent();
       const buttons = wrapper.findAll("button");
       const githubBtn = buttons.find((b) => b.text().includes("dialog.change_log.github"));
-      expect(githubBtn).toBeTruthy();
+      if (!githubBtn) {
+        throw new Error("github button not found");
+      }
 
       await githubBtn.trigger("click");
       expect(openExternalLinkFn).toHaveBeenCalledWith("https://github.com/vrcx-team/VRCX/releases");

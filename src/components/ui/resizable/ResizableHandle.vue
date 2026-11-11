@@ -1,26 +1,43 @@
 <script setup lang="ts">
+import type { PrimitiveProps, SplitterResizeHandleEmits, SplitterResizeHandleProps } from "reka-ui";
 import { SplitterResizeHandle, useForwardPropsEmits } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { GripVertical } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  id: { type: String, required: false },
-  hitAreaMargins: {
-    type: Object,
-    required: false,
-  },
-  tabindex: { type: Number, required: false },
-  disabled: { type: Boolean, required: false },
-  nonce: { type: String, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  withHandle: { type: Boolean, required: false },
-});
-const emits = defineEmits(["dragging"]);
+const props = withDefaults(
+  defineProps<{
+    id?: string | undefined;
+    hitAreaMargins?: SplitterResizeHandleProps["hitAreaMargins"] | undefined;
+    tabindex?: number | undefined;
+    disabled?: boolean;
+    nonce?: string | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    withHandle?: boolean;
+  }>(),
+  {
+    id: undefined,
+    hitAreaMargins: undefined,
+    tabindex: undefined,
+    nonce: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+const emits = defineEmits<SplitterResizeHandleEmits>();
 
-const delegatedProps = reactiveOmit(props, "class", "withHandle");
+const delegatedProps = computed(() => ({
+  ...(props.id === undefined ? {} : { id: props.id }),
+  ...(props.hitAreaMargins === undefined ? {} : { hitAreaMargins: props.hitAreaMargins }),
+  ...(props.tabindex === undefined ? {} : { tabindex: props.tabindex }),
+  disabled: props.disabled,
+  ...(props.nonce === undefined ? {} : { nonce: props.nonce }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 

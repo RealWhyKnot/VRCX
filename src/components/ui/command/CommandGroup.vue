@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { ListboxGroup, ListboxGroupLabel, useId } from "reka-ui";
 import { computed, onMounted, onUnmounted } from "vue";
 import { cn } from "@/lib/utils";
@@ -6,14 +8,21 @@ import { reactiveOmit } from "@vueuse/core";
 
 import { provideCommandGroupContext, useCommand } from ".";
 
-const props = defineProps({
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  heading: { type: String, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    heading?: string | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+    heading: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const { allGroups, filterState } = useCommand();
 const id = useId();

@@ -23,7 +23,7 @@
         :unmount-on-hide="false"
         fill
         :background="true"
-        @update:model-value="userDialogTabClick"
+        @update:model-value="selectUserDialogTab"
       >
         <template #Info>
           <UserDialogInfoTab ref="infoTabRef" />
@@ -57,7 +57,7 @@
           <DialogJsonTab
             class="rounded-xl bg-(--profile-card) p-2"
             :tree-data="treeData"
-            :tree-data-key="treeData?.user?.id"
+            :tree-data-key="treeDataKey"
             :dialog-id="userDialog.id"
             :dialog-ref="userDialog.ref"
             @refresh="refreshUserDialogTreeData()"
@@ -101,6 +101,7 @@ import { useModerationStore } from "../../../stores/moderation";
 import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
 import { copyToClipboard } from "../../../shared/utils/app-actions";
+import { logError } from "../../../stores/notification/errors";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 import { miscRequest } from "../../../api/misc";
 import { useUserDialogCommands } from "./use-user-dialog-commands";
@@ -122,16 +123,21 @@ import UserSummaryHeader from "./UserSummaryHeader.vue";
 import ModerateGroupDialog from "../ModerateGroupDialog.vue";
 import SendInviteRequestDialog from "./SendInviteRequestDialog.vue";
 
-const props = defineProps({
-  previousIds: {
-    type: Object,
-    required: true,
-  },
-  updatePreviousId: {
-    type: Function,
-    default: () => {},
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    previousIds: {
+      mutualFriend: string | null;
+      group: string | null;
+      avatar: string | null;
+      world: string | null;
+      favoriteWorld: string | null;
+    };
+    updatePreviousId?: (key: string, value: string) => void;
+  }>(),
+  {
+    updatePreviousId: () => undefined,
+  }
+);
 
 const { t } = useI18n();
 const userDialogTabs = computed(() => {
@@ -151,28 +157,24 @@ const userDialogTabs = computed(() => {
   tabs.splice(jsonIdx, 0, { value: "Activity", label: t("dialog.user.activity.header") });
   return tabs;
 });
-const infoTabRef = ref(null);
-const activityTabRef = ref(null);
-const favoriteWorldsTabRef = ref(null);
-const mutualFriendsTabRef = ref(null);
-const worldsTabRef = ref(null);
-const avatarsTabRef = ref(null);
-const groupsTabRef = ref(null);
+const infoTabRef = ref<InstanceType<typeof UserDialogInfoTab> | null>(null);
+const activityTabRef = ref<InstanceType<typeof UserDialogActivityTab> | null>(null);
+const favoriteWorldsTabRef = ref<InstanceType<typeof UserDialogFavoriteWorldsTab> | null>(null);
+const mutualFriendsTabRef = ref<InstanceType<typeof UserDialogMutualFriendsTab> | null>(null);
+const worldsTabRef = ref<InstanceType<typeof UserDialogWorldsTab> | null>(null);
+const avatarsTabRef = ref<InstanceType<typeof UserDialogAvatarsTab> | null>(null);
+const groupsTabRef = ref<InstanceType<typeof UserDialogGroupsTab> | null>(null);
 
 const modalStore = useModalStore();
 const instanceStore = useInstanceStore();
 
 const { userDialog, currentUser } = storeToRefs(useUserStore());
 const userDialogTabColor = computed(() => {
-  const color = userDialog.value.theme?.buttonColor;
+  const color = userDialog.value.theme.buttonColor;
   if (!color) {
     return "var(--primary)";
   }
   return color;
-});
-const scrollbarThumbColor = computed(() => {
-  const color = userDialog.value.theme?.buttonColor;
-  return color === "var(--primary)" ? "color-mix(in oklab, var(--foreground) 30%, transparent)" : `color-mix(in oklab, ${color} 50%, transparent)`;
 });
 const { cachedUsers, showSendBoopDialog, showEditProfileDialog } = useUserStore();
 const { showFavoriteDialog } = useFavoriteStore();
@@ -218,24 +220,34 @@ watch(
   () => userDialog.value.loading,
   () => {
     if (userDialog.value.visible) {
-      !userDialog.value.loading && loadLastActiveTab();
+      if (!userDialog.value.loading) {
+        loadLastActiveTab();
+      }
     }
   }
 );
 
 watch(
   () => userDialog.value.visible,
-  (visible) => {
-    if (visible && !userDialog.value.loading) {
+  (isVisible) => {
+    if (isVisible && !userDialog.value.loading) {
       loadLastActiveTab();
     }
   }
 );
 
-const treeData = ref({});
+const treeData = ref<Record<string, unknown>>({});
 
-function getUserStateText(user) {
-  let state = "";
+const treeDataKey = computed(() => {
+  const user = treeData.value["user"];
+  if (typeof user !== "object" || user === null || !("id" in user)) {
+    return null;
+  }
+  return typeof user.id === "string" || typeof user.id === "number" ? user.id : null;
+});
+
+function getUserStateText(user: { state?: string; status?: string }) {
+  let state: string;
   if (user.state === "active") {
     state = t("dialog.user.status.active");
   } else if (user.state === "offline") {
@@ -249,7 +261,7 @@ function getUserStateText(user) {
   return state;
 }
 
-function getUserStatusText(status) {
+function getUserStatusText(status: string | undefined) {
   if (status === "active") {
     return t("dialog.user.status.active");
   }
@@ -271,17 +283,17 @@ function refreshUserDialogTreeData() {
     treeData.value = {
       currentUser: formatJsonVars(currentUser.value),
       user: formatJsonVars(D.ref),
-      profile: formatJsonVars(D.publicProfileRef),
+      profile: formatJsonVars(D.publicProfileRef ?? {}),
     };
     return;
   }
   treeData.value = {
     user: formatJsonVars(D.ref),
-    profile: formatJsonVars(D.publicProfileRef),
+    profile: formatJsonVars(D.publicProfileRef ?? {}),
   };
 }
 
-function handleUserDialogTab(tabName) {
+function handleUserDialogTab(tabName: string) {
   userDialog.value.lastActiveTab = tabName;
   const userId = userDialog.value.id;
   if (tabName === "Info") {
@@ -306,7 +318,7 @@ function handleUserDialogTab(tabName) {
     if (props.previousIds.avatar !== userId) {
       props.updatePreviousId("avatar", userId);
       if (userId === currentUser.value.id) {
-        refreshUserDialogAvatars();
+        refreshUserDialogAvatars().catch(logError);
       } else {
         avatarsTabRef.value?.setUserDialogAvatarsRemote(userId);
       }
@@ -334,7 +346,7 @@ function loadLastActiveTab() {
   handleUserDialogTab(tab);
 }
 
-function userDialogTabClick(tabName) {
+function userDialogTabClick(tabName: string) {
   if (tabName === userDialog.value.lastActiveTab) {
     if (tabName === "JSON") {
       refreshUserDialogTreeData();
@@ -344,42 +356,50 @@ function userDialogTabClick(tabName) {
   handleUserDialogTab(tabName);
 }
 
+function selectUserDialogTab(tabName: string | number) {
+  if (typeof tabName === "string") {
+    userDialogTabClick(tabName);
+  }
+}
+
 registerCallbacks({
   showEditProfileDialog,
-  showEditNoteAndMemoDialog: () => infoTabRef.value?.showEditNoteAndMemoDialog(),
+  showEditNoteAndMemoDialog: () => {
+    infoTabRef.value?.showEditNoteAndMemoDialog();
+  },
 });
 
-async function toggleBadgeVisibility(badge) {
+async function toggleBadgeVisibility(badge: { badgeId: string; hidden?: boolean | null | undefined; showcased: boolean }) {
   if (badge.hidden) {
     badge.showcased = false;
   }
   const args = await miscRequest.updateBadge({
     badgeId: badge.badgeId,
-    hidden: badge.hidden,
+    hidden: badge.hidden === true,
     showcased: badge.showcased,
   });
   handleBadgeUpdate(args);
 }
 
-async function toggleBadgeShowcased(badge) {
+async function toggleBadgeShowcased(badge: { badgeId: string; hidden?: boolean | null | undefined; showcased: boolean }) {
   if (badge.showcased) {
     badge.hidden = false;
   }
   const args = await miscRequest.updateBadge({
     badgeId: badge.badgeId,
-    hidden: badge.hidden,
+    hidden: badge.hidden === true,
     showcased: badge.showcased,
   });
   handleBadgeUpdate(args);
 }
 
-function handleBadgeUpdate(args) {
+function handleBadgeUpdate(args: { json: unknown }) {
   if (args.json) {
     toast.success(t("message.badge.updated"));
   }
 }
 
-function copyUserDisplayName(displayName) {
+function copyUserDisplayName(displayName: string) {
   copyToClipboard(displayName, "User DisplayName copied to clipboard");
 }
 
@@ -390,7 +410,6 @@ function closeInviteDialog() {
 
 <style scoped>
 .user-dialog-scrollbars {
-  --user-dialog-scrollbar-thumb: v-bind(scrollbarthumbcolor);
   --user-dialog-scrollbar-track: transparent;
 }
 

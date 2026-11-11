@@ -32,7 +32,7 @@
                 <User class="size-4 text-muted-foreground" />
               </AvatarFallback>
             </Avatar>
-            <IconFrame :icon-frame="user.iconFrame" />
+            <IconFrame :icon-frame="user.iconFrame ?? ''" />
           </div>
           <div class="flex-1 overflow-hidden">
             <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName || user.id" />
@@ -127,7 +127,7 @@
                 </span>
               </template>
             </template>
-            <Timer :epoch="Date.parse(groupDialog.announcement.updatedAt)" />
+            <Timer :epoch="Date.parse(groupDialog.announcement.updatedAt ?? '')" />
           </TooltipWrapper>
         </div>
       </div>
@@ -143,7 +143,7 @@
           v-for="value in upcomingCalenderEvents"
           :key="value.id"
           :event="value"
-          :is-following="value.userInterest?.isFollowing"
+          :is-following="value.userInterest?.isFollowing ?? false"
           mode="grid"
           card-class="group-dialog-grid-card"
           @update-following-calendar-data="updateFollowingCalendarData"
@@ -161,7 +161,7 @@
           v-for="value in pastCalenderEvents"
           :key="value.id"
           :event="value"
-          :is-following="value.userInterest?.isFollowing"
+          :is-following="value.userInterest?.isFollowing ?? false"
           mode="grid"
           card-class="group-dialog-grid-card"
           @update-following-calendar-data="updateFollowingCalendarData"
@@ -180,6 +180,8 @@
 </template>
 
 <script setup lang="ts">
+import Timer from "@/components/Timer.vue";
+import Location from "@/components/Location.vue";
 import { Eye, Image, Pencil, Trash2, User } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
@@ -203,17 +205,12 @@ import { useGroupCalendarEvents } from "./use-group-calendar-events";
 import GroupCalendarEventCard from "../../../views/Tools/components/GroupCalendarEventCard.vue";
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
+import type { GroupPostEntry } from "../../../stores/group-types";
 
-defineProps({
-  showGroupPostEditDialog: {
-    type: Function,
-    required: true,
-  },
-  confirmDeleteGroupPost: {
-    type: Function,
-    required: true,
-  },
-});
+defineProps<{
+  showGroupPostEditDialog: (groupId: string, post: GroupPostEntry | null) => void;
+  confirmDeleteGroupPost: (post: GroupPostEntry) => void;
+}>();
 
 const { t } = useI18n();
 const { userImage, userStatusClass } = useUserDisplay();

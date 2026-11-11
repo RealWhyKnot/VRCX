@@ -1,4 +1,13 @@
-const InstanceActivityTooltip = ({ color, displayName, icon, joinTime, leaveTime, duration }) => {
+type InstanceActivityTooltipProps = {
+  color: string | undefined;
+  displayName: string | null;
+  icon: string;
+  joinTime: string;
+  leaveTime: string;
+  duration: string;
+};
+
+const InstanceActivityTooltip = ({ color, displayName, icon, joinTime, leaveTime, duration }: InstanceActivityTooltipProps) => {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       <div

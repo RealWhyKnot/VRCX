@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
 import { useCarousel } from "./use-carousel";
 
-const props = defineProps<{ class?: unknown }>();
+const props = defineProps<{ class?: ClassValue }>();
 
 const { orientation } = useCarousel();
 </script>

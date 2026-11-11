@@ -23,33 +23,38 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { database } from "../../../services/database";
+import { escapeCsvField } from "./csv-field";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { useUserStore } from "../../../stores/user";
+import { logError } from "../../../stores/vrcx-messages";
+import type { FriendContext } from "../../../stores/friend-types";
 
 const { t } = useI18n();
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  discordNamesDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-  friends: {
-    type: Map,
-    default: () => new Map(),
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    discordNamesDialogVisible?: boolean | undefined;
+    friends?: Map<string, FriendContext> | undefined;
+  }>(),
+  {
+    discordNamesDialogVisible: false,
+    friends: () => new Map<string, FriendContext>(),
+  }
+);
 
 watch(
   () => props.discordNamesDialogVisible,
-  (newVal) => {
-    if (newVal) {
-      showDiscordNamesContent();
+  (isVisible) => {
+    if (isVisible) {
+      void showDiscordNamesContent().catch(logError);
     }
   }
 );
 
-const emit = defineEmits(["update:discordNamesDialogVisible"]);
+const emit = defineEmits<{
+  "update:discordNamesDialogVisible": [value: boolean];
+}>();
 
 const discordNamesContent = ref("");
 
@@ -61,12 +66,6 @@ async function showDiscordNamesContent() {
   const profiles = await database.getAllUserProfiles();
   const bioByUserId = new Map(profiles.map((profile) => [profile.userId, replaceBioSymbols(profile.bio)]));
   const lines = ["DisplayName,DiscordName"];
-  const _ = function (str) {
-    if (/[\x00-\x1f,"]/.test(str)) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
   for (const userId of friends) {
     let discord = "";
     const friend = props.friends.get(userId);
@@ -78,21 +77,21 @@ async function showDiscordNamesContent() {
     if (ref.statusDescription) {
       const statusRegex = /(?:discord|dc|dis)(?: |=|:|˸|;)(.*)/gi.exec(ref.statusDescription);
       if (statusRegex) {
-        discord = statusRegex[1];
+        discord = statusRegex[1] ?? "";
       }
     }
     const bio = bioByUserId.get(userId);
     if (!discord && bio) {
       const bioRegex = /(?:discord|dc|dis)(?: |=|:|˸|;)(.*)/gi.exec(bio);
       if (bioRegex) {
-        discord = bioRegex[1];
+        discord = bioRegex[1] ?? "";
       }
     }
     if (!discord) {
       continue;
     }
     discord = discord.trim();
-    lines.push(`${_(name)},${_(discord)}`);
+    lines.push(`${escapeCsvField(name)},${escapeCsvField(discord)}`);
   }
   discordNamesContent.value = lines.join("\n");
 }

@@ -3,26 +3,33 @@ import { mount } from "@vue/test-utils";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
+import type { StoredNotificationEntry } from "../../../../src/stores/notification/types";
+
 dayjs.extend(relativeTime);
+
+type NotificationFixture = StoredNotificationEntry & {
+  responses?: unknown;
+  version?: number;
+};
 
 const mocks = vi.hoisted(() => ({
   notificationStore: {
-    acceptFriendRequestNotification: vi.fn(),
-    acceptRequestInvite: vi.fn(),
-    hideNotificationPrompt: vi.fn(),
-    deleteNotificationLogPrompt: vi.fn(),
-    sendNotificationResponse: vi.fn(),
-    queueMarkAsSeen: vi.fn(),
-    openNotificationLink: vi.fn(),
-    isNotificationExpired: vi.fn(() => false),
+    acceptFriendRequestNotification: vi.fn<(notification: unknown) => void>(),
+    acceptRequestInvite: vi.fn<(notification: unknown) => void>(),
+    hideNotificationPrompt: vi.fn<(notification: unknown) => void>(),
+    deleteNotificationLogPrompt: vi.fn<(notification: unknown) => void>(),
+    sendNotificationResponse: vi.fn<(id: string, responses: unknown, responseType: string) => void>(),
+    queueMarkAsSeen: vi.fn<(id: string, version: number) => void>(),
+    openNotificationLink: vi.fn<(link: string) => void>(),
+    isNotificationExpired: vi.fn<(notification: unknown) => boolean>(() => false),
   },
   userStore: {
-    cachedUsers: new Map(),
-    showSendBoopDialog: vi.fn(),
+    cachedUsers: new Map<string, unknown>(),
+    showSendBoopDialog: vi.fn<(userId: string | undefined) => void>(),
     currentUser: { id: "usr_me" },
   },
   friendStore: {
-    friends: new Map(),
+    friends: new Map<string, unknown>(),
   },
   groupStore: {},
   locationStore: {
@@ -35,17 +42,17 @@ const mocks = vi.hoisted(() => ({
     isGameRunning: { value: true },
   },
   instanceStore: {
-    cachedInstances: new Map(),
+    cachedInstances: new Map<string, unknown>(),
   },
-  showUserDialog: vi.fn(),
-  showGroupDialog: vi.fn(),
+  showUserDialog: vi.fn<(userId: string) => void>(),
+  showGroupDialog: vi.fn<(groupId: string) => void>(),
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("pinia")>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: <T>(store: T) => store,
   };
 });
 
@@ -72,11 +79,11 @@ vi.mock("../../../../src/stores/instance", () => ({
 }));
 
 vi.mock("../../../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mocks.showUserDialog(...args),
+  showUserDialog: mocks.showUserDialog,
 }));
 
 vi.mock("../../../../src/coordinators/group-dialog-coordinator", () => ({
-  showGroupDialog: (...args) => mocks.showGroupDialog(...args),
+  showGroupDialog: mocks.showGroupDialog,
 }));
 
 vi.mock("../../../../src/shared/utils/invite", () => ({
@@ -93,13 +100,16 @@ vi.mock("../../../../src/composables/use-user-display", () => ({
   }),
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    te: () => false,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      te: () => false,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("@/components/ui/item/Item.vue", () => ({
   default: { template: '<div data-testid="item"><slot /></div>' },
@@ -168,7 +178,7 @@ vi.mock("../../../../src/components/Location.vue", () => ({
 }));
 
 vi.mock("lucide-vue-next", () => {
-  function icon(name) {
+  function icon(name: string) {
     return { template: `<span data-icon="${name}" />` };
   }
   return {
@@ -192,13 +202,14 @@ vi.mock("lucide-vue-next", () => {
 
 import NotificationItem from "../../../../src/views/Sidebar/components/NotificationItem.vue";
 
-function makeNotification(overrides = {}) {
+function makeNotification(overrides: Partial<NotificationFixture> = {}): NotificationFixture {
   return {
     id: "noty_1",
     type: "friendRequest",
     senderUserId: "usr_123",
     senderUsername: "Alice",
     created_at: "2026-03-09T00:00:00.000Z",
+    message: "",
     seen: false,
     details: {},
     ...overrides,
@@ -218,9 +229,9 @@ describe("NotificationItem.vue", () => {
     mocks.showUserDialog.mockReset();
     mocks.userStore.showSendBoopDialog.mockReset();
     mocks.showGroupDialog.mockReset();
-    mocks.userStore.cachedUsers = new Map();
-    mocks.friendStore.friends = new Map();
-    mocks.instanceStore.cachedInstances = new Map();
+    mocks.userStore.cachedUsers = new Map<string, unknown>();
+    mocks.friendStore.friends = new Map<string, unknown>();
+    mocks.instanceStore.cachedInstances = new Map<string, unknown>();
   });
 
   test("renders sender and opens user dialog on sender click", async () => {

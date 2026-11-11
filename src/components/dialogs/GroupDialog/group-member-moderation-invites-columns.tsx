@@ -3,10 +3,23 @@ import { i18n } from "@/plugins/i18n";
 import { ArrowUpDown } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
+import { toValue } from "vue";
+import type { ModerationColumn, ModerationRow, ModerationUserColumnContext } from "./group-moderation-types";
 
 const { t } = i18n.global;
 
-const sortButton = ({ column, label, descFirst = false }) => (
+type SortableColumn = {
+  getIsSorted: () => false | "asc" | "desc";
+  toggleSorting: (desc?: boolean) => void;
+};
+
+type SortButtonOptions = {
+  column: SortableColumn;
+  label: string;
+  descFirst?: boolean;
+};
+
+const sortButton = ({ column, label, descFirst = false }: SortButtonOptions) => (
   <Button
     variant="ghost"
     size="sm"
@@ -25,7 +38,16 @@ const sortButton = ({ column, label, descFirst = false }) => (
   </Button>
 );
 
-export const createColumns = ({ randomUserColours, userImage, userImageFull, onShowFullscreenImage, onShowUser, onSelectionChange }) => [
+export type GroupInvitesColumnContext = ModerationUserColumnContext;
+
+export const createColumns = ({
+  randomUserColours,
+  userImage,
+  userImageFull,
+  onShowFullscreenImage,
+  onShowUser,
+  onSelectionChange,
+}: GroupInvitesColumnContext): ModerationColumn<ModerationRow>[] => [
   {
     id: "selected",
     header: () => null,
@@ -36,10 +58,10 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
       return (
         <div class="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox
-            modelValue={!!original?.$selected}
+            modelValue={!!original.$selected}
             onUpdate:modelValue={(value) => {
-              original.$selected = value;
-              onSelectionChange?.(original);
+              original.$selected = value === true;
+              onSelectionChange(original);
             }}
           />
         </div>
@@ -53,8 +75,8 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
     enableSorting: false,
     cell: ({ row }) => {
       const original = row.original;
-      const thumb = userImage?.(original?.user);
-      const full = userImageFull?.(original?.user);
+      const thumb = userImage(original.user);
+      const full = userImageFull(original.user);
 
       return (
         <img
@@ -64,7 +86,7 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
           onClick={(e) => {
             e.stopPropagation();
             if (full) {
-              onShowFullscreenImage?.(full);
+              onShowFullscreenImage(full);
             }
           }}
         />
@@ -73,7 +95,7 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
   },
   {
     id: "displayName",
-    accessorFn: (row) => row?.user?.displayName ?? row?.$displayName ?? "",
+    accessorFn: (row) => row.user?.displayName ?? row.$displayName ?? "",
     header: ({ column }) =>
       sortButton({
         column,
@@ -82,18 +104,20 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
     size: 160,
     cell: ({ row }) => {
       const original = row.original;
-      const useColors = !!(randomUserColours?.value ?? randomUserColours);
-      const colorStyle = useColors ? { color: original?.user?.$userColour } : null;
+      const isUsingColours = toValue(randomUserColours);
+      const colorStyle = isUsingColours ? { color: original.user?.$userColour } : null;
 
       return (
         <span
           style="cursor: pointer"
           onClick={(e) => {
             e.stopPropagation();
-            onShowUser?.(original?.userId);
+            if (original.userId) {
+              onShowUser(original.userId);
+            }
           }}
         >
-          <span style={colorStyle}>{original?.user?.displayName}</span>
+          <span style={colorStyle}>{original.user?.displayName}</span>
         </span>
       );
     },
@@ -106,7 +130,7 @@ export const createColumns = ({ randomUserColours, userImage, userImageFull, onS
         label: t("dialog.group_member_moderation.notes"),
       }),
     cell: ({ row }) => {
-      const managerNotes = row.original?.managerNotes ?? "";
+      const managerNotes = row.original.managerNotes ?? "";
       return (
         <TooltipWrapper content={managerNotes} disabled={!managerNotes}>
           <span class="inline-block max-w-full truncate align-middle" onClick={(e) => e.stopPropagation()}>

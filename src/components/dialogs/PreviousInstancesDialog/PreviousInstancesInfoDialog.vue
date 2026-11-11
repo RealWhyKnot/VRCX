@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
 defineOptions({ name: "PreviousInstancesInfoDialog" });
 
 import { computed, nextTick, ref, watch } from "vue";
@@ -78,23 +79,32 @@ import { BarChart3, List } from "lucide-vue-next";
 
 import { useGameLogStore } from "../../../stores/gameLog";
 import { useInstanceStore } from "../../../stores/instance";
+import type { PreviousInstancesTableState } from "../../../stores/instance-types";
 import { useSearchStore } from "../../../stores/search";
-import { useVrcxStore } from "../../../stores/vrcx";
 import { compareByCreatedAt } from "../../../shared/utils/compare";
 import { localeIncludes } from "../../../shared/utils/base/string";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { timeToText } from "../../../shared/utils/base/format";
+import type { ParsedLocation } from "../../../types/vrcx";
 import DataTableLayout from "../../ui/data-table/DataTableLayout.vue";
 import InputGroupField from "../../ui/input-group/InputGroupField.vue";
 import ToggleGroup from "../../ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../ui/toggle-group/ToggleGroupItem.vue";
 import TooltipWrapper from "../../ui/tooltip/TooltipWrapper.vue";
-import { createColumns } from "./previous-instances-info-columns.tsx";
+import { createColumns, type InstancePlayerRow } from "./previous-instances-info-columns.tsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { lookupUser } from "../../../coordinators/user-coordinator";
+import { logError } from "../../../stores/vrcx-messages";
 
 import PreviousInstancesInfoChart from "./PreviousInstancesInfoChart.vue";
+
+type ChartRow = {
+  created_at: string;
+  time: number;
+  user_id: string;
+  display_name: string;
+};
 
 const { previousInstancesInfoDialog, previousInstancesInfoState } = storeToRefs(useInstanceStore());
 const { gameLogIsFriend, gameLogIsFavorite } = useGameLogStore();
@@ -105,7 +115,7 @@ const dialogState = computed(() => {
 });
 
 const loading = ref(false);
-const rawRows = ref([]);
+const rawRows = ref<InstancePlayerRow[]>([]);
 const pageSizes = [10, 25, 50, 100];
 const pageSize = computed({
   get: () => dialogState.value.pageSize,
@@ -133,7 +143,7 @@ const sortBy = computed({
   },
 });
 
-const location = ref({
+const location = ref<ParsedLocation>({
   tag: "",
   isOffline: false,
   isPrivate: false,
@@ -160,21 +170,21 @@ const location = ref({
 const { stringComparer } = storeToRefs(useSearchStore());
 
 const viewMode = ref("table");
-const chartData = ref([]);
+const chartData = ref<ChartRow[]>([]);
 const chartLoading = ref(false);
 
 const displayRows = computed(() => {
-  const q = String(search.value ?? "")
-    .trim()
-    .toLowerCase();
-  const rows = Array.isArray(rawRows.value) ? rawRows.value : [];
+  const q = search.value.trim().toLowerCase();
+  const rows = rawRows.value;
   if (!q) return rows;
-  return rows.filter((row) => localeIncludes(row?.displayName ?? "", q, stringComparer.value));
+  return rows.filter((row) => localeIncludes(row.displayName ?? "", q, stringComparer.value));
 });
 
 const columns = computed(() =>
   createColumns({
-    onLookupUser: lookupUser,
+    onLookupUser: (lookupRef) => {
+      void lookupUser(lookupRef).catch(logError);
+    },
   })
 );
 
@@ -184,7 +194,7 @@ const { table } = useVrcxVueTable({
     return displayRows.value;
   },
   columns: columns.value,
-  getRowId: (row) => JSON.stringify(row ?? {}),
+  getRowId: (row) => JSON.stringify(row),
   initialSorting: sortBy.value,
   initialPagination: {
     pageIndex: pageIndex.value,
@@ -210,23 +220,23 @@ const totalItems = computed(() => {
   return table.getFilteredRowModel().rows.length;
 });
 
-const handlePageSizeChange = (size) => {
+const handlePageSizeChange = (size: number) => {
   pageSize.value = size;
 };
 
-const handlePageChange = (page) => {
+const handlePageChange = (page: number) => {
   pageIndex.value = Math.max(0, page - 1);
 };
 
-const handleSortChange = (sorting) => {
+const handleSortChange = (sorting: PreviousInstancesTableState["sortBy"]) => {
   sortBy.value = sorting;
 };
 
-function handleViewModeChange(value) {
-  if (value) {
+function handleViewModeChange(value: unknown) {
+  if (value === "table" || value === "chart") {
     viewMode.value = value;
     if (value === "chart" && chartData.value.length === 0) {
-      loadChartData();
+      void loadChartData().catch(logError);
     }
   }
 }
@@ -235,7 +245,12 @@ async function loadChartData() {
   chartLoading.value = true;
   try {
     const data = await database.getPlayerDetailFromInstance(location.value.tag);
-    chartData.value = data;
+    chartData.value = data.map((row) => ({
+      created_at: row.created_at ?? "",
+      time: row.time,
+      user_id: row.user_id ?? "",
+      display_name: row.display_name ?? "",
+    }));
   } catch (error) {
     console.error("Failed to load chart data:", error);
     chartData.value = [];
@@ -246,12 +261,12 @@ async function loadChartData() {
 
 watch(
   () => previousInstancesInfoDialog.value.visible,
-  (value) => {
-    if (value) {
-      nextTick(() => {
+  (isVisible) => {
+    if (isVisible) {
+      void nextTick(() => {
         init();
         refreshPreviousInstancesInfoTable();
-      });
+      }).catch(logError);
     } else {
       viewMode.value = "table";
       chartData.value = [];
@@ -270,17 +285,22 @@ function init() {
 }
 
 function refreshPreviousInstancesInfoTable() {
-  database.getPlayersFromInstance(location.value.tag).then((data) => {
-    const array = [];
-    for (const entry of Array.from(data.values())) {
-      entry.timer = timeToText(entry.time);
-      entry.isFriend = gameLogIsFriend(entry);
-      entry.isFavorite = gameLogIsFavorite(entry);
-      array.push(entry);
-    }
-    array.sort(compareByCreatedAt);
-    rawRows.value = array;
-    loading.value = false;
-  });
+  void database
+    .getPlayersFromInstance(location.value.tag)
+    .then((data) => {
+      const array: InstancePlayerRow[] = [];
+      for (const entry of data.values()) {
+        array.push({
+          ...entry,
+          timer: timeToText(entry.time),
+          isFriend: gameLogIsFriend(entry),
+          isFavorite: gameLogIsFavorite(entry),
+        });
+      }
+      array.sort(compareByCreatedAt);
+      rawRows.value = array;
+      loading.value = false;
+    })
+    .catch(logError);
 }
 </script>

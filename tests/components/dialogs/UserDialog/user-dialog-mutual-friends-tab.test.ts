@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 
 vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
   return {
     useI18n: () => ({
-      t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+      t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key),
       locale: vue.ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: vue.ref("en") },
+      global: { t: (key: string) => key, locale: vue.ref("en") },
       install: vi.fn(),
     }),
   };
@@ -34,7 +36,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref } = vue;
   return {
     ...actual,
@@ -60,13 +62,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn().mockImplementation((_k: string, fallback?: string) => fallback ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn().mockImplementation((_k: string, isFallback?: boolean) => isFallback ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn().mockImplementation((_k: string, fallback?: number) => fallback ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -91,7 +93,7 @@ vi.mock("../../../../src/services/request", () => ({
 
 import * as userCoordinatorModule from "../../../../src/coordinators/user-coordinator";
 vi.mock("../../../../src/coordinators/user-coordinator", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, showUserDialog: vi.fn() };
 });
 
@@ -120,25 +122,27 @@ const MOCK_MUTUAL_FRIENDS = [
   },
 ];
 
-function mountComponent(overrides = {}) {
+type MountOverrides = Partial<UserDialogState> & { currentUser?: Partial<CurrentUserState> };
+
+function mountComponent({ currentUser: currentUserOverrides, ...overrides }: MountOverrides = {}) {
   const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: false });
 
   const userStore = useUserStore(pinia);
-  userStore.$patch({
-    userDialog: {
-      id: "usr_target",
-      ref: { id: "usr_target" },
-      mutualFriends: [...MOCK_MUTUAL_FRIENDS],
-      mutualFriendSorting: userDialogMutualFriendSortingOptions.alphabetical,
-      isMutualFriendsLoading: false,
-      ...overrides,
-    },
-    currentUser: {
-      id: "usr_me",
-      hasSharedConnectionsOptOut: false,
-      ...overrides.currentUser,
-    },
-  });
+  const userDialog: Partial<UserDialogState> = {
+    id: "usr_target",
+    ref: { id: "usr_target" },
+    mutualFriends: [...MOCK_MUTUAL_FRIENDS],
+    mutualFriendSorting: userDialogMutualFriendSortingOptions.alphabetical,
+    isMutualFriendsLoading: false,
+    ...overrides,
+  };
+  const currentUser: Partial<CurrentUserState> = {
+    id: "usr_me",
+    hasSharedConnectionsOptOut: false,
+    ...currentUserOverrides,
+  };
+  userStore.userDialog = { ...createUserDialogState(), ...userDialog };
+  userStore.currentUser = { ...createCurrentUserState(), ...currentUser };
 
   return mount(UserDialogMutualFriendsTab, {
     global: {
@@ -222,7 +226,7 @@ describe("UserDialogMutualFriendsTab.vue", () => {
         },
         currentUser: { id: "usr_me" },
       });
-      const showUserDialogSpy = vi.spyOn(userCoordinatorModule, "showUserDialog").mockImplementation(() => {});
+      const showUserDialogSpy = vi.spyOn(userCoordinatorModule, "showUserDialog").mockImplementation(() => undefined);
 
       const wrapper = mount(UserDialogMutualFriendsTab, {
         global: {
@@ -234,6 +238,7 @@ describe("UserDialogMutualFriendsTab.vue", () => {
       });
 
       const firstItem = wrapper.findAll("li")[0];
+      if (firstItem === undefined) throw new Error("mutual friend item not rendered");
       await firstItem.trigger("click");
       expect(showUserDialogSpy).toHaveBeenCalledWith("usr_1");
     });

@@ -25,7 +25,7 @@
             :class="['group/main-layout flex-1 h-full min-w-0', { 'aside-collapsed': isAsideCollapsedStatic }]"
             @layout="handleLayout"
           >
-            <template #default="{ layout }">
+            <template #default>
               <ResizablePanel :default-size="mainDefaultSize" :order="1">
                 <RouterView v-slot="{ Component }">
                   <KeepAlive exclude="ChartsInstance, ChartsMutual">
@@ -138,14 +138,14 @@ const { navWidth, isNavCollapsed } = storeToRefs(appearanceSettingsStore);
 
 const sidebarOpen = computed(() => !isNavCollapsed.value);
 
-const handleSidebarOpenChange = (open) => {
-  appearanceSettingsStore.setNavCollapsed(!open);
+const handleSidebarOpenChange = (isOpen: boolean) => {
+  appearanceSettingsStore.setNavCollapsed(!isOpen);
 };
 
 let isResizingNav = false;
-let cleanupNavResize = null;
+let cleanupNavResize: (() => void) | null = null;
 
-const startNavResize = (event) => {
+const startNavResize = (event: PointerEvent) => {
   if (!sidebarOpen.value) {
     return;
   }
@@ -156,7 +156,7 @@ const startNavResize = (event) => {
   document.body.style.userSelect = "none";
   document.body.style.cursor = "col-resize";
 
-  const handleMove = (e) => {
+  const handleMove = (e: PointerEvent) => {
     if (!isResizingNav) {
       return;
     }
@@ -184,27 +184,33 @@ onUnmounted(() => {
 
 const { asideDefaultSize, asideMinSize, asideMaxPx, mainDefaultSize, handleLayout, isAsideCollapsedStatic, isSideBarTabShow } = useMainLayoutResizable();
 
-const asidePanelRef = ref(null);
+type AsidePanelHandle = {
+  expand: () => void;
+  collapse: () => void;
+  isCollapsed: boolean;
+};
+
+const asidePanelRef = ref<AsidePanelHandle | null>(null);
 const showAsideExpandButton = computed(() => isSideBarTabShow.value && isAsideCollapsedStatic.value);
-let restoreAsideAfterHiddenRoute = false;
+let isAsideRestorePending = false;
 
 const asideLayoutStorage = {
-  getItem: (name) => localStorage.getItem(name),
-  setItem: (name, value) => {
+  getItem: (name: string) => localStorage.getItem(name),
+  setItem: (name: string, value: string) => {
     if (isSideBarTabShow.value) {
       localStorage.setItem(name, value);
     }
   },
 };
 
-watch(isSideBarTabShow, async (show) => {
-  if (!show) {
-    restoreAsideAfterHiddenRoute = asidePanelRef.value?.isCollapsed === false;
+watch(isSideBarTabShow, async (isVisible) => {
+  if (!isVisible) {
+    isAsideRestorePending = asidePanelRef.value?.isCollapsed === false;
   }
 
   await nextTick();
-  if (show) {
-    if (restoreAsideAfterHiddenRoute) {
+  if (isVisible) {
+    if (isAsideRestorePending) {
       asidePanelRef.value?.expand();
     }
   } else {
@@ -216,7 +222,7 @@ watch(
   () => watchState.isLoggedIn,
   (isLoggedIn) => {
     if (!isLoggedIn) {
-      router.replace({ name: "login" });
+      void router.replace({ name: "login" }).catch((error: unknown) => console.error("Failed to redirect to login", error));
     }
   },
   { immediate: true }

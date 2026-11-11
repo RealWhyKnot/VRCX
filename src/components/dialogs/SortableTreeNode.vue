@@ -9,61 +9,92 @@ import Button from "@/components/ui/button/Button.vue";
 import TreeItem from "@/components/ui/tree/TreeItem.vue";
 import { useI18n } from "vue-i18n";
 import { useSortable } from "@dnd-kit/vue/sortable";
+import type { ComponentPublicInstance } from "vue";
+import type { NavDefinition } from "../nav-menu/nav-menu-types";
+import { isNavTreeEntry } from "./custom-nav-types";
+import type { NavDragState, NavFlatItem, NavTreeEntry, NavTreeFolderNode } from "./custom-nav-types";
 
-const props = defineProps({
-  item: { type: Object, required: true },
-  index: { type: Number, required: true },
-  definitionsMap: { type: Map, required: true },
-  dragState: { type: Object, default: () => ({}) },
-});
+type SortableTreeItem = NavFlatItem & {
+  hasChildren?: boolean;
+  bind?: Record<string, unknown>;
+};
 
-const emit = defineEmits(["editFolder", "deleteFolder", "editDashboard", "deleteDashboard", "hide", "toggle"]);
+const props = withDefaults(
+  defineProps<{
+    item: SortableTreeItem;
+    index: number;
+    definitionsMap: Map<string, NavDefinition>;
+    dragState?: Partial<NavDragState>;
+  }>(),
+  {
+    dragState: () => ({}),
+  }
+);
+
+const emit = defineEmits<{
+  editFolder: [id: string];
+  deleteFolder: [id: string];
+  editDashboard: [key: string];
+  deleteDashboard: [key: string];
+  hide: [key: string];
+  toggle: [];
+}>();
 
 const { t } = useI18n();
 
-const element = ref(null);
+const element = ref<ComponentPublicInstance | null>(null);
 
-const nodeValue = computed(() => props.item.value);
-const isFolder = computed(() => nodeValue.value?.type === "folder");
+const isFolderNode = (node: NavTreeEntry): node is NavTreeFolderNode => "type" in node && node.type === "folder";
+
+const nodeValue = computed<NavTreeEntry>(() => {
+  const value = props.item.value;
+  if (!isNavTreeEntry(value)) {
+    throw new Error("custom nav tree item is missing its id or level");
+  }
+  return value;
+});
+const isFolder = computed(() => isFolderNode(nodeValue.value));
+const nodeKey = computed(() => ("key" in nodeValue.value ? nodeValue.value.key : nodeValue.value.id));
 const isDashboard = computed(() => {
-  return !isFolder.value && nodeValue.value?.key?.startsWith("dashboard-");
+  return !isFolder.value && nodeKey.value.startsWith("dashboard-");
 });
 const isTool = computed(() => {
-  return !isFolder.value && nodeValue.value?.key?.startsWith("tool-");
+  return !isFolder.value && nodeKey.value.startsWith("tool-");
 });
 const hasChildren = computed(() => props.item.hasChildren);
-const level = computed(() => nodeValue.value?.level ?? 0);
-const nodeId = computed(() => (isFolder.value ? nodeValue.value?.id : nodeValue.value?.key));
+const level = computed(() => nodeValue.value.level);
 
 const { isDragSource } = useSortable({
-  id: nodeId,
+  id: nodeKey,
   index: computed(() => props.index),
   element,
 });
 
 const displayLabel = computed(() => {
-  if (isFolder.value) {
-    return nodeValue.value.name?.trim() || t("nav_menu.custom_nav.folder_name_placeholder");
+  const value = nodeValue.value;
+  if (isFolderNode(value)) {
+    return value.name.trim() || t("nav_menu.custom_nav.folder_name_placeholder");
   }
-  const def = props.definitionsMap.get(nodeValue.value?.key);
+  const def = props.definitionsMap.get(nodeKey.value);
   if (!def) {
-    return nodeValue.value?.key || "";
+    return nodeKey.value || "";
   }
   return def.isDashboard ? def.labelKey : t(def.labelKey);
 });
 
 const displayIcon = computed(() => {
-  if (isFolder.value) {
-    return nodeValue.value.icon || "ri-folder-line";
+  const value = nodeValue.value;
+  if (isFolderNode(value)) {
+    return value.icon || "ri-folder-line";
   }
-  const def = props.definitionsMap.get(nodeValue.value?.key);
-  return def?.icon || "";
+  const def = props.definitionsMap.get(nodeKey.value);
+  return def?.icon ?? "";
 });
 
 const isDropHighlighted = computed(() => {
-  if (!props.dragState?.active) return false;
+  if (!props.dragState.active) return false;
   if (!isFolder.value) return false;
-  return props.dragState.overTargetId === nodeId.value && props.dragState.overIsFolder;
+  return props.dragState.overTargetId === nodeKey.value && props.dragState.overIsFolder;
 });
 </script>
 
@@ -121,15 +152,15 @@ const isDropHighlighted = computed(() => {
             </DropdownMenuItem>
           </template>
           <template v-else-if="isDashboard">
-            <DropdownMenuItem @click="emit('editDashboard', nodeValue.key)">
+            <DropdownMenuItem @click="emit('editDashboard', nodeKey)">
               {{ t("nav_menu.custom_nav.edit_dashboard") }}
             </DropdownMenuItem>
-            <DropdownMenuItem class="text-destructive" @click="emit('deleteDashboard', nodeValue.key)">
+            <DropdownMenuItem class="text-destructive" @click="emit('deleteDashboard', nodeKey)">
               {{ t("nav_menu.custom_nav.delete_dashboard") }}
             </DropdownMenuItem>
           </template>
           <template v-else>
-            <DropdownMenuItem @click="emit('hide', nodeValue.key)">
+            <DropdownMenuItem @click="emit('hide', nodeKey)">
               {{ isTool ? t("common.actions.delete") : t("nav_menu.custom_nav.hide") }}
             </DropdownMenuItem>
           </template>

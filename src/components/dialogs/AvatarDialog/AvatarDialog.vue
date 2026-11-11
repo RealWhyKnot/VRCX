@@ -15,7 +15,7 @@
               :src="avatarDialog.ref.thumbnailImageUrl"
               class="absolute inset-0 size-full cursor-pointer object-cover"
               loading="lazy"
-              @click="showFullscreenImageDialog(avatarDialog.ref.imageUrl)"
+              @click="showFullscreenImageDialog(avatarDialog.ref.imageUrl ?? '')"
               @error="imageError = true"
             />
             <div v-else class="absolute inset-0 flex items-center justify-center bg-muted">
@@ -28,7 +28,7 @@
                 <span
                   class="flex flex-wrap font-bold cursor-pointer"
                   :title="avatarDialog.ref.name || avatarDialog.id"
-                  @click="copyToClipboard(avatarDialog.ref.name)"
+                  @click="copyToClipboard(avatarDialog.ref.name ?? '')"
                   v-text="avatarDialog.ref.name || avatarDialog.id"
                 ></span>
               </div>
@@ -51,40 +51,34 @@
                 <TooltipWrapper v-if="avatarDialog.isPC" side="top" content="PC">
                   <Badge class="text-platform-pc border-platform-pc! mr-1.5 mt-1.5" variant="outline"
                     ><Monitor class="h-4 w-4 text-platform-pc" />
-                    <span v-if="avatarDialog.platformInfo.pc" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      t(`dialog.avatar.tags.performanceRating.${avatarDialog.platformInfo.pc.performanceRating.replace(" ", "")}`)
+                    <span v-if="performanceLabel('pc')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      performanceLabel("pc")
                     }}</span>
-                    <span
-                      v-if="avatarDialog.fileAnalysis.standalonewindows?._fileSize"
-                      class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5"
-                      >{{ avatarDialog.fileAnalysis.standalonewindows._fileSize }}</span
-                    >
+                    <span v-if="fileSizeOf('standalonewindows')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      fileSizeOf("standalonewindows")
+                    }}</span>
                   </Badge>
                 </TooltipWrapper>
                 <TooltipWrapper v-if="avatarDialog.isQuest" side="top" content="Android">
                   <Badge class="text-platform-quest border-platform-quest! mr-1.5 mt-1.5" variant="outline"
                     ><Smartphone class="h-4 w-4 text-platform-quest" />
-                    <span v-if="avatarDialog.platformInfo.android" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      t(`dialog.avatar.tags.performanceRating.${avatarDialog.platformInfo.android.performanceRating.replace(" ", "")}`)
+                    <span v-if="performanceLabel('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      performanceLabel("android")
                     }}</span>
-                    <span v-if="avatarDialog.fileAnalysis.android?._fileSize" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-                      avatarDialog.fileAnalysis.android._fileSize
+                    <span v-if="fileSizeOf('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      fileSizeOf("android")
                     }}</span>
                   </Badge>
                 </TooltipWrapper>
                 <TooltipWrapper v-if="avatarDialog.isIos" side="top" content="iOS">
                   <Badge class="text-platform-ios border-platform-ios mr-1.5 mt-1.5" variant="outline"
                     ><Apple class="h-4 w-4 text-platform-ios" />
-                    <span
-                      v-if="avatarDialog.platformInfo.ios"
-                      class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5"
-                      >{{ t(`dialog.avatar.tags.performanceRating.${avatarDialog.platformInfo.ios.performanceRating.replace(" ", "")}`) }}</span
-                    >
-                    <span
-                      v-if="avatarDialog.fileAnalysis.ios?._fileSize"
-                      class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5"
-                      >{{ avatarDialog.fileAnalysis.ios._fileSize }}</span
-                    >
+                    <span v-if="performanceLabel('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      performanceLabel("ios")
+                    }}</span>
+                    <span v-if="fileSizeOf('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+                      fileSizeOf("ios")
+                    }}</span>
                   </Badge>
                 </TooltipWrapper>
                 <Badge v-if="avatarDialog.inCache" variant="outline" class="cursor-pointer mr-1.5 mt-1.5" @click="openFolderGeneric(avatarDialog.cachePath)">
@@ -183,7 +177,7 @@
                     <XCircle class="size-4" />
                     {{ t("dialog.avatar.actions.block") }}
                   </DropdownMenuItem>
-                  <DropdownMenuItem v-if="/quest/.test(avatarDialog.ref.tags)" @click="avatarDialogCommand('Select Fallback Avatar')">
+                  <DropdownMenuItem v-if="/quest/.test((avatarDialog.ref.tags ?? []).join(','))" @click="avatarDialogCommand('Select Fallback Avatar')">
                     <Check class="size-4" />
                     {{ t("dialog.avatar.actions.select_fallback") }}
                   </DropdownMenuItem>
@@ -248,7 +242,7 @@
                   variant="outline"
                   :disabled="isGameRunning && avatarDialog.cacheLocked"
                   :aria-label="t('dialog.avatar.actions.delete_cache_tooltip')"
-                  @click="deleteVRChatCache(avatarDialog.ref)"
+                  @click="deleteVRChatCache({ unityPackages: avatarDialog.ref.unityPackages ?? [] })"
                   ><Trash2
                 /></Button>
               </TooltipWrapper>
@@ -345,7 +339,7 @@
           :items="avatarDialogTabs"
           :unmount-on-hide="false"
           fill
-          @update:model-value="avatarDialogTabClick"
+          @update:model-value="(tabName) => avatarDialogTabClick(String(tabName))"
         >
           <template #Info>
             <div>
@@ -457,7 +451,7 @@
                       class="size-full rounded-lg object-cover"
                       :src="getImageUrlFromImageId(listing.imageId)"
                       loading="lazy"
-                      @click="showFullscreenImageDialog(getImageUrlFromImageId(listing.imageId))"
+                      @click="listing.imageId && showFullscreenImageDialog(getImageUrlFromImageId(listing.imageId))"
                     />
                   </div>
                   <div class="flex-1 overflow-hidden">
@@ -610,6 +604,11 @@ import { showUserDialog } from "../../../coordinators/user-coordinator";
 import SetAvatarStylesDialog from "./SetAvatarStylesDialog.vue";
 import SetAvatarTagsDialog from "./SetAvatarTagsDialog.vue";
 import { AppDebug } from "@/services/app-config";
+import { logError } from "../../../stores/vrcx-messages";
+import type { Avatar } from "vrchat";
+import type { AvatarGalleryImage } from "../../../stores/avatar";
+import type { Json } from "../../../types/vrcx";
+import type { SetAvatarStylesState, SetAvatarTagsState } from "./avatar-dialog-types";
 
 const { sortUserDialogAvatars, getAllProductPurchases } = useUserStore();
 const { userDialog, currentUser, currentUserCredits, ownedListingIds, ownedProductIds } = storeToRefs(useUserStore());
@@ -626,8 +625,9 @@ const uiStore = useUiStore();
 
 const { t } = useI18n();
 
-const { cropDialogOpen, cropDialogFile, avatarDialogCommand, onFileChangeAvatarImage, onCropConfirmAvatar, registerCallbacks, copyAvatarUrl } =
-  useAvatarDialogCommands(avatarDialog, {
+const { cropDialogOpen, cropDialogFile, avatarDialogCommand, onFileChangeAvatarImage, onCropConfirmAvatar, registerCallbacks } = useAvatarDialogCommands(
+  avatarDialog,
+  {
     t,
     toast,
     modalStore,
@@ -640,15 +640,23 @@ const { cropDialogOpen, cropDialogFile, avatarDialogCommand, onFileChangeAvatarI
     applyAvatar,
     sortUserDialogAvatars,
     uiStore,
-  });
+  }
+);
 
 const isAvatarOwner = computed(() => avatarDialog.value.ref.authorId === currentUser.value.id);
+type GalleryCarouselApi = {
+  selectedScrollSnap(): number;
+  on(event: "select" | "reInit", handler: () => void): void;
+  reInit(): void;
+  scrollTo(index: number, jump?: boolean): void;
+};
+
 const galleryCropDialogOpen = ref(false);
-const galleryCropDialogFile = ref(null);
-const galleryCarouselApi = ref(null);
+const galleryCropDialogFile = ref<File | null>(null);
+const galleryCarouselApi = ref<GalleryCarouselApi | null>(null);
 const galleryCarouselIndex = ref(0);
 
-function onGalleryCarouselInit(api) {
+function onGalleryCarouselInit(api: GalleryCarouselApi) {
   galleryCarouselApi.value = api;
   const updateIndex = () => {
     galleryCarouselIndex.value = api.selectedScrollSnap();
@@ -658,7 +666,7 @@ function onGalleryCarouselInit(api) {
   api.on("reInit", updateIndex);
 }
 
-async function scrollGalleryToImage(imageId) {
+async function scrollGalleryToImage(imageId: string | undefined) {
   await nextTick();
   const api = galleryCarouselApi.value;
   if (!api) {
@@ -672,12 +680,33 @@ async function scrollGalleryToImage(imageId) {
   api.scrollTo(index, true);
 }
 
+function fileSizeOf(platform: string): string | undefined {
+  const analysis = avatarDialog.value.fileAnalysis[platform];
+  if (typeof analysis !== "object" || analysis === null || !("_fileSize" in analysis)) {
+    return undefined;
+  }
+  const size = analysis._fileSize;
+  return typeof size === "string" ? size : undefined;
+}
+
+function performanceLabel(platform: string): string | undefined {
+  const info = avatarDialog.value.platformInfo[platform];
+  if (typeof info !== "object" || info === null || !("performanceRating" in info)) {
+    return undefined;
+  }
+  const rating = info.performanceRating;
+  if (typeof rating !== "string") {
+    return undefined;
+  }
+  return t(`dialog.avatar.tags.performanceRating.${rating.replace(" ", "")}`);
+}
+
 const avatarDialogTabs = computed(() => [
   { value: "Info", label: t("dialog.avatar.info.header") },
   { value: "JSON", label: t("dialog.avatar.json.header") },
 ]);
 
-const treeData = ref({});
+const treeData = ref<Record<string, unknown>>({});
 const memo = ref("");
 const imageError = ref(false);
 
@@ -687,7 +716,7 @@ watch(
     imageError.value = false;
   }
 );
-const setAvatarTagsDialog = ref({
+const setAvatarTagsDialog = ref<SetAvatarTagsState>({
   visible: false,
   loading: false,
   ownAvatars: [],
@@ -700,7 +729,7 @@ const setAvatarTagsDialog = ref({
   contentAdult: false,
   contentSex: false,
 });
-const setAvatarStylesDialog = ref({
+const setAvatarStylesDialog = ref<SetAvatarStylesState>({
   visible: false,
   loading: false,
   avatarId: "",
@@ -716,7 +745,7 @@ const setAvatarStylesDialog = ref({
 
 const avatarDialogPlatform = computed(() => {
   const { ref } = avatarDialog.value;
-  const platforms = [];
+  const platforms: string[] = [];
   if (ref.unityPackages) {
     for (const unityPackage of ref.unityPackages) {
       if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
@@ -744,7 +773,7 @@ const avatarDialogPlatform = computed(() => {
 });
 
 const avatarTags = computed(() => {
-  return avatarDialog.value.ref?.tags
+  return avatarDialog.value.ref.tags
     ?.filter((tag) => tag.startsWith("author_tag_"))
     .map((tag) => tag.replace("author_tag_", ""))
     .join(", ");
@@ -755,12 +784,14 @@ watch(
   () => {
     if (avatarDialog.value.visible) {
       handleDialogOpen();
-      !avatarDialog.value.loading && loadLastActiveTab();
+      if (!avatarDialog.value.loading) {
+        loadLastActiveTab();
+      }
     }
   }
 );
 
-function handleAvatarDialogTab(tabName) {
+function handleAvatarDialogTab(tabName: string) {
   avatarDialog.value.lastActiveTab = tabName;
   if (tabName === "JSON") {
     refreshAvatarDialogTreeData();
@@ -771,7 +802,7 @@ function loadLastActiveTab() {
   handleAvatarDialogTab(avatarDialog.value.lastActiveTab);
 }
 
-function avatarDialogTabClick(tabName) {
+function avatarDialogTabClick(tabName: string) {
   if (tabName === avatarDialog.value.lastActiveTab) {
     if (tabName === "JSON") {
       refreshAvatarDialogTreeData();
@@ -781,7 +812,10 @@ function avatarDialogTabClick(tabName) {
   handleAvatarDialogTab(tabName);
 }
 
-function getImageUrlFromImageId(imageId) {
+function getImageUrlFromImageId(imageId: string | undefined) {
+  if (!imageId) {
+    return "";
+  }
   return `${AppDebug.endpointDomain}/file/${imageId}/1/`;
 }
 
@@ -794,34 +828,44 @@ function handleDialogOpen() {
   getAvatarMemo();
 }
 
-function isListingOwned(listing) {
-  return ownedListingIds.value.has(listing.listingId) || ownedProductIds.value.has(avatarDialog.value.ref.productId);
+type PublishedListing = NonNullable<Json<Avatar>["publishedListings"]>[number];
+
+function isListingOwned(listing: PublishedListing) {
+  return (listing.listingId !== undefined && ownedListingIds.value.has(listing.listingId)) || ownedProductIds.value.has(avatarDialog.value.ref.productId ?? "");
 }
 
-function canPurchaseListing(listing) {
-  return currentUserCredits.value !== null && currentUserCredits.value >= listing.priceTokens;
+function canPurchaseListing(listing: PublishedListing) {
+  return (
+    currentUserCredits.value !== null && listing.listingId !== undefined && listing.priceTokens !== undefined && currentUserCredits.value >= listing.priceTokens
+  );
 }
 
 function getAvatarTimeSpent() {
   const D = avatarDialog.value;
   avatarDialog.value.timeSpent = 0;
-  database.getAvatarTimeSpent(D.id).then((aviTime) => {
-    if (D.id === aviTime.avatarId) {
-      avatarDialog.value.timeSpent = aviTime.timeSpent;
-      if (D.id === currentUser.value.currentAvatar && currentUser.value.$previousAvatarSwapTime) {
-        avatarDialog.value.timeSpent += Date.now() - currentUser.value.$previousAvatarSwapTime;
+  void database
+    .getAvatarTimeSpent(D.id)
+    .then((aviTime) => {
+      if (D.id === aviTime.avatarId) {
+        avatarDialog.value.timeSpent = aviTime.timeSpent ?? 0;
+        if (D.id === currentUser.value.currentAvatar && currentUser.value.$previousAvatarSwapTime) {
+          avatarDialog.value.timeSpent += Date.now() - currentUser.value.$previousAvatarSwapTime;
+        }
       }
-    }
-  });
+    })
+    .catch(logError);
 }
 
 function getAvatarMemo() {
   const D = avatarDialog.value;
-  database.getAvatarMemoDB(D.id).then((res) => {
-    if (D.id === res.avatarId) {
-      memo.value = res.memo;
-    }
-  });
+  void database
+    .getAvatarMemoDB(D.id)
+    .then((res) => {
+      if (D.id === res.avatarId) {
+        memo.value = res.memo ?? "";
+      }
+    })
+    .catch(logError);
 }
 
 registerCallbacks({
@@ -841,7 +885,7 @@ function onAvatarMemoChange() {
   }
 }
 
-function copyAvatarId(id) {
+function copyAvatarId(id: string) {
   copyToClipboard(id);
 }
 
@@ -849,7 +893,7 @@ function refreshAvatarDialogTreeData() {
   treeData.value = formatJsonVars(avatarDialog.value.ref);
 }
 
-function showSetAvatarTagsDialog(avatarId) {
+function showSetAvatarTagsDialog(avatarId: string) {
   const D = setAvatarTagsDialog.value;
   D.selectedAvatarIds = [avatarId];
   D.visible = true;
@@ -862,7 +906,7 @@ function showSetAvatarTagsDialog(avatarId) {
   D.contentViolence = false;
   D.contentAdult = false;
   D.contentSex = false;
-  const oldTags = avatarDialog.value.ref.tags;
+  const oldTags = avatarDialog.value.ref.tags ?? [];
   oldTags.forEach((tag) => {
     switch (tag) {
       case "content_horror":
@@ -892,9 +936,9 @@ function showSetAvatarTagsDialog(avatarId) {
       D.ownAvatars.push(ref);
     }
   }
-  nextTick(() => {
+  void nextTick(() => {
     D.loading = false;
-  });
+  }).catch(logError);
 }
 
 function showSetAvatarStylesDialog() {
@@ -902,11 +946,11 @@ function showSetAvatarStylesDialog() {
   D.visible = true;
   D.loading = true;
   D.avatarId = avatarDialog.value.id;
-  D.primaryStyle = avatarDialog.value.ref.styles?.primary || "";
-  D.secondaryStyle = avatarDialog.value.ref.styles?.secondary || "";
+  D.primaryStyle = avatarDialog.value.ref.styles?.primary ?? "";
+  D.secondaryStyle = avatarDialog.value.ref.styles?.secondary ?? "";
   D.initialPrimaryStyle = D.primaryStyle;
   D.initialSecondaryStyle = D.secondaryStyle;
-  D.initialTags = avatarDialog.value.ref.tags;
+  D.initialTags = avatarDialog.value.ref.tags ?? [];
   D.authorTags = "";
   for (const tag of D.initialTags) {
     if (tag.startsWith("author_tag_")) {
@@ -916,16 +960,20 @@ function showSetAvatarStylesDialog() {
       D.authorTags += tag.substring(11);
     }
   }
-  nextTick(() => {
+  void nextTick(() => {
     D.loading = false;
-  });
+  }).catch(logError);
 }
 
 function displayAvatarGalleryUpload() {
-  document.getElementById("AvatarGalleryUploadButton").click();
+  const uploadButton = document.getElementById("AvatarGalleryUploadButton");
+  if (!uploadButton) {
+    throw new Error("AvatarGalleryUploadButton is not in the document");
+  }
+  uploadButton.click();
 }
 
-function onFileChangeAvatarGallery(e) {
+function onFileChangeAvatarGallery(e: Event) {
   const { file, clearInput } = handleImageUploadInput(e, {
     inputSelector: "#AvatarGalleryUploadButton",
     tooLargeMessage: () => t("message.file.too_large"),
@@ -939,10 +987,13 @@ function onFileChangeAvatarGallery(e) {
   galleryCropDialogOpen.value = true;
 }
 
-async function onCropConfirmAvatarGallery(blob) {
+async function onCropConfirmAvatarGallery(blob: Blob | null) {
   const avatarId = avatarDialog.value.id;
   avatarDialog.value.galleryLoading = true;
   const uploadPromise = (async () => {
+    if (!blob) {
+      throw new Error("No gallery image to upload");
+    }
     const base64Body = await readFileAsBase64(blob);
     const base64File = await resizeImageToFitLimits(base64Body);
     const args = await avatarRequest.uploadAvatarGalleryImage(base64File, avatarId);
@@ -956,7 +1007,7 @@ async function onCropConfirmAvatarGallery(blob) {
   });
   try {
     const args = await uploadPromise;
-    await scrollGalleryToImage(args.json?.id);
+    await scrollGalleryToImage(args.json.id);
   } catch (error) {
     console.error("Failed to upload image", error);
   } finally {
@@ -965,14 +1016,17 @@ async function onCropConfirmAvatarGallery(blob) {
   }
 }
 
-async function moveGalleryImage(index, direction) {
+async function moveGalleryImage(index: number, direction: number) {
   const avatarId = avatarDialog.value.id;
   const images = [...avatarDialog.value.galleryImages];
   const target = index + direction;
-  if (target < 0 || target >= images.length) {
+  const movedImage = images[index];
+  const targetImage = images[target];
+  if (!movedImage || !targetImage) {
     return;
   }
-  [images[index], images[target]] = [images[target], images[index]];
+  images[index] = targetImage;
+  images[target] = movedImage;
   avatarDialog.value.galleryLoading = true;
   try {
     await avatarRequest.setAvatarGalleryOrder(
@@ -984,10 +1038,10 @@ async function moveGalleryImage(index, direction) {
     toast.error(t("message.upload.error"));
   }
   await getAvatarGallery(avatarId);
-  await scrollGalleryToImage(images[target].id);
+  await scrollGalleryToImage(movedImage.id);
 }
 
-async function deleteGalleryImage(image) {
+async function deleteGalleryImage(image: AvatarGalleryImage) {
   const avatarId = avatarDialog.value.id;
   const { ok } = await modalStore.confirm({
     title: t("confirm.title"),
@@ -1007,12 +1061,16 @@ async function deleteGalleryImage(image) {
   await getAvatarGallery(avatarId);
 }
 
-async function purchaseListing(listing) {
+async function purchaseListing(listing: PublishedListing) {
+  const { listingId, priceTokens } = listing;
+  if (listingId === undefined || priceTokens === undefined) {
+    return;
+  }
   const { ok } = await modalStore.confirm({
     title: t("confirm.title"),
     description: t("dialog.avatar.info.purchase_confirm", {
       name: listing.displayName,
-      price: commaNumber(listing.priceTokens),
+      price: commaNumber(priceTokens),
     }),
   });
   if (!ok) {
@@ -1020,15 +1078,15 @@ async function purchaseListing(listing) {
   }
   try {
     await marketplaceRequest.purchaseListing({
-      listingId: listing.listingId,
-      totalPrice: listing.priceTokens,
+      listingId,
+      totalPrice: priceTokens,
       quantity: 1,
     });
     toast.success(t("dialog.avatar.info.purchase_success"));
   } catch (error) {
     console.error("Failed to purchase listing", error);
   } finally {
-    getAllProductPurchases();
+    void getAllProductPurchases().catch(logError);
   }
 }
 </script>

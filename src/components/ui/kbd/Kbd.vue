@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: {
-    type: [Boolean, null, String, Object, Array],
-    required: false,
-    skipCheck: true,
-  },
-});
+defineOptions({ name: "UiKbd" });
+
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    class: undefined,
+  }
+);
 </script>
 
 <template>

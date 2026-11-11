@@ -23,7 +23,7 @@
             <template #item="{ item, selected }">
               <div class="flex w-full items-center p-1.5 text-[13px]">
                 <div class="relative inline-block flex-none size-9 mr-2.5">
-                  <img class="size-full rounded-full object-cover" :src="item.iconUrl" loading="lazy" />
+                  <img class="size-full rounded-full object-cover" :src="groupIconUrl(item)" loading="lazy" />
                 </div>
                 <div class="flex-1 overflow-hidden">
                   <span class="block truncate font-medium leading-[18px]" v-text="item.label"></span>
@@ -46,12 +46,16 @@
           >
             <template #item="{ item, selected }">
               <div class="flex w-full items-center p-1.5 text-[13px]">
-                <template v-if="item.user">
-                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(item.user)">
-                    <img class="size-full rounded-full object-cover" :src="userImage(item.user)" loading="lazy" />
+                <template v-if="friendUser(item)">
+                  <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(friendUser(item))">
+                    <img class="size-full rounded-full object-cover" :src="userImage(friendUser(item))" loading="lazy" />
                   </div>
                   <div class="flex-1 overflow-hidden">
-                    <span class="block truncate font-medium leading-[18px]" :style="{ color: item.user.$userColour }" v-text="item.user.displayName"></span>
+                    <span
+                      class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+                      :style="{ '--user-colour': friendUser(item)?.$userColour }"
+                      v-text="friendUser(item)?.displayName"
+                    ></span>
                   </div>
                 </template>
                 <template v-else>
@@ -90,7 +94,9 @@ import { useI18n } from "vue-i18n";
 import { hasGroupPermission } from "../../shared/utils/group";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { useFriendStore } from "../../stores/friend";
+import type { FriendContext } from "../../stores/friend-types";
 import { useGroupStore } from "../../stores/group";
+import { logFailure } from "../../stores/log-failure";
 import { useModalStore } from "../../stores/modal";
 import { groupRequest } from "../../api/group";
 import { queryRequest } from "../../api/query-request";
@@ -107,8 +113,8 @@ const modalStore = useModalStore();
 
 watch(
   () => inviteGroupDialog.value.visible,
-  async (value) => {
-    if (value) {
+  async (isVisible) => {
+    if (isVisible) {
       const lastGroupId = await configRepository.getString("inviteGroupLastGroup", "");
       if (!inviteGroupDialog.value.groupId) {
         inviteGroupDialog.value.groupId = lastGroupId;
@@ -130,12 +136,19 @@ const groupPickerGroups = computed(() => [
     label: t("dialog.invite_to_group.groups_with_invite_permission"),
     items: groupsWithInvitePermission.value.map((group) => ({
       value: String(group.id),
-      label: group.name,
-      search: group.name,
-      iconUrl: group.iconUrl,
+      label: group.name ?? "",
+      search: group.name ?? "",
     })),
   },
 ]);
+
+const groupIconUrlById = computed(
+  () => new Map<string, string | undefined>(groupsWithInvitePermission.value.map((group) => [String(group.id), group.iconUrl ?? undefined]))
+);
+
+function groupIconUrl(item: { value: string | number }) {
+  return groupIconUrlById.value.get(String(item.value));
+}
 
 const friendSections = computed(() => [
   {
@@ -161,41 +174,58 @@ const friendSections = computed(() => [
 ]);
 
 const friendById = computed(() => {
-  const map = new Map();
+  const map = new Map<string, FriendContext>();
   for (const section of friendSections.value) {
-    for (const friend of section.friends ?? []) {
+    for (const friend of section.friends) {
       map.set(friend.id, friend);
     }
   }
   return map;
 });
 
-function resolveUserDisplayName(userId) {
+type PickerUser = NonNullable<FriendContext["ref"]>;
+
+const friendUserById = computed(() => {
+  const map = new Map<string, PickerUser>();
+  for (const section of friendSections.value) {
+    for (const friend of section.friends) {
+      if (friend.ref) {
+        map.set(friend.id, friend.ref);
+      }
+    }
+  }
+  return map;
+});
+
+function friendUser(item: { value: string | number }) {
+  return friendUserById.value.get(String(item.value));
+}
+
+function resolveUserDisplayName(userId: string) {
   const D = inviteGroupDialog.value;
-  if (D?.userObject?.id && D.userObject.id === userId) {
-    return D.userObject.displayName;
+  if (D.userObject.id && D.userObject.id === userId) {
+    return D.userObject.displayName ?? userId;
   }
   const friend = friendById.value.get(userId);
-  return friend?.ref?.displayName ?? friend?.name ?? String(userId);
+  return friend?.ref?.displayName ?? friend?.name ?? userId;
 }
 
 const friendPickerGroups = computed(() => {
   const D = inviteGroupDialog.value;
 
-  const groups = [];
+  const groups: { key: string; label: string; items: { value: string; label: string; search: string }[] }[] = [];
 
-  if (D?.userId) {
-    const selectedUser = D.userObject?.id
+  if (D.userId) {
+    const selectedUser = D.userObject.id
       ? {
-          value: String(D.userObject.id),
-          label: D.userObject.displayName,
-          search: D.userObject.displayName,
-          user: D.userObject,
+          value: D.userObject.id,
+          label: D.userObject.displayName ?? D.userObject.id,
+          search: D.userObject.displayName ?? D.userObject.id,
         }
       : {
-          value: String(D.userId),
-          label: String(D.userId),
-          search: String(D.userId),
+          value: D.userId,
+          label: D.userId,
+          search: D.userId,
         };
 
     groups.push({
@@ -205,19 +235,17 @@ const friendPickerGroups = computed(() => {
     });
   }
 
-  const addFriendGroup = ({ key, label, friends }) => {
-    if (!friends?.length) return;
+  const addFriendGroup = ({ key, label, friends }: { key: string; label: string; friends: FriendContext[] }) => {
+    if (!friends.length) return;
     groups.push({
       key,
       label,
       items: friends.map((friend) => {
-        const user = friend?.ref ?? null;
         const displayName = resolveUserDisplayName(friend.id);
         return {
-          value: String(friend.id),
+          value: friend.id,
           label: displayName,
           search: displayName,
-          user,
         };
       }),
     });
@@ -238,10 +266,10 @@ watch(
       inviteGroupDialog.value.groupName = "";
       return;
     }
-    queryRequest
+    void queryRequest
       .fetch("group", { groupId })
       .then((args) => {
-        inviteGroupDialog.value.groupName = args.ref.name;
+        inviteGroupDialog.value.groupName = args.ref.name ?? "";
       })
       .catch(() => {
         inviteGroupDialog.value.groupId = "";
@@ -253,12 +281,12 @@ watch(
 function initDialog() {
   const D = inviteGroupDialog.value;
   if (D.groupId) {
-    queryRequest
+    void queryRequest
       .fetch("group", {
         groupId: D.groupId,
       })
       .then((args) => {
-        D.groupName = args.ref.name;
+        D.groupName = args.ref.name ?? "";
       })
       .catch(() => {
         D.groupId = "";
@@ -267,10 +295,13 @@ function initDialog() {
   }
 
   if (D.userId) {
-    queryRequest.fetch("user.dialog", { userId: D.userId }).then((args) => {
-      D.userObject = args.ref;
-      D.userIds = [D.userId];
-    });
+    void queryRequest
+      .fetch("user.dialog", { userId: D.userId })
+      .then((args) => {
+        D.userObject = args.ref;
+        D.userIds = [D.userId];
+      })
+      .catch(logFailure("Loading the invite target user failed:"));
   }
 }
 function isAllowedToInviteToGroup() {
@@ -280,24 +311,23 @@ function isAllowedToInviteToGroup() {
     return;
   }
   inviteGroupDialog.value.loading = true;
-  groupRequest
+  void groupRequest
     .getGroup({ groupId })
     .then((args) => {
       const ref = applyGroup(args.json);
-      if (hasGroupPermission(ref, "group-invites-manage")) {
-        return args;
+      if (!hasGroupPermission(ref, "group-invites-manage")) {
+        inviteGroupDialog.value.groupId = "";
+        toast.error("You are not allowed to invite to this group");
       }
-
-      inviteGroupDialog.value.groupId = "";
-      toast.error("You are not allowed to invite to this group");
-      return args;
-    })
-    .finally(() => {
       inviteGroupDialog.value.loading = false;
+    })
+    .catch((error: unknown) => {
+      inviteGroupDialog.value.loading = false;
+      logFailure("Checking the invite group permission failed:")(error);
     });
 }
 function sendGroupInvite() {
-  modalStore
+  void modalStore
     .confirm({
       description: t("confirm.invite_group"),
       title: "Confirm",
@@ -310,12 +340,12 @@ function sendGroupInvite() {
       }
       D.loading = true;
       const inviteLoop = () => {
-        if (D.userIds.length === 0) {
+        const receiverUserId = D.userIds.shift();
+        if (receiverUserId === undefined) {
           D.loading = false;
           return;
         }
-        const receiverUserId = D.userIds.shift();
-        groupRequest
+        void groupRequest
           .sendGroupInvite({
             groupId: D.groupId,
             userId: receiverUserId,
@@ -327,6 +357,6 @@ function sendGroupInvite() {
       };
       inviteLoop();
     })
-    .catch(() => {});
+    .catch(logFailure("Sending the group invite failed:"));
 }
 </script>

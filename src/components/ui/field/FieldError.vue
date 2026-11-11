@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
 import { computed } from "vue";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  errors: {
-    type: Array,
-    required: false,
-  },
-});
+type FieldErrorItem = string | { message?: string | undefined } | undefined;
+
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    errors?: FieldErrorItem[] | undefined;
+  }>(),
+  {
+    class: undefined,
+    errors: undefined,
+  }
+);
 
 const content = computed(() => {
   if (!props.errors || props.errors.length === 0) return null;
@@ -31,8 +37,8 @@ const content = computed(() => {
 </script>
 
 <template>
-  <div v-if="$slots.default || content" role="alert" data-slot="field-error" :class="cn('text-destructive text-sm font-normal', props.class)">
-    <slot v-if="$slots.default" />
+  <div v-if="$slots['default'] || content" role="alert" data-slot="field-error" :class="cn('text-destructive text-sm font-normal', props.class)">
+    <slot v-if="$slots['default']" />
 
     <template v-else-if="typeof content === 'string'">
       {{ content }}

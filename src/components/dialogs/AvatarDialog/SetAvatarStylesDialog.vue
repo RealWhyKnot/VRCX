@@ -18,7 +18,7 @@
           <br />
           <Select
             :model-value="setAvatarStylesDialog.primaryStyle"
-            @update:model-value="(v) => updateDialog({ primaryStyle: v === SELECT_CLEAR_VALUE ? '' : v })"
+            @update:model-value="(v) => updateDialog({ primaryStyle: typeof v === 'string' && v !== SELECT_CLEAR_VALUE ? v : '' })"
           >
             <SelectTrigger size="sm" style="display: inline-flex">
               <SelectValue :placeholder="t('dialog.set_avatar_styles.select_style')" />
@@ -37,7 +37,7 @@
           <br />
           <Select
             :model-value="setAvatarStylesDialog.secondaryStyle"
-            @update:model-value="(v) => updateDialog({ secondaryStyle: v === SELECT_CLEAR_VALUE ? '' : v })"
+            @update:model-value="(v) => updateDialog({ secondaryStyle: typeof v === 'string' && v !== SELECT_CLEAR_VALUE ? v : '' })"
           >
             <SelectTrigger size="sm" style="display: inline-flex">
               <SelectValue :placeholder="t('dialog.set_avatar_styles.select_style')" />
@@ -93,17 +93,17 @@ import SelectValue from "../../ui/select/SelectValue.vue";
 import { avatarRequest } from "../../../api/avatar";
 import { queryRequest } from "../../../api/query-request";
 import { arraysMatch } from "../../../shared/utils/base/array";
-import { useAvatarStore } from "../../../stores/avatar";
 import { applyAvatar } from "../../../coordinators/avatar-coordinator";
+import { logError } from "../../../stores/vrcx-messages";
+import type { SetAvatarStylesState } from "./avatar-dialog-types";
 
-const props = defineProps({
-  setAvatarStylesDialog: {
-    type: Object,
-    required: true,
-  },
-});
+const props = defineProps<{
+  setAvatarStylesDialog: SetAvatarStylesState;
+}>();
 
-const emit = defineEmits(["update:setAvatarStylesDialog"]);
+const emit = defineEmits<{
+  "update:setAvatarStylesDialog": [value: SetAvatarStylesState];
+}>();
 
 const { t } = useI18n();
 
@@ -111,14 +111,14 @@ const SELECT_CLEAR_VALUE = "__clear__";
 
 watch(
   () => props.setAvatarStylesDialog.visible,
-  (newVal) => {
-    if (newVal) {
-      getAvatarStyles();
+  (isVisible) => {
+    if (isVisible) {
+      void getAvatarStyles().catch(logError);
     }
   }
 );
 
-function updateDialog(patch) {
+function updateDialog(patch: Partial<SetAvatarStylesState>) {
   emit("update:setAvatarStylesDialog", {
     ...props.setAvatarStylesDialog,
     ...patch,
@@ -128,8 +128,8 @@ function updateDialog(patch) {
 async function getAvatarStyles() {
   try {
     const ref = await queryRequest.fetch("avatarStyles");
-    const styles = [];
-    const stylesMap = new Map();
+    const styles: string[] = [];
+    const stylesMap = new Map<string, string>();
     for (const style of ref.json) {
       styles.push(style.styleName);
       stylesMap.set(style.styleName, style.id);
@@ -149,17 +149,18 @@ function closeSetAvatarStylesDialog() {
 }
 
 function saveSetAvatarStylesDialog() {
-  const primaryStyleId = props.setAvatarStylesDialog.availableAvatarStylesMap.get(props.setAvatarStylesDialog.primaryStyle) || "";
-  const secondaryStyleId = props.setAvatarStylesDialog.availableAvatarStylesMap.get(props.setAvatarStylesDialog.secondaryStyle) || "";
+  const D = props.setAvatarStylesDialog;
+  const primaryStyleId = D.availableAvatarStylesMap.get(D.primaryStyle) ?? "";
+  const secondaryStyleId = D.availableAvatarStylesMap.get(D.secondaryStyle) ?? "";
 
-  const tags = [];
-  for (const tag of props.setAvatarStylesDialog.initialTags) {
+  const tags: string[] = [];
+  for (const tag of D.initialTags) {
     if (!tag.startsWith("author_tag_")) {
       tags.push(tag);
     }
   }
 
-  const authorTagsArray = props.setAvatarStylesDialog.authorTags.split(",");
+  const authorTagsArray = D.authorTags.split(",");
   for (const tag of authorTagsArray) {
     if (!tag.trim()) {
       continue;
@@ -170,17 +171,13 @@ function saveSetAvatarStylesDialog() {
     }
   }
 
-  if (
-    props.setAvatarStylesDialog.initialPrimaryStyle === props.setAvatarStylesDialog.primaryStyle &&
-    props.setAvatarStylesDialog.initialSecondaryStyle === props.setAvatarStylesDialog.secondaryStyle &&
-    arraysMatch(props.setAvatarStylesDialog.initialTags, tags)
-  ) {
+  if (D.initialPrimaryStyle === D.primaryStyle && D.initialSecondaryStyle === D.secondaryStyle && arraysMatch(D.initialTags, tags)) {
     closeSetAvatarStylesDialog();
     return;
   }
 
   const params = {
-    id: props.setAvatarStylesDialog.avatarId,
+    id: D.avatarId,
     primaryStyle: primaryStyleId,
     secondaryStyle: secondaryStyleId,
     tags,
@@ -193,7 +190,7 @@ function saveSetAvatarStylesDialog() {
       toast.success(t("dialog.set_avatar_styles.save_success"));
       closeSetAvatarStylesDialog();
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       toast.error(t("dialog.set_avatar_styles.save_failed"));
       console.error("Error saving avatar styles:", error);
     });

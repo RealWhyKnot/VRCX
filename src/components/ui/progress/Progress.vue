@@ -1,25 +1,40 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { ProgressRootProps } from "reka-ui";
 import { ProgressIndicator, ProgressRoot } from "reka-ui";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  modelValue: { type: [Number, null], required: false, default: 0 },
-  max: { type: Number, required: false },
-  getValueLabel: {
-    type: Function,
-    required: false,
-  },
-  getValueText: {
-    type: Function,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiProgress" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = withDefaults(
+  defineProps<{
+    modelValue?: number | null;
+    max?: number | undefined;
+    getValueLabel?: ProgressRootProps["getValueLabel"] | undefined;
+    getValueText?: ProgressRootProps["getValueText"] | undefined;
+    asChild?: boolean;
+    as?: ProgressRootProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    modelValue: 0,
+    max: undefined,
+    getValueLabel: undefined,
+    getValueText: undefined,
+    as: undefined,
+    class: undefined,
+  }
+);
+
+const delegatedProps = computed(() => ({
+  modelValue: props.modelValue,
+  asChild: props.asChild,
+  ...(props.max === undefined ? {} : { max: props.max }),
+  ...(props.getValueLabel === undefined ? {} : { getValueLabel: props.getValueLabel }),
+  ...(props.getValueText === undefined ? {} : { getValueText: props.getValueText }),
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>

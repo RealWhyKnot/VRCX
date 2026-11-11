@@ -5,7 +5,6 @@ import type {
   CurrentUser,
   DeveloperType,
   InventoryTemplate,
-  LimitedWorld,
   ProductPurchase,
   PublicProfile,
   UserClientConfig,
@@ -14,8 +13,7 @@ import type {
   ProfileTheme,
 } from "vrchat";
 
-import type { Json, ParsedLocation, VrcxGroup, VrcxInstance, VrcxUser } from "../types/vrcx";
-import type { AvatarRef } from "../shared/utils/avatar-transforms";
+import type { Json, ParsedLocation, VrcxInstance, VrcxUser } from "../types/vrcx";
 
 import type { FriendContext } from "./friend-types";
 
@@ -175,6 +173,20 @@ export type RepresentedGroupState = {
 
 export type UserSorting = { name: string; value: string };
 
+export type UserFavoriteWorld = UserDialogWorld & {
+  favoriteId?: string | undefined;
+};
+
+export type UserFavoriteWorldList = [name: string | undefined, visibility: string | undefined, worlds: UserFavoriteWorld[]];
+
+export type UserDialogAvatar = {
+  id: string;
+  name: string;
+  authorId: string;
+  releaseStatus: string;
+  thumbnailImageUrl: string;
+};
+
 export type UserDialogInstance = {
   id: string;
   tag: string;
@@ -183,6 +195,36 @@ export type UserDialogInstance = {
   users: VrcxUser[];
   shortName: string;
   ref: Partial<VrcxInstance>;
+};
+
+export type UserDialogWorld = {
+  id: string;
+  name?: string | undefined;
+  thumbnailImageUrl?: string | undefined;
+  occupants?: number | undefined;
+};
+
+export type UserDialogGroup = {
+  id?: string | undefined;
+  name?: string | undefined;
+  iconUrl?: string | null | undefined;
+  isRepresenting?: boolean | undefined;
+  memberCount?: number | undefined;
+  memberVisibility?: string | boolean | undefined;
+  myMember?: { visibility?: string | undefined } | null | undefined;
+};
+
+export type UserDialogFriendedInfo = {
+  type: string | null;
+  created_at?: string | null | undefined;
+};
+
+export type UserDialogFriend = {
+  id: string;
+  displayName?: string | undefined;
+  iconUrl?: string | undefined;
+  iconFrame?: string | undefined;
+  $userColour?: string | undefined;
 };
 
 export type UserDialogState = {
@@ -210,19 +252,19 @@ export type UserDialogState = {
   $homeLocationName: string;
   users: VrcxUser[];
   instance: UserDialogInstance;
-  worlds: Json<LimitedWorld>[];
-  avatars: AvatarRef[];
-  licensedAvatars: AvatarRef[];
+  worlds: UserDialogWorld[];
+  avatars: UserDialogAvatar[];
+  licensedAvatars: UserDialogAvatar[];
   isWorldsLoading: boolean;
   isFavoriteWorldsLoading: boolean;
   isAvatarsLoading: boolean;
   isGroupsLoading: boolean;
-  userFavoriteWorlds: Json<LimitedWorld>[];
+  userFavoriteWorlds: UserFavoriteWorldList[];
   userGroups: {
-    groups: VrcxGroup[];
-    ownGroups: VrcxGroup[];
-    mutualGroups: VrcxGroup[];
-    remainingGroups: VrcxGroup[];
+    groups: UserDialogGroup[];
+    ownGroups: UserDialogGroup[];
+    mutualGroups: UserDialogGroup[];
+    remainingGroups: UserDialogGroup[];
   };
   worldSorting: UserSorting;
   worldOrder: UserSorting;
@@ -242,10 +284,10 @@ export type UserDialogState = {
   previousDisplayNames: { displayName: string | null; updated_at: string | null }[];
   dateFriended: string;
   unFriended: boolean;
-  dateFriendedInfo: unknown[];
+  dateFriendedInfo: UserDialogFriendedInfo[];
   mutualFriendCount: number;
   mutualGroupCount: number;
-  mutualFriends: VrcxUser[];
+  mutualFriends: UserDialogFriend[];
   isMutualFriendsLoading: boolean;
 };
 

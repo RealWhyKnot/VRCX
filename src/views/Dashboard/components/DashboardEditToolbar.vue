@@ -4,7 +4,7 @@
       :model-value="name"
       :placeholder="t('dashboard.toolbar.name_placeholder')"
       class="mx-2 h-7 max-w-[200px] text-sm"
-      @update:model-value="emit('update:name', $event)"
+      @update:model-value="emit('update:name', String($event))"
     />
     <div class="flex gap-2">
       <Button variant="secondary" size="sm" @click="emit('cancel')">{{ t("dashboard.actions.cancel") }}</Button>
@@ -20,12 +20,19 @@ import { useI18n } from "vue-i18n";
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 
-defineProps({
-  name: {
-    type: String,
-    default: "",
-  },
-});
-const emit = defineEmits(["save", "cancel", "delete", "update:name"]);
+withDefaults(
+  defineProps<{
+    name?: string;
+  }>(),
+  {
+    name: "",
+  }
+);
+const emit = defineEmits<{
+  save: [];
+  cancel: [];
+  delete: [];
+  "update:name": [value: string];
+}>();
 const { t } = useI18n();
 </script>

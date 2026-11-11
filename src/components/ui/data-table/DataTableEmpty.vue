@@ -22,12 +22,14 @@ import EmptyDescription from "../empty/EmptyDescription.vue";
 import EmptyHeader from "../empty/EmptyHeader.vue";
 import EmptyMedia from "../empty/EmptyMedia.vue";
 
-const props = defineProps({
-  type: {
-    type: String,
-    default: "nodata",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    type?: string;
+  }>(),
+  {
+    type: "nodata",
+  }
+);
 
 const { t } = useI18n();
 

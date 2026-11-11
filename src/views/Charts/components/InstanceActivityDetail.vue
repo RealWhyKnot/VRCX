@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
@@ -33,30 +34,34 @@ import * as echarts from "echarts";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { InstanceActivityTooltip } from "./instance-activity-tooltip.tsx";
 import { renderToHtml } from "@/lib/utils";
+import type { InstanceActivityEntry } from "../activity-types";
+
+type DetailElement = {
+  offset: number;
+  time: number | null;
+  tail: number;
+  entry: InstanceActivityEntry;
+};
 
 const { isDarkMode, dtHour12 } = storeToRefs(useAppearanceSettingsStore());
 
 const { currentUser } = storeToRefs(useUserStore());
 
-const props = defineProps({
-  activityDetailData: {
-    type: Array,
-    required: true,
-  },
-  barWidth: {
-    type: Number,
-    required: true,
-    default: 10,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    activityDetailData: InstanceActivityEntry[];
+    barWidth?: number;
+  }>(),
+  { barWidth: 10 }
+);
 
-const activityDetailChartRef = ref(null);
+const activityDetailChartRef = ref<HTMLDivElement | null>(null);
 
 const isLoading = ref(true);
-let echartsInstance = null;
-const usersFirstActivity = ref(null);
-const resizeObserver = ref(null);
-const hasChartData = computed(() => (props.activityDetailData || []).length > 0);
+let echartsInstance: echarts.EChartsType | null = null;
+const usersFirstActivity = ref<InstanceActivityEntry[] | null>(null);
+const resizeObserver = ref<ResizeObserver | null>(null);
+const hasChartData = computed(() => props.activityDetailData.length > 0);
 
 const startTimeStamp = computed(() => {
   return props.activityDetailData.find((item) => item.user_id === currentUser.value.id)?.joinTime.valueOf();
@@ -98,10 +103,6 @@ onBeforeUnmount(() => {
     resizeObserver.value.disconnect();
     resizeObserver.value = null;
   }
-  if (echartsInstance.value) {
-    echartsInstance.value.dispose();
-    echartsInstance.value = null;
-  }
 });
 
 function initResizeObserver() {
@@ -124,8 +125,8 @@ function initResizeObserver() {
   });
 }
 
-async function initEcharts() {
-  if (!activityDetailChartRef.value || !props.activityDetailData || props.activityDetailData.length === 0) {
+function initEcharts() {
+  if (!activityDetailChartRef.value || props.activityDetailData.length === 0) {
     isLoading.value = false;
     return;
   }
@@ -151,7 +152,8 @@ async function initEcharts() {
       echartsInstance.off("click");
 
       const options = getNewOption();
-      if (options?.series && options.series.length > 0) {
+      const series = options.series;
+      if (Array.isArray(series) && series.length > 0) {
         echartsInstance.clear();
         echartsInstance.setOption(options, { notMerge: true });
         echartsInstance.on("click", "yAxis", handleClickYAxisLabel);
@@ -167,7 +169,7 @@ async function initEcharts() {
 
   const initEchartsInstance = () => {
     if (!echartsInstance) {
-      echartsInstance = echarts.init(chartDom, `${isDarkMode.value ? "dark" : null}`, {
+      echartsInstance = echarts.init(chartDom, isDarkMode.value ? "dark" : "null", {
         height: chartsHeight,
         useDirtyRect: props.activityDetailData.length > 80,
       });
@@ -181,15 +183,15 @@ async function initEcharts() {
   setTimeout(afterInit, 50);
 }
 
-function handleClickYAxisLabel(params) {
-  const userData = usersFirstActivity.value[params.dataIndex];
+function handleClickYAxisLabel(params: echarts.ECElementEvent) {
+  const userData = usersFirstActivity.value?.[params.dataIndex];
   if (userData?.user_id) {
     showUserDialog(userData.user_id);
   }
 }
 
-function getNewOption() {
-  if (!props.activityDetailData || props.activityDetailData.length === 0) {
+function getNewOption(): echarts.EChartsOption {
+  if (props.activityDetailData.length === 0) {
     return {
       title: {
         text: "No data",
@@ -209,30 +211,30 @@ function getNewOption() {
     };
   }
 
-  const userGroupedEntries = new Map();
+  const startTime = startTimeStamp.value;
+  const endTime = endTimeStamp.value;
 
-  const uniqueUserEntries = [];
+  const userGroupedEntries = new Map<string | null, DetailElement[]>();
+
+  const uniqueUserEntries: InstanceActivityEntry[] = [];
   for (const entry of props.activityDetailData) {
-    if (!userGroupedEntries.has(entry.user_id)) {
-      userGroupedEntries.set(entry.user_id, []);
+    let elements = userGroupedEntries.get(entry.user_id);
+    if (!elements) {
+      elements = [];
+      userGroupedEntries.set(entry.user_id, elements);
       uniqueUserEntries.push(entry);
     }
-    const elements = userGroupedEntries.get(entry.user_id);
-    const offset = Math.max(
-      0,
-      elements.length === 0
-        ? entry.joinTime.valueOf() - startTimeStamp.value
-        : entry.joinTime.valueOf() - startTimeStamp.value - elements[elements.length - 1].tail
-    );
-    const tail = elements.length === 0 ? offset + entry.time : elements[elements.length - 1].tail + offset + entry.time;
+    const lastElement = elements[elements.length - 1];
+    const offset = Math.max(0, elements.length === 0 ? entry.joinTime.valueOf() - startTime : entry.joinTime.valueOf() - startTime - (lastElement?.tail ?? 0));
+    const tail = elements.length === 0 ? offset + (entry.time ?? 0) : (lastElement?.tail ?? 0) + offset + (entry.time ?? 0);
     const element = { offset, time: entry.time, tail, entry };
     elements.push(element);
   }
   usersFirstActivity.value = uniqueUserEntries;
 
-  const generateSeries = () => {
+  const generateSeries = (): echarts.BarSeriesOption[] => {
     const maxEntryCount = Math.max(...Array.from(userGroupedEntries.values()).map((entries) => entries.length));
-    const placeholderSeries = (data) => {
+    const placeholderSeries = (data: number[]): echarts.BarSeriesOption => {
       return {
         name: "Placeholder",
         type: "bar",
@@ -250,7 +252,7 @@ function getNewOption() {
         data,
       };
     };
-    const timeSeries = (data) => {
+    const timeSeries = (data: (number | null)[]): echarts.BarSeriesOption => {
       return {
         name: "Time",
         type: "bar",
@@ -270,30 +272,28 @@ function getNewOption() {
       };
     };
 
-    const series = Array(maxEntryCount)
-      .fill(0)
-      .flatMap((_, index) => {
-        return [
-          placeholderSeries(
-            uniqueUserEntries.map((entry) => {
-              const element = userGroupedEntries.get(entry.user_id)[index];
-              return element ? element.offset : 0;
-            })
-          ),
-          timeSeries(
-            uniqueUserEntries.map((entry) => {
-              const element = userGroupedEntries.get(entry.user_id)[index];
-              return element ? element.time : 0;
-            })
-          ),
-        ];
-      });
+    const series = Array.from({ length: maxEntryCount }).flatMap((_, index) => {
+      return [
+        placeholderSeries(
+          uniqueUserEntries.map((entry) => {
+            const element = userGroupedEntries.get(entry.user_id)?.[index];
+            return element ? element.offset : 0;
+          })
+        ),
+        timeSeries(
+          uniqueUserEntries.map((entry) => {
+            const element = userGroupedEntries.get(entry.user_id)?.[index];
+            return element ? element.time : 0;
+          })
+        ),
+      ];
+    });
 
     return series;
   };
 
-  const friendOrFavIcon = (display_name) => {
-    const foundItem = props.activityDetailData.find((item) => item.display_name === display_name);
+  const friendOrFavIcon = (displayName: string | null) => {
+    const foundItem = props.activityDetailData.find((item) => item.display_name === displayName);
 
     if (!foundItem) {
       return "";
@@ -308,39 +308,40 @@ function getNewOption() {
     return "";
   };
 
-  const getTooltip = (params) => {
-    const isTimeSeries = params.seriesIndex % 2 === 1;
+  const getTooltip = (params: echarts.DefaultLabelFormatterCallbackParams) => {
+    const seriesIndex = params.seriesIndex ?? 0;
+    const isTimeSeries = seriesIndex % 2 === 1;
     if (!isTimeSeries) return "";
 
     const userData = uniqueUserEntries[params.dataIndex];
-    const targetEntryIndex = Math.floor(params.seriesIndex / 2);
+    const targetEntryIndex = Math.floor(seriesIndex / 2);
 
-    const instanceData = userGroupedEntries.get(userData?.user_id)?.[targetEntryIndex]?.entry;
+    const instanceData = userData === undefined ? undefined : userGroupedEntries.get(userData.user_id)?.[targetEntryIndex]?.entry;
 
     if (!instanceData) return "";
 
     const format = dtHour12.value ? "hh:mm:ss A" : "HH:mm:ss";
     return renderToHtml(
       InstanceActivityTooltip({
-        color: params.color,
+        color: typeof params.color === "string" ? params.color : undefined,
         displayName: instanceData.display_name,
         icon: friendOrFavIcon(instanceData.display_name),
         joinTime: dayjs(instanceData.joinTime).format(format),
         leaveTime: dayjs(instanceData.leaveTime).format(format),
-        duration: timeToText(instanceData.time, true),
+        duration: timeToText(instanceData.time ?? 0, true),
       })
     );
   };
 
   const format = dtHour12.value ? "hh:mm A" : "HH:mm";
 
-  const echartsOption = {
+  return {
     tooltip: {
       trigger: "item",
       axisPointer: {
         type: "shadow",
       },
-      formatter: getTooltip,
+      formatter: (params: echarts.TooltipComponentFormatterCallbackParams) => (Array.isArray(params) ? "" : getTooltip(params)),
     },
     grid: {
       top: 50,
@@ -351,31 +352,29 @@ function getNewOption() {
       type: "category",
       axisLabel: {
         interval: 0,
-        formatter: (value) => {
-          const MAX_LENGTH = 20;
+        formatter: (value: string) => {
+          const maxLength = 20;
           const len = value.length;
-          return `${friendOrFavIcon(value)} ${len > MAX_LENGTH ? `${value.substring(0, MAX_LENGTH)}...` : value}`;
+          return `${friendOrFavIcon(value)} ${len > maxLength ? `${value.substring(0, maxLength)}...` : value}`;
         },
       },
       inverse: true,
-      data: uniqueUserEntries.map((item) => item.display_name),
+      data: uniqueUserEntries.map((item) => item.display_name ?? ""),
       triggerEvent: true,
     },
     xAxis: {
       type: "value",
       min: 0,
-      max: endTimeStamp.value - startTimeStamp.value,
+      max: endTime - startTime,
       axisLine: { show: true },
       axisLabel: {
-        formatter: (value) => dayjs(value + startTimeStamp.value).format(format),
+        formatter: (value: number) => dayjs(value + startTime).format(format),
       },
       splitLine: { lineStyle: { type: "dashed" } },
     },
     series: generateSeries(),
     backgroundColor: "transparent",
   };
-
-  return echartsOption;
 }
 
 defineExpose({

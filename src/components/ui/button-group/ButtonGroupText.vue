@@ -1,13 +1,25 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  orientation: { type: null, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false, default: "div" },
-});
+import { buttonGroupVariants } from ".";
+
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    orientation?: VariantProps<typeof buttonGroupVariants>["orientation"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+  }>(),
+  {
+    class: undefined,
+    orientation: undefined,
+    as: "div",
+  }
+);
 </script>
 
 <template>

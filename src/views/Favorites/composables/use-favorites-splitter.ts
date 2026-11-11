@@ -1,8 +1,39 @@
 import { computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import { configRepository } from "../../../services/config.ts";
+import { measureElementWidth, resolveElementTarget } from "./element-target.ts";
 
-export function useFavoritesSplitter(options) {
+type FavoritesSplitterOptions = {
+  configKey?: string;
+  defaultSize?: number;
+  maxPx?: number;
+  minPx?: number;
+};
+
+type PanelHandle = {
+  resize: (size: number) => void;
+};
+
+function isPanelHandle(value: unknown): value is PanelHandle {
+  return typeof value === "object" && value !== null && "resize" in value && typeof value.resize === "function";
+}
+
+function resolveDraggingPayload(payload: unknown): boolean {
+  if (typeof payload === "boolean") {
+    return payload;
+  }
+  if (typeof payload === "object" && payload !== null) {
+    if ("detail" in payload && typeof payload.detail === "boolean") {
+      return payload.detail;
+    }
+    if ("dragging" in payload && typeof payload.dragging === "boolean") {
+      return payload.dragging;
+    }
+  }
+  return Boolean(payload);
+}
+
+export function useFavoritesSplitter(options: FavoritesSplitterOptions) {
   const configKey = options.configKey ?? "";
   const defaultSize = options.defaultSize ?? 260;
   const maxPx = options.maxPx ?? 360;
@@ -11,11 +42,11 @@ export function useFavoritesSplitter(options) {
   const splitterFallbackWidth = typeof window !== "undefined" && window.innerWidth ? window.innerWidth : 1200;
 
   const splitterSize = ref(defaultSize);
-  const splitterGroupRef = ref(null);
-  const splitterPanelRef = ref(null);
+  const splitterGroupRef = ref<unknown>(null);
+  const splitterPanelRef = ref<unknown>(null);
   const splitterWidth = ref(splitterFallbackWidth);
   const splitterDraggingCount = ref(0);
-  let splitterObserver = null;
+  let splitterObserver: ResizeObserver | null = null;
 
   async function loadSplitterPreferences() {
     const storedSize = await configRepository.getString(configKey, String(defaultSize));
@@ -25,50 +56,31 @@ export function useFavoritesSplitter(options) {
     }
   }
 
-  const getSplitterWidthRaw = () => {
-    const element = splitterGroupRef.value?.$el ?? splitterGroupRef.value;
-    const width = element?.getBoundingClientRect?.().width;
-    return Number.isFinite(width) ? width : null;
-  };
+  const getSplitterWidthRaw = () => measureElementWidth(splitterGroupRef.value);
 
   const getSplitterWidth = () => {
     const width = getSplitterWidthRaw();
-    return Number.isFinite(width) && width > 0 ? width : splitterFallbackWidth;
+    return width !== null && width > 0 ? width : splitterFallbackWidth;
   };
 
-  const resolveDraggingPayload = (payload) => {
-    if (typeof payload === "boolean") {
-      return payload;
-    }
-    if (payload && typeof payload === "object") {
-      if (typeof payload.detail === "boolean") {
-        return payload.detail;
-      }
-      if (typeof payload.dragging === "boolean") {
-        return payload.dragging;
-      }
-    }
-    return Boolean(payload);
-  };
-
-  const setDragging = (payload) => {
+  const setDragging = (payload: unknown) => {
     const isDragging = resolveDraggingPayload(payload);
     const next = splitterDraggingCount.value + (isDragging ? 1 : -1);
     splitterDraggingCount.value = Math.max(0, next);
   };
 
-  const pxToPercent = (px, groupWidth, min = 0) => {
+  const pxToPercent = (px: number, groupWidth: number | undefined, min = 0) => {
     const width = groupWidth ?? getSplitterWidth();
     return Math.min(100, Math.max(min, (px / width) * 100));
   };
 
-  const percentToPx = (percent, groupWidth) => (percent / 100) * groupWidth;
+  const percentToPx = (percent: number, groupWidth: number) => (percent / 100) * groupWidth;
 
   const defaultSizePercent = computed(() => pxToPercent(splitterSize.value, splitterWidth.value, 0));
   const minSizePercent = computed(() => pxToPercent(minPx, splitterWidth.value, 0));
   const maxSizePercent = computed(() => pxToPercent(maxPx, splitterWidth.value, 0));
 
-  const handleLayout = (sizes) => {
+  const handleLayout = (sizes: unknown) => {
     if (!Array.isArray(sizes) || !sizes.length) {
       return;
     }
@@ -78,40 +90,47 @@ export function useFavoritesSplitter(options) {
     }
 
     const rawWidth = getSplitterWidthRaw();
-    if (!Number.isFinite(rawWidth) || rawWidth <= 0) {
+    if (rawWidth === null || rawWidth <= 0) {
       return;
     }
 
-    const nextSize = sizes[0];
-    if (!Number.isFinite(nextSize)) {
+    const nextSize: unknown = sizes[0];
+    if (typeof nextSize !== "number" || !Number.isFinite(nextSize)) {
       return;
     }
 
     const nextPx = Math.round(percentToPx(nextSize, rawWidth));
     const clampedPx = Math.min(maxPx, Math.max(minPx, nextPx));
     splitterSize.value = clampedPx;
-    configRepository.setString(configKey, clampedPx.toString());
+    void configRepository.setString(configKey, clampedPx.toString()).catch((error: unknown) => console.error(error));
   };
 
   const updateSplitterWidth = () => {
     const width = getSplitterWidth();
     splitterWidth.value = width;
     const targetSize = pxToPercent(splitterSize.value, width, 0);
-    splitterPanelRef.value?.resize?.(targetSize);
+    const panel = splitterPanelRef.value;
+    if (isPanelHandle(panel)) {
+      panel.resize(targetSize);
+    }
   };
 
-  onBeforeMount(() => {
-    loadSplitterPreferences();
-  });
-
-  onMounted(async () => {
+  async function observeSplitterGroup() {
     await nextTick();
     updateSplitterWidth();
-    const element = splitterGroupRef.value?.$el ?? splitterGroupRef.value;
-    if (element && typeof ResizeObserver !== "undefined") {
+    const element = resolveElementTarget(splitterGroupRef.value);
+    if (element && typeof ResizeObserver !== "undefined" && element instanceof Element) {
       splitterObserver = new ResizeObserver(updateSplitterWidth);
       splitterObserver.observe(element);
     }
+  }
+
+  onBeforeMount(() => {
+    void loadSplitterPreferences().catch((error: unknown) => console.error(error));
+  });
+
+  onMounted(() => {
+    void observeSplitterGroup().catch((error: unknown) => console.error(error));
   });
 
   watch(splitterSize, (value, previous) => {

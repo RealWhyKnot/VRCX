@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from "vue";
+import { computed, h, onMounted, ref, watch, type VNode } from "vue";
 
 import { storeToRefs } from "pinia";
 import { Plus } from "lucide-vue-next";
@@ -185,6 +185,7 @@ import { useSearchStore } from "../../stores/search";
 import { useUiStore } from "../../stores/ui";
 import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
 import { isEntryNotified as checkEntryNotified } from "./nav-menu-utils";
+import type { NavIndexed, NavLayoutEntry, NavLayoutItemEntry, NavMenuChild, NavMenuItem } from "./nav-menu-types";
 import { DASHBOARD_NAV_KEY_PREFIX } from "../../shared/constants/dashboard";
 import { links } from "../../shared/constants/link";
 import { openExternalLink } from "../../shared/utils/app-actions";
@@ -197,6 +198,8 @@ import CustomNavDialog from "../dialogs/CustomNavDialog.vue";
 const { t, locale } = useI18n();
 const router = useRouter();
 const isMac = navigator.platform.toUpperCase().includes("MAC");
+type SupportLinkId = keyof typeof links;
+const isSupportLinkId = (id: string): id is SupportLinkId => Object.hasOwn(links, id);
 
 const VRCXUpdaterStore = useVRCXUpdaterStore();
 const { pendingVRCXUpdate, pendingVRCXInstall, appVersion } = storeToRefs(VRCXUpdaterStore);
@@ -211,6 +214,10 @@ const { clearAllNotifications } = uiStore;
 
 const { directAccessPaste } = useSearchStore();
 const { triggerTool } = useToolActions();
+
+const pasteDirectAccess = () => {
+  void directAccessPaste().catch((error: unknown) => console.error("Failed to paste direct access", error));
+};
 const { unpinToolFromNav } = useToolNavPinning();
 const { logout } = useAuthStore();
 const modalStore = useModalStore();
@@ -255,20 +262,23 @@ const {
   router,
   dashboardStore,
   dashboards,
-  directAccessPaste,
+  directAccessPaste: pasteDirectAccess,
   triggerTool,
 });
 
-const collapsedDropdownOpenId = ref(null);
+const collapsedDropdownOpenId = ref<string | null>(null);
 const customNavDialogVisible = ref(false);
 
 const hasNotifications = computed(() => notifiedMenus.value.length > 0);
-const version = computed(() => appVersion.value?.split("VRCX ")?.[1] || "-");
+const version = computed(() => {
+  const versionText = appVersion.value.split("VRCX ")[1] ?? "";
+  return versionText === "" ? "-" : versionText;
+});
 const vrcxLogo = new URL("../../../images/VRCX.png", import.meta.url).href;
 
-const isEntryNotified = (entry) => checkEntryNotified(entry, notifiedMenus.value);
+const isEntryNotified = (entry: NavMenuChild) => checkEntryNotified(entry, notifiedMenus.value);
 
-const getItemTooltip = (item) => {
+const getItemTooltip = (item: NavMenuItem): string | (() => VNode) => {
   const label = item.titleIsCustom ? item.title : t(item.title || "");
   if (item.action !== "direct-access") {
     return label;
@@ -276,10 +286,7 @@ const getItemTooltip = (item) => {
   return () => h("span", { class: "inline-flex items-center gap-1" }, [label, h(Kbd, () => (isMac ? "⌘" : "Ctrl")), h(Kbd, () => "D")]);
 };
 
-const isNavItemNotified = (item) => {
-  if (!item) {
-    return false;
-  }
+const isNavItemNotified = (item: NavMenuItem) => {
   if (notifiedMenus.value.includes(item.index)) {
     return true;
   }
@@ -289,8 +296,8 @@ const isNavItemNotified = (item) => {
   return false;
 };
 
-const handleSettingsClick = () => {
-  router.push({ name: "settings" });
+const handleSettingsClick = async () => {
+  await router.push({ name: "settings" });
 };
 
 const handleLogoutClick = () => {
@@ -301,10 +308,9 @@ const openGithub = () => {
   openExternalLink("https://github.com/vrcx-team/VRCX");
 };
 
-const handleSupportLink = (id) => {
-  const target = links[id];
-  if (target) {
-    openExternalLink(target);
+const handleSupportLink = (id: string) => {
+  if (isSupportLinkId(id) && links[id]) {
+    openExternalLink(links[id]);
   }
 };
 
@@ -312,10 +318,10 @@ const handleOpenCustomNavDialog = () => {
   customNavDialogVisible.value = true;
 };
 
-const isDashboardItem = (item) => item?.index?.startsWith(DASHBOARD_NAV_KEY_PREFIX);
-const isToolItem = (item) => item?.index?.startsWith("tool-");
+const isDashboardItem = (item: NavIndexed) => item.index.startsWith(DASHBOARD_NAV_KEY_PREFIX);
+const isToolItem = (item: NavIndexed) => item.index.startsWith("tool-");
 
-const handleUnpinToolItem = async (item) => {
+const handleUnpinToolItem = async (item: NavIndexed) => {
   if (!isToolItem(item)) {
     return;
   }
@@ -325,9 +331,9 @@ const handleUnpinToolItem = async (item) => {
 const handleQuickCreateDashboard = async () => {
   const dashboard = await dashboardStore.createDashboard(t("dashboard.default_name"));
   const dashboardKey = `${DASHBOARD_NAV_KEY_PREFIX}${dashboard.id}`;
-  const currentLayout = [...navLayout.value];
+  const currentLayout: NavLayoutEntry[] = [...navLayout.value];
   const directAccessIdx = currentLayout.findIndex((entry) => entry.type === "item" && entry.key === "direct-access");
-  const newEntry = { type: "item", key: dashboardKey };
+  const newEntry: NavLayoutItemEntry = { type: "item", key: dashboardKey };
   if (directAccessIdx !== -1) {
     currentLayout.splice(directAccessIdx, 0, newEntry);
   } else {
@@ -343,19 +349,19 @@ const handleQuickCreateDashboard = async () => {
   dashboardStore.setEditingDashboardId(dashboard.id);
 };
 
-const handleEditDashboard = async (item) => {
+const handleEditDashboard = async (item: NavIndexed) => {
   if (!isDashboardItem(item)) {
     return;
   }
   const dashboardId = item.index.replace(DASHBOARD_NAV_KEY_PREFIX, "");
   const currentRoute = router.currentRoute.value;
-  if (currentRoute?.name !== "dashboard" || String(currentRoute?.params?.id || "") !== dashboardId) {
+  if (currentRoute.name !== "dashboard" || String(currentRoute.params["id"] ?? "") !== dashboardId) {
     await router.push({ name: "dashboard", params: { id: dashboardId } });
   }
   dashboardStore.setEditingDashboardId(dashboardId);
 };
 
-const handleDeleteDashboard = async (item) => {
+const handleDeleteDashboard = async (item: NavIndexed) => {
   if (!isDashboardItem(item)) {
     return;
   }
@@ -370,38 +376,36 @@ const handleDeleteDashboard = async (item) => {
   const dashboardId = item.index.replace(DASHBOARD_NAV_KEY_PREFIX, "");
   await dashboardStore.deleteDashboard(dashboardId);
   const currentRoute = router.currentRoute.value;
-  if (currentRoute?.name === "dashboard" && String(currentRoute?.params?.id || "") === dashboardId) {
-    router.replace({ name: "feed" });
+  if (currentRoute.name === "dashboard" && String(currentRoute.params["id"] ?? "") === dashboardId) {
+    await router.replace({ name: "feed" });
   }
 };
 
-const handleCustomNavSave = async (layout, hiddenKeys) => {
+const handleCustomNavSave = async (layout: NavLayoutEntry[], hiddenKeys: string[]) => {
   await applyCustomNavLayout(layout, hiddenKeys);
   customNavDialogVisible.value = false;
 };
 
-const handleDashboardCreated = async (dashboardId, layout, hiddenKeys) => {
+const handleDashboardCreated = async (dashboardId: string, layout: NavLayoutEntry[], hiddenKeys: string[]) => {
   await handleCustomNavSave(layout, hiddenKeys);
   await router.push({ name: "dashboard", params: { id: dashboardId } });
   dashboardStore.setEditingDashboardId(dashboardId);
 };
 
-const handleSubmenuClick = (entry) => {
+const handleSubmenuClick = (entry: NavMenuChild) => {
   triggerNavAction(entry);
 };
 
-const handleCollapsedDropdownOpenChange = (index, value) => {
-  collapsedDropdownOpenId.value = value ? index : null;
+const handleCollapsedDropdownOpenChange = (index: string, isOpen: boolean) => {
+  collapsedDropdownOpenId.value = isOpen ? index : null;
 };
 
-const handleCollapsedSubmenuSelect = (event, entry) => {
-  if (event?.preventDefault) {
-    event.preventDefault();
-  }
+const handleCollapsedSubmenuSelect = (event: Event, entry: NavMenuChild) => {
+  event.preventDefault();
   handleSubmenuClick(entry);
 };
 
-const handleMenuItemClick = (item) => {
+const handleMenuItemClick = (item: NavMenuItem) => {
   triggerNavAction(item);
 };
 
@@ -411,8 +415,8 @@ const toggleNavCollapse = () => {
 
 watch(
   () => isCollapsed.value,
-  (value) => {
-    if (!value) {
+  (isNavCollapsed) => {
+    if (!isNavCollapsed) {
       collapsedDropdownOpenId.value = null;
     }
   }

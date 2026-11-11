@@ -15,7 +15,7 @@
             >
               <div class="relative inline-block flex-none size-9 mr-2.5">
                 <Avatar class="size-9">
-                  <AvatarImage :src="world.thumbnailImageUrl" class="object-cover" />
+                  <AvatarImage :src="world.thumbnailImageUrl ?? ''" class="object-cover" />
                   <AvatarFallback>
                     <Image class="size-4 text-muted-foreground" />
                   </AvatarFallback>
@@ -61,7 +61,7 @@
               >
                 <div class="relative inline-block flex-none size-9 mr-2.5">
                   <Avatar class="size-9">
-                    <AvatarImage :src="world.thumbnailImageUrl" class="object-cover" />
+                    <AvatarImage :src="world.thumbnailImageUrl ?? ''" class="object-cover" />
                     <AvatarFallback>
                       <Image class="size-4 text-muted-foreground" />
                     </AvatarFallback>
@@ -99,6 +99,7 @@ import { useI18n } from "vue-i18n";
 
 import { useFavoriteStore } from "../../../stores/favorite";
 import { useUserStore } from "../../../stores/user";
+import type { UserFavoriteWorldList } from "../../../stores/user-state";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { handleFavoriteWorldList } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../../api/favorite";
@@ -112,9 +113,9 @@ const favoriteWorldsTab = ref("0");
 const userDialogFavoriteWorldsRequestId = ref(0);
 
 const favoriteWorldTabs = computed(() =>
-  (userDialog.value.userFavoriteWorlds || []).map((list, index) => ({
+  userDialog.value.userFavoriteWorlds.map((list, index) => ({
     value: String(index),
-    label: list?.[0] ?? "",
+    label: list[0] ?? "",
   }))
 );
 
@@ -123,9 +124,8 @@ const searchActive = computed(() => searchQuery.value.trim().length > 0);
 const allFilteredFavoriteWorlds = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return [];
-  const lists = userDialog.value.userFavoriteWorlds || [];
-  const all = lists.flatMap((list) => list[2] || []);
-  return all.filter((w) => (w.name || "").toLowerCase().includes(query));
+  const all = userDialog.value.userFavoriteWorlds.flatMap((list) => list[2]);
+  return all.filter((w) => (w.name ?? "").toLowerCase().includes(query));
 });
 watch(
   () => userDialog.value.id,
@@ -135,31 +135,27 @@ watch(
 );
 
 const userDialogTabColor = computed(() => {
-  const color = userDialog.value.theme?.buttonColor;
+  const color = userDialog.value.theme.buttonColor;
   if (!color) {
     return "var(--primary)";
   }
   return color;
 });
 
-function userFavoriteWorldsStatus(visibility) {
-  const style = {};
-  if (visibility === "public") {
-    style.green = true;
-  } else if (visibility === "friends") {
-    style.blue = true;
-  } else {
-    style.red = true;
-  }
-  return style;
+function userFavoriteWorldsStatus(visibility: string | undefined) {
+  return {
+    green: visibility === "public",
+    blue: visibility === "friends",
+    red: visibility !== "public" && visibility !== "friends",
+  };
 }
 
-async function getUserFavoriteWorlds(userId) {
+async function getUserFavoriteWorlds(userId: string) {
   const requestId = ++userDialogFavoriteWorldsRequestId.value;
   userDialog.value.isFavoriteWorldsLoading = true;
   favoriteWorldsTab.value = "0";
   userDialog.value.userFavoriteWorlds = [];
-  const worldLists = [];
+  const worldLists: UserFavoriteWorldList[] = [];
   const groupArgs = await favoriteRequest.getFavoriteGroups({
     ownerId: userId,
     n: 100,
@@ -172,7 +168,7 @@ async function getUserFavoriteWorlds(userId) {
     return;
   }
   const worldGroups = groupArgs.json;
-  const tasks = worldGroups.map(async (list) => {
+  const tasks = worldGroups.map(async (list): Promise<UserFavoriteWorldList | null> => {
     if (list.type !== "world" && list.type !== "vrcPlusWorld") {
       return null;
     }

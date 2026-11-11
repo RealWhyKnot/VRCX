@@ -131,7 +131,7 @@
                     </span>
                     <Field>
                       <FieldContent>
-                        <Select :model-value="sidebarSortMethod1" @update:model-value="setSidebarSortMethod1">
+                        <Select :model-value="sidebarSortMethod1" @update:model-value="(v) => setSidebarSortMethod1(toSortMethod(v))">
                           <SelectTrigger size="sm">
                             <SelectValue :placeholder="t('view.settings.appearance.side_panel.sorting.placeholder')" />
                           </SelectTrigger>
@@ -149,7 +149,7 @@
                         <Select
                           :model-value="sidebarSortMethod2"
                           :disabled="!sidebarSortMethod1"
-                          @update:model-value="(v) => setSidebarSortMethod2(v === CLEAR_VALUE ? '' : v)"
+                          @update:model-value="(v) => setSidebarSortMethod2(v === CLEAR_VALUE ? '' : toSortMethod(v))"
                         >
                           <SelectTrigger size="sm">
                             <SelectValue :placeholder="t('view.settings.appearance.side_panel.sorting.placeholder')" />
@@ -169,7 +169,7 @@
                         <Select
                           :model-value="sidebarSortMethod3"
                           :disabled="!sidebarSortMethod2"
-                          @update:model-value="(v) => setSidebarSortMethod3(v === CLEAR_VALUE ? '' : v)"
+                          @update:model-value="(v) => setSidebarSortMethod3(v === CLEAR_VALUE ? '' : toSortMethod(v))"
                         >
                           <SelectTrigger size="sm">
                             <SelectValue :placeholder="t('view.settings.appearance.side_panel.sorting.placeholder')" />
@@ -297,6 +297,7 @@ import PopoverContent from "@/components/ui/popover/PopoverContent.vue";
 import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import { computed, ref } from "vue";
 import { useMagicKeys, whenever } from "@vueuse/core";
+import type { AcceptableValue } from "reka-ui";
 import Button from "@/components/ui/button/Button.vue";
 import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
 import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
@@ -324,6 +325,8 @@ import FavoriteFriendGroupOrderDialog from "./components/FavoriteFriendGroupOrde
 import GroupsSidebar from "./components/GroupsSidebar.vue";
 import NotificationCenterSheet from "./components/NotificationCenterSheet.vue";
 
+defineOptions({ name: "SidebarView" });
+
 const { friends, isRefreshFriendsLoading, onlineFriendCount } = storeToRefs(useFriendStore());
 const { groupInstances } = storeToRefs(useGroupStore());
 const notificationStore = useNotificationStore();
@@ -334,8 +337,10 @@ const { t } = useI18n();
 const isMac = navigator.platform.toUpperCase().includes("MAC");
 
 const keys = useMagicKeys();
-whenever(keys["Meta+k"], () => openQuickSearch());
-whenever(keys["Ctrl+k"], () => openQuickSearch());
+const metaKKey = keys["Meta+k"];
+const ctrlKKey = keys["Ctrl+k"];
+if (metaKKey) whenever(metaKKey, () => openQuickSearch());
+if (ctrlKKey) whenever(ctrlKKey, () => openQuickSearch());
 
 function openQuickSearch() {
   quickSearchStore.open();
@@ -382,15 +387,22 @@ const allFavoriteGroupKeys = computed(() => {
 
 const resolvedSidebarFavoriteGroups = computed(() => resolveFavoriteGroups(sidebarFavoriteGroups.value, allFavoriteGroupKeys.value));
 
-function handleFavoriteGroupsChange(value) {
-  setSidebarFavoriteGroups(normalizeFavoriteGroupsChange(value, allFavoriteGroupKeys.value));
+function toSortMethod(value: AcceptableValue): string {
+  return typeof value === "string" ? value : "";
+}
+
+function handleFavoriteGroupsChange(value: AcceptableValue) {
+  const selected = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  setSidebarFavoriteGroups(normalizeFavoriteGroupsChange(selected, allFavoriteGroupKeys.value));
 }
 
 const selectedFavGroupLabel = computed(() => {
   const key = resolvedSidebarFavoriteGroups.value[0];
   if (!key) return "";
   if (key.startsWith("local:")) return key.slice(6);
-  return favoriteFriendGroups.value.find((g) => g.key === key)?.displayName || key;
+  const displayName = favoriteFriendGroups.value.find((g) => g.key === key)?.displayName;
+  if (!displayName) return key;
+  return displayName;
 });
 
 const CLEAR_VALUE = "__clear__";

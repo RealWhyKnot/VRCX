@@ -1,14 +1,61 @@
-export function buildHeatmapOption({ data, rawBuckets, dayLabels, hourLabels, weekStartsOn, isDarkMode, emptyColor, scaleColors, unitLabel }) {
+import type { EChartsOption, HeatmapSeriesOption, TooltipComponentFormatterCallbackParams } from "echarts";
+
+export type HeatmapDatum = [number, number, number | undefined];
+
+export type HeatmapOptionInput = {
+  data: HeatmapDatum[];
+  rawBuckets: number[];
+  dayLabels: string[];
+  hourLabels: string[];
+  weekStartsOn: number;
+  isDarkMode: boolean;
+  emptyColor: string;
+  scaleColors: [string, string, string, string, string];
+  unitLabel: string;
+};
+
+function isHeatmapDatum(value: unknown): value is HeatmapDatum {
+  return Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number";
+}
+
+export function buildHeatmapOption({
+  data,
+  rawBuckets,
+  dayLabels,
+  hourLabels,
+  weekStartsOn,
+  isDarkMode,
+  emptyColor,
+  scaleColors,
+  unitLabel,
+}: HeatmapOptionInput): EChartsOption {
+  const heatmapSeries: HeatmapSeriesOption = {
+    type: "heatmap",
+    data,
+    emphasis: {
+      itemStyle: {
+        borderColor: isDarkMode ? "hsl(220, 15%, 18%)" : "hsl(210, 18%, 78%)",
+        borderWidth: 1.5,
+        opacity: 0.92,
+      },
+    },
+    itemStyle: {
+      borderWidth: 1.5,
+      borderColor: isDarkMode ? "hsl(220, 15%, 8%)" : "hsl(0, 0%, 100%)",
+      borderRadius: 2,
+    },
+  };
   return {
     tooltip: {
       confine: true,
       position: "top",
-      formatter: (params) => {
+      formatter: (params: TooltipComponentFormatterCallbackParams) => {
+        if (Array.isArray(params) || !isHeatmapDatum(params.data)) return "";
         const [hour, dayIndex] = params.data;
         const originalDay = (dayIndex + weekStartsOn) % 7;
         const slot = originalDay * 24 + hour;
-        const minutes = Math.round(rawBuckets[slot] || 0);
-        return `${dayLabels[dayIndex]} ${hourLabels[hour]}<br/><b>${minutes}</b> ${unitLabel}`;
+        const minutes = Math.round(rawBuckets[slot] ?? 0);
+        return `${dayLabels[dayIndex] ?? ""} ${hourLabels[hour] ?? ""}<br/><b>${minutes}</b> ${unitLabel}`;
       },
     },
     grid: {
@@ -54,30 +101,13 @@ export function buildHeatmapOption({ data, rawBuckets, dayLabels, hourLabels, we
         { gt: 0.8, lte: 1, color: scaleColors[4] },
       ],
     },
-    series: [
-      {
-        type: "heatmap",
-        data,
-        emphasis: {
-          itemStyle: {
-            borderColor: isDarkMode ? "hsl(220, 15%, 18%)" : "hsl(210, 18%, 78%)",
-            borderWidth: 1.5,
-            opacity: 0.92,
-          },
-        },
-        itemStyle: {
-          borderWidth: 1.5,
-          borderColor: isDarkMode ? "hsl(220, 15%, 8%)" : "hsl(0, 0%, 100%)",
-          borderRadius: 2,
-        },
-      },
-    ],
+    series: [heatmapSeries],
     backgroundColor: "transparent",
   };
 }
 
-export function toHeatmapSeriesData(normalizedBuckets, weekStartsOn) {
-  const data = [];
+export function toHeatmapSeriesData(normalizedBuckets: number[], weekStartsOn: number): HeatmapDatum[] {
+  const data: HeatmapDatum[] = [];
   for (let day = 0; day < 7; day++) {
     for (let hour = 0; hour < 24; hour++) {
       const slot = day * 24 + hour;

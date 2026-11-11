@@ -144,8 +144,8 @@
           <div v-else-if="selectedBannerType === 'customImage'">
             <div class="flex items-center gap-2 mt-2">
               <img
-                v-if="props.editProfileDialog.bannerUrl"
-                :src="props.editProfileDialog.bannerUrl"
+                v-if="editProfileDialog.bannerUrl"
+                :src="editProfileDialog.bannerUrl"
                 class="inline-block h-16 aspect-17/6 rounded-md object-cover"
                 :alt="t('dialog.edit_profile.banner_type_custom_image')"
               />
@@ -183,9 +183,10 @@
           <InputGroupAction
             v-for="(link, index) in editProfileDialog.bioLinks"
             :key="index"
-            v-model="editProfileDialog.bioLinks[index]"
+            :model-value="link"
             :maxlength="1000"
             size="sm"
+            @update:model-value="(value) => (editProfileDialog.bioLinks[index] = String(value))"
           >
             <template #leading>
               <img v-if="link" :src="getFaviconUrl(link)" style="width: 16px; height: 16px; vertical-align: middle" />
@@ -323,7 +324,7 @@
           <h3 class="text-sm font-semibold">{{ t("dialog.edit_profile.profile_background") }}</h3>
           <div class="flex items-center gap-2">
             <Select
-              :model-value="props.editProfileDialog.backgroundType"
+              :model-value="editProfileDialog.backgroundType"
               :disabled="editProfileDialog.loading"
               @update:model-value="handleProfileBackgroundTypeChange"
             >
@@ -370,7 +371,7 @@
 
           <div v-if="editProfileDialog.backgroundType === 'texture'" class="space-y-2">
             <Select
-              :model-value="props.editProfileDialog.backgroundTextureId"
+              :model-value="editProfileDialog.backgroundTextureId"
               :disabled="editProfileDialog.loading"
               @update:model-value="handleBackgroundTextureChange"
             >
@@ -594,6 +595,8 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { Bookmark, Check, ChevronDown, History, Trash2, X } from "lucide-vue-next";
+import type { BannerType, ProfileTheme, UpdateProfileRequest, UpdateUserRequest, UserStatus } from "vrchat";
+import type { AcceptableValue } from "reka-ui";
 
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
@@ -631,10 +634,16 @@ import { useUserStore } from "../../../stores/user";
 import { useAuthStore } from "../../../stores/auth";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useModalStore } from "../../../stores/modal";
-import { useStatusPresets } from "./composables/use-status-presets";
+import { isUserStatus, useStatusPresets } from "./composables/use-status-presets";
+import type { StatusPreset } from "./composables/use-status-presets";
 import GallerySelectDialog from "../GroupDialog/GallerySelectDialog.vue";
 import { updateUserDialogProfile } from "@/coordinators/user-coordinator";
 import { profileBackgrounds } from "@/shared/constants/backgrounds";
+import type { EditProfileDialogState } from "@/stores/user-state";
+import type { Json } from "@/types/vrcx";
+
+type BackgroundType = NonNullable<UpdateProfileRequest["backgroundType"]>;
+type StatusOption = { value: UserStatus; statusClass: string; label: string };
 
 const { t } = useI18n();
 const { currentUser, isLocalUserVrcPlusSupporter } = storeToRefs(useUserStore());
@@ -644,12 +653,31 @@ const { refreshGalleryTable, getInventory } = useGalleryStore();
 const { presets, addPreset, removePreset, getStatusClass, MAX_PRESETS } = useStatusPresets();
 const { inventoryTable } = storeToRefs(useGalleryStore());
 
-const props = defineProps({
-  editProfileDialog: {
-    type: Object,
-    required: true,
-  },
-});
+const editProfileDialog = defineModel<EditProfileDialogState>("editProfileDialog", { required: true });
+
+function isBannerType(value: string): value is BannerType {
+  return value === "avatarBanner" || value === "color" || value === "customImage";
+}
+
+function isBackgroundType(value: string): value is BackgroundType {
+  return value === "default" || value === "gradient" || value === "inventory" || value === "texture";
+}
+
+function isProfileTheme(value: unknown): value is Json<ProfileTheme> {
+  if (typeof value !== "object" || value === null) return false;
+  return (
+    "id" in value &&
+    typeof value.id === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "buttonColor" in value &&
+    typeof value.buttonColor === "string" &&
+    "iconColor" in value &&
+    typeof value.iconColor === "string" &&
+    "subtextColor" in value &&
+    typeof value.subtextColor === "string"
+  );
+}
 
 const selectedLanguageToAdd = ref("");
 const nameplateEffectsOpen = ref(false);
@@ -663,28 +691,30 @@ const gallerySelectDialog = ref({
 });
 
 watch(
-  () => props.editProfileDialog.visible,
-  (visible) => {
-    if (visible) {
-      getInventory();
+  () => editProfileDialog.value.visible,
+  (isVisible) => {
+    if (isVisible) {
+      void getInventory().catch((error: unknown) => {
+        console.error("Error fetching inventory items:", error);
+      });
     }
   },
   { immediate: true }
 );
 
-const nameplateEffects = computed(() => inventoryTable.value?.filter((item) => item.itemType === "nameplateEffect") ?? []);
-const profileEffects = computed(() => inventoryTable.value?.filter((item) => item.itemType === "profileEffect") ?? []);
-const iconFrames = computed(() => inventoryTable.value?.filter((item) => item.itemType === "iconFrame") ?? []);
-const selectedNameplateEffect = computed(() => nameplateEffects.value.find((item) => item.templateId === props.editProfileDialog.nameplateEffect));
-const selectedProfileEffect = computed(() => profileEffects.value.find((item) => item.templateId === props.editProfileDialog.profileEffect));
-const selectedIconFrame = computed(() => iconFrames.value.find((item) => item.templateId === props.editProfileDialog.iconFrame));
+const nameplateEffects = computed(() => inventoryTable.value.filter((item) => item.itemType === "nameplateEffect"));
+const profileEffects = computed(() => inventoryTable.value.filter((item) => item.itemType === "profileEffect"));
+const iconFrames = computed(() => inventoryTable.value.filter((item) => item.itemType === "iconFrame"));
+const selectedNameplateEffect = computed(() => nameplateEffects.value.find((item) => item.templateId === editProfileDialog.value.nameplateEffect));
+const selectedProfileEffect = computed(() => profileEffects.value.find((item) => item.templateId === editProfileDialog.value.profileEffect));
+const selectedIconFrame = computed(() => iconFrames.value.find((item) => item.templateId === editProfileDialog.value.iconFrame));
 
-const currentLanguages = computed(() => currentUser.value?.$languages ?? []);
+const currentLanguages = computed(() => currentUser.value.$languages);
 const availableLanguages = computed(() => {
-  const options = authStore.cachedConfig?.constants?.LANGUAGE?.SPOKEN_LANGUAGE_OPTIONS ?? {};
+  const options = authStore.cachedConfig.constants?.LANGUAGE.SPOKEN_LANGUAGE_OPTIONS ?? {};
   return Object.entries(options).map(([key, value]) => ({ key, value }));
 });
-const historyItems = computed(() => props.editProfileDialog.socialStatusHistoryTable ?? []);
+const historyItems = computed(() => editProfileDialog.value.socialStatusHistoryTable);
 
 const bannerTypeOptions = [
   { value: "color", label: t("dialog.edit_profile.banner_type_color") },
@@ -696,36 +726,33 @@ const profileBackgroundTypeOptions = [
   { value: "texture", label: t("dialog.edit_profile.profile_background_type_image") },
   { value: "gradient", label: t("dialog.edit_profile.profile_background_type_gradient") },
 ];
-const selectedProfileBackgroundTextureOption = computed(() => profileBackgrounds.find((option) => option.id === props.editProfileDialog.backgroundTextureId));
+const selectedProfileBackgroundTextureOption = computed(() => profileBackgrounds.find((option) => option.id === editProfileDialog.value.backgroundTextureId));
 
 const selectedBannerType = computed(() => {
-  const type = props.editProfileDialog.bannerType;
+  const type = editProfileDialog.value.bannerType;
   return bannerTypeOptions.some((option) => option.value === type) ? type : "color";
 });
-const bannerColorValue = computed(() => getThemeHexColor(props.editProfileDialog.bannerColor));
-const themeButtonColorValue = computed(() => getThemeHexColor(props.editProfileDialog.themeButtonColor));
-const themeIconColorValue = computed(() => getThemeHexColor(props.editProfileDialog.themeIconColor));
-const themeSubtextColorValue = computed(() => getThemeHexColor(props.editProfileDialog.themeSubtextColor));
-const backgroundGradientBottomColorValue = computed(() => getThemeHexColor(props.editProfileDialog.backgroundGradientBottom));
-const backgroundGradientTopColorValue = computed(() => getThemeHexColor(props.editProfileDialog.backgroundGradientTop));
+const bannerColorValue = computed(() => getThemeHexColor(editProfileDialog.value.bannerColor));
+const themeButtonColorValue = computed(() => getThemeHexColor(editProfileDialog.value.themeButtonColor));
+const themeIconColorValue = computed(() => getThemeHexColor(editProfileDialog.value.themeIconColor));
+const themeSubtextColorValue = computed(() => getThemeHexColor(editProfileDialog.value.themeSubtextColor));
+const backgroundGradientBottomColorValue = computed(() => getThemeHexColor(editProfileDialog.value.backgroundGradientBottom));
+const backgroundGradientTopColorValue = computed(() => getThemeHexColor(editProfileDialog.value.backgroundGradientTop));
 
 const saveThemeDebounced = debounce(saveTheme, 300);
 
-function normalizeColor(value) {
-  const hex = String(value ?? "")
-    .trim()
-    .replace(/^#/, "")
-    .toLowerCase();
+function normalizeColor(value: string | null | undefined) {
+  const hex = (value ?? "").trim().replace(/^#/, "").toLowerCase();
   return /^[0-9a-f]{6}$/.test(hex) ? hex : "";
 }
 
-function getThemeHexColor(value) {
+function getThemeHexColor(value: string) {
   const normalized = normalizeColor(value);
   return normalized ? `#${normalized}` : "#ffffff";
 }
 
 const statusOptions = computed(() => {
-  const options = [
+  const options: StatusOption[] = [
     {
       value: "join me",
       statusClass: "joinme",
@@ -747,7 +774,7 @@ const statusOptions = computed(() => {
       label: t("dialog.user.status.busy"),
     },
   ];
-  if (currentUser.value?.$isModerator) {
+  if (currentUser.value.$isModerator) {
     options.push({
       value: "offline",
       statusClass: "offline",
@@ -757,125 +784,141 @@ const statusOptions = computed(() => {
   return options;
 });
 
-const selectedStatusOption = computed(() => statusOptions.value.find((option) => option.value === props.editProfileDialog.status));
+const selectedStatusOption = computed(() => statusOptions.value.find((option) => option.value === editProfileDialog.value.status));
 
-function getStatusLabel(status) {
+function getStatusLabel(status: string) {
   const option = statusOptions.value.find((item) => item.value === status);
-  return option?.label || status;
+  if (!option?.label) {
+    return status;
+  }
+  return option.label;
 }
 
-function applyPreset(preset) {
-  props.editProfileDialog.status = preset.status;
-  props.editProfileDialog.statusDescription = preset.statusDescription;
+function applyPreset(preset: StatusPreset) {
+  editProfileDialog.value.status = preset.status;
+  editProfileDialog.value.statusDescription = preset.statusDescription;
 }
 
 async function handleSavePreset() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
+  if (!isUserStatus(D.status)) return;
   const result = await addPreset(D.status, D.statusDescription);
   if (result === "ok") {
     toast.success(t("dialog.social_status.preset_saved"));
   } else if (result === "exists") {
     toast.info(t("dialog.social_status.preset_exists"));
-  } else if (result === "limit") {
+  } else {
     toast.warning(t("dialog.social_status.preset_limit", { max: MAX_PRESETS }));
   }
 }
 
-async function handleDeletePreset(index) {
+async function handleDeletePreset(index: number) {
   await removePreset(index);
 }
 
-function handleSocialStatusChange(value) {
-  props.editProfileDialog.status = String(value);
+function handleSocialStatusChange(value: unknown) {
+  editProfileDialog.value.status = String(value);
 }
 
-function selectNameplateEffect(id) {
-  props.editProfileDialog.nameplateEffect = id;
+function selectNameplateEffect(id: string) {
+  editProfileDialog.value.nameplateEffect = id;
   nameplateEffectsOpen.value = false;
 }
 
-function selectProfileEffect(id) {
-  props.editProfileDialog.profileEffect = id;
+function selectProfileEffect(id: string) {
+  editProfileDialog.value.profileEffect = id;
   profileEffectsOpen.value = false;
 }
 
-function selectIconFrame(id) {
-  props.editProfileDialog.iconFrame = id;
+function selectIconFrame(id: string) {
+  editProfileDialog.value.iconFrame = id;
   iconFramesOpen.value = false;
 }
 
-function setSocialStatusFromHistory(val) {
+function setSocialStatusFromHistory(val: { status: string } | null) {
   if (val === null) {
     return;
   }
-  props.editProfileDialog.statusDescription = val.status;
+  editProfileDialog.value.statusDescription = val.status;
 }
 
-function handleBannerColorInput(event) {
+function handleBannerColorInput(event: string) {
   const normalized = normalizeColor(event);
   if (!normalized) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.bannerColor = normalized;
   D.bannerType = "color";
 }
 
-function handleBannerTypeChange(value) {
+function handleBannerTypeChange(value: AcceptableValue) {
+  if (typeof value !== "string") {
+    return;
+  }
   if (!bannerTypeOptions.some((option) => option.value === value)) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.bannerType = value;
 }
 
-function handleProfileBackgroundTypeChange(value) {
+function handleProfileBackgroundTypeChange(value: AcceptableValue) {
+  if (typeof value !== "string") {
+    return;
+  }
   if (!profileBackgroundTypeOptions.some((option) => option.value === value)) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.backgroundType = value;
   if (value === "texture" && !profileBackgrounds.some((option) => option.id === D.backgroundTextureId)) {
     D.backgroundTextureId = profileBackgrounds[0]?.id ?? "";
   }
   if (value === "gradient") {
-    const profileDefaults = authStore.cachedConfig?.profileDefaults;
+    const profileDefaults = authStore.cachedConfig.profileDefaults;
     D.backgroundGradientTop = profileDefaults?.backgroundGradientTop ?? "000000";
     D.backgroundGradientBottom = profileDefaults?.backgroundGradientBottom ?? "000000";
   }
 }
 
-function handleBackgroundTextureChange(value) {
+function handleBackgroundTextureChange(value: AcceptableValue) {
+  if (typeof value !== "string") {
+    return;
+  }
   if (!profileBackgrounds.some((option) => option.id === value)) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.backgroundTextureId = value;
   D.backgroundType = "texture";
 }
 
-function handleBackgroundGradientTopColorInput(event) {
+function handleBackgroundGradientTopColorInput(event: string) {
   const normalized = normalizeColor(event);
   if (!normalized) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.backgroundGradientTop = normalized;
   D.backgroundType = "gradient";
 }
 
-function handleBackgroundGradientBottomColorInput(event) {
+function handleBackgroundGradientBottomColorInput(event: string) {
   const normalized = normalizeColor(event);
   if (!normalized) {
     return;
   }
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.backgroundGradientBottom = normalized;
   D.backgroundType = "gradient";
 }
 
-function handleThemeChange(value) {
-  const D = props.editProfileDialog;
+function handleThemeChange(value: AcceptableValue) {
+  if (typeof value !== "string") {
+    return;
+  }
+  const D = editProfileDialog.value;
   D.themeId = value;
   const selectedTheme = D.themes.find((option) => option.id === D.themeId);
   if (!selectedTheme) {
@@ -887,26 +930,26 @@ function handleThemeChange(value) {
   D.themeSubtextColor = normalizeColor(selectedTheme.subtextColor);
 }
 
-function handleThemeButtonColorInput(event) {
-  const D = props.editProfileDialog;
+function handleThemeButtonColorInput(event: string) {
+  const D = editProfileDialog.value;
   D.themeButtonColor = normalizeColor(event);
   handleThemeInput();
 }
 
-function handleThemeIconColorInput(event) {
-  const D = props.editProfileDialog;
+function handleThemeIconColorInput(event: string) {
+  const D = editProfileDialog.value;
   D.themeIconColor = normalizeColor(event);
   handleThemeInput();
 }
 
-function handleThemeSubtextColorInput(event) {
-  const D = props.editProfileDialog;
+function handleThemeSubtextColorInput(event: string) {
+  const D = editProfileDialog.value;
   D.themeSubtextColor = normalizeColor(event);
   handleThemeInput();
 }
 
 function handleThemeInput() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   if (D.themeId) {
     const selectedTheme = D.themes.find((option) => option.id === D.themeId);
     if (selectedTheme) {
@@ -917,19 +960,19 @@ function handleThemeInput() {
 }
 
 function createTheme() {
-  const profileDefaults = authStore.cachedConfig?.profileDefaults;
-  const D = props.editProfileDialog;
+  const profileDefaults = authStore.cachedConfig.profileDefaults;
+  const D = editProfileDialog.value;
   const payload = {
     name: D.themeName,
     buttonColor: profileDefaults?.themeButtonColor ?? "064b5c",
     iconColor: profileDefaults?.themeIconColor ?? "6ae3f9",
     subtextColor: profileDefaults?.themeSubtextColor ?? "a9a9a9",
   };
-  userRequest
+  void userRequest
     .createProfileTheme(payload)
     .then((args) => {
       const newTheme = args.json;
-      if (newTheme?.id) {
+      if (isProfileTheme(newTheme) && newTheme.id) {
         D.themes.push(newTheme);
         D.themeId = newTheme.id;
         D.themeName = newTheme.name;
@@ -938,13 +981,13 @@ function createTheme() {
         D.themeSubtextColor = newTheme.subtextColor;
       }
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error("Failed to create profile theme:", error);
     });
 }
 
 function saveTheme() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   const payload = {
     themeId: D.themeId,
     name: D.themeName,
@@ -952,7 +995,7 @@ function saveTheme() {
     iconColor: D.themeIconColor,
     subtextColor: D.themeSubtextColor,
   };
-  userRequest
+  void userRequest
     .saveProfileTheme(payload)
     .then(() => {
       const index = D.themes.findIndex((option) => option.id === payload.themeId);
@@ -966,40 +1009,39 @@ function saveTheme() {
         };
       }
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error("Failed to update profile theme:", error);
     });
 }
 
 function deleteTheme() {
-  const D = props.editProfileDialog;
-  userRequest
+  const D = editProfileDialog.value;
+  void userRequest
     .deleteProfileTheme({ id: D.themeId })
     .then(() => {
       const index = D.themes.findIndex((option) => option.id === D.themeId);
       if (index !== -1) {
         D.themes.splice(index, 1);
-        if (D.themeId === D.themeId) {
-          D.themeId = "";
-          D.themeName = "";
-          D.themeButtonColor = "";
-          D.themeIconColor = "";
-          D.themeSubtextColor = "";
-          if (D.themes.length) {
-            handleThemeChange(D.themes[D.themes.length - 1].id);
-          }
+        D.themeId = "";
+        D.themeName = "";
+        D.themeButtonColor = "";
+        D.themeIconColor = "";
+        D.themeSubtextColor = "";
+        const lastTheme = D.themes.at(-1);
+        if (lastTheme) {
+          handleThemeChange(lastTheme.id);
         }
       }
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.error("Failed to delete profile theme:", error);
     });
 }
 
 function handleCreateNewTheme() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
 
-  modalStore
+  void modalStore
     .prompt({
       title: t("dialog.edit_profile.profile_theme"),
       description: "Enter a theme name (1-12 characters).",
@@ -1020,7 +1062,9 @@ function handleCreateNewTheme() {
       D.themeSubtextColor = "";
       createTheme();
     })
-    .catch(() => {});
+    .catch((error: unknown) => {
+      console.error("Failed to prompt for profile theme name:", error);
+    });
 }
 
 function showGallerySelectDialog() {
@@ -1037,8 +1081,8 @@ function showIconSelectDialog() {
   refreshGalleryTable();
 }
 
-function handleGalleryImageSelect({ imageUrl }) {
-  const D = props.editProfileDialog;
+function handleGalleryImageSelect({ imageUrl }: { imageUrl: string }) {
+  const D = editProfileDialog.value;
   if (gallerySelectDialog.value.isIconGallerySelectDialog) {
     D.iconUrl = imageUrl;
   } else {
@@ -1052,39 +1096,42 @@ function handleGalleryImageSelect({ imageUrl }) {
 }
 
 function clearUserIcon() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   D.iconUrl = "";
 }
 
-function handleAddUserLanguage(language) {
+function handleAddUserLanguage(language: AcceptableValue) {
+  if (typeof language !== "string") {
+    return;
+  }
   addUserLanguage(language);
   selectedLanguageToAdd.value = "";
 }
 
-function removeUserLanguage(language) {
-  if (language !== String(language)) {
-    return;
-  }
-  const D = props.editProfileDialog;
+function removeUserLanguage(language: string) {
+  const D = editProfileDialog.value;
   D.loading = true;
   userRequest
     .removeUserTags({
       tags: [`language_${language}`],
+    })
+    .catch((error: unknown) => {
+      console.error("Failed to remove user language:", error);
     })
     .finally(() => {
       D.loading = false;
     });
 }
 
-function addUserLanguage(language) {
-  if (language !== String(language)) {
-    return;
-  }
-  const D = props.editProfileDialog;
+function addUserLanguage(language: string) {
+  const D = editProfileDialog.value;
   D.loading = true;
   userRequest
     .addUserTags({
       tags: [`language_${language}`],
+    })
+    .catch((error: unknown) => {
+      console.error("Failed to add user language:", error);
     })
     .finally(() => {
       D.loading = false;
@@ -1092,13 +1139,13 @@ function addUserLanguage(language) {
 }
 
 async function saveProfile() {
-  const D = props.editProfileDialog;
+  const D = editProfileDialog.value;
   if (D.loading) {
     return;
   }
 
-  const userPayload = {};
-  if (D.status !== currentUser.value.status) {
+  const userPayload: UpdateUserRequest = {};
+  if (D.status !== currentUser.value.status && isUserStatus(D.status)) {
     userPayload.status = D.status;
   }
   if (D.statusDescription !== currentUser.value.statusDescription) {
@@ -1108,7 +1155,7 @@ async function saveProfile() {
     userPayload.pronouns = D.pronouns;
   }
 
-  const profilePayload = {};
+  const profilePayload: UpdateProfileRequest = {};
   if (D.bio !== D.selfProfileRef.bio) {
     profilePayload.bio = D.bio;
   }
@@ -1121,17 +1168,17 @@ async function saveProfile() {
   if (D.bannerUrl !== D.selfProfileRef.bannerUrl) {
     profilePayload.bannerCustomUrl = D.bannerUrl;
   }
-  if (D.bannerType !== D.selfProfileRef.bannerType) {
+  if (D.bannerType !== D.selfProfileRef.bannerType && isBannerType(D.bannerType)) {
     profilePayload.bannerType = D.bannerType;
     if (D.bannerType === "avatarBanner") {
-      profilePayload.bannerCustomUrl = undefined;
-      profilePayload.bannerColor = undefined;
+      delete profilePayload.bannerCustomUrl;
+      delete profilePayload.bannerColor;
     }
     if (D.bannerType === "color") {
-      profilePayload.bannerCustomUrl = undefined;
+      delete profilePayload.bannerCustomUrl;
     }
     if (D.bannerType === "customImage") {
-      profilePayload.bannerColor = undefined;
+      delete profilePayload.bannerColor;
     }
   }
   if (D.iconUrl !== D.selfProfileRef.iconUrl) {
@@ -1140,7 +1187,7 @@ async function saveProfile() {
   if (D.themeId !== D.selfProfileRef.themeId) {
     profilePayload.themeId = D.themeId;
   }
-  if (D.backgroundType !== D.selfProfileRef.backgroundType) {
+  if (D.backgroundType !== D.selfProfileRef.backgroundType && isBackgroundType(D.backgroundType)) {
     profilePayload.backgroundType = D.backgroundType;
   }
   if (D.backgroundTextureId !== D.selfProfileRef.backgroundTextureId) {

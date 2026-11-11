@@ -65,28 +65,28 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { formatCsvField, formatCsvRow } from "../../../shared/utils/csv";
+import { formatCsvRow } from "../../../shared/utils/csv";
 import { useAvatarStore } from "../../../stores/avatar";
 import { useFavoriteStore } from "../../../stores/favorite";
+import type { FavoriteGroupSlot } from "../../../stores/favorite-types";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  avatarExportDialogVisible: {
-    type: Boolean,
-    required: true,
-  },
-});
+const props = defineProps<{
+  avatarExportDialogVisible: boolean;
+}>();
 
-const emit = defineEmits(["update:avatarExportDialogVisible"]);
+const emit = defineEmits<{
+  "update:avatarExportDialogVisible": [value: boolean];
+}>();
 
 const { favoriteAvatars, favoriteAvatarGroups, localAvatarFavorites, localAvatarFavoritesList, localAvatarFavoriteGroups } = storeToRefs(useFavoriteStore());
 const { localAvatarFavGroupLength } = useFavoriteStore();
 const { cachedAvatars } = useAvatarStore();
 
 const avatarExportContent = ref("");
-const avatarExportFavoriteGroup = ref(null);
-const avatarExportLocalFavoriteGroup = ref(null);
+const avatarExportFavoriteGroup = ref<FavoriteGroupSlot | null>(null);
+const avatarExportLocalFavoriteGroup = ref<string | null>(null);
 
 const AVATAR_EXPORT_ALL_VALUE = "__all__";
 const AVATAR_EXPORT_NONE_VALUE = "__none__";
@@ -102,7 +102,7 @@ const exportSelectOptions = ref([
   { label: "Thumbnail", value: "thumbnailImageUrl" },
 ]);
 
-function toggleAvatarExportOption(label, checked) {
+function toggleAvatarExportOption(label: string, checked: boolean | "indeterminate") {
   const selection = exportSelectedOptions.value;
   const index = selection.indexOf(label);
   if (checked && index === -1) {
@@ -117,15 +117,15 @@ const isDialogVisible = computed({
   get() {
     return props.avatarExportDialogVisible;
   },
-  set(value) {
-    emit("update:avatarExportDialogVisible", value);
+  set(isOpen: boolean) {
+    emit("update:avatarExportDialogVisible", isOpen);
   },
 });
 
 watch(
   () => props.avatarExportDialogVisible,
-  (value) => {
-    if (value) {
+  (isOpen) => {
+    if (isOpen) {
       showAvatarExportDialog();
     }
   }
@@ -139,35 +139,37 @@ function showAvatarExportDialog() {
   updateAvatarExportDialog();
 }
 
-function handleAvatarExportFavoriteGroupSelect(value) {
-  avatarExportFavoriteGroupSelection.value = value;
-  if (value === AVATAR_EXPORT_ALL_VALUE) {
+function handleAvatarExportFavoriteGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  avatarExportFavoriteGroupSelection.value = selectedValue;
+  if (selectedValue === AVATAR_EXPORT_ALL_VALUE) {
     selectAvatarExportGroup(null);
     return;
   }
-  const group = favoriteAvatarGroups.value.find((g) => g.name === value) || null;
+  const group = favoriteAvatarGroups.value.find((g) => g.name === selectedValue) ?? null;
   selectAvatarExportGroup(group);
 }
 
-function handleAvatarExportLocalFavoriteGroupSelect(value) {
-  avatarExportLocalFavoriteGroupSelection.value = value;
-  if (value === AVATAR_EXPORT_NONE_VALUE) {
+function handleAvatarExportLocalFavoriteGroupSelect(value: unknown) {
+  const selectedValue = String(value);
+  avatarExportLocalFavoriteGroupSelection.value = selectedValue;
+  if (selectedValue === AVATAR_EXPORT_NONE_VALUE) {
     selectAvatarExportLocalGroup(null);
     return;
   }
-  selectAvatarExportLocalGroup(value);
+  selectAvatarExportLocalGroup(selectedValue);
 }
 
-function handleCopyAvatarExportData(event) {
-  if (event.target.tagName === "TEXTAREA") {
+function handleCopyAvatarExportData(event: MouseEvent) {
+  if (event.target instanceof HTMLTextAreaElement) {
     event.target.select();
   }
-  navigator.clipboard
+  void navigator.clipboard
     .writeText(avatarExportContent.value)
     .then(() => {
       toast.success("Copied successfully!", { duration: 2000 });
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Copy failed:", err);
       toast.error("Copy failed!");
     });
@@ -192,16 +194,14 @@ function updateAvatarExportDialog() {
     if (!favoriteGroup) {
       return;
     }
-    for (let i = 0; i < favoriteGroup.length; ++i) {
-      const ref = favoriteGroup[i];
+    for (const ref of favoriteGroup) {
       lines.push(formatCsvRow(ref, propsForQuery));
     }
   } else {
     favoriteAvatars.value.forEach((ref) => {
       lines.push(formatCsvRow(ref.ref, propsForQuery));
     });
-    for (let i = 0; i < localAvatarFavoritesList.value.length; ++i) {
-      const avatarId = localAvatarFavoritesList.value[i];
+    for (const avatarId of localAvatarFavoritesList.value) {
       const ref = cachedAvatars.get(avatarId);
       if (typeof ref !== "undefined") {
         lines.push(formatCsvRow(ref, propsForQuery));
@@ -211,7 +211,7 @@ function updateAvatarExportDialog() {
   avatarExportContent.value = lines.reverse().join("\n");
 }
 
-function selectAvatarExportGroup(group) {
+function selectAvatarExportGroup(group: FavoriteGroupSlot | null) {
   avatarExportFavoriteGroup.value = group;
   avatarExportLocalFavoriteGroup.value = null;
   avatarExportFavoriteGroupSelection.value = group?.name ?? AVATAR_EXPORT_ALL_VALUE;
@@ -219,7 +219,7 @@ function selectAvatarExportGroup(group) {
   updateAvatarExportDialog();
 }
 
-function selectAvatarExportLocalGroup(group) {
+function selectAvatarExportLocalGroup(group: string | null) {
   avatarExportLocalFavoriteGroup.value = group;
   avatarExportFavoriteGroup.value = null;
   avatarExportLocalFavoriteGroupSelection.value = group ?? AVATAR_EXPORT_NONE_VALUE;

@@ -1,48 +1,57 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { ListboxRootEmits, ListboxRootProps, PrimitiveProps } from "reka-ui";
 import { ListboxRoot, useFilter, useForwardPropsEmits } from "reka-ui";
 import { reactive, ref, watch } from "vue";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
+import type { CommandFilterState } from ".";
 import { provideCommandContext } from ".";
 
-const props = defineProps({
-  modelValue: { type: null, required: false, default: "" },
-  defaultValue: { type: null, required: false },
-  multiple: { type: Boolean, required: false },
-  orientation: {
-    type: String,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  disabled: { type: Boolean, required: false },
-  selectionBehavior: {
-    type: String,
-    required: false,
-  },
-  highlightOnHover: { type: Boolean, required: false },
-  by: {
-    type: [String, Function],
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-  class: { type: null, required: false },
-});
+defineOptions({ name: "UiCommand" });
 
-const emits = defineEmits(["update:modelValue", "highlight", "entryFocus", "leave"]);
+const props = withDefaults(
+  defineProps<{
+    modelValue?: ListboxRootProps["modelValue"] | undefined;
+    defaultValue?: ListboxRootProps["defaultValue"] | undefined;
+    multiple?: boolean;
+    orientation?: ListboxRootProps["orientation"] | undefined;
+    dir?: ListboxRootProps["dir"] | undefined;
+    disabled?: boolean;
+    selectionBehavior?: ListboxRootProps["selectionBehavior"] | undefined;
+    highlightOnHover?: boolean;
+    by?: ListboxRootProps["by"] | undefined;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    name?: string | undefined;
+    required?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    modelValue: "",
+    defaultValue: undefined,
+    orientation: undefined,
+    dir: undefined,
+    selectionBehavior: undefined,
+    by: undefined,
+    as: undefined,
+    name: undefined,
+    class: undefined,
+  }
+);
 
-const delegatedProps = reactiveOmit(props, "class");
+const emits = defineEmits<ListboxRootEmits>();
+
+const delegatedProps: Record<string, unknown> = reactiveOmit(props, "class");
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 
-const allItems = ref(new Map());
-const allGroups = ref(new Map());
+const allItems = ref(new Map<string, string>());
+const allGroups = ref(new Map<string, Set<string>>());
 
 const { contains } = useFilter({ sensitivity: "base" });
-const filterState = reactive({
+const filterState = reactive<CommandFilterState>({
   search: "",
   filtered: {
     count: 0,
@@ -64,14 +73,14 @@ function filterItems() {
   let itemCount = 0;
 
   for (const [id, value] of allItems.value) {
-    const score = contains(value, filterState.search);
-    filterState.filtered.items.set(id, score ? 1 : 0);
-    if (score) itemCount++;
+    const isMatch = contains(value, filterState.search);
+    filterState.filtered.items.set(id, isMatch ? 1 : 0);
+    if (isMatch) itemCount++;
   }
 
   for (const [groupId, group] of allGroups.value) {
     for (const itemId of group) {
-      if (filterState.filtered.items.get(itemId) > 0) {
+      if ((filterState.filtered.items.get(itemId) ?? 0) > 0) {
         filterState.filtered.groups.add(groupId);
         break;
       }

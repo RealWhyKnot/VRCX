@@ -1,21 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { getString, setString } = vi.hoisted(() => ({
+  getString: vi.fn<(key: string, defaultValue: string) => Promise<string>>(),
+  setString: vi.fn<(key: string, value: string) => Promise<void>>(),
+}));
+
 vi.mock("../../../../src/services/config.ts", () => ({
   configRepository: {
-    getString: vi.fn().mockResolvedValue("0.6"),
-    setString: vi.fn(),
+    getString,
+    setString,
   },
 }));
 
-import { useAvatarCardGrid } from "../../../../src/views/MyAvatars/composables/use-avatar-card-grid";
+import { useAvatarCardGrid, type AvatarCardGridOptions } from "../../../../src/views/MyAvatars/composables/use-avatar-card-grid";
 
-function createGrid(options = {}) {
+function createGrid(options: AvatarCardGridOptions = {}) {
   return useAvatarCardGrid(options);
 }
 
 describe("useAvatarCardGrid", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getString.mockResolvedValue("0.6");
+    setString.mockResolvedValue(undefined);
   });
 
   describe("defaults", () => {
@@ -168,16 +175,16 @@ describe("useAvatarCardGrid", () => {
       const items = [{ id: 1 }, { id: 2 }, { id: 3 }];
       const rows = chunkIntoRows(items, "test");
       expect(rows).toHaveLength(3);
-      expect(rows[0].key).toBe("test:0");
-      expect(rows[0].items).toEqual([{ id: 1 }]);
-      expect(rows[1].key).toBe("test:1");
-      expect(rows[2].key).toBe("test:2");
+      expect(rows[0]?.key).toBe("test:0");
+      expect(rows[0]?.items).toEqual([{ id: 1 }]);
+      expect(rows[1]?.key).toBe("test:1");
+      expect(rows[2]?.key).toBe("test:2");
     });
 
     it("uses default key prefix", () => {
       const { chunkIntoRows } = createGrid();
       const rows = chunkIntoRows([{ id: 1 }]);
-      expect(rows[0].key).toBe("row:0");
+      expect(rows[0]?.key).toBe("row:0");
     });
   });
 
@@ -242,27 +249,24 @@ describe("useAvatarCardGrid", () => {
   });
 
   describe("persistence", () => {
-    it("calls configRepository.setString when scale changes", async () => {
-      const config = (await import("../../../../src/services/config.ts")).configRepository;
+    it("calls configRepository.setString when scale changes", () => {
       const { cardScale } = createGrid();
       cardScale.value = 0.7;
-      expect(config.setString).toHaveBeenCalledWith("VRCX_MyAvatarsCardScale", "0.7");
+      expect(setString).toHaveBeenCalledWith("VRCX_MyAvatarsCardScale", "0.7");
     });
 
-    it("calls configRepository.setString when spacing changes", async () => {
-      const config = (await import("../../../../src/services/config.ts")).configRepository;
+    it("calls configRepository.setString when spacing changes", () => {
       const { cardSpacing } = createGrid();
       cardSpacing.value = 0.8;
-      expect(config.setString).toHaveBeenCalledWith("VRCX_MyAvatarsCardSpacing", "0.8");
+      expect(setString).toHaveBeenCalledWith("VRCX_MyAvatarsCardSpacing", "0.8");
     });
 
-    it("uses custom config keys", async () => {
-      const config = (await import("../../../../src/services/config.ts")).configRepository;
+    it("uses custom config keys", () => {
       const { cardScale } = createGrid({
         scaleConfigKey: "CUSTOM_SCALE",
       });
       cardScale.value = 0.5;
-      expect(config.setString).toHaveBeenCalledWith("CUSTOM_SCALE", "0.5");
+      expect(setString).toHaveBeenCalledWith("CUSTOM_SCALE", "0.5");
     });
   });
 

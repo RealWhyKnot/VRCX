@@ -33,7 +33,7 @@
 
     <SettingsGroup :title="t('view.settings.general.vrcx_updater.header')">
       <div class="flex gap-2">
-        <Button size="sm" variant="outline" @click="showChangeLogDialog">{{ t("view.settings.general.vrcx_updater.change_log") }}</Button>
+        <Button size="sm" variant="outline" @click="openChangeLog">{{ t("view.settings.general.vrcx_updater.change_log") }}</Button>
         <Button v-if="!noUpdater" size="sm" variant="outline" @click="showVRCXUpdateDialog()">{{
           t("view.settings.general.vrcx_updater.change_build")
         }}</Button>
@@ -41,7 +41,7 @@
 
       <template v-if="!noUpdater">
         <SettingsItem :label="t('view.settings.general.vrcx_updater.update_action')">
-          <Select :model-value="autoUpdateVRCX" @update:model-value="setAutoUpdateVRCX">
+          <Select :model-value="autoUpdateVRCX" @update:model-value="handleAutoUpdateVRCXChange">
             <SelectTrigger size="sm">
               <SelectValue />
             </SelectTrigger>
@@ -163,6 +163,7 @@ import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { useGeneralSettingsStore } from "@/stores/settings/general";
 import { useVRCXUpdaterStore } from "@/stores/vrcx-updater";
 import { links } from "@/shared/constants/link";
+import { logError } from "@/stores/notification/errors";
 import { openExternalLink } from "@/shared/utils/app-actions";
 
 import SettingsGroup from "../SettingsGroup.vue";
@@ -196,7 +197,19 @@ const isMacOS = computed(() => {
 
 const OpenSourceSoftwareNoticeDialog = defineAsyncComponent(() => import("../../dialogs/OpenSourceSoftwareNoticeDialog.vue"));
 
+function openChangeLog() {
+  void showChangeLogDialog().catch((error: unknown) => {
+    console.error(error);
+  });
+}
+
 function openOSSDialog() {
   ossDialog.value = true;
+}
+
+function handleAutoUpdateVRCXChange(value: unknown) {
+  if (typeof value === "string") {
+    void setAutoUpdateVRCX(value).catch(logError);
+  }
 }
 </script>

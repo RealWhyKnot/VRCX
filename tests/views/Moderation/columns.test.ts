@@ -1,26 +1,48 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { PlayerModerationEntry } from "../../../src/stores/moderation";
+
+type VNodeProps = {
+  onClick?: () => void;
+  [name: string]: unknown;
+};
+
+type VNodeLike = {
+  type: unknown;
+  props: VNodeProps;
+  children: unknown[];
+};
+
+type CellContext = {
+  row: { original: Partial<PlayerModerationEntry> };
+};
+
+type CellColumn = {
+  accessorKey?: unknown;
+  id?: unknown;
+  cell: (context: CellContext) => unknown;
+};
 
 const mocks = vi.hoisted(() => ({
   shiftHeld: { value: false, __v_isRef: true },
   currentUser: { value: { id: "usr_me" }, __v_isRef: true },
-  showUserDialog: vi.fn(),
-  t: vi.fn((key) => key),
-  te: vi.fn((key) => key === "view.moderation.filters.block"),
+  showUserDialog: vi.fn<(userId: string) => void>(),
+  t: vi.fn((key: string) => key),
+  te: vi.fn((key: string) => key === "view.moderation.filters.block"),
 }));
 
 vi.mock("pinia", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    storeToRefs: (store) => store,
+    storeToRefs: (store: unknown) => store,
   };
 });
 
 vi.mock("../../../src/plugins/i18n", () => ({
   i18n: {
     global: {
-      t: (...args) => mocks.t(...args),
-      te: (...args) => mocks.te(...args),
+      t: (key: string) => mocks.t(key),
+      te: (key: string) => mocks.te(key),
     },
   },
 }));
@@ -37,11 +59,11 @@ vi.mock("../../../src/stores/user", () => ({
 }));
 
 vi.mock("../../../src/coordinators/user-coordinator", () => ({
-  showUserDialog: (...args) => mocks.showUserDialog(...args),
+  showUserDialog: (userId: string) => mocks.showUserDialog(userId),
 }));
 
 vi.mock("../../../src/coordinators/date-coordinator", () => ({
-  formatDateFilter: (value, format) => `${format}:${value}`,
+  formatDateFilter: (value: string, format: string) => `${format}:${value}`,
 }));
 
 vi.mock("../../../src/components/ui/badge/Badge.vue", () => ({
@@ -67,7 +89,7 @@ vi.mock("lucide-vue-next", () => ({
 
 import { createColumns } from "../../../src/views/Moderation/columns.tsx";
 
-function createElement(type, props, ...children) {
+function createElement(type: unknown, props: VNodeProps | null, ...children: unknown[]): VNodeLike {
   return {
     type,
     props: props ?? {},
@@ -75,8 +97,15 @@ function createElement(type, props, ...children) {
   };
 }
 
-function findNode(node, predicate) {
-  if (!node) return null;
+function isVNodeLike(value: unknown): value is VNodeLike {
+  return typeof value === "object" && value !== null && "type" in value && "props" in value && "children" in value;
+}
+
+function isCellColumn(value: unknown): value is CellColumn {
+  return typeof value === "object" && value !== null && "cell" in value && typeof value.cell === "function";
+}
+
+function findNode(node: unknown, predicate: (candidate: VNodeLike) => boolean): VNodeLike | null {
   if (Array.isArray(node)) {
     for (const item of node) {
       const result = findNode(item, predicate);
@@ -85,14 +114,30 @@ function findNode(node, predicate) {
     return null;
   }
 
+  if (!isVNodeLike(node)) return null;
   if (predicate(node)) return node;
-  if (!node.children) return null;
   return findNode(node.children, predicate);
+}
+
+function clickNode(node: unknown, predicate: (candidate: VNodeLike) => boolean) {
+  const target = findNode(node, predicate);
+  if (!target?.props.onClick) {
+    throw new Error("Expected a clickable node");
+  }
+  target.props.onClick();
+}
+
+function findCellColumn(columns: unknown[], match: (column: CellColumn) => boolean): CellColumn {
+  const column = columns.find((item): item is CellColumn => isCellColumn(item) && match(item));
+  if (!column) {
+    throw new Error("Expected column to exist");
+  }
+  return column;
 }
 
 describe("views/Moderation/columns.tsx", () => {
   beforeEach(() => {
-    globalThis.React = { createElement };
+    Object.assign(globalThis, { React: { createElement } });
     mocks.shiftHeld.value = false;
     mocks.currentUser.value = { id: "usr_me" };
     mocks.showUserDialog.mockReset();
@@ -100,11 +145,11 @@ describe("views/Moderation/columns.tsx", () => {
 
   test("source and target cells open corresponding user dialog", () => {
     const cols = createColumns({
-      onDelete: vi.fn(),
-      onDeletePrompt: vi.fn(),
+      onDelete: vi.fn<(row: PlayerModerationEntry) => void>(),
+      onDeletePrompt: vi.fn<(row: PlayerModerationEntry) => void>(),
     });
-    const sourceCol = cols.find((c) => c.accessorKey === "sourceDisplayName");
-    const targetCol = cols.find((c) => c.accessorKey === "targetDisplayName");
+    const sourceCol = findCellColumn(cols, (column) => column.accessorKey === "sourceDisplayName");
+    const targetCol = findCellColumn(cols, (column) => column.accessorKey === "targetDisplayName");
     const row = {
       original: {
         sourceUserId: "usr_source",
@@ -112,13 +157,12 @@ describe("views/Moderation/columns.tsx", () => {
         targetUserId: "usr_target",
         targetDisplayName: "Target",
       },
-      getValue: vi.fn(),
     };
 
     const sourceCell = sourceCol.cell({ row });
     const targetCell = targetCol.cell({ row });
-    findNode(sourceCell, (n) => n.type === "span" && typeof n.props?.onClick === "function").props.onClick();
-    findNode(targetCell, (n) => n.type === "span" && typeof n.props?.onClick === "function").props.onClick();
+    clickNode(sourceCell, (n) => n.type === "span" && typeof n.props.onClick === "function");
+    clickNode(targetCell, (n) => n.type === "span" && typeof n.props.onClick === "function");
 
     expect(mocks.showUserDialog).toHaveBeenNthCalledWith(1, "usr_source");
     expect(mocks.showUserDialog).toHaveBeenNthCalledWith(2, "usr_target");
@@ -126,10 +170,10 @@ describe("views/Moderation/columns.tsx", () => {
 
   test("action cell hidden when source user is not current user", () => {
     const cols = createColumns({
-      onDelete: vi.fn(),
-      onDeletePrompt: vi.fn(),
+      onDelete: vi.fn<(row: PlayerModerationEntry) => void>(),
+      onDeletePrompt: vi.fn<(row: PlayerModerationEntry) => void>(),
     });
-    const actionCol = cols.find((c) => c.id === "action");
+    const actionCol = findCellColumn(cols, (column) => column.id === "action");
     const vnode = actionCol.cell({
       row: {
         original: {
@@ -142,10 +186,10 @@ describe("views/Moderation/columns.tsx", () => {
   });
 
   test("action cell routes to onDeletePrompt or onDelete based on shift", () => {
-    const onDelete = vi.fn();
-    const onDeletePrompt = vi.fn();
+    const onDelete = vi.fn<(row: PlayerModerationEntry) => void>();
+    const onDeletePrompt = vi.fn<(row: PlayerModerationEntry) => void>();
     const cols = createColumns({ onDelete, onDeletePrompt });
-    const actionCol = cols.find((c) => c.id === "action");
+    const actionCol = findCellColumn(cols, (column) => column.id === "action");
     const row = {
       original: {
         sourceUserId: "usr_me",
@@ -155,13 +199,13 @@ describe("views/Moderation/columns.tsx", () => {
     };
 
     const promptCell = actionCol.cell({ row });
-    findNode(promptCell, (n) => n.type === "button").props.onClick();
+    clickNode(promptCell, (n) => n.type === "button");
     expect(onDeletePrompt).toHaveBeenCalledWith(row.original);
     expect(onDelete).not.toHaveBeenCalled();
 
     mocks.shiftHeld.value = true;
     const directCell = actionCol.cell({ row });
-    findNode(directCell, (n) => n.type === "button").props.onClick();
+    clickNode(directCell, (n) => n.type === "button");
     expect(onDelete).toHaveBeenCalledWith(row.original);
   });
 });

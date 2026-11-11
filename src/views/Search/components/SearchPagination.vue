@@ -23,11 +23,21 @@ import Kbd from "@/components/ui/kbd/Kbd.vue";
 
 const isMac = navigator.platform.toUpperCase().includes("MAC");
 
-defineProps({
-  show: { type: Boolean, default: false },
-  prevDisabled: { type: Boolean, default: true },
-  nextDisabled: { type: Boolean, default: true },
-});
+withDefaults(
+  defineProps<{
+    show?: boolean;
+    prevDisabled?: boolean;
+    nextDisabled?: boolean;
+  }>(),
+  {
+    show: false,
+    prevDisabled: true,
+    nextDisabled: true,
+  }
+);
 
-defineEmits(["prev", "next"]);
+defineEmits<{
+  prev: [];
+  next: [];
+}>();
 </script>

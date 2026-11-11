@@ -27,6 +27,7 @@ import { runCheckVRChatDebugLoggingFlow, runUpdateIsGameRunningFlow, runUpdateIs
 import Toaster from "./components/ui/sonner/Sonner.vue";
 import TooltipProvider from "./components/ui/tooltip/TooltipProvider.vue";
 import { createGlobalStores } from "./stores";
+import { logFailure } from "./stores/log-failure";
 import { initNoty } from "./plugins/noty";
 
 import AlertDialogModal from "./components/ui/alert-dialog/AlertDialogModal.vue";
@@ -57,7 +58,7 @@ const coordinators = Object.fromEntries(
     path
       .replace("./coordinators/", "")
       .replace("-coordinator.ts", "")
-      .replace(/-(?<letter>[a-z])/gu, (_match, letter) => letter.toUpperCase()),
+      .replace(/-(?<letter>[a-z])/gu, (_match: string, letter: string) => letter.toUpperCase()),
     module,
   ])
 );
@@ -73,17 +74,17 @@ if (typeof window !== "undefined") {
 }
 
 onBeforeMount(() => {
-  store.updateLoop.updateLoop();
+  store.updateLoop.updateLoop().catch(logFailure("Starting the update loop failed:"));
 });
 
 onMounted(async () => {
   if (await store.vrcx.waitForDatabaseInit()) {
-    getGameLogTable();
+    getGameLogTable().catch(logFailure("Loading the game log table failed:"));
     await store.auth.migrateStoredUsers();
-    store.auth.autoLoginAfterMounted();
-    store.vrcx.checkAutoBackupRestoreVrcRegistry();
+    store.auth.autoLoginAfterMounted().catch(logFailure("Auto login failed:"));
+    store.vrcx.checkAutoBackupRestoreVrcRegistry().catch(logFailure("Checking the auto backup restore failed:"));
   }
 
-  runCheckVRChatDebugLoggingFlow();
+  runCheckVRChatDebugLoggingFlow().catch(logFailure("Checking VRChat debug logging failed:"));
 });
 </script>

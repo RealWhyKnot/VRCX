@@ -1,33 +1,48 @@
 <script setup lang="ts">
+import type { SelectRootEmits, SelectRootProps } from "reka-ui";
 import { SelectRoot, useForwardPropsEmits } from "reka-ui";
+import { computed } from "vue";
 
-const props = defineProps({
-  open: { type: Boolean, required: false },
-  defaultOpen: { type: Boolean, required: false },
-  defaultValue: { type: null, required: false },
-  modelValue: { type: null, required: false },
-  by: {
-    type: [String, Function],
-    required: false,
-  },
-  dir: { type: String, required: false },
-  multiple: { type: Boolean, required: false },
-  autocomplete: { type: String, required: false },
-  disabled: { type: Boolean, required: false },
-  name: { type: String, required: false },
-  required: { type: Boolean, required: false },
-});
-const emits = defineEmits(["update:modelValue", "update:open"]);
+defineOptions({ name: "UiSelect" });
 
-const forwarded = useForwardPropsEmits(props, emits);
+const props = defineProps<{
+  open?: boolean;
+  defaultOpen?: boolean;
+  defaultValue?: SelectRootProps["defaultValue"];
+  modelValue?: SelectRootProps["modelValue"];
+  by?: SelectRootProps["by"];
+  dir?: SelectRootProps["dir"];
+  multiple?: boolean;
+  autocomplete?: string;
+  disabled?: boolean;
+  name?: string;
+  required?: boolean;
+}>();
+const emits = defineEmits<SelectRootEmits>();
 
-function handleOpenChange(isOpen) {
+const delegatedProps = computed(() => ({
+  open: props.open,
+  defaultOpen: props.defaultOpen,
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  ...(props.by === undefined ? {} : { by: props.by }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  multiple: props.multiple,
+  ...(props.autocomplete === undefined ? {} : { autocomplete: props.autocomplete }),
+  disabled: props.disabled,
+  ...(props.name === undefined ? {} : { name: props.name }),
+  required: props.required,
+}));
+
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
+
+function handleOpenChange(isOpen: boolean) {
   if (!isOpen || typeof document === "undefined") {
     return;
   }
 
   const activeElement = document.activeElement;
-  if (activeElement instanceof HTMLElement && activeElement.dataset.slot === "select-trigger") {
+  if (activeElement instanceof HTMLElement && activeElement.dataset["slot"] === "select-trigger") {
     activeElement.blur();
   }
 }

@@ -31,21 +31,21 @@ import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { useI18n } from "vue-i18n";
 
-defineProps({
-  form: {
-    type: Object,
-    required: true,
-  },
-  saving: {
-    type: Boolean,
-    default: false,
-  },
-  submitLabel: {
-    type: String,
-    required: true,
-  },
-});
-const emit = defineEmits(["save", "cancel"]);
+type GalleryForm = { name: string; description: string; membersOnly: boolean };
+
+const form = defineModel<GalleryForm>("form", { required: true });
+
+withDefaults(
+  defineProps<{
+    saving?: boolean;
+    submitLabel: string;
+  }>(),
+  { saving: false }
+);
+const emit = defineEmits<{
+  save: [];
+  cancel: [];
+}>();
 
 const { t } = useI18n();
 </script>

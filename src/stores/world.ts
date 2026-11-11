@@ -10,7 +10,7 @@ import type { InstanceRoom } from "./instance-types";
 import type { Json, ParsedLocation, WorldRatingValue } from "../types/vrcx";
 import { watchState } from "../services/watch-state";
 
-type WorldDialogState = {
+export type WorldDialogState = {
   visible: boolean;
   loading: boolean;
   activeTab: string;

@@ -54,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch, type Slots } from "vue";
 import { AlertTriangle, Lock } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
@@ -74,19 +74,23 @@ import { useInstanceStore } from "../stores/instance";
 import { useInviteStore } from "../stores/invite";
 import { useSearchStore } from "../stores/search";
 import { useWorldStore } from "../stores/world";
+import { logFailure } from "../stores/log-failure";
 import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { runNewInstanceSelfInviteFlow } from "../coordinators/invite-coordinator";
 import Spinner from "./ui/spinner/Spinner.vue";
 import WorldActionMenuItems from "./WorldActionMenuItems.vue";
 import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
+import type { InstanceEntry } from "../stores/instance-types";
+import type { ParsedLocation } from "../types/vrcx";
 import { cn } from "@/lib/utils";
 
 defineOptions({
+  name: "LocationText",
   inheritAttrs: false,
 });
 
-const Passthrough = (_, { slots }) => slots.default?.();
+const Passthrough = (_: unknown, { slots }: { slots: Slots }) => slots["default"]?.();
 
 const { t } = useI18n();
 
@@ -98,49 +102,41 @@ const { lastInstanceApplied } = storeToRefs(useInstanceStore());
 const { canOpenInstanceInGame } = useInviteStore();
 const { showInstanceIdInLocation, isAgeGatedInstancesVisible } = storeToRefs(useAppearanceSettingsStore());
 
-const props = defineProps({
-  location: String,
-  traveling: String,
-  hint: {
-    type: String,
-    default: "",
-  },
-  grouphint: {
-    type: String,
-    default: "",
-  },
-  excludeGroupName: {
-    type: Boolean,
-    default: false,
-  },
-  link: {
-    type: Boolean,
-    default: true,
-  },
-  disableTooltip: {
-    type: Boolean,
-    default: false,
-  },
-  isOpenPreviousInstanceInfoDialog: {
-    type: Boolean,
-    default: false,
-  },
-  enableContextMenu: {
-    type: Boolean,
-    default: false,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    location?: string | undefined;
+    traveling?: string | undefined;
+    hint?: string | undefined;
+    grouphint?: string;
+    excludeGroupName?: boolean;
+    link?: boolean;
+    disableTooltip?: boolean;
+    isOpenPreviousInstanceInfoDialog?: boolean;
+    enableContextMenu?: boolean;
+  }>(),
+  {
+    location: undefined,
+    traveling: undefined,
+    hint: "",
+    grouphint: "",
+    excludeGroupName: false,
+    link: true,
+    disableTooltip: false,
+    isOpenPreviousInstanceInfoDialog: false,
+    enableContextMenu: false,
+  }
+);
 
 const text = ref("");
 const region = ref("");
 const strict = ref(false);
 const ageGate = ref(false);
 const isTraveling = ref(false);
-const parsedLocation = ref({ isRealInstance: false, worldId: "", tag: "", shortName: "" });
+const parsedLocation = ref<ParsedLocation>(parseLocation(""));
 const groupName = ref("");
 const closedAt = ref("");
 const instanceName = ref("");
-const instanceRef = ref(null);
+const instanceRef = ref<InstanceEntry | null>(null);
 
 const isAgeRestricted = computed(() => !isAgeGatedInstancesVisible.value && ageGate.value);
 const isLocationLink = computed(() => props.link && props.location !== "private" && props.location !== "offline");
@@ -216,14 +212,14 @@ function parse() {
   ageGate.value = L.ageGate;
 }
 
-function applyInstanceRef(L) {
-  const cachedInstanceRef = cachedInstances.get(L.tag);
+function applyInstanceRef(parsed: ParsedLocation) {
+  const cachedInstanceRef = cachedInstances.get(parsed.tag);
   if (typeof cachedInstanceRef === "undefined") {
     return;
   }
   instanceRef.value = cachedInstanceRef;
   if (cachedInstanceRef.displayName) {
-    setText(L);
+    setText(parsed);
     instanceName.value = cachedInstanceRef.displayName;
   }
   if (cachedInstanceRef.closedAt) {
@@ -231,7 +227,7 @@ function applyInstanceRef(L) {
   }
 }
 
-function updateGroupName(L, instanceId) {
+function updateGroupName(parsed: ParsedLocation, instanceId: string | undefined) {
   if (props.excludeGroupName) {
     return;
   }
@@ -239,48 +235,52 @@ function updateGroupName(L, instanceId) {
     groupName.value = props.grouphint;
     return;
   }
-  if (!L.groupId) {
+  if (!parsed.groupId) {
     return;
   }
-  groupName.value = L.groupId;
-  getGroupName(instanceId).then((name) => {
-    if (!isDisposed && name && currentInstanceId() === L.tag) {
-      groupName.value = name;
-    }
-  });
+  groupName.value = parsed.groupId;
+  void getGroupName(instanceId)
+    .then((name) => {
+      if (!isDisposed && name && currentInstanceId() === parsed.tag) {
+        groupName.value = name;
+      }
+    })
+    .catch(logFailure("Failed to load group name:"));
 }
 
-function updateRegion(L) {
-  region.value = resolveRegion(L);
+function updateRegion(parsed: ParsedLocation) {
+  region.value = resolveRegion(parsed);
 }
 
-function getAccessTypeLabel(accessTypeName) {
+function getAccessTypeLabel(accessTypeName: string) {
   return translateAccessType(accessTypeName, t, accessTypeLocaleKeyMap);
 }
 
-function setText(L) {
-  const accessTypeLabel = getAccessTypeLabel(L.accessTypeName);
-  const cachedRef = L.worldId ? cachedWorlds.get(L.worldId) : undefined;
+function setText(parsed: ParsedLocation) {
+  const accessTypeLabel = getAccessTypeLabel(parsed.accessTypeName);
+  const cachedRef = parsed.worldId ? cachedWorlds.get(parsed.worldId) : undefined;
   const worldName = typeof cachedRef !== "undefined" ? cachedRef.name : undefined;
 
-  text.value = getLocationText(L, {
+  text.value = getLocationText(parsed, {
     hint: props.hint,
     worldName,
     accessTypeLabel,
     t,
   });
 
-  if (L.worldId && typeof cachedRef === "undefined") {
-    getWorldName(L.worldId).then((name) => {
-      if (!isDisposed && name && currentInstanceId() === L.tag) {
-        text.value = getLocationText(L, {
-          hint: props.hint,
-          worldName: name,
-          accessTypeLabel: getAccessTypeLabel(L.accessTypeName),
-          t,
-        });
-      }
-    });
+  if (parsed.worldId && typeof cachedRef === "undefined") {
+    void getWorldName(parsed.worldId)
+      .then((name) => {
+        if (!isDisposed && name && currentInstanceId() === parsed.tag) {
+          text.value = getLocationText(parsed, {
+            hint: props.hint,
+            worldName: name,
+            accessTypeLabel: getAccessTypeLabel(parsed.accessTypeName),
+            t,
+          });
+        }
+      })
+      .catch(logFailure("Failed to load world name:"));
   }
 }
 
@@ -288,13 +288,13 @@ function handleShowWorldDialog() {
   if (props.link) {
     const instanceId = currentInstanceId();
     if (!instanceId && props.hint.length === 8) {
-      verifyShortName("", props.hint);
+      void verifyShortName("", props.hint).catch(logFailure("Checking the instance short name failed:"));
       return;
     }
     if (props.isOpenPreviousInstanceInfoDialog) {
-      showPreviousInstancesInfoDialog(instanceId);
+      showPreviousInstancesInfoDialog(instanceId ?? "");
     } else {
-      showWorldDialog(instanceId);
+      showWorldDialog(instanceId ?? "");
     }
   }
 }

@@ -82,7 +82,7 @@
               <User class="size-4 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
-          <IconFrame :icon-frame="user.user?.iconFrame" />
+          <IconFrame :icon-frame="user.user?.iconFrame ?? ''" />
         </div>
         <div class="flex-1 overflow-hidden">
           <span class="block truncate font-medium leading-[18px]" :style="{ color: user.user?.$userColour }" v-text="user.user?.displayName" />
@@ -134,7 +134,7 @@
               <User class="size-4 text-muted-foreground" />
             </AvatarFallback>
           </Avatar>
-          <IconFrame :icon-frame="user.user?.iconFrame" />
+          <IconFrame :icon-frame="user.user?.iconFrame ?? ''" />
         </div>
         <div class="flex-1 overflow-hidden">
           <span class="block truncate font-medium leading-[18px]" :style="{ color: user.user?.$userColour }" v-text="user.user?.displayName" />
@@ -171,7 +171,7 @@
         v-if="!isGroupMembersDone"
         class="box-border flex items-center p-1.5 text-[13px] cursor-pointer"
         style="width: 100%; height: 45px; text-align: center"
-        @click="loadMoreGroupMembers"
+        @click="loadMoreGroupMembers()"
       >
         <div v-if="!isGroupMembersLoading" class="flex-1 overflow-hidden">
           <span class="block truncate font-medium leading-[18px]">{{ t("dialog.group.members.load_more") }}</span>
@@ -227,8 +227,8 @@ const {
   loadAllGroupMembers,
 } = useGroupMembers(groupDialog, { currentUser, applyGroupMember, handleGroupMember, t });
 
-function getUserRoleNamesText(roleIds = []) {
-  const groupRoles = groupDialog.value?.ref?.roles ?? [];
+function getUserRoleNamesText(roleIds: string[] = []) {
+  const groupRoles = groupDialog.value.ref.roles ?? [];
   const roleNameById = new Map(groupRoles.map((role) => [role.id, role.name]));
 
   return roleIds

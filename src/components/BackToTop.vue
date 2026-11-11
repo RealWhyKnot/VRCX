@@ -7,50 +7,66 @@ import { ArrowUp } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { useI18n } from "vue-i18n";
 
-const props = defineProps({
-  target: { type: [String, Object], default: null },
+type ElementSource = string | Element | { readonly value: unknown } | { readonly $el: unknown };
 
-  virtualizer: { type: [Object], default: null },
+type VirtualizerHandle = {
+  scrollToIndex?: (index: number, options: { align: "start"; behavior: "auto" }) => void;
+};
 
-  bottom: { type: Number, default: 20 },
-  right: { type: Number, default: 20 },
+type VirtualizerSource = VirtualizerHandle | { readonly value: VirtualizerHandle };
 
-  visibilityHeight: { type: Number, default: 400 },
-
-  behavior: {
-    type: String,
-    default: "smooth",
-    validator: (value) => value === "auto" || value === "smooth",
-  },
-
-  tooltip: { type: Boolean, default: true },
-  tooltipText: { type: String, default: "Back to top" },
-
-  teleport: { type: Boolean, default: true },
-  teleportTo: { type: [Boolean, String, Object], default: null },
-});
+const props = withDefaults(
+  defineProps<{
+    target?: ElementSource | null | undefined;
+    virtualizer?: VirtualizerSource | null | undefined;
+    bottom?: number;
+    right?: number;
+    visibilityHeight?: number;
+    behavior?: "auto" | "smooth";
+    tooltip?: boolean;
+    tooltipText?: string;
+    teleport?: boolean;
+    teleportTo?: boolean | ElementSource | null | undefined;
+  }>(),
+  {
+    target: null,
+    virtualizer: null,
+    bottom: 20,
+    right: 20,
+    visibilityHeight: 400,
+    behavior: "smooth",
+    tooltip: true,
+    tooltipText: "Back to top",
+    teleport: true,
+    teleportTo: null,
+  }
+);
 
 const visible = ref(false);
 const { t } = useI18n();
-let containerEl = null;
+let containerEl: Element | null = null;
 
-function resolveElement(target) {
+function resolveElement(target: unknown): Element | null {
   if (!target) return null;
   if (typeof target === "string") return document.querySelector(target);
   if (typeof target === "object") {
-    if ("value" in target) return target.value;
-    if ("$el" in target) return target.$el;
+    if ("value" in target) return asElement(target.value);
+    if ("$el" in target) return asElement(target.$el);
   }
-  return target;
+  return asElement(target);
 }
 
-function getVirtualizer() {
+function asElement(value: unknown): Element | null {
+  return value instanceof Element ? value : null;
+}
+
+function getVirtualizer(): VirtualizerHandle | null {
   if (!props.virtualizer) return null;
   return "value" in props.virtualizer ? props.virtualizer.value : props.virtualizer;
 }
 
 function getScrollTop() {
-  if (!containerEl || typeof containerEl.scrollTop !== "number") {
+  if (!containerEl) {
     return window.scrollY || document.documentElement.scrollTop || 0;
   }
   return containerEl.scrollTop || 0;
@@ -67,8 +83,8 @@ function scrollToTop() {
     v.scrollToIndex(0, { align: "start", behavior: "auto" });
     return;
   }
-  const target = containerEl || resolveElement(props.target);
-  if (target && typeof target.scrollTo === "function") {
+  const target = containerEl ?? resolveElement(props.target);
+  if (target) {
     target.scrollTo({ top: 0, behavior });
     return;
   }
@@ -78,13 +94,13 @@ function scrollToTop() {
 function bind() {
   containerEl = resolveElement(props.target);
 
-  const target = containerEl && typeof containerEl.addEventListener === "function" ? containerEl : window;
+  const target: EventTarget = containerEl ?? window;
   target.addEventListener("scroll", handleScroll, { passive: true });
   handleScroll();
 }
 
 function unbind() {
-  const target = containerEl || window;
+  const target: EventTarget = containerEl ?? window;
   target.removeEventListener("scroll", handleScroll);
 }
 
@@ -105,7 +121,7 @@ onBeforeUnmount(() => {
 });
 
 const teleportTarget = computed(() => {
-  if (props.teleportTo !== null && props.teleportTo !== undefined) {
+  if (props.teleportTo !== null) {
     if (props.teleportTo === true) return "body";
     if (props.teleportTo === false) return null;
     return resolveElement(props.teleportTo);

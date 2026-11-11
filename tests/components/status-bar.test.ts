@@ -10,13 +10,13 @@ import en from "../../src/localization/en.json";
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? "{}"),
+    getString: vi.fn((_key: string, defaultValue?: string) => defaultValue ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? false),
+    getBool: vi.fn((_key: string, isDefaultValue?: boolean) => isDefaultValue ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? 0),
+    getInt: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? 0),
+    getFloat: vi.fn((_key: string, defaultValue?: number) => defaultValue ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),
@@ -64,7 +64,7 @@ vi.mock("../../src/services/database", () => ({
     {
       get: (_target, prop) => {
         if (prop === "__esModule") return false;
-        return vi.fn().mockResolvedValue(null);
+        return vi.fn(() => Promise.resolve(null));
       },
     }
   ),
@@ -80,7 +80,7 @@ vi.mock("../../src/plugins/router", () => ({
   initRouter: vi.fn(),
 }));
 vi.mock("vue-router", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("vue-router")>();
   return {
     ...actual,
     useRouter: vi.fn(() => ({
@@ -158,7 +158,9 @@ const stubs = {
   NumberFieldInput: { template: "<input />", props: ["class"] },
 };
 
-function mountStatusBar(storeOverrides = {}) {
+type StoreOverrides = Partial<Record<"Game" | "Vrcx" | "VrcStatus" | "User" | "GeneralSettings", Record<string, unknown>>>;
+
+function mountStatusBar(storeOverrides: StoreOverrides = {}) {
   return mount(StatusBar, {
     global: {
       plugins: [

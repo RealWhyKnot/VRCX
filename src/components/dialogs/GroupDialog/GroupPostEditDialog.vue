@@ -64,7 +64,7 @@
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem v-for="role in groupPostEditDialog.groupRef?.roles ?? []" :key="role.id" :value="role.id">
+                    <SelectItem v-for="role in selectableRoles" :key="role.id" :value="role.id">
                       {{ role.name }}
                     </SelectItem>
                   </SelectGroup>
@@ -134,6 +134,7 @@ import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
+import type { AcceptableValue } from "reka-ui";
 
 import Select from "../../ui/select/Select.vue";
 import SelectContent from "../../ui/select/SelectContent.vue";
@@ -144,25 +145,29 @@ import SelectValue from "../../ui/select/SelectValue.vue";
 import RadioGroup from "../../ui/radio-group/RadioGroup.vue";
 import RadioGroupItem from "../../ui/radio-group/RadioGroupItem.vue";
 import { groupRequest } from "../../../api/group";
-import { vrcPlusIconRequest } from "../../../api/vrc-plus-icon";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 
 import GallerySelectDialog from "./GallerySelectDialog.vue";
+import type { GroupPostEditDialogState, GroupPostSelectedImage } from "./group-dialog-types";
 
-const props = defineProps({
-  dialogData: {
-    type: Object,
-    required: true,
-  },
-  selectedGalleryFile: { type: Object, default: () => ({}) },
-});
+const props = withDefaults(
+  defineProps<{
+    dialogData: GroupPostEditDialogState;
+    selectedGalleryFile?: GroupPostSelectedImage;
+  }>(),
+  {
+    selectedGalleryFile: () => ({ selectedFileId: "", selectedImageUrl: "" }),
+  }
+);
 
-const emit = defineEmits(["update:dialogData"]);
+const emit = defineEmits<{
+  "update:dialogData": [value: GroupPostEditDialogState];
+}>();
 
 const { t } = useI18n();
 
-const { showFullscreenImageDialog, handleFilesList } = useGalleryStore();
+const { showFullscreenImageDialog } = useGalleryStore();
 const { handleGroupPost } = useGroupStore();
 
 const gallerySelectDialog = ref({
@@ -171,8 +176,6 @@ const gallerySelectDialog = ref({
   selectedImageUrl: "",
   isIconGallerySelectDialog: false,
 });
-const galleryTable = ref([]);
-
 const groupPostEditDialog = computed({
   get() {
     return props.dialogData;
@@ -182,35 +185,40 @@ const groupPostEditDialog = computed({
   },
 });
 
+const selectableRoles = computed(() =>
+  (groupPostEditDialog.value.groupRef.roles ?? []).filter((role): role is typeof role & { id: string } => typeof role.id === "string")
+);
+
 const selectedRoleSummary = computed(() => {
-  const ids = groupPostEditDialog.value.roleIds ?? [];
-  if (!Array.isArray(ids) || ids.length === 0) {
+  const ids = groupPostEditDialog.value.roleIds;
+  if (ids.length === 0) {
     return "";
   }
-  const roleById = new Map((groupPostEditDialog.value.groupRef?.roles ?? []).map((r) => [r.id, r.name]));
-  const names = ids.map((id) => roleById.get(id) ?? String(id));
+  const roleById = new Map<string, string>();
+  for (const role of groupPostEditDialog.value.groupRef.roles ?? []) {
+    if (role.id !== undefined && role.name !== undefined) {
+      roleById.set(role.id, role.name);
+    }
+  }
+  const names = ids.map((id) => roleById.get(id) ?? id);
   return names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
 });
 
-function handleRoleIdsChange(value) {
-  const next = Array.isArray(value) ? value.map((v) => String(v ?? "")).filter(Boolean) : [];
+function handleRoleIdsChange(value: AcceptableValue | AcceptableValue[]) {
+  const next: string[] = [];
+  if (Array.isArray(value)) {
+    for (const roleId of value) {
+      if (typeof roleId === "string" && roleId !== "") {
+        next.push(roleId);
+      }
+    }
+  }
   groupPostEditDialog.value.roleIds = next;
 }
 
 function showGallerySelectDialog() {
   const D = gallerySelectDialog.value;
   D.visible = true;
-}
-async function refreshGalleryTable() {
-  const params = {
-    n: 100,
-    tag: "gallery",
-  };
-  const args = await vrcPlusIconRequest.getFileList(params);
-  handleFilesList(args);
-  if (args.params.tag === "gallery") {
-    galleryTable.value = args.json.reverse();
-  }
 }
 function editGroupPost() {
   const D = groupPostEditDialog.value;
@@ -228,15 +236,15 @@ function editGroupPost() {
     text: D.text,
     roleIds: D.roleIds,
     visibility: D.visibility,
-    imageId: null,
+    imageId: gallerySelectDialog.value.selectedFileId || null,
   };
-  if (gallerySelectDialog.value.selectedFileId) {
-    params.imageId = gallerySelectDialog.value.selectedFileId;
-  }
-  groupRequest.editGroupPost(params).then((args) => {
-    handleGroupPost(args);
-    toast.success("Group post edited");
-  });
+  groupRequest
+    .editGroupPost(params)
+    .then((args) => {
+      handleGroupPost(args);
+      toast.success("Group post edited");
+    })
+    .catch((err: unknown) => console.error(err));
   D.visible = false;
 }
 function createGroupPost() {
@@ -252,15 +260,15 @@ function createGroupPost() {
     roleIds: D.roleIds,
     visibility: D.visibility,
     sendNotification: D.sendNotification,
-    imageId: null,
+    imageId: gallerySelectDialog.value.selectedFileId || null,
   };
-  if (gallerySelectDialog.value.selectedFileId) {
-    params.imageId = gallerySelectDialog.value.selectedFileId;
-  }
-  groupRequest.createGroupPost(params).then((args) => {
-    handleGroupPost(args);
-    toast.success("Group post created");
-  });
+  groupRequest
+    .createGroupPost(params)
+    .then((args) => {
+      handleGroupPost(args);
+      toast.success("Group post created");
+    })
+    .catch((err: unknown) => console.error(err));
   D.visible = false;
 }
 function clearImageGallerySelect() {

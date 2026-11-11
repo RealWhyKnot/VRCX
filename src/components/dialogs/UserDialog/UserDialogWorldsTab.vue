@@ -13,7 +13,7 @@
       </div>
       <div style="display: flex; align-items: center">
         <span class="mr-1">{{ t("dialog.user.worlds.sort_by") }}</span>
-        <Select :model-value="userDialogWorldSortingKey" :disabled="userDialog.isWorldsLoading" @update:model-value="setUserDialogWorldSortingByKey">
+        <Select :model-value="userDialogWorldSortingKey" :disabled="userDialog.isWorldsLoading" @update:model-value="selectWorldSortingKey">
           <SelectTrigger size="sm" @click.stop>
             <SelectValue />
           </SelectTrigger>
@@ -26,7 +26,7 @@
       </div>
       <div style="display: flex; align-items: center">
         <span class="ml-2 mr-1">{{ t("dialog.user.worlds.order_by") }}</span>
-        <Select :model-value="userDialogWorldOrderKey" :disabled="userDialog.isWorldsLoading" @update:model-value="setUserDialogWorldOrderByKey">
+        <Select :model-value="userDialogWorldOrderKey" :disabled="userDialog.isWorldsLoading" @update:model-value="selectWorldOrderKey">
           <SelectTrigger size="sm" @click.stop>
             <SelectValue />
           </SelectTrigger>
@@ -49,7 +49,7 @@
           >
             <div class="relative inline-block flex-none size-9 mr-2.5">
               <Avatar class="size-9">
-                <AvatarImage :src="world.thumbnailImageUrl" class="object-cover" />
+                <AvatarImage :src="world.thumbnailImageUrl ?? ''" class="object-cover" />
                 <AvatarFallback>
                   <Image class="size-4 text-muted-foreground" />
                 </AvatarFallback>
@@ -88,11 +88,13 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { useUserStore } from "../../../stores/user";
+import type { UserDialogWorld, UserSorting } from "../../../stores/user-state";
 import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { userDialogWorldOrderOptions, userDialogWorldSortingOptions } from "../../../shared/constants/user";
 import { queryRequest } from "../../../api/query-request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
+import type { OrderOption, ReleaseStatus, SortOption } from "vrchat";
 
 const { t } = useI18n();
 
@@ -102,12 +104,23 @@ const { cachedWorlds } = useWorldStore();
 
 const userDialogWorldsRequestId = ref(0);
 
+const worldSortOptionValues = ["name", "updated", "created", "favorites", "popularity"] as const satisfies readonly SortOption[];
+const worldOrderOptionValues = ["descending", "ascending"] as const satisfies readonly OrderOption[];
+
+function toWorldSortOption(value: string): SortOption | undefined {
+  return worldSortOptionValues.find((option) => option === value);
+}
+
+function toWorldOrderOption(value: string): OrderOption | undefined {
+  return worldOrderOptionValues.find((option) => option === value);
+}
+
 const searchQuery = ref("");
 const filteredWorlds = computed(() => {
   const worlds = userDialog.value.worlds;
   const query = searchQuery.value.trim().toLowerCase();
   if (!query) return worlds;
-  return worlds.filter((w) => (w.name || "").toLowerCase().includes(query));
+  return worlds.filter((w) => (w.name ?? "").toLowerCase().includes(query));
 });
 watch(
   () => userDialog.value.id,
@@ -116,8 +129,8 @@ watch(
   }
 );
 
-function setUserDialogWorlds(userId) {
-  const worlds = [];
+function setUserDialogWorlds(userId: string) {
+  const worlds: UserDialogWorld[] = [];
   for (const ref of cachedWorlds.values()) {
     if (ref.authorId === userId) {
       worlds.push(ref);
@@ -131,13 +144,26 @@ function refreshUserDialogWorlds() {
   if (D.isWorldsLoading) {
     return;
   }
+  const sort = toWorldSortOption(D.worldSorting.value);
+  const order = toWorldOrderOption(D.worldOrder.value);
+  if (!sort || !order) {
+    return;
+  }
   const requestId = ++userDialogWorldsRequestId.value;
   D.isWorldsLoading = true;
-  const params = {
+  const params: {
+    n: number;
+    offset: number;
+    sort: SortOption;
+    order: OrderOption;
+    userId: string;
+    releaseStatus: ReleaseStatus;
+    user?: "me";
+  } = {
     n: 50,
     offset: 0,
-    sort: userDialog.value.worldSorting.value,
-    order: userDialog.value.worldOrder.value,
+    sort,
+    order,
 
     userId: D.id,
     releaseStatus: "public",
@@ -146,12 +172,13 @@ function refreshUserDialogWorlds() {
     params.user = "me";
     params.releaseStatus = "all";
   }
-  const worlds = [];
-  const worldIds = new Set();
+  const worlds: UserDialogWorld[] = [];
+  const worldIds = new Set<string>();
   (async () => {
     try {
       let offset = 0;
-      while (true) {
+      let isLastPage = false;
+      while (!isLastPage) {
         const args = await queryRequest.fetch("worldsByUser", {
           ...params,
           offset,
@@ -165,9 +192,7 @@ function refreshUserDialogWorlds() {
             worlds.push(world);
           }
         }
-        if (args.json.length < params.n) {
-          break;
-        }
+        isLastPage = args.json.length < params.n;
         offset += params.n;
       }
       if (requestId === userDialogWorldsRequestId.value && D.id === params.userId) {
@@ -178,12 +203,12 @@ function refreshUserDialogWorlds() {
         D.isWorldsLoading = false;
       }
     }
-  })().catch((err) => {
+  })().catch((err: unknown) => {
     console.error("refreshUserDialogWorlds failed", err);
   });
 }
 
-async function setUserDialogWorldSorting(sortOrder) {
+function setUserDialogWorldSorting(sortOrder: UserSorting) {
   const D = userDialog.value;
   if (D.worldSorting.value === sortOrder.value) {
     return;
@@ -198,7 +223,13 @@ const { selectedKey: userDialogWorldSortingKey, selectByKey: setUserDialogWorldS
   setUserDialogWorldSorting
 );
 
-async function setUserDialogWorldOrder(order) {
+function selectWorldSortingKey(value: unknown) {
+  if (typeof value === "string") {
+    setUserDialogWorldSortingByKey(value);
+  }
+}
+
+function setUserDialogWorldOrder(order: UserSorting) {
   const D = userDialog.value;
   if (D.worldOrder.value === order.value) {
     return;
@@ -212,6 +243,12 @@ const { selectedKey: userDialogWorldOrderKey, selectByKey: setUserDialogWorldOrd
   () => userDialog.value.worldOrder,
   setUserDialogWorldOrder
 );
+
+function selectWorldOrderKey(value: unknown) {
+  if (typeof value === "string") {
+    setUserDialogWorldOrderByKey(value);
+  }
+}
 
 defineExpose({ setUserDialogWorlds, refreshUserDialogWorlds });
 </script>

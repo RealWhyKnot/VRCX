@@ -1,39 +1,48 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, type DOMWrapper } from "@vue/test-utils";
 
-const mocks = vi.hoisted(() => ({
-  makeRef: (value) => ({ value, __v_isRef: true }),
-  feedTable: null,
-  feedTableData: null,
-  feedTableLookup: vi.fn(),
-  pagination: null,
-  filteredRows: [{ id: "r1" }],
-  tablePageSizes: [10, 25, 50],
-  tablePageSize: 25,
-  maxTableSize: 100,
-}));
+type MockRef<T> = { value: T; __v_isRef: true };
+type FeedTableMock = {
+  loading: boolean;
+  vip: boolean;
+  filter: string[];
+  search: string;
+  dateFrom: string;
+  dateTo: string;
+};
+type PaginationMock = { pageIndex: number; pageSize: number };
+type MockRow = { id: unknown };
 
-mocks.feedTable = mocks.makeRef({
-  loading: false,
-  vip: false,
-  filter: [],
-  search: "",
-  dateFrom: "",
-  dateTo: "",
-});
-mocks.feedTableData = mocks.makeRef([]);
-mocks.pagination = mocks.makeRef({
-  pageIndex: 2,
-  pageSize: 10,
+const mocks = vi.hoisted(() => {
+  const makeRef = <T>(value: T): MockRef<T> => ({ value, __v_isRef: true });
+  const filteredRows: MockRow[] = [{ id: "r1" }];
+  return {
+    makeRef,
+    feedTable: makeRef<FeedTableMock>({
+      loading: false,
+      vip: false,
+      filter: [],
+      search: "",
+      dateFrom: "",
+      dateTo: "",
+    }),
+    feedTableData: makeRef<unknown[]>([]),
+    feedTableLookup: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    pagination: makeRef<PaginationMock>({ pageIndex: 2, pageSize: 10 }),
+    filteredRows,
+    tablePageSizes: [10, 25, 50],
+    tablePageSize: 25,
+    maxTableSize: 100,
+  };
 });
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: (store: unknown) => store,
 }));
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
     locale: { value: "en-US" },
   }),
 }));
@@ -165,7 +174,7 @@ vi.mock("lucide-vue-next", () => ({
 
 import Feed from "../../../src/views/Feed/Feed.vue";
 
-function clickButtonByText(wrapper, text) {
+function clickButtonByText(wrapper: { findAll: (selector: string) => DOMWrapper<Element>[] }, text: string) {
   const button = wrapper.findAll("button").find((node) => node.text().includes(text));
   if (!button) {
     throw new Error(`Cannot find button with text: ${text}`);

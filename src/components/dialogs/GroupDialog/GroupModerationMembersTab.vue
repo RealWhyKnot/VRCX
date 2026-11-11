@@ -42,8 +42,8 @@
           <DropdownMenuItem v-for="item in filterOptions" :key="item.name" @click="$emit('filter-change', item)">
             {{ t(item.name) }}
           </DropdownMenuItem>
-          <template v-for="role in groupRef.roles" :key="role.name">
-            <DropdownMenuItem v-if="!role.defaultRole" @click="$emit('filter-change', role)">
+          <template v-for="role in roleFilterOptions" :key="role.name">
+            <DropdownMenuItem @click="$emit('filter-change', role)">
               {{ t(role.name) }}
             </DropdownMenuItem>
           </template>
@@ -76,31 +76,51 @@ import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue
 import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { hasGroupPermission } from "@/shared/utils/group";
-import { createColumns } from "./group-member-moderation-members-columns.tsx";
+import { createColumns, type GroupMembersColumnContext } from "./group-member-moderation-members-columns.tsx";
+import type { GroupFilterOption, GroupSortOption, ModerationRow } from "./group-moderation-types";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
+import type { VrcxGroup } from "../../../types/vrcx";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-const props = defineProps({
-  loading: { type: Boolean, default: false },
-  tableData: { type: Object, required: true },
-  groupRef: { type: Object, default: () => ({}) },
-  memberSortOrder: { type: Object, required: true },
-  memberFilter: { type: Object, required: true },
-  memberSearch: { type: String, default: "" },
-  sortingOptions: { type: Array, required: true },
-  filterOptions: { type: Array, required: true },
-  pageSizes: { type: Array, required: true },
-  columnContext: {
-    type: Object,
-    required: true,
-  },
-  handlePageChange: { type: Function, required: true },
-});
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean;
+    tableData: GroupMemberModerationTable<ModerationRow>;
+    groupRef?: Partial<VrcxGroup>;
+    memberSortOrder: GroupSortOption;
+    memberFilter: GroupFilterOption;
+    memberSearch?: string;
+    sortingOptions: GroupSortOption[];
+    filterOptions: GroupFilterOption[];
+    pageSizes: number[];
+    columnContext: GroupMembersColumnContext;
+    handlePageChange: (page: number) => void;
+  }>(),
+  {
+    loading: false,
+    groupRef: () => ({}),
+    memberSearch: "",
+  }
+);
 
-defineEmits(["refresh", "update:memberSearch", "search", "sort-change", "filter-change", "select-all"]);
+defineEmits<{
+  refresh: [];
+  "update:memberSearch": [value: string];
+  search: [];
+  "sort-change": [item: GroupSortOption];
+  "filter-change": [item: GroupFilterOption];
+  "select-all": [rows: ModerationRow[]];
+}>();
 
 const { t } = useI18n();
 
 const sortFilterDisabled = computed(() => Boolean(props.loading || props.memberSearch.length || !hasGroupPermission(props.groupRef, "group-bans-manage")));
+
+const roleFilterOptions = computed<GroupFilterOption[]>(() =>
+  (props.groupRef.roles ?? []).flatMap((role) =>
+    !role.defaultRole && typeof role.name === "string" && typeof role.id === "string" ? [{ name: role.name, id: role.id }] : []
+  )
+);
 
 const columns = computed(() => createColumns(props.columnContext));
 
@@ -110,8 +130,8 @@ const { table: tanstackTable } = useVrcxVueTable({
     return computed(() => props.tableData.data).value;
   },
   columns,
-  getRowId: (row) => String(row?.userId ?? ""),
-  initialPagination: { pageIndex: props.tableData.pageIndex ?? 0, pageSize: props.tableData.pageSize ?? 15 },
+  getRowId: (row) => String(row.userId),
+  initialPagination: { pageIndex: props.tableData.pageIndex, pageSize: props.tableData.pageSize },
   tableOptions: {
     autoResetPageIndex: false,
   },

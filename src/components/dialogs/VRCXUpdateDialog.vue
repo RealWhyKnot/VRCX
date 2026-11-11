@@ -35,7 +35,7 @@
             <Field>
               <FieldLabel>{{ t("dialog.vrcx_updater.release") }}</FieldLabel>
               <FieldContent>
-                <Select :model-value="VRCXUpdateDialog.release" @update:model-value="(v) => (VRCXUpdateDialog.release = v)">
+                <Select :model-value="VRCXUpdateDialog.release" @update:model-value="handleReleaseChange">
                   <SelectTrigger class="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -91,6 +91,7 @@ import Button from "@/components/ui/button/Button.vue";
 import Progress from "@/components/ui/progress/Progress.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
+import { logFailure } from "../../stores/log-failure";
 
 import Select from "../ui/select/Select.vue";
 import SelectContent from "../ui/select/SelectContent.vue";
@@ -101,16 +102,22 @@ import { useVRCXUpdaterStore } from "../../stores/vrcx-updater";
 
 const VRCXUpdaterStore = useVRCXUpdaterStore();
 
-const { appVersion, branch, checkingForVRCXUpdate, VRCXUpdateDialog, pendingVRCXInstall, updateInProgress, updateProgress } = storeToRefs(VRCXUpdaterStore);
+const { appVersion, branch, VRCXUpdateDialog, pendingVRCXInstall, updateInProgress, updateProgress } = storeToRefs(VRCXUpdaterStore);
 const { installVRCXUpdate, loadBranchVersions, restartVRCX, updateProgressText, cancelUpdate } = VRCXUpdaterStore;
 
 const { t } = useI18n();
 
-const handleBranchChange = (value) => {
-  if (!value || value === branch.value) {
+const handleReleaseChange = (value: unknown) => {
+  if (typeof value === "string") {
+    VRCXUpdateDialog.value.release = value;
+  }
+};
+
+const handleBranchChange = (value: unknown) => {
+  if (typeof value !== "string" || !value || value === branch.value) {
     return;
   }
   branch.value = value;
-  loadBranchVersions();
+  void loadBranchVersions().catch(logFailure("Loading the VRCX update branch versions failed:"));
 };
 </script>

@@ -1,42 +1,62 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import type { FriendLogHistoryRow } from "../../../src/stores/friend-types";
 
-const mocks = vi.hoisted(() => ({
-  makeRef: (value) => ({ value, __v_isRef: true }),
-  hideUnfriends: null,
-  friendLogTable: null,
-  pagination: null,
-  configSetString: vi.fn(),
-  deleteFriendLogHistory: vi.fn(),
-  removeFromArray: vi.fn((arr, row) => {
-    const idx = arr.indexOf(row);
-    if (idx !== -1) {
-      arr.splice(idx, 1);
-    }
-  }),
-}));
+type TableFilterMock = { value: unknown };
 
-mocks.hideUnfriends = mocks.makeRef(false);
-mocks.friendLogTable = mocks.makeRef({
-  loading: false,
-  data: [],
-  filters: [{ value: [] }, { value: "" }, { value: false }],
-});
-mocks.pagination = mocks.makeRef({
-  pageIndex: 3,
-  pageSize: 10,
+type FriendLogTableMock = {
+  loading: boolean;
+  data: FriendLogHistoryRow[];
+  filters: TableFilterMock[];
+};
+
+type PaginationMock = {
+  pageIndex: number;
+  pageSize: number;
+};
+
+type FriendLogVm = {
+  friendLogDisplayData: FriendLogHistoryRow[];
+  deleteFriendLog: (row: FriendLogHistoryRow) => void;
+};
+
+const mocks = vi.hoisted(() => {
+  const makeRef = <T>(value: T) => ({ value, __v_isRef: true });
+  return {
+    hideUnfriends: makeRef(false),
+    friendLogTable: makeRef<FriendLogTableMock>({
+      loading: false,
+      data: [],
+      filters: [{ value: [] }, { value: "" }, { value: false }],
+    }),
+    pagination: makeRef<PaginationMock>({
+      pageIndex: 3,
+      pageSize: 10,
+    }),
+    configSetString: vi.fn<(key: string, value: string) => Promise<void>>(),
+    deleteFriendLogHistory: vi.fn<(row: FriendLogHistoryRow) => void>(),
+    removeFromArray: vi.fn((arr: FriendLogHistoryRow[], row: FriendLogHistoryRow) => {
+      const idx = arr.indexOf(row);
+      if (idx !== -1) {
+        arr.splice(idx, 1);
+      }
+    }),
+  };
 });
 
 vi.mock("pinia", () => ({
-  storeToRefs: (store) => store,
+  storeToRefs: (store: unknown) => store,
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({
-    t: (key) => key,
-    locale: require("vue").ref("en"),
-  }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({
+      t: (key: string) => key,
+      locale: ref("en"),
+    }),
+  };
+});
 
 vi.mock("../../../src/stores/settings/appearance", () => ({
   useAppearanceSettingsStore: () => ({
@@ -62,7 +82,7 @@ vi.mock("../../../src/stores/vrcx", () => ({
 }));
 
 vi.mock("../../../src/lib/table/use-vrcx-vue-table", () => ({
-  useVrcxVueTable: (options) => ({
+  useVrcxVueTable: (options: { data: FriendLogHistoryRow[] }) => ({
     table: {
       getFilteredRowModel: () => ({ rows: options.data }),
     },
@@ -118,21 +138,44 @@ vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
 
 vi.mock("../../../src/services/config", () => ({
   configRepository: {
-    setString: (...args) => mocks.configSetString(...args),
+    setString: (key: string, value: string) => mocks.configSetString(key, value),
   },
 }));
 
 vi.mock("../../../src/services/database", () => ({
   database: {
-    deleteFriendLogHistory: (...args) => mocks.deleteFriendLogHistory(...args),
+    deleteFriendLogHistory: (row: FriendLogHistoryRow) => mocks.deleteFriendLogHistory(row),
   },
 }));
 
 vi.mock("../../../src/shared/utils/base/array", () => ({
-  removeFromArray: (...args) => mocks.removeFromArray(...args),
+  removeFromArray: (arr: FriendLogHistoryRow[], row: FriendLogHistoryRow) => mocks.removeFromArray(arr, row),
 }));
 
 import FriendLog from "../../../src/views/FriendLog/FriendLog.vue";
+
+function makeRow(row: Partial<FriendLogHistoryRow>): FriendLogHistoryRow {
+  return {
+    rowId: null,
+    created_at: null,
+    type: null,
+    userId: null,
+    displayName: null,
+    friendNumber: null,
+    ...row,
+  };
+}
+
+function isFriendLogVm(value: unknown): value is FriendLogVm {
+  return typeof value === "object" && value !== null && "friendLogDisplayData" in value && "deleteFriendLog" in value;
+}
+
+function requireFriendLogVm(value: unknown): FriendLogVm {
+  if (!isFriendLogVm(value)) {
+    throw new Error("FriendLog.vue did not expose its setup state");
+  }
+  return value;
+}
 
 describe("FriendLog.vue", () => {
   beforeEach(() => {
@@ -147,6 +190,7 @@ describe("FriendLog.vue", () => {
       pageSize: 10,
     };
     mocks.configSetString.mockReset();
+    mocks.configSetString.mockResolvedValue(undefined);
     mocks.deleteFriendLogHistory.mockReset();
     mocks.removeFromArray.mockClear();
   });
@@ -155,41 +199,39 @@ describe("FriendLog.vue", () => {
     mocks.hideUnfriends.value = true;
     mount(FriendLog);
 
-    expect(mocks.friendLogTable.value.filters[2].value).toBe(true);
+    expect(mocks.friendLogTable.value.filters[2]?.value).toBe(true);
   });
 
   test("filters and sorts friend log data", () => {
+    const alice = makeRow({
+      rowId: 1,
+      type: "Friend",
+      displayName: "Alice",
+      userId: "usr_alice",
+      created_at: "2026-03-08T00:00:00.000Z",
+    });
     mocks.friendLogTable.value.data = [
-      {
-        rowId: 1,
-        type: "Friend",
-        displayName: "Alice",
-        created_at: "2026-03-08T00:00:00.000Z",
-      },
-      {
+      alice,
+      makeRow({
         rowId: 2,
         type: "Friend",
         displayName: "Bob",
+        userId: "usr_bob",
         created_at: "2026-03-09T00:00:00.000Z",
-      },
-      {
+      }),
+      makeRow({
         rowId: 3,
         type: "Unfriend",
         displayName: "Alice2",
+        userId: "usr_alice2",
         created_at: "2026-03-10T00:00:00.000Z",
-      },
+      }),
     ];
     mocks.friendLogTable.value.filters = [{ value: ["Friend"] }, { value: "ali" }, { value: true }];
     const wrapper = mount(FriendLog);
 
-    expect(wrapper.vm.friendLogDisplayData).toEqual([
-      {
-        rowId: 1,
-        type: "Friend",
-        displayName: "Alice",
-        created_at: "2026-03-08T00:00:00.000Z",
-      },
-    ]);
+    const vm = requireFriendLogVm(wrapper.vm);
+    expect(vm.friendLogDisplayData).toEqual([alice]);
   });
 
   test("updates type filter and persists filter selection", async () => {
@@ -197,19 +239,37 @@ describe("FriendLog.vue", () => {
 
     await wrapper.get('[data-testid="set-type-filter"]').trigger("click");
 
-    expect(mocks.friendLogTable.value.filters[0].value).toEqual(["Friend"]);
+    expect(mocks.friendLogTable.value.filters[0]?.value).toEqual(["Friend"]);
     expect(mocks.configSetString).toHaveBeenCalledWith("VRCX_friendLogTableFilters", JSON.stringify(["Friend"]));
   });
 
-  test("deletes friend log row and writes to database", () => {
-    const row = { rowId: 55 };
+  test("deletes deletable friend log row and writes to database", () => {
+    const row = makeRow({
+      rowId: 55,
+      type: "Friend",
+      userId: "usr_55",
+      created_at: "2026-03-08T00:00:00.000Z",
+    });
     mocks.friendLogTable.value.data = [row];
     const wrapper = mount(FriendLog);
 
-    wrapper.vm.deleteFriendLog(row);
+    const vm = requireFriendLogVm(wrapper.vm);
+    vm.deleteFriendLog(row);
 
     expect(mocks.removeFromArray).toHaveBeenCalledWith(mocks.friendLogTable.value.data, row);
     expect(mocks.deleteFriendLogHistory).toHaveBeenCalledWith(row);
+  });
+
+  test("removes incomplete friend log row without writing to database", () => {
+    const row = makeRow({ rowId: 56 });
+    mocks.friendLogTable.value.data = [row];
+    const wrapper = mount(FriendLog);
+
+    const vm = requireFriendLogVm(wrapper.vm);
+    vm.deleteFriendLog(row);
+
+    expect(mocks.removeFromArray).toHaveBeenCalledWith(mocks.friendLogTable.value.data, row);
+    expect(mocks.deleteFriendLogHistory).not.toHaveBeenCalled();
   });
 
   test("resets page index when page size changes", async () => {

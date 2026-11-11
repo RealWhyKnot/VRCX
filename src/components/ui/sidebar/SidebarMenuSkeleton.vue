@@ -1,18 +1,19 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import Skeleton from "@/components/ui/skeleton/Skeleton.vue";
 import { cn } from "@/lib/utils";
 import { computed } from "vue";
 
-const props = defineProps({
-  showIcon: {
-    type: Boolean,
-    default: false,
-  },
-  class: {
-    type: [String, Array, Object],
-    default: undefined,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    showIcon?: boolean;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    showIcon: false,
+    class: undefined,
+  }
+);
 
 const width = computed(() => {
   return `${Math.floor(Math.random() * 40) + 50}%`;

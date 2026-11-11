@@ -1,28 +1,40 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import { useWorldDialogCommands } from "../../../../src/components/dialogs/WorldDialog/use-world-dialog-commands";
+import type { WorldDialogState } from "../../../../src/stores/world";
+
+const mocks = vi.hoisted(() => ({
+  deleteFavorite: vi.fn(),
+  deleteWorldPersistData: vi.fn(),
+  saveCurrentUser: vi.fn(),
+  saveWorld: vi.fn(),
+  publishWorld: vi.fn(),
+  unpublishWorld: vi.fn(),
+  deleteWorld: vi.fn(),
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("../../../../src/api/favorite", () => ({
   favoriteRequest: {
-    deleteFavorite: vi.fn(),
+    deleteFavorite: mocks.deleteFavorite,
   },
 }));
 vi.mock("../../../../src/api/misc", () => ({
   miscRequest: {
-    deleteWorldPersistData: vi.fn(),
+    deleteWorldPersistData: mocks.deleteWorldPersistData,
   },
 }));
 vi.mock("../../../../src/api/user", () => ({
   userRequest: {
-    saveCurrentUser: vi.fn(),
+    saveCurrentUser: mocks.saveCurrentUser,
   },
 }));
 vi.mock("../../../../src/api/world", () => ({
   worldRequest: {
-    saveWorld: vi.fn(),
-    publishWorld: vi.fn(),
-    unpublishWorld: vi.fn(),
-    deleteWorld: vi.fn(),
+    saveWorld: mocks.saveWorld,
+    publishWorld: mocks.publishWorld,
+    unpublishWorld: mocks.unpublishWorld,
+    deleteWorld: mocks.deleteWorld,
   },
 }));
 
@@ -30,13 +42,13 @@ vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: vi.fn(),
 }));
 vi.mock("../../../../src/shared/utils/url-utils", () => ({
-  replaceVrcPackageUrl: vi.fn((url) => url),
+  replaceVrcPackageUrl: vi.fn((url: string) => url),
 }));
 
 vi.mock("../../../../src/shared/utils/image-upload", () => ({
   handleImageUploadInput: vi.fn(),
   readFileAsBase64: vi.fn(),
-  withUploadTimeout: vi.fn((p) => p),
+  withUploadTimeout: vi.fn((p: unknown) => p),
 }));
 
 vi.mock("../../../../src/coordinators/image-upload-coordinator", () => ({
@@ -48,17 +60,20 @@ vi.mock("../../../../src/coordinators/world-coordinator", () => ({
   removeWorldFromCache: vi.fn(),
 }));
 
-const { favoriteRequest } = await import("../../../../src/api/favorite");
-const { miscRequest } = await import("../../../../src/api/misc");
-const { userRequest } = await import("../../../../src/api/user");
-const { worldRequest } = await import("../../../../src/api/world");
 const { openExternalLink } = await import("../../../../src/shared/utils/app-actions");
 
-function createWorldDialog(overrides = {}) {
-  return ref({
+function unsettled<T>() {
+  return new Promise<T>(() => undefined);
+}
+
+function createWorldDialog(overrides: Partial<WorldDialogState> = {}) {
+  return ref<WorldDialogState>({
     id: "wrld_123",
     visible: true,
     loading: false,
+    activeTab: "Info",
+    lastActiveTab: "Info",
+    memo: "",
     hasPersistData: true,
     isFavorite: false,
     $location: {
@@ -77,13 +92,29 @@ function createWorldDialog(overrides = {}) {
       urlList: ["https://example.com"],
       tags: ["system_approved"],
     },
+    avatarScalingDisabled: false,
+    focusViewDisabled: false,
+    rooms: [],
+    inCache: false,
+    cacheSize: "",
+    cacheLocked: false,
+    cachePath: "",
+    fileAnalysis: {},
+    lastVisit: "",
+    visitCount: 0,
+    timeSpent: 0,
+    isPC: false,
+    isQuest: false,
+    isIos: false,
+    rating: null,
+    listings: [],
     ...overrides,
   });
 }
 
 function createDeps(overrides = {}) {
   return {
-    t: vi.fn((key) => key),
+    t: vi.fn((key: string) => key),
     toast: {
       success: vi.fn(),
       error: vi.fn(),
@@ -97,7 +128,7 @@ function createDeps(overrides = {}) {
     showWorldDialog: vi.fn(),
     showFavoriteDialog: vi.fn(),
     newInstanceSelfInvite: vi.fn(),
-    showPreviousInstancesListDialog: vi.fn(),
+    showPreviousInstancesListDialog: vi.fn().mockResolvedValue(undefined),
     showFullscreenImageDialog: vi.fn(),
     ...overrides,
   };
@@ -196,7 +227,7 @@ describe("useWorldDialogCommands", () => {
 
     test("Share copies world URL", () => {
       Object.defineProperty(navigator, "clipboard", {
-        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        value: { writeText: mocks.writeText },
         writable: true,
         configurable: true,
       });
@@ -205,7 +236,7 @@ describe("useWorldDialogCommands", () => {
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Share");
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
+      expect(mocks.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
     });
 
     test("Change Allowed Domains opens the allowed domains dialog", () => {
@@ -234,79 +265,77 @@ describe("useWorldDialogCommands", () => {
       worldDialogCommand("Delete Favorite");
       await vi.waitFor(() => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
-        expect(favoriteRequest.deleteFavorite).toHaveBeenCalledWith({
+        expect(mocks.deleteFavorite).toHaveBeenCalledWith({
           objectId: "wrld_123",
         });
       });
     });
 
     test("Make Home calls saveCurrentUser with homeLocation", async () => {
-      userRequest.saveCurrentUser.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveCurrentUser).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Make Home");
       await vi.waitFor(() => {
-        expect(userRequest.saveCurrentUser).toHaveBeenCalledWith({
+        expect(mocks.saveCurrentUser).toHaveBeenCalledWith({
           homeLocation: "wrld_123",
         });
       });
     });
 
     test("Reset Home calls saveCurrentUser with empty homeLocation", async () => {
-      userRequest.saveCurrentUser.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveCurrentUser).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Reset Home");
       await vi.waitFor(() => {
-        expect(userRequest.saveCurrentUser).toHaveBeenCalledWith({
+        expect(mocks.saveCurrentUser).toHaveBeenCalledWith({
           homeLocation: "",
         });
       });
     });
 
     test("Publish calls publishWorld", async () => {
-      worldRequest.publishWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.publishWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Publish");
       await vi.waitFor(() => {
-        expect(worldRequest.publishWorld).toHaveBeenCalledWith({
+        expect(mocks.publishWorld).toHaveBeenCalledWith({
           worldId: "wrld_123",
         });
       });
     });
 
     test("Unpublish calls unpublishWorld", async () => {
-      worldRequest.unpublishWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.unpublishWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Unpublish");
       await vi.waitFor(() => {
-        expect(worldRequest.unpublishWorld).toHaveBeenCalledWith({
+        expect(mocks.unpublishWorld).toHaveBeenCalledWith({
           worldId: "wrld_123",
         });
       });
     });
 
     test("Delete Persistent Data calls deleteWorldPersistData", async () => {
-      miscRequest.deleteWorldPersistData.mockResolvedValue({
-        params: { worldId: "wrld_123" },
-      });
+      vi.mocked(mocks.deleteWorldPersistData).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       const { worldDialogCommand } = useWorldDialogCommands(worldDialog, deps);
 
       worldDialogCommand("Delete Persistent Data");
       await vi.waitFor(() => {
-        expect(miscRequest.deleteWorldPersistData).toHaveBeenCalledWith({ worldId: "wrld_123" });
+        expect(mocks.deleteWorldPersistData).toHaveBeenCalledWith({ worldId: "wrld_123" });
       });
     });
 
@@ -320,13 +349,13 @@ describe("useWorldDialogCommands", () => {
       await vi.waitFor(() => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
       });
-      expect(userRequest.saveCurrentUser).not.toHaveBeenCalled();
+      expect(mocks.saveCurrentUser).not.toHaveBeenCalled();
     });
   });
 
   describe("prompt commands", () => {
     test("Rename calls prompt then saveWorld", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({
@@ -337,7 +366,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Rename");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           name: "New Name",
         });
@@ -345,7 +374,7 @@ describe("useWorldDialogCommands", () => {
     });
 
     test("Change Description calls prompt then saveWorld", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({
@@ -356,7 +385,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Change Description");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           description: "New Desc",
         });
@@ -364,7 +393,7 @@ describe("useWorldDialogCommands", () => {
     });
 
     test("Change Capacity calls prompt then saveWorld with number", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({ ok: true, value: "30" });
@@ -372,7 +401,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Change Capacity");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           capacity: 30,
         });
@@ -380,7 +409,7 @@ describe("useWorldDialogCommands", () => {
     });
 
     test("Change Recommended Capacity calls prompt then saveWorld", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({ ok: true, value: "15" });
@@ -388,7 +417,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Change Recommended Capacity");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           recommendedCapacity: 15,
         });
@@ -405,13 +434,13 @@ describe("useWorldDialogCommands", () => {
       await vi.waitFor(() => {
         expect(deps.modalStore.prompt).toHaveBeenCalled();
       });
-      expect(worldRequest.saveWorld).not.toHaveBeenCalled();
+      expect(mocks.saveWorld).not.toHaveBeenCalled();
     });
   });
 
   describe("promptChangeWorldYouTubePreview", () => {
     test("parses YouTube URL with v parameter", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({
@@ -422,7 +451,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Change YouTube Preview");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           previewYoutubeId: "dQw4w9WgXcQ",
         });
@@ -430,7 +459,7 @@ describe("useWorldDialogCommands", () => {
     });
 
     test("uses short id directly", async () => {
-      worldRequest.saveWorld.mockResolvedValue({ ok: true });
+      vi.mocked(mocks.saveWorld).mockReturnValue(unsettled());
       const worldDialog = createWorldDialog();
       const deps = createDeps();
       deps.modalStore.prompt.mockResolvedValue({
@@ -441,7 +470,7 @@ describe("useWorldDialogCommands", () => {
 
       worldDialogCommand("Change YouTube Preview");
       await vi.waitFor(() => {
-        expect(worldRequest.saveWorld).toHaveBeenCalledWith({
+        expect(mocks.saveWorld).toHaveBeenCalledWith({
           id: "wrld_123",
           previewYoutubeId: "dQw4w9WgXcQ",
         });
@@ -452,7 +481,7 @@ describe("useWorldDialogCommands", () => {
   describe("clipboard operations", () => {
     beforeEach(() => {
       Object.defineProperty(navigator, "clipboard", {
-        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        value: { writeText: mocks.writeText },
         writable: true,
         configurable: true,
       });
@@ -465,7 +494,7 @@ describe("useWorldDialogCommands", () => {
 
       copyWorldUrl();
       await vi.waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
+        expect(mocks.writeText).toHaveBeenCalledWith("https://vrchat.com/home/world/wrld_123");
       });
     });
 
@@ -476,7 +505,7 @@ describe("useWorldDialogCommands", () => {
 
       copyWorldName();
       await vi.waitFor(() => {
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Test World");
+        expect(mocks.writeText).toHaveBeenCalledWith("Test World");
       });
     });
   });

@@ -150,7 +150,7 @@
 import { Heart } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
@@ -168,86 +168,61 @@ import SidebarMenu from "@/components/ui/sidebar/SidebarMenu.vue";
 import SidebarMenuButton from "@/components/ui/sidebar/SidebarMenuButton.vue";
 import SidebarMenuItem from "@/components/ui/sidebar/SidebarMenuItem.vue";
 
-defineProps({
-  isCollapsed: {
-    type: Boolean,
-    default: false,
-  },
-  isDarkMode: {
-    type: Boolean,
-    default: false,
-  },
-  hasPendingUpdate: {
-    type: Boolean,
-    default: false,
-  },
-  hasPendingInstall: {
-    type: Boolean,
-    default: false,
-  },
-  version: {
-    type: String,
-    default: "-",
-  },
-  vrcxLogo: {
-    type: String,
-    required: true,
-  },
-  themes: {
-    type: Array,
-    default: () => [],
-  },
-  themeMode: {
-    type: String,
-    default: "system",
-  },
-  tableDensity: {
-    type: String,
-    default: "standard",
-  },
-  themeColors: {
-    type: Array,
-    default: () => [],
-  },
-  currentThemeColor: {
-    type: String,
-    default: "",
-  },
-  isApplyingThemeColor: {
-    type: Boolean,
-    default: false,
-  },
-  themeDisplayName: {
-    type: Function,
-    required: true,
-  },
-  themeColorDisplayName: {
-    type: Function,
-    required: true,
-  },
-});
+import type { NavThemeColor } from "./nav-menu-types";
 
-const emit = defineEmits([
-  "show-changelog",
-  "support-link",
-  "toggle-theme",
-  "show-vrcx-update-dialog",
-  "settings-click",
-  "theme-select",
-  "theme-color-select",
-  "table-density-select",
-  "open-custom-nav",
-  "logout-click",
-  "toggle-nav-collapse",
-  "open-github",
-]);
+withDefaults(
+  defineProps<{
+    isCollapsed?: boolean;
+    isDarkMode?: boolean;
+    hasPendingUpdate?: boolean;
+    hasPendingInstall?: boolean;
+    version?: string;
+    vrcxLogo: string;
+    themes?: string[];
+    themeMode?: string;
+    tableDensity?: string;
+    themeColors?: NavThemeColor[];
+    currentThemeColor?: string;
+    isApplyingThemeColor?: boolean;
+    themeDisplayName: (theme: string) => string;
+    themeColorDisplayName: (theme: NavThemeColor) => string;
+  }>(),
+  {
+    isCollapsed: false,
+    isDarkMode: false,
+    hasPendingUpdate: false,
+    hasPendingInstall: false,
+    version: "-",
+    themes: () => [],
+    themeMode: "system",
+    tableDensity: "standard",
+    themeColors: () => [],
+    currentThemeColor: "",
+    isApplyingThemeColor: false,
+  }
+);
+
+const emit = defineEmits<{
+  "show-changelog": [];
+  "support-link": [id: string];
+  "toggle-theme": [];
+  "show-vrcx-update-dialog": [];
+  "settings-click": [];
+  "theme-select": [theme: string];
+  "theme-color-select": [theme: NavThemeColor];
+  "table-density-select": [density: string];
+  "open-custom-nav": [];
+  "logout-click": [];
+  "toggle-nav-collapse": [];
+  "open-github": [];
+}>();
 const { t } = useI18n();
 
 const router = useRouter();
 const isSettingsRoute = ref(false);
 
 watch(
-  () => router?.currentRoute.value?.name,
+  () => router.currentRoute.value.name,
   (name) => {
     isSettingsRoute.value = name === "settings";
   },

@@ -2,9 +2,9 @@
   <div class="flex h-full flex-col overflow-hidden">
     <div ref="scrollViewportRef" class="flex-1 overflow-y-auto">
       <div v-if="allRows.length" class="relative w-full px-1.5 py-2" :style="virtualContainerStyle">
-        <template v-for="item in virtualItems" :key="item.virtualItem.key">
+        <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
           <div
-            :ref="virtualizer.measureElement"
+            :ref="measureRowElement"
             class="absolute left-0 top-0 w-full px-0.5 box-border"
             :data-index="item.virtualItem.index"
             :style="{ transform: `translateY(${item.virtualItem.start}px)` }"
@@ -47,23 +47,56 @@ import Button from "@/components/ui/button/Button.vue";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { useI18n } from "vue-i18n";
 import { useVirtualizer } from "@tanstack/vue-virtual";
+import type { VirtualItem } from "@tanstack/vue-virtual";
 
 import dayjs from "dayjs";
 
+import type { NotificationEntry } from "../../../stores/notification/types";
+import { logFailure } from "../../../stores/log-failure";
+
 import NotificationItem from "./NotificationItem.vue";
 
-const props = defineProps({
-  notifications: { type: Array, required: true },
-  recentNotifications: { type: Array, default: () => [] },
-});
+type NotificationRow = {
+  type: "notification";
+  key: string;
+  notification: NotificationEntry;
+  isUnseen: boolean;
+};
 
-defineEmits(["show-invite-response", "show-invite-request-response", "navigate-to-table"]);
+type SectionHeaderRow = {
+  type: "section-header";
+  key: string;
+  label: string;
+};
+
+type ListRow = NotificationRow | SectionHeaderRow;
+
+type VirtualListItem = {
+  virtualItem: VirtualItem;
+  row: ListRow;
+};
+
+const props = withDefaults(
+  defineProps<{
+    notifications: NotificationEntry[];
+    recentNotifications?: NotificationEntry[];
+  }>(),
+  {
+    recentNotifications: () => [],
+  }
+);
+
+defineEmits<{
+  "show-invite-response": [notification: NotificationEntry];
+  "show-invite-request-response": [notification: NotificationEntry];
+  "navigate-to-table": [];
+}>();
 
 const { t } = useI18n();
-const scrollViewportRef = ref(null);
+const scrollViewportRef = ref<HTMLDivElement | null>(null);
 
-function getTs(n) {
-  const raw = n?.created_at ?? n?.createdAt;
+function getTs(n: { created_at?: string | undefined; createdAt?: string | undefined }) {
+  const raw = n.created_at ?? n.createdAt;
   const ts = dayjs(raw).valueOf();
   return Number.isFinite(ts) ? ts : 0;
 }
@@ -72,12 +105,12 @@ const sortedUnseenNotifications = computed(() => [...props.notifications].sort((
 
 const sortedRecentNotifications = computed(() => [...props.recentNotifications].sort((a, b) => getTs(b) - getTs(a)));
 
-const allRows = computed(() => {
-  const rows = [];
+const allRows = computed<ListRow[]>(() => {
+  const rows: ListRow[] = [];
   for (const n of sortedUnseenNotifications.value) {
     rows.push({
       type: "notification",
-      key: `unseen:${n.id}`,
+      key: `unseen:${String(n.id)}`,
       notification: n,
       isUnseen: true,
     });
@@ -91,7 +124,7 @@ const allRows = computed(() => {
     for (const n of sortedRecentNotifications.value) {
       rows.push({
         type: "notification",
-        key: `recent:${n.id}`,
+        key: `recent:${String(n.id)}`,
         notification: n,
         isUnseen: false,
       });
@@ -104,31 +137,40 @@ const virtualizer = useVirtualizer(
   computed(() => ({
     count: allRows.value.length,
     getScrollElement: () => scrollViewportRef.value,
-    estimateSize: (index) => {
+    estimateSize: (index: number) => {
       const row = allRows.value[index];
       return row?.type === "section-header" ? 32 : 56;
     },
-    getItemKey: (index) => allRows.value[index]?.key ?? index,
+    getItemKey: (index: number) => allRows.value[index]?.key ?? index,
     overscan: 8,
   }))
 );
 
-const virtualItems = computed(() => {
-  const items = virtualizer.value?.getVirtualItems?.() ?? [];
-  return items.map((virtualItem) => ({
-    virtualItem,
-    row: allRows.value[virtualItem.index],
-  }));
-});
+function measureRowElement(node: unknown) {
+  if (node === null || node instanceof Element) {
+    virtualizer.value.measureElement(node);
+  }
+}
+
+const virtualItems = computed<VirtualListItem[]>(() =>
+  virtualizer.value.getVirtualItems().flatMap((virtualItem) => {
+    const row = allRows.value[virtualItem.index];
+    return row ? [{ virtualItem, row }] : [];
+  })
+);
 
 const virtualContainerStyle = computed(() => ({
-  height: `${virtualizer.value?.getTotalSize?.() ?? 0}px`,
+  height: `${virtualizer.value.getTotalSize()}px`,
   width: "100%",
 }));
 
+function remeasureVirtualRows() {
+  void nextTick(() => {
+    virtualizer.value.measure();
+  }).catch(logFailure("measure notification rows"));
+}
+
 watch(allRows, () => {
-  nextTick(() => {
-    virtualizer.value?.measure?.();
-  });
+  remeasureVirtualRows();
 });
 </script>

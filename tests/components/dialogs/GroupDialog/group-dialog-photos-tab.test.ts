@@ -6,11 +6,11 @@ vi.mock("vue-i18n", async () => {
   const vue = await import("vue");
   return {
     useI18n: () => ({
-      t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+      t: (key: string, params?: Record<string, unknown>) => (params ? `${key}:${JSON.stringify(params)}` : key),
       locale: vue.ref("en"),
     }),
     createI18n: () => ({
-      global: { t: (key) => key, locale: vue.ref("en") },
+      global: { t: (key: string) => key, locale: vue.ref("en") },
       install: vi.fn(),
     }),
   };
@@ -34,7 +34,7 @@ vi.mock("../../../../src/plugins/router", async () => {
 vi.mock("vue-router", async (importOriginal) => {
   const vue = await import("vue");
 
-  const actual = await importOriginal();
+  const actual = await importOriginal<Record<string, unknown>>();
   const { ref } = vue;
   return {
     ...actual,
@@ -60,13 +60,13 @@ vi.mock("../../../../src/services/database", () => ({
 vi.mock("../../../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
+    getString: vi.fn((_k: string, d?: string) => d ?? "{}"),
     setString: vi.fn().mockResolvedValue(undefined),
-    getBool: vi.fn().mockImplementation((_k, d) => d ?? false),
+    getBool: vi.fn((_k: string, isDefault?: boolean) => isDefault ?? false),
     setBool: vi.fn().mockResolvedValue(undefined),
-    getInt: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getInt: vi.fn((_k: string, d?: number) => d ?? 0),
     setInt: vi.fn().mockResolvedValue(undefined),
-    getFloat: vi.fn().mockImplementation((_k, d) => d ?? 0),
+    getFloat: vi.fn((_k: string, d?: number) => d ?? 0),
     setFloat: vi.fn().mockResolvedValue(undefined),
     getObject: vi.fn().mockReturnValue(null),
     setObject: vi.fn().mockResolvedValue(undefined),

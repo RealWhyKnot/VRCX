@@ -149,7 +149,7 @@
               <span>{{ t("nav_tooltip.moderation") }}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent side="right" align="start" class="w-56">
-              <DropdownMenuItem :disabled="userDialog.ref.$isModerator" @click="onCommand('Report User')">
+              <DropdownMenuItem :disabled="userDialog.ref.$isModerator === true" @click="onCommand('Report User')">
                 <Flag class="size-4" />
                 {{ t("dialog.user.actions.report_user") }}
               </DropdownMenuItem>
@@ -158,7 +158,7 @@
                 <CheckCircle class="size-4" />
                 {{ t("dialog.user.actions.moderation_unblock") }}
               </DropdownMenuItem>
-              <DropdownMenuItem v-else :disabled="userDialog.ref.$isModerator" @click="onCommand('Moderation Block')">
+              <DropdownMenuItem v-else :disabled="userDialog.ref.$isModerator === true" @click="onCommand('Moderation Block')">
                 <XCircle class="size-4" />
                 {{ t("dialog.user.actions.moderation_block") }}
               </DropdownMenuItem>
@@ -166,7 +166,7 @@
                 <Mic class="size-4" />
                 {{ t("dialog.user.actions.moderation_unmute") }}
               </DropdownMenuItem>
-              <DropdownMenuItem v-else :disabled="userDialog.ref.$isModerator" @click="onCommand('Moderation Mute')">
+              <DropdownMenuItem v-else :disabled="userDialog.ref.$isModerator === true" @click="onCommand('Moderation Mute')">
                 <VolumeX class="size-4" />
                 {{ t("dialog.user.actions.moderation_mute") }}
               </DropdownMenuItem>
@@ -280,12 +280,9 @@ import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { isActionRecent } from "../../../composables/use-recent-actions";
 import { invertHexColor } from "@/shared/utils/user";
 
-const props = defineProps({
-  userDialogCommand: {
-    type: Function,
-    required: true,
-  },
-});
+const props = defineProps<{
+  userDialogCommand: (command: string) => void;
+}>();
 
 const { t } = useI18n();
 
@@ -299,7 +296,7 @@ const hasRisk = computed(
   () => userDialog.value.isBlock || userDialog.value.isMute || userDialog.value.isMuteChat || userDialog.value.isInteractOff || userDialog.value.isHideAvatar
 );
 
-function onCommand(command) {
+function onCommand(command: string) {
   props.userDialogCommand(command);
 }
 </script>

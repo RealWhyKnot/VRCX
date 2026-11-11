@@ -407,7 +407,7 @@ export const useGroupStore = defineStore("Group", () => {
     }
   }
 
-  function showEditGroupDialog(group: GroupEditSource) {
+  function showEditGroupDialog(group: Partial<GroupEditSource>) {
     resetGroupEditDialog();
     groupEditDialog.value = {
       visible: true,
@@ -468,7 +468,7 @@ export const useGroupStore = defineStore("Group", () => {
     };
   }
 
-  function showCreateGroupEventDialog(group: VrcxGroup) {
+  function showCreateGroupEventDialog(group: Partial<VrcxGroup>) {
     resetGroupEventEditDialog();
     groupEventEditDialog.value = {
       ...groupEventEditDialog.value,
@@ -478,7 +478,7 @@ export const useGroupStore = defineStore("Group", () => {
     };
   }
 
-  function showEditGroupEventDialog(event: Json<CalendarEvent>, group: VrcxGroup) {
+  function showEditGroupEventDialog(event: Json<CalendarEvent>, group: Partial<VrcxGroup>) {
     resetGroupEventEditDialog();
     groupEventEditDialog.value = {
       visible: true,

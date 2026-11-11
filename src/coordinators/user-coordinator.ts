@@ -715,7 +715,7 @@ export async function refreshUserDialogAvatars(fileId?: string) {
   }
 }
 
-export async function lookupUser(ref: { userId?: string; displayName?: string }) {
+export async function lookupUser(ref: { userId?: string | undefined; displayName?: string | undefined }) {
   const userStore = useUserStore();
   const searchStore = useSearchStore();
 

@@ -14,7 +14,7 @@ import { watchState } from "../services/watch-state";
 
 type AvatarGalleryFile = Json<File> & { order?: number };
 
-type AvatarGalleryImage = {
+export type AvatarGalleryImage = {
   id: string;
   url: string;
 };

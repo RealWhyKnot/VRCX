@@ -1,6 +1,6 @@
 <template>
   <div class="rounded-b-lg rounded-t-[15px] bg-(--profile-card) overflow-hidden flex flex-col relative">
-    <ProfileEffect :profile-effect="userDialog.ref.profileEffect" class="z-1" />
+    <ProfileEffect :profile-effect="userDialog.ref.profileEffect ?? ''" class="z-1" />
     <div class="relative aspect-17/6">
       <div
         v-if="userDialog.loading || profileImageError || userDialog.ref.bannerType === 'color' || !userDialog.ref.bannerUrl"
@@ -45,15 +45,15 @@
             class="w-full h-full object-cover cursor-pointer"
             :src="userDialog.publicProfileRef?.iconUrl"
             loading="lazy"
-            @click.stop="showFullscreenImageDialog(userDialog.publicProfileRef?.iconUrl)"
+            @click.stop="showFullscreenImageDialog(userDialog.publicProfileRef?.iconUrl ?? '')"
             @error="userIconError = true"
           />
         </div>
-        <IconFrame :icon-frame="userDialog.ref.iconFrame" class="z-2" />
+        <IconFrame :icon-frame="userDialog.ref.iconFrame ?? ''" class="z-2" />
       </div>
     </div>
 
-    <NameplateEffect :nameplate-effect="userDialog.ref.nameplateEffect" />
+    <NameplateEffect :nameplate-effect="userDialog.ref.nameplateEffect ?? ''" />
 
     <div class="relative isolate flex flex-col gap-2 px-3 pb-3 pt-15 z-40 pointer-events-none *:pointer-events-auto">
       <div class="flex gap-1.5 items-center">
@@ -63,7 +63,7 @@
               <TooltipWrapper side="bottom">
                 <template #content>
                   <span>{{ t("dialog.user.previous_display_names") }}</span>
-                  <div v-for="data in userDialog.previousDisplayNames" :key="data.displayName" placement="top">
+                  <div v-for="data in userDialog.previousDisplayNames" :key="data.displayName ?? undefined" placement="top">
                     <span>{{ data.displayName }}</span>
                     <span v-if="data.updated_at"> &horbar; {{ formatDateFilter(data.updated_at, "long") }}</span>
                   </div>
@@ -74,7 +74,7 @@
             <span
               class="font-bold cursor-pointer flex flex-wrap"
               :title="userDialog.ref.displayName || userDialog.id"
-              @click="copyUserDisplayName(userDialog.ref.displayName)"
+              @click="copyUserDisplayName(userDialog.ref.displayName || userDialog.id)"
               v-text="userDialog.ref.displayName || userDialog.id"
             ></span>
             <TooltipWrapper v-if="userDialog.publicProfileRef?.isEconomyCreator" side="top" :content="t('dialog.user.info.economy_creator')">
@@ -254,12 +254,12 @@
                   <template v-if="userDialog.id === currentUser.id">
                     <br />
                     <label class="inline-flex items-center gap-2" style="margin-top: 6px">
-                      <Checkbox v-model="badge.hidden" @update:model-value="toggleBadgeVisibility(badge)" />
+                      <Checkbox :model-value="badge.hidden === true" @update:model-value="setBadgeHidden(badge, $event)" />
                       <span>{{ t("dialog.user.badges.hidden") }}</span>
                     </label>
                     <br />
                     <label class="inline-flex items-center gap-2">
-                      <Checkbox v-model="badge.showcased" @update:model-value="toggleBadgeShowcased(badge)" />
+                      <Checkbox :model-value="badge.showcased === true" @update:model-value="setBadgeShowcased(badge, $event)" />
                       <span>{{ t("dialog.user.badges.showcased") }}</span>
                     </label>
                   </template>
@@ -412,7 +412,6 @@ import { useI18n } from "vue-i18n";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
-import { convertFileUrlToImageUrl } from "../../../shared/utils/common";
 import { copyToClipboard, openDiscordProfile } from "../../../shared/utils/app-actions";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { languageClass } from "../../../shared/utils/user";
@@ -433,28 +432,19 @@ import UserActionDropdown from "./UserActionDropdown.vue";
 import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { getAvatarName } from "@/coordinators/avatar-coordinator";
 
-const props = defineProps({
-  getUserStateText: {
-    type: Function,
-    required: true,
-  },
-  copyUserDisplayName: {
-    type: Function,
-    required: true,
-  },
-  toggleBadgeVisibility: {
-    type: Function,
-    required: true,
-  },
-  toggleBadgeShowcased: {
-    type: Function,
-    required: true,
-  },
-  userDialogCommand: {
-    type: Function,
-    required: true,
-  },
-});
+type UserDialogBadge = {
+  badgeId: string;
+  hidden?: boolean | null | undefined;
+  showcased: boolean;
+};
+
+const props = defineProps<{
+  getUserStateText: (user: { state?: string; status?: string }) => string;
+  copyUserDisplayName: (displayName: string) => void;
+  toggleBadgeVisibility: (badge: UserDialogBadge) => Promise<void>;
+  toggleBadgeShowcased: (badge: UserDialogBadge) => Promise<void>;
+  userDialogCommand: (command: string) => void;
+}>();
 
 const { t } = useI18n();
 
@@ -481,7 +471,7 @@ watch(
   async (iconUrl) => {
     hasAvatarSet.value = false;
 
-    const avatarInfo = await getAvatarName(iconUrl);
+    const avatarInfo = await getAvatarName(iconUrl ?? "");
     if (iconUrl === userDialog.value.publicProfileRef?.iconUrl) {
       hasAvatarSet.value = Boolean(avatarInfo.ownerId);
     }
@@ -502,4 +492,18 @@ const copyUserDisplayName = props.copyUserDisplayName;
 const toggleBadgeVisibility = props.toggleBadgeVisibility;
 const toggleBadgeShowcased = props.toggleBadgeShowcased;
 const userDialogCommand = props.userDialogCommand;
+
+function setBadgeHidden(badge: UserDialogBadge, value: unknown) {
+  badge.hidden = value === true;
+  toggleBadgeVisibility(badge).catch((err: unknown) => {
+    console.error(err);
+  });
+}
+
+function setBadgeShowcased(badge: UserDialogBadge, value: unknown) {
+  badge.showcased = value === true;
+  toggleBadgeShowcased(badge).catch((err: unknown) => {
+    console.error(err);
+  });
+}
 </script>

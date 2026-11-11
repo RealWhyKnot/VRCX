@@ -1,19 +1,33 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
+import type { PrimitiveProps } from "reka-ui";
 import { Primitive } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { computed } from "vue";
 
 import { buttonVariants } from ".";
 
-const props = defineProps({
-  variant: { type: null, required: false },
-  size: { type: null, required: false },
-  class: { type: null, required: false },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false, default: "button" },
-  ariaLabel: { type: String, required: false },
-});
+defineOptions({ name: "UiButton" });
+
+const props = withDefaults(
+  defineProps<{
+    variant?: VariantProps<typeof buttonVariants>["variant"] | undefined;
+    size?: VariantProps<typeof buttonVariants>["size"] | undefined;
+    class?: ClassValue | undefined;
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    ariaLabel?: string | undefined;
+  }>(),
+  {
+    variant: undefined,
+    size: undefined,
+    class: undefined,
+    as: "button",
+    ariaLabel: undefined,
+  }
+);
 
 const isNativeButton = computed(() => props.as === "button" && !props.asChild);
 

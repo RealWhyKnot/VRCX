@@ -20,13 +20,13 @@ describe("sanitizeNotificationJson", () => {
   it("should apply replaceBioSymbols to message", () => {
     const json = { message: "hello？ world" };
     const result = sanitizeNotificationJson(json);
-    expect(result.message).toContain("?");
+    expect(result["message"]).toContain("?");
   });
 
   it("should apply replaceBioSymbols to title", () => {
     const json = { title: "hello？ world" };
     const result = sanitizeNotificationJson(json);
-    expect(result.title).toContain("?");
+    expect(result["title"]).toContain("?");
   });
 
   it("should not touch other fields", () => {
@@ -164,6 +164,7 @@ describe("applyBoopLegacyHandling", () => {
       title: "Hello",
       message: "",
       imageUrl: "",
+      details: {},
     };
     applyBoopLegacyHandling(ref, "https://api.example.com");
     expect(ref.title).toBe("Hello");
@@ -176,6 +177,7 @@ describe("applyBoopLegacyHandling", () => {
       title: "",
       message: "existing",
       imageUrl: "",
+      details: {},
     };
     applyBoopLegacyHandling(ref, "https://api.example.com");
     expect(ref.message).toBe("existing");

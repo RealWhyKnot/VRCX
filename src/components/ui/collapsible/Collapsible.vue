@@ -1,17 +1,15 @@
 <script setup lang="ts">
+import type { CollapsibleRootProps } from "reka-ui";
 import { CollapsibleRoot, useForwardPropsEmits } from "reka-ui";
+import type { CollapsibleRootEmits } from "reka-ui";
 
-const props = defineProps({
-  defaultOpen: { type: Boolean, required: false },
-  open: { type: Boolean, required: false },
-  disabled: { type: Boolean, required: false },
-  unmountOnHide: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
-const emits = defineEmits(["update:open"]);
+defineOptions({ name: "UiCollapsible" });
 
-const forwarded = useForwardPropsEmits(props, emits);
+const props = defineProps<CollapsibleRootProps>();
+const delegatedProps: Record<string, unknown> = props;
+const emits = defineEmits<CollapsibleRootEmits>();
+
+const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 
 <template>

@@ -5,32 +5,49 @@ import { usePreferredReducedMotion, useResizeObserver } from "@vueuse/core";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 import Button from "@/components/ui/button/Button.vue";
+import { logFailure } from "@/stores/log-failure";
 
-const props = defineProps({
-  modelValue: String,
-  defaultValue: String,
-  items: {
-    type: Array,
-    required: true,
-    validator: (value) =>
-      Array.isArray(value) &&
-      value.every((item) => item && (typeof item.value === "string" || typeof item.value === "number") && typeof item.label === "string"),
-  },
-  ariaLabel: { type: String, default: "" },
+defineOptions({ name: "UiTabsUnderline" });
 
-  variant: { type: String, default: "fit" },
-  unmountOnHide: { type: Boolean, default: false },
-  fill: { type: Boolean, default: false },
-  sticky: { type: Boolean, default: false },
-  activeColor: { type: String, default: "" },
-  background: { type: Boolean, default: false },
-});
+type TabsUnderlineItem = {
+  value: string | number;
+  label: string;
+  disabled?: boolean;
+};
 
-const emit = defineEmits(["update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | null | undefined;
+    defaultValue?: string | null | undefined;
+    items: TabsUnderlineItem[];
+    ariaLabel?: string;
+    variant?: string;
+    unmountOnHide?: boolean;
+    fill?: boolean;
+    sticky?: boolean;
+    activeColor?: string;
+    background?: boolean;
+  }>(),
+  {
+    modelValue: undefined,
+    defaultValue: undefined,
+    ariaLabel: "",
+    variant: "fit",
+    unmountOnHide: false,
+    fill: false,
+    sticky: false,
+    activeColor: "",
+    background: false,
+  }
+);
+
+const emit = defineEmits<{
+  "update:modelValue": [value: string | number];
+}>();
 const { t } = useI18n();
-const header = ref(null);
-const viewport = ref(null);
-const content = ref(null);
+const header = ref<HTMLDivElement | null>(null);
+const viewport = ref<HTMLDivElement | null>(null);
+const content = ref<HTMLDivElement | null>(null);
 const hasOverflow = ref(false);
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
@@ -41,12 +58,12 @@ const { modelValue, defaultValue, items, ariaLabel, variant, unmountOnHide, fill
 const itemsList = computed(() => (Array.isArray(items.value) ? items.value : []));
 
 const resolvedDefault = computed(() => {
-  return defaultValue.value ?? itemsList.value?.[0]?.value;
+  return defaultValue.value ?? itemsList.value[0]?.value;
 });
 
-const isValueValid = (value) => itemsList.value.some((item) => item?.value === value);
+const isValueValid = (value: string | number | null | undefined) => itemsList.value.some((item) => item.value === value);
 
-const innerValue = ref(isValueValid(modelValue.value) ? modelValue.value : resolvedDefault.value);
+const innerValue = ref<string | number | null | undefined>(isValueValid(modelValue.value) ? modelValue.value : resolvedDefault.value);
 
 watch(modelValue, (v) => {
   if (isValueValid(v)) {
@@ -60,21 +77,29 @@ watch([itemsList, defaultValue], () => {
     return;
   }
 
-  if (modelValue.value !== undefined && modelValue.value !== null && !isValueValid(modelValue.value)) {
+  if (modelValue.value != null && !isValueValid(modelValue.value)) {
     innerValue.value = resolvedDefault.value;
   }
 });
 
-function onValueChange(v) {
-  innerValue.value = v;
-  emit("update:modelValue", v);
+const rootProps = computed(() => ({
+  ...(innerValue.value == null ? {} : { modelValue: innerValue.value }),
+  ...(resolvedDefault.value == null ? {} : { defaultValue: resolvedDefault.value }),
+  unmountOnHide: unmountOnHide.value,
+}));
+
+function onValueChange(value: string | number) {
+  innerValue.value = value;
+  emit("update:modelValue", value);
 }
 
 function updateOverflow() {
   if (!header.value || !viewport.value || !content.value) return;
 
   const removedPadding =
-    background.value && hasOverflow.value ? parseFloat(getComputedStyle(document.documentElement).fontSize) * (variant.value === "pill" ? 0.25 : 0.5) : 0;
+    background.value && hasOverflow.value
+      ? Number(getComputedStyle(document.documentElement).fontSize.replace("px", "")) * (variant.value === "pill" ? 0.25 : 0.5)
+      : 0;
 
   hasOverflow.value = header.value.clientWidth > 0 && content.value.scrollWidth + removedPadding > header.value.clientWidth + scrollTolerance;
   const { scrollLeft, scrollWidth, clientWidth } = viewport.value;
@@ -82,7 +107,7 @@ function updateOverflow() {
   canScrollRight.value = scrollWidth - clientWidth - scrollLeft > scrollTolerance;
 }
 
-function scrollTabs(direction) {
+function scrollTabs(direction: number) {
   const element = viewport.value;
   if (!element) return;
 
@@ -93,7 +118,7 @@ function scrollTabs(direction) {
   });
 }
 
-function revealTab(tab) {
+function revealTab(tab: Element | null | undefined) {
   const element = viewport.value;
   if (!element || !tab || element.clientWidth === 0) return;
 
@@ -115,10 +140,10 @@ function revealTab(tab) {
 }
 
 function revealActiveTab() {
-  revealTab(content.value?.querySelector('[role="tab"][data-state="active"]'));
+  revealTab(content.value?.querySelector<HTMLElement>('[role="tab"][data-state="active"]'));
 }
 
-function onTabFocus(event) {
+function onTabFocus(event: FocusEvent) {
   if (event.target instanceof HTMLElement && event.target.matches('[role="tab"]')) {
     revealTab(event.target);
   }
@@ -126,15 +151,21 @@ function onTabFocus(event) {
 
 useResizeObserver([header, content], () => {
   updateOverflow();
-  nextTick(revealActiveTab);
+  void nextTick(revealActiveTab).catch(logFailure("Failed to reveal active tab:"));
 });
 useResizeObserver(viewport, updateOverflow);
 onMounted(() => {
   updateOverflow();
-  nextTick(revealActiveTab);
+  void nextTick(revealActiveTab).catch(logFailure("Failed to reveal active tab:"));
 });
 onUpdated(updateOverflow);
-watch([innerValue, itemsList, hasOverflow], () => nextTick(revealActiveTab), { flush: "post" });
+watch(
+  [innerValue, itemsList, hasOverflow],
+  () => {
+    void nextTick(revealActiveTab).catch(logFailure("Failed to reveal active tab:"));
+  },
+  { flush: "post" }
+);
 
 const triggerStyle = computed(() => {
   if (!activeColor.value) {
@@ -173,13 +204,7 @@ const headerClass = computed(() => {
 </script>
 
 <template>
-  <TabsRoot
-    :model-value="innerValue"
-    :default-value="resolvedDefault"
-    :class="['w-full min-w-0', fill ? 'flex min-h-0 flex-col' : '']"
-    :unmount-on-hide="unmountOnHide"
-    @update:model-value="onValueChange"
-  >
+  <TabsRoot v-bind="rootProps" :class="['w-full min-w-0', fill ? 'flex min-h-0 flex-col' : '']" @update:model-value="onValueChange">
     <div ref="header" :class="headerClass">
       <Button
         v-if="hasOverflow"
@@ -216,7 +241,7 @@ const headerClass = computed(() => {
               v-for="it in itemsList"
               :key="it.value"
               :value="it.value"
-              :disabled="it.disabled"
+              :disabled="it.disabled ?? false"
               :class="triggerClass"
               :style="innerValue === it.value ? triggerStyle : undefined"
             >

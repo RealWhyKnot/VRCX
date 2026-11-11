@@ -206,7 +206,7 @@
           </template>
           <span class="flex items-center gap-0.5">
             <MapPin class="h-4 w-4" />
-            <Timer :epoch="lastJoin" />
+            <Timer :epoch="lastJoin ?? 0" />
           </span>
         </TooltipWrapper>
       </span>
@@ -320,6 +320,8 @@ import {
   UserPlus2,
 } from "lucide-vue-next";
 import { computed, reactive, ref, watch } from "vue";
+import type { CSSProperties } from "vue";
+import type { ClassValue } from "clsx";
 import { useIntervalFn } from "@vueuse/core";
 import Button from "@/components/ui/button/Button.vue";
 import Popover from "@/components/ui/popover/Popover.vue";
@@ -332,8 +334,10 @@ import { cn } from "@/lib/utils";
 
 import { useGroupStore } from "../stores/group";
 import { useInstanceStore } from "../stores/instance";
+import type { RoomRef } from "../stores/instance-types";
 import { useInviteStore } from "../stores/invite";
 import { useLaunchStore } from "../stores/launch";
+import { logFailure } from "../stores/log-failure";
 import { useLocationStore } from "../stores/location";
 import { useModalStore } from "../stores/modal";
 import { useUserStore } from "../stores/user";
@@ -341,7 +345,6 @@ import { formatSeconds } from "../shared/utils/base/format";
 import { hasGroupPermission } from "../shared/utils/group";
 import { languageClass } from "../shared/utils/user";
 import { parseLocation } from "../shared/utils/location-parser";
-import { replaceBioSymbols } from "../shared/utils/base/string";
 import { instanceCategoryIcons } from "../shared/constants/instance";
 import { useInviteChecks } from "../composables/use-invite-checks";
 import { instanceRequest } from "../api/instance";
@@ -350,6 +353,7 @@ import { queryRequest } from "../api/query-request";
 import InstanceAnnouncementDialog from "./dialogs/InstanceAnnouncementDialog.vue";
 import InstanceCalendarLinkDialog from "./dialogs/InstanceCalendarLinkDialog.vue";
 import GroupCalendarEventDetails from "../views/Tools/components/GroupCalendarEventDetails.vue";
+import Timer from "./Timer.vue";
 
 defineOptions({
   inheritAttrs: false,
@@ -370,98 +374,60 @@ const { canOpenInstanceInGame } = storeToRefs(inviteStore);
 const { isOpeningInstance } = storeToRefs(launchStore);
 const { checkCanInviteSelf } = useInviteChecks();
 
-const props = defineProps({
-  location: {
-    type: String,
-    default: "",
-  },
-  launchLocation: {
-    type: String,
-    default: "",
-  },
-  inviteLocation: {
-    type: String,
-    default: "",
-  },
-  lastJoinLocation: {
-    type: String,
-    default: "",
-  },
-  instanceLocation: {
-    type: String,
-    default: "",
-  },
-  shortname: {
-    type: String,
-    default: "",
-  },
-  instance: {
-    type: Object,
-    default: null,
-  },
-  friendcount: {
-    type: Number,
-    default: undefined,
-  },
-  currentlocation: {
-    type: String,
-    default: "",
-  },
-  showLaunch: {
-    type: Boolean,
-    default: true,
-  },
-  showInvite: {
-    type: Boolean,
-    default: true,
-  },
-  showRefresh: {
-    type: Boolean,
-    default: true,
-  },
-  showHistory: {
-    type: Boolean,
-    default: false,
-  },
-  showLastJoin: {
-    type: Boolean,
-    default: true,
-  },
-  showInstanceInfo: {
-    type: Boolean,
-    default: true,
-  },
-  showButtons: {
-    type: Boolean,
-    default: true,
-  },
-  refreshTooltip: {
-    type: String,
-    default: "",
-  },
-  historyTooltip: {
-    type: String,
-    default: "",
-  },
-  onRefresh: {
-    type: Function,
-    default: null,
-  },
-  onHistory: {
-    type: Function,
-    default: null,
-  },
-  buttonStyle: {
-    type: Object,
-    default: () => ({}),
-  },
-  class: { type: null, required: false },
+type InstanceActionBarProps = {
+  location?: string;
+  launchLocation?: string;
+  inviteLocation?: string;
+  lastJoinLocation?: string;
+  instanceLocation?: string;
+  shortname?: string;
+  instance?: RoomRef | null;
+  friendcount?: number | undefined;
+  currentlocation?: string;
+  showLaunch?: boolean;
+  showInvite?: boolean;
+  showRefresh?: boolean;
+  showHistory?: boolean;
+  showLastJoin?: boolean;
+  showInstanceInfo?: boolean;
+  showButtons?: boolean;
+  refreshTooltip?: string;
+  historyTooltip?: string;
+  onRefresh?: (() => void) | null;
+  onHistory?: (() => void) | null;
+  buttonStyle?: CSSProperties;
+  class?: ClassValue | undefined;
+};
+
+const props = withDefaults(defineProps<InstanceActionBarProps>(), {
+  location: "",
+  launchLocation: "",
+  inviteLocation: "",
+  lastJoinLocation: "",
+  instanceLocation: "",
+  shortname: "",
+  instance: null,
+  friendcount: undefined,
+  currentlocation: "",
+  class: undefined,
+  showLaunch: true,
+  showInvite: true,
+  showRefresh: true,
+  showHistory: false,
+  showLastJoin: true,
+  showInstanceInfo: true,
+  showButtons: true,
+  refreshTooltip: "",
+  historyTooltip: "",
+  onRefresh: null,
+  onHistory: null,
+  buttonStyle: () => ({}),
 });
 
-const resolvedLaunchLocation = computed(() => props.launchLocation || props.location);
-const resolvedInviteLocation = computed(() => props.inviteLocation || props.location);
-const resolvedLastJoinLocation = computed(() => props.lastJoinLocation || props.location);
-const resolvedInstanceLocation = computed(() => props.instanceLocation || props.location);
+const resolvedLaunchLocation = computed(() => (props.launchLocation !== "" ? props.launchLocation : props.location));
+const resolvedInviteLocation = computed(() => (props.inviteLocation !== "" ? props.inviteLocation : props.location));
+const resolvedLastJoinLocation = computed(() => (props.lastJoinLocation !== "" ? props.lastJoinLocation : props.location));
+const resolvedInstanceLocation = computed(() => (props.instanceLocation !== "" ? props.instanceLocation : props.location));
 
 const showLaunchButton = computed(() => props.showLaunch && checkCanInviteSelf(resolvedLaunchLocation.value));
 const showInviteYourself = computed(() => props.showInvite && checkCanInviteSelf(resolvedInviteLocation.value));
@@ -469,24 +435,24 @@ const showInviteYourself = computed(() => props.showInvite && checkCanInviteSelf
 const showRefreshButton = computed(() => props.showRefresh && typeof props.onRefresh === "function");
 const showHistoryButton = computed(() => props.showHistory && typeof props.onHistory === "function");
 
-const lastJoin = ref(null);
+const lastJoin = ref<number | undefined>();
 const instanceAnnouncementDialogVisible = ref(false);
 const instanceCalendarLinkDialogVisible = ref(false);
 const showLastJoinIndicator = computed(() => props.showLastJoin && lastJoin.value);
 const hasInstanceMetadata = computed(() => {
   return !!(
-    props.instance?.queueSize ||
+    !!props.instance?.queueSize ||
     instanceInfoState.isAgeGated ||
     instanceInfoState.isRoleRestricted ||
-    props.instance?.calendarEntryId ||
-    props.instance?.hypeTrain?.current ||
-    (props.instance.minimumAvatarPerformance && props.instance.minimumAvatarPerformance !== "None")
+    !!props.instance?.calendarEntryId ||
+    !!props.instance?.hypeTrain?.current ||
+    (props.instance?.minimumAvatarPerformance && props.instance.minimumAvatarPerformance !== "None")
   );
 });
 
 const performanceIcon = computed(() => {
-  const rank = props.instance.minimumAvatarPerformance?.toLowerCase();
-  if (!rank || rank === "none") return null;
+  const rank = props.instance?.minimumAvatarPerformance?.toLowerCase();
+  if (!rank || rank === "none") return undefined;
   return `/images/performance_ranks/${rank}.png`;
 });
 
@@ -501,23 +467,33 @@ const instanceInfoState = reactive({
   disabledContentSettings: "",
 });
 
+type InstanceLanguageRow = {
+  key: string;
+  flagKey: string;
+  name: string;
+  percent: number | null;
+  isCreationLanguage: boolean;
+};
+
+const languageNameOf = (key: string): string | undefined => (Object.hasOwn(userStore.subsetOfLanguages, key) ? userStore.subsetOfLanguages[key] : undefined);
+
 const instanceLanguages = computed(() => {
-  const languages = Array.isArray(props.instance?.languages) ? props.instance.languages : [];
-  const iso639 = props.instance?.languagesIso639 ?? [];
-  const ratio = props.instance?.languageRatio ?? {};
+  const rawLanguages = props.instance?.languages;
+  const languages: string[] = Array.isArray(rawLanguages) ? rawLanguages : [];
+  const iso639: string[] = props.instance?.languagesIso639 ?? [];
   const creationLanguages = new Set<string>(props.instance?.creationLanguages ?? []);
-  const baseOf = (code) => code.split("-")[0];
+  const baseOf = (code: string) => code.split("-")[0] ?? code;
   const uniqueBases = [...new Set(languages.map(baseOf))];
-  const iso639ByBase = Object.fromEntries(uniqueBases.map((base, i) => [base, iso639[i]]));
-  const list = languages.map((code) => {
-    const key = iso639ByBase[baseOf(code)] ?? code;
+  const iso639ByBase = new Map(uniqueBases.map((base, i): [string, string | undefined] => [base, iso639[i]]));
+  const list: InstanceLanguageRow[] = languages.map((code) => {
+    const key = iso639ByBase.get(baseOf(code)) ?? code;
     const region = code.split("-")[1];
-    const name = userStore.subsetOfLanguages?.[key] ?? code;
+    const name = languageNameOf(key) ?? code;
     return {
       key: code,
       flagKey: key,
       name: region ? `${name} (${region.toUpperCase()})` : name,
-      percent: Math.round((ratio[code] ?? 0) * 100),
+      percent: Math.round(Number(props.instance?.languageRatio?.[code] ?? 0) * 100),
       isCreationLanguage: creationLanguages.has(key) || creationLanguages.has(code),
     };
   });
@@ -527,7 +503,7 @@ const instanceLanguages = computed(() => {
     list.push({
       key,
       flagKey: key,
-      name: userStore.subsetOfLanguages?.[key] ?? key,
+      name: languageNameOf(key) ?? key,
       percent: null,
       isCreationLanguage: true,
     });
@@ -542,18 +518,29 @@ const instanceDescription = computed(() => {
   return description;
 });
 
+const isInstanceCategoryIconKey = (value: string): value is keyof typeof instanceCategoryIcons => Object.hasOwn(instanceCategoryIcons, value);
+
 const instanceCategory = computed(() => {
-  const category = instanceCategories.value.find((category) => category.id === props.instance?.categoryId);
+  const category = instanceCategories.value.find((entry) => entry.id === props.instance?.categoryId);
   if (!category) return null;
-  return { name: category.name, icon: instanceCategoryIcons[category.iconUrl] };
+  const icon = isInstanceCategoryIconKey(category.iconUrl) ? instanceCategoryIcons[category.iconUrl] : undefined;
+  return { name: category.name, icon };
 });
 
 const instanceVibeTitles = computed(() => {
-  const vibeById = new Map(instanceVibes.value.map((vibe) => [vibe.id, vibe.title]));
+  const vibeById = new Map(instanceVibes.value.map((vibe): [string, string] => [vibe.id, vibe.title]));
   return (props.instance?.vibeIds ?? []).map((id) => vibeById.get(id) ?? id).join(", ");
 });
 
-const currentHypeTrain = computed(() => props.instance?.hypeTrain?.current ?? null);
+type HypeTrainCurrent = {
+  startDate: string;
+  endDate: string;
+  currentGiftCount?: number;
+  totalGiftGoal?: number;
+  totalGiftContributors?: number;
+};
+
+const currentHypeTrain = computed<HypeTrainCurrent | null>(() => props.instance?.hypeTrain?.current ?? null);
 const hypeTrainStartEpoch = computed(() => {
   const startDate = currentHypeTrain.value?.startDate;
   return startDate ? Date.parse(startDate) || 0 : 0;
@@ -565,7 +552,7 @@ const { pause: pauseNow, resume: resumeNow } = useIntervalFn(() => (now.value = 
 });
 watch(currentHypeTrain, (train) => (train ? resumeNow() : pauseNow()), { immediate: true });
 const hypeTrainTimeRemaining = computed(() => {
-  const endEpoch = Date.parse(currentHypeTrain.value?.endDate);
+  const endEpoch = Date.parse(currentHypeTrain.value?.endDate ?? "");
   if (!endEpoch) return "";
   return formatSeconds(Math.max(0, (endEpoch - now.value) / 1000));
 });
@@ -583,7 +570,7 @@ const handleHistory = () => {
 };
 
 const confirmLaunch = () => {
-  launchStore.showLaunchDialog(resolvedLaunchLocation.value);
+  void launchStore.showLaunchDialog(resolvedLaunchLocation.value).catch(logFailure("Showing the launch dialog failed:"));
 };
 
 const confirmInvite = () => {
@@ -592,16 +579,16 @@ const confirmInvite = () => {
     return;
   }
 
-  instanceRequest
+  void instanceRequest
     .selfInvite({
       instanceId: L.instanceId,
       worldId: L.worldId,
       shortName: props.shortname,
     })
-    .then((args) => {
+    .then(() => {
       toast.success(t("message.invite.self_sent"));
-      return args;
-    });
+    })
+    .catch(logFailure("Sending the self invite failed:"));
 };
 
 const openInstance = () => {
@@ -610,7 +597,7 @@ const openInstance = () => {
     return;
   }
 
-  launchStore.tryOpenInstanceInVrc(L.tag, props.shortname);
+  void launchStore.tryOpenInstanceInVrc(L.tag, props.shortname).catch(logFailure("Opening the instance in VRChat failed:"));
 };
 
 const parseLastJoin = () => {
@@ -632,11 +619,12 @@ const parseInstanceInfo = () => {
   if (!resolvedInstanceLocation.value || !props.instance || Object.keys(props.instance).length === 0) return;
 
   instanceInfoState.isValidInstance = true;
-  if (props.instance.ownerId === userStore.currentUser.id) {
+  const ownerId = props.instance.ownerId;
+  if (ownerId === userStore.currentUser.id) {
     instanceInfoState.canCloseInstance = true;
     instanceInfoState.canRenameInstance = true;
-  } else if (props.instance.ownerId?.startsWith("grp_")) {
-    const group = groupStore.cachedGroups.get(props.instance.ownerId);
+  } else if (ownerId?.startsWith("grp_")) {
+    const group = groupStore.cachedGroups.get(ownerId);
     instanceInfoState.canCloseInstance = hasGroupPermission(group, "group-instance-moderate");
     instanceInfoState.canRenameInstance = hasGroupPermission(group, "group-instance-manage");
     instanceInfoState.canSendAnnouncement =
@@ -644,20 +632,20 @@ const parseInstanceInfo = () => {
     instanceInfoState.canLinkCalendarEvent = hasGroupPermission(group, "group-instance-manage") && hasGroupPermission(group, "group-instance-calendar-link");
   }
   instanceInfoState.isAgeGated = props.instance.ageGate === true;
-  if (resolvedInstanceLocation.value?.includes("~ageGate")) instanceInfoState.isAgeGated = true;
+  if (resolvedInstanceLocation.value.includes("~ageGate")) instanceInfoState.isAgeGated = true;
   instanceInfoState.isRoleRestricted = props.instance.roleRestricted === true;
   if (props.instance.$disabledContentSettings?.length) {
     instanceInfoState.disabledContentSettings = props.instance.$disabledContentSettings.join(", ");
   }
 };
 
-const refreshInstance = (location) => {
+const refreshInstance = (location: string) => {
   const L = parseLocation(location);
   return instanceRequest.getInstance({ worldId: L.worldId, instanceId: L.instanceId });
 };
 
-const closeInstance = (location) => {
-  modalStore
+const closeInstance = (location: string) => {
+  void modalStore
     .confirm({
       description: t("confirm.close_instance"),
       title: t("confirm.title"),
@@ -665,17 +653,15 @@ const closeInstance = (location) => {
     .then(async ({ ok }) => {
       if (!ok) return;
       const args = await miscRequest.closeInstance({ location, hardClose: false });
-      if (args.json) {
-        toast.success(t("message.instance.closed"));
-        instanceStore.applyInstance(args.json);
-        await refreshInstance(location);
-      }
+      toast.success(t("message.instance.closed"));
+      instanceStore.applyInstance(args.json);
+      await refreshInstance(location);
     })
-    .catch(() => {});
+    .catch(logFailure("Closing the instance failed:"));
 };
 
-const renameInstance = (location) => {
-  modalStore
+const renameInstance = (location: string) => {
+  void modalStore
     .prompt({
       title: t("prompt.rename_instance.header"),
       description: t("prompt.rename_instance.description"),
@@ -689,15 +675,17 @@ const renameInstance = (location) => {
       toast.success(t("message.instance.renamed"));
       await refreshInstance(location);
     })
-    .catch(() => {});
+    .catch(logFailure("Renaming the instance failed:"));
 };
 
 const calendarPopoverOpen = ref(false);
-const calendarEvent = ref(null);
+const calendarEvent = ref<ReturnType<typeof groupStore.applyGroupEvent> | null>(null);
 const calendarEventFailed = ref(false);
-let calendarPopoverCloseTimer = null;
+let calendarPopoverCloseTimer: ReturnType<typeof setTimeout> | undefined;
 
-const isInGroup = computed(() => groupStore.currentUserGroups.has(props.instance?.ownerId));
+const isInGroup = computed(() => groupStore.currentUserGroups.has(props.instance?.ownerId ?? ""));
+
+const currentCalendarEntryId = () => props.instance?.calendarEntryId;
 
 const fetchCalendarEvent = async () => {
   const groupId = props.instance?.ownerId;
@@ -705,7 +693,7 @@ const fetchCalendarEvent = async () => {
   if (!groupId || !eventId || !isInGroup.value || calendarEvent.value?.id === eventId) return;
   try {
     const args = await queryRequest.fetch("groupCalendarEvent", { groupId, eventId });
-    if (props.instance?.calendarEntryId === eventId) {
+    if (currentCalendarEntryId() === eventId) {
       calendarEvent.value = groupStore.applyGroupEvent(args.json);
     }
   } catch (error) {
@@ -717,7 +705,7 @@ const fetchCalendarEvent = async () => {
 const openCalendarPopover = () => {
   clearTimeout(calendarPopoverCloseTimer);
   calendarPopoverOpen.value = true;
-  fetchCalendarEvent();
+  void fetchCalendarEvent().catch(logFailure("Loading the calendar event failed:"));
 };
 
 const scheduleCloseCalendarPopover = () => {

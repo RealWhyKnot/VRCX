@@ -2,22 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const mocks = vi.hoisted(() => ({
-  selectResult: vi.fn(),
-  userImage: vi.fn(() => "https://example.com/u.png"),
+  selectResult: vi.fn((_item: unknown) => undefined),
+  userImage: vi.fn((_user: unknown) => "https://example.com/u.png"),
   isOpen: { value: true },
   query: { value: "" },
-  friendResults: { value: [] },
-  ownAvatarResults: { value: [] },
-  favoriteAvatarResults: { value: [] },
-  ownWorldResults: { value: [] },
-  favoriteWorldResults: { value: [] },
-  ownGroupResults: { value: [] },
-  joinedGroupResults: { value: [] },
+  friendResults: { value: new Array<unknown>() },
+  ownAvatarResults: { value: new Array<unknown>() },
+  favoriteAvatarResults: { value: new Array<unknown>() },
+  ownWorldResults: { value: new Array<unknown>() },
+  favoriteWorldResults: { value: new Array<unknown>() },
+  ownGroupResults: { value: new Array<unknown>() },
+  joinedGroupResults: { value: new Array<unknown>() },
   hasResults: { value: false },
 }));
 
-vi.mock("pinia", async (i) => ({ ...(await i()), storeToRefs: (s) => s }));
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("pinia", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("pinia")>()),
+  storeToRefs: (store: object) => store,
+}));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("../../src/stores/quick-search", () => ({
   useQuickSearchStore: () => ({
     isOpen: mocks.isOpen,
@@ -30,11 +33,11 @@ vi.mock("../../src/stores/quick-search", () => ({
     ownGroupResults: mocks.ownGroupResults,
     joinedGroupResults: mocks.joinedGroupResults,
     hasResults: mocks.hasResults,
-    selectResult: (...args) => mocks.selectResult(...args),
+    selectResult: mocks.selectResult,
   }),
 }));
 vi.mock("../../src/composables/use-user-display", () => ({
-  useUserDisplay: () => ({ userImage: (...a) => mocks.userImage(...a) }),
+  useUserDisplay: () => ({ userImage: mocks.userImage }),
 }));
 vi.mock("../../src/components/QuickSearchSync.vue", () => ({
   default: { template: '<div data-testid="sync" />' },

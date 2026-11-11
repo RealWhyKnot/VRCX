@@ -1,24 +1,46 @@
 <script setup lang="ts">
-import { ToggleGroupItem, useForwardProps } from "reka-ui";
+import type { PrimitiveProps, ToggleGroupItemProps } from "reka-ui";
+import type { ClassValue } from "clsx";
+import type { VariantProps } from "class-variance-authority";
+import { ToggleGroupItem } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { inject } from "vue";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 import { toggleVariants } from "@/components/ui/toggle";
 
-const props = defineProps({
-  value: { type: null, required: true },
-  disabled: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-  variant: { type: null, required: false },
-  size: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    value: ToggleGroupItemProps["value"];
+    disabled?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+    variant?: VariantProps<typeof toggleVariants>["variant"] | undefined;
+    size?: VariantProps<typeof toggleVariants>["size"] | undefined;
+  }>(),
+  {
+    as: undefined,
+    class: undefined,
+    variant: undefined,
+    size: undefined,
+  }
+);
 
-const context = inject("toggleGroup");
+const context = inject<
+  | {
+      variant?: VariantProps<typeof toggleVariants>["variant"] | undefined;
+      size?: VariantProps<typeof toggleVariants>["size"] | undefined;
+      spacing?: number | undefined;
+    }
+  | undefined
+>("toggleGroup");
 
-const delegatedProps = reactiveOmit(props, "class", "size", "variant");
-const forwardedProps = useForwardProps(delegatedProps);
+const delegatedProps = computed(() => ({
+  value: props.value,
+  disabled: props.disabled,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 </script>
 
 <template>
@@ -28,7 +50,7 @@ const forwardedProps = useForwardProps(delegatedProps);
     :data-variant="context?.variant || variant"
     :data-size="context?.size || size"
     :data-spacing="context?.spacing"
-    v-bind="forwardedProps"
+    v-bind="delegatedProps"
     :value="props.value"
     :class="
       cn(

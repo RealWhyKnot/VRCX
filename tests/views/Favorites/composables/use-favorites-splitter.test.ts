@@ -4,33 +4,39 @@ import { mount } from "@vue/test-utils";
 import { beforeEach } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getString: vi.fn(async (_key, fallback) => fallback),
-  setString: vi.fn(),
+  getString: vi.fn<(key: string, fallback: string) => Promise<string>>((_key, fallback) => Promise.resolve(fallback)),
+  setString: vi.fn<(key: string, value: string) => Promise<void>>(() => Promise.resolve()),
 }));
 
 vi.mock("../../../../src/services/config.ts", () => ({
   configRepository: {
-    getString: (...args) => mocks.getString(...args),
-    setString: (...args) => mocks.setString(...args),
+    getString: (...args: Parameters<typeof mocks.getString>) => mocks.getString(...args),
+    setString: (...args: Parameters<typeof mocks.setString>) => mocks.setString(...args),
   },
 }));
 
 import { useFavoritesSplitter } from "../../../../src/views/Favorites/composables/use-favorites-splitter";
 
 function mountComposable() {
-  let api;
+  const apis: ReturnType<typeof useFavoritesSplitter>[] = [];
   const Comp = defineComponent({
     setup() {
-      api = useFavoritesSplitter({
-        configKey: "split-key",
-        defaultSize: 240,
-        minPx: 120,
-        maxPx: 360,
-      });
+      apis.push(
+        useFavoritesSplitter({
+          configKey: "split-key",
+          defaultSize: 240,
+          minPx: 120,
+          maxPx: 360,
+        })
+      );
       return () => h("div");
     },
   });
   mount(Comp);
+  const api = apis[0];
+  if (!api) {
+    throw new Error("useFavoritesSplitter was not set up");
+  }
   return api;
 }
 

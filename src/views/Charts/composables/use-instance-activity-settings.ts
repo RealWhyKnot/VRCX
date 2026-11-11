@@ -1,6 +1,13 @@
 import { nextTick, ref } from "vue";
+import type { Ref } from "vue";
 
 import { configRepository } from "../../../services/config";
+
+import type { ActivityDetailChart } from "../activity-types";
+
+function logSettingsError(error: unknown) {
+  console.error("Settings update failed:", error);
+}
 
 export function useInstanceActivitySettings() {
   const barWidth = ref(25);
@@ -26,36 +33,48 @@ export function useInstanceActivitySettings() {
     }
   }
 
-  function changeBarWidth(value, onSettingsChange) {
+  function changeBarWidth(value: number, onSettingsChange?: () => void) {
     barWidth.value = value;
-    configRepository.setInt("VRCX_InstanceActivityBarWidth", value).finally(() => {
-      if (onSettingsChange) onSettingsChange();
-    });
+    void configRepository
+      .setInt("VRCX_InstanceActivityBarWidth", value)
+      .finally(() => {
+        if (onSettingsChange) onSettingsChange();
+      })
+      .catch(logSettingsError);
   }
 
-  function changeIsDetailInstanceVisible(value, onSettingsChange) {
-    isDetailVisible.value = value;
-    configRepository.setBool("VRCX_InstanceActivityDetailVisible", value).finally(() => {
-      if (onSettingsChange) onSettingsChange();
-    });
+  function changeIsDetailInstanceVisible(isVisible: boolean, onSettingsChange?: () => void) {
+    isDetailVisible.value = isVisible;
+    void configRepository
+      .setBool("VRCX_InstanceActivityDetailVisible", isVisible)
+      .finally(() => {
+        if (onSettingsChange) onSettingsChange();
+      })
+      .catch(logSettingsError);
   }
 
-  function changeIsSoloInstanceVisible(value, onSettingsChange) {
-    isSoloInstanceVisible.value = value;
-    configRepository.setBool("VRCX_InstanceActivitySoloInstanceVisible", value).finally(() => {
-      if (onSettingsChange) onSettingsChange();
-    });
+  function changeIsSoloInstanceVisible(isVisible: boolean, onSettingsChange?: () => void) {
+    isSoloInstanceVisible.value = isVisible;
+    void configRepository
+      .setBool("VRCX_InstanceActivitySoloInstanceVisible", isVisible)
+      .finally(() => {
+        if (onSettingsChange) onSettingsChange();
+      })
+      .catch(logSettingsError);
   }
 
-  function changeIsNoFriendInstanceVisible(value, onSettingsChange) {
-    isNoFriendInstanceVisible.value = value;
-    configRepository.setBool("VRCX_InstanceActivityNoFriendInstanceVisible", value).finally(() => {
-      if (onSettingsChange) onSettingsChange();
-    });
+  function changeIsNoFriendInstanceVisible(isVisible: boolean, onSettingsChange?: () => void) {
+    isNoFriendInstanceVisible.value = isVisible;
+    void configRepository
+      .setBool("VRCX_InstanceActivityNoFriendInstanceVisible", isVisible)
+      .finally(() => {
+        if (onSettingsChange) onSettingsChange();
+      })
+      .catch(logSettingsError);
   }
 
-  function handleChangeSettings(activityDetailChartRef) {
-    nextTick(() => {
+  function handleChangeSettings(activityDetailChartRef: Ref<ActivityDetailChart[] | null>) {
+    void nextTick(() => {
       if (activityDetailChartRef.value) {
         activityDetailChartRef.value.forEach((child) => {
           requestAnimationFrame(() => {
@@ -65,7 +84,7 @@ export function useInstanceActivitySettings() {
           });
         });
       }
-    });
+    }).catch(logSettingsError);
   }
 
   return {

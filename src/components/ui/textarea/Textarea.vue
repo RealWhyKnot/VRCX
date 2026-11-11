@@ -1,15 +1,25 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { computed, useAttrs } from "vue";
 import { cn } from "@/lib/utils";
 import { useVModel } from "@vueuse/core";
 
-const props = defineProps({
-  class: { type: null, required: false },
-  defaultValue: { type: [String, Number], required: false },
-  modelValue: { type: [String, Number], required: false },
-});
+defineOptions({ name: "UiTextarea" });
 
-const emits = defineEmits(["update:modelValue"]);
+const props = withDefaults(
+  defineProps<{
+    class?: ClassValue | undefined;
+    defaultValue?: string | number | undefined;
+    modelValue?: string | number | undefined;
+  }>(),
+  {
+    class: undefined,
+    defaultValue: undefined,
+    modelValue: undefined,
+  }
+);
+
+const emits = defineEmits<{ "update:modelValue": [value: string | number] }>();
 const attrs = useAttrs();
 
 const modelValue = useVModel(props, "modelValue", emits, {

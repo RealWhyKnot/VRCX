@@ -1,30 +1,34 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import type { DOMWrapper } from "@vue/test-utils";
+import type { NavLayoutEntry } from "../../../src/components/nav-menu/nav-menu-types";
 
-vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k) => k }) }));
+vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (k: string) => k }) }));
 vi.mock("@/shared/utils/app-actions", () => ({
   openExternalLink: vi.fn(),
 }));
 vi.mock("../../../src/stores/dashboard", () => ({
   useDashboardStore: () => ({
-    createDashboard: vi.fn(async () => ({
-      id: "dashboard-1",
-      name: "Dashboard",
-      icon: "ri-dashboard-line",
-    })),
+    createDashboard: vi.fn(() =>
+      Promise.resolve({
+        id: "dashboard-1",
+        name: "Dashboard",
+        icon: "ri-dashboard-line",
+      })
+    ),
     getDashboard: vi.fn(() => ({
       id: "dashboard-1",
       name: "Dashboard",
       icon: "ri-dashboard-line",
     })),
-    updateDashboard: vi.fn(async () => {}),
-    deleteDashboard: vi.fn(async () => {}),
+    updateDashboard: vi.fn(() => Promise.resolve()),
+    deleteDashboard: vi.fn(() => Promise.resolve()),
     setEditingDashboardId: vi.fn(),
   }),
 }));
 vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({
-    confirm: vi.fn(async () => ({ ok: true })),
+    confirm: vi.fn(() => Promise.resolve({ ok: true })),
   }),
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
@@ -83,9 +87,17 @@ vi.mock("../../../src/components/dialogs/SortableTreeNode.vue", () => ({
 
 import CustomNavDialog from "../../../src/components/dialogs/CustomNavDialog.vue";
 
+const findButtonByText = (buttons: DOMWrapper<Element>[], text: string) => {
+  const button = buttons.find((candidate) => candidate.text().includes(text));
+  if (!button) {
+    throw new Error(`no button contains "${text}"`);
+  }
+  return button;
+};
+
 describe("CustomNavDialog.vue", () => {
   it("keeps folder nameKey when restoring defaults and saving", async () => {
-    const defaultLayout = [
+    const defaultLayout: NavLayoutEntry[] = [
       {
         type: "folder",
         id: "default-folder-social",
@@ -106,15 +118,15 @@ describe("CustomNavDialog.vue", () => {
     });
 
     const buttons = wrapper.findAll('[data-testid="btn"]');
-    const resetButton = buttons.find((button) => button.text().includes("nav_menu.custom_nav.restore_default"));
-    const saveButton = buttons.find((button) => button.text().includes("common.actions.confirm"));
+    const resetButton = findButtonByText(buttons, "nav_menu.custom_nav.restore_default");
+    const saveButton = findButtonByText(buttons, "common.actions.confirm");
 
     await resetButton.trigger("click");
     await saveButton.trigger("click");
 
-    const emitted = wrapper.emitted("save");
+    const emitted = wrapper.emitted<[NavLayoutEntry[], string[]]>("save");
     expect(emitted).toBeTruthy();
-    expect(emitted[0][0]).toEqual(defaultLayout);
-    expect(emitted[0][0][0].nameKey).toBe("nav_tooltip.social");
+    expect(emitted?.[0]?.[0]).toEqual(defaultLayout);
+    expect(emitted?.[0]?.[0]?.[0]).toMatchObject({ nameKey: "nav_tooltip.social" });
   });
 });

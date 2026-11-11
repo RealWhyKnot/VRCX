@@ -64,7 +64,7 @@ type RowModelSlots = Pick<TableFeatures, "expandedRowModel" | "filteredRowModel"
 
 type VrcxFeatures = typeof baseFeatures & RowModelSlots;
 
-type VrcxColumn<TData extends RowData> = ColumnDef<VrcxFeatures, TData>;
+export type VrcxColumn<TData extends RowData> = ColumnDef<VrcxFeatures, TData>;
 
 type ColumnIdentity = {
   id?: string | undefined;
@@ -494,7 +494,7 @@ export function useVrcxVueTable<TData extends RowData>(options: VrcxTableOptions
 
       return withSpacerColumn(cols, fillRemainingSpace, spacerColumnId, stretchAfterId) ?? [];
     },
-    getRowId,
+    ...(getRowId ? { getRowId } : {}),
 
     ...handlers,
     ...extra,

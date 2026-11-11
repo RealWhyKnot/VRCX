@@ -15,7 +15,7 @@
             :src="worldDialog.ref.thumbnailImageUrl"
             class="absolute inset-0 size-full cursor-pointer object-cover"
             loading="lazy"
-            @click="showFullscreenImageDialog(worldDialog.ref.imageUrl)"
+            @click="showFullscreenImageDialog(worldDialog.ref.imageUrl ?? '')"
             @error="imageError = true"
           />
           <div v-else-if="!worldDialog.loading" class="absolute inset-0 flex items-center justify-center bg-muted">
@@ -211,7 +211,7 @@
                     variant="outline"
                     :aria-label="t('common.actions.delete')"
                     :disabled="isGameRunning && worldDialog.cacheLocked"
-                    @click="deleteVRChatCache(worldDialog.ref)"
+                    @click="deleteVRChatCache({ unityPackages: worldDialog.ref.unityPackages ?? [] })"
                     ><Trash2
                   /></Button>
                 </TooltipWrapper>
@@ -230,11 +230,8 @@
               <TooltipWrapper v-if="worldDialog.isPC" side="top" content="PC">
                 <Badge class="text-platform-pc border-platform-pc!" variant="outline">
                   <Monitor class="h-4 w-4 text-platform-pc" />
-                  <span
-                    v-if="worldDialog.fileAnalysis.standalonewindows?._fileSize"
-                    class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5"
-                  >
-                    {{ worldDialog.fileAnalysis.standalonewindows._fileSize }}
+                  <span v-if="fileSizeOf('standalonewindows')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">
+                    {{ fileSizeOf("standalonewindows") }}
                   </span>
                 </Badge>
               </TooltipWrapper>
@@ -242,8 +239,8 @@
               <TooltipWrapper v-if="worldDialog.isQuest" side="top" content="Quest">
                 <Badge class="text-platform-quest border-platform-quest!" variant="outline">
                   <Smartphone class="h-4 w-4 text-platform-quest" />
-                  <span v-if="worldDialog.fileAnalysis.android?._fileSize" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">
-                    {{ worldDialog.fileAnalysis.android._fileSize }}
+                  <span v-if="fileSizeOf('android')" class="x-grey text-platform-quest border-l-[0.8px] border-solid ml-1.5 pl-1.5">
+                    {{ fileSizeOf("android") }}
                   </span>
                 </Badge>
               </TooltipWrapper>
@@ -251,11 +248,8 @@
               <TooltipWrapper v-if="worldDialog.isIos" side="top" content="iOS">
                 <Badge class="text-platform-ios border-platform-ios" variant="outline">
                   <Apple class="h-4 w-4 text-platform-ios" />
-                  <span
-                    v-if="worldDialog.fileAnalysis.ios?._fileSize"
-                    class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5"
-                  >
-                    {{ worldDialog.fileAnalysis.ios._fileSize }}
+                  <span v-if="fileSizeOf('ios')" class="x-grey text-platform-ios border-platform-ios border-l-[0.8px] border-solid ml-1.5 pl-1.5">
+                    {{ fileSizeOf("ios") }}
                   </span>
                 </Badge>
               </TooltipWrapper>
@@ -311,7 +305,7 @@
         :items="worldDialogTabs"
         :unmount-on-hide="false"
         fill
-        @update:model-value="worldDialogTabClick"
+        @update:model-value="(tabName) => worldDialogTabClick(String(tabName))"
       >
         <template #Instances>
           <WorldDialogInstancesTab />
@@ -323,7 +317,7 @@
           <DialogJsonTab
             class="rounded-xl bg-(--profile-card) p-2"
             :tree-data="treeData"
-            :tree-data-key="treeData?.id"
+            :tree-data-key="treeDataKey"
             :dialog-id="worldDialog.id"
             :dialog-ref="worldDialog.ref"
             :file-analysis="worldDialog.fileAnalysis"
@@ -338,11 +332,11 @@
       <SetWorldTagsDialog
         v-model:is-set-world-tags-dialog-visible="isSetWorldTagsDialogVisible"
         :old-tags="worldDialog.ref?.tags"
-        :old-disabled-prop-abilities="worldDialog.ref?.disabledPropAbilities"
+        :old-disabled-prop-abilities="oldDisabledPropAbilities"
         :world-id="worldDialog.id"
         :is-world-dialog-visible="worldDialog.visible"
       />
-      <NewInstanceDialog :new-instance-dialog-location-tag="newInstanceDialogLocationTag" :last-location="lastLocation" />
+      <NewInstanceDialog :new-instance-dialog-location-tag="newInstanceDialogLocationTag ?? ''" :last-location="lastLocation" />
       <input id="WorldImageUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeWorldImage" />
       <ImageCropDialog
         :open="cropDialogOpen"
@@ -410,6 +404,8 @@ import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubConten
 import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
 import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
 import { deleteVRChatCache } from "../../../coordinators/cache-coordinator";
+import { logError } from "../../../stores/vrcx-messages";
+import type { WorldRatingValue } from "../../../types/vrcx";
 import { openFolderGeneric } from "../../../shared/utils/app-actions";
 import Badge from "../../ui/badge/Badge.vue";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
@@ -473,7 +469,11 @@ registerCallbacks({
     showWorldAllowedDomainsDialog();
   },
   showChangeWorldImageDialog: () => {
-    document.getElementById("WorldImageUploadButton").click();
+    const uploadButton = document.getElementById("WorldImageUploadButton");
+    if (!uploadButton) {
+      throw new Error("WorldImageUploadButton is not in the document");
+    }
+    uploadButton.click();
   },
 });
 
@@ -483,9 +483,27 @@ const worldDialogTabs = computed(() => [
   { value: "JSON", label: t("dialog.world.json.header") },
 ]);
 
-const treeData = ref({});
-const storeTabRef = ref(null);
+const treeData = ref<Record<string, unknown>>({});
+const storeTabRef = ref<{ getWorldListings: () => Promise<void> } | null>(null);
 const imageError = ref(false);
+
+const treeDataKey = computed(() => {
+  const id = treeData.value["id"];
+  return typeof id === "string" ? id : null;
+});
+
+const oldDisabledPropAbilities = computed(() =>
+  (worldDialog.value.ref.disabledPropAbilities ?? []).filter((ability): ability is string => typeof ability === "string")
+);
+
+function fileSizeOf(platform: string): string | undefined {
+  const analysis = worldDialog.value.fileAnalysis[platform];
+  if (typeof analysis !== "object" || analysis === null || !("_fileSize" in analysis)) {
+    return undefined;
+  }
+  const size = analysis._fileSize;
+  return typeof size === "string" ? size : undefined;
+}
 
 watch(
   () => worldDialog.value.id,
@@ -498,8 +516,8 @@ const isDialogVisible = computed({
   get() {
     return worldDialog.value.visible;
   },
-  set(value) {
-    worldDialog.value.visible = value;
+  set(isVisible: boolean) {
+    worldDialog.value.visible = isVisible;
   },
 });
 
@@ -508,15 +526,17 @@ watch(
   () => {
     if (worldDialog.value.visible) {
       handleDialogOpen();
-      !worldDialog.value.loading && loadLastActiveTab();
+      if (!worldDialog.value.loading) {
+        loadLastActiveTab();
+      }
     }
   }
 );
 
-function handleWorldDialogTab(tabName) {
+function handleWorldDialogTab(tabName: string) {
   worldDialog.value.lastActiveTab = tabName;
   if (tabName === "Store") {
-    storeTabRef.value?.getWorldListings();
+    void storeTabRef.value?.getWorldListings().catch(logError);
   } else if (tabName === "JSON") {
     refreshWorldDialogTreeData();
   }
@@ -530,7 +550,7 @@ function loadLastActiveTab() {
   handleWorldDialogTab(worldDialog.value.lastActiveTab);
 }
 
-function worldDialogTabClick(tabName) {
+function worldDialogTabClick(tabName: string) {
   if (tabName === worldDialog.value.lastActiveTab) {
     if (tabName === "JSON") {
       refreshWorldDialogTreeData();
@@ -548,13 +568,15 @@ function refreshWorldDialogTreeData() {
   treeData.value = formatJsonVars(worldDialog.value.ref);
 }
 
-function setWorldRating(rating) {
+function setWorldRating(rating: WorldRatingValue) {
   const D = worldDialog.value;
   const req = D.rating === rating ? worldRequest.deleteWorldRating({ worldId: D.id }) : worldRequest.setWorldRating({ worldId: D.id, value: rating });
-  req.then((args) => {
-    if (args.params.worldId === D.id) {
-      D.rating = args.json?.value ?? null;
-    }
-  });
+  void req
+    .then((args) => {
+      if (args.params.worldId === D.id) {
+        D.rating = args.json?.value ?? null;
+      }
+    })
+    .catch(logError);
 }
 </script>

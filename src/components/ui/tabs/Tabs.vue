@@ -1,28 +1,35 @@
 <script setup lang="ts">
+import type { TabsRootEmits, TabsRootProps } from "reka-ui";
 import { TabsRoot, useForwardPropsEmits } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  defaultValue: { type: null, required: false },
-  orientation: {
-    type: String,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  activationMode: {
-    type: String,
-    required: false,
-  },
-  modelValue: { type: null, required: false },
-  unmountOnHide: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["update:modelValue"]);
+defineOptions({ name: "UiTabs" });
 
-const delegatedProps = reactiveOmit(props, "class");
+const props = defineProps<{
+  defaultValue?: TabsRootProps["defaultValue"] | undefined;
+  orientation?: TabsRootProps["orientation"] | undefined;
+  dir?: TabsRootProps["dir"] | undefined;
+  activationMode?: TabsRootProps["activationMode"] | undefined;
+  modelValue?: TabsRootProps["modelValue"] | undefined;
+  unmountOnHide?: boolean;
+  asChild?: boolean;
+  as?: TabsRootProps["as"] | undefined;
+  class?: ClassValue | undefined;
+}>();
+const emits = defineEmits<TabsRootEmits>();
+
+const delegatedProps = computed(() => ({
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  ...(props.orientation === undefined ? {} : { orientation: props.orientation }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  ...(props.activationMode === undefined ? {} : { activationMode: props.activationMode }),
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  unmountOnHide: props.unmountOnHide,
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>
 

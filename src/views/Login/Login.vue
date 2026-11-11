@@ -118,7 +118,7 @@
             {{ t("view.login.savedAccounts") }}
           </h2>
           <div class="flex flex-col overflow-y-auto sm:h-0 sm:grow">
-            <Item v-for="user in savedCredentials" :key="user.user.id" class="cursor-pointer hover:bg-muted p-2 border-0" @click="clickSavedLogin(user)">
+            <Item v-for="user in savedAccounts" :key="user.user.id" class="cursor-pointer hover:bg-muted p-2 border-0" @click="clickSavedLogin(user)">
               <ItemMedia class="relative size-10">
                 <Avatar class="size-full rounded-full">
                   <AvatarImage :src="userImage(user.user)" />
@@ -126,15 +126,15 @@
                     <User class="size-5 text-muted-foreground" />
                   </AvatarFallback>
                 </Avatar>
-                <IconFrame :icon-frame="user.user.iconFrame" />
+                <IconFrame :icon-frame="user.user.iconFrame ?? ''" />
               </ItemMedia>
               <ItemContent class="min-w-0">
                 <ItemTitle class="truncate max-w-full">{{ user.user.displayName }}</ItemTitle>
                 <ItemDescription class="truncate text-xs!">
                   {{ user.user.username }}
                 </ItemDescription>
-                <ItemDescription v-if="user.loginParams.endpoint" class="truncate text-xs!">
-                  {{ user.loginParams.endpoint }}
+                <ItemDescription v-if="user.loginParams?.endpoint" class="truncate text-xs!">
+                  {{ user.loginParams?.endpoint }}
                 </ItemDescription>
               </ItemContent>
               <ItemActions @click.stop>
@@ -165,6 +165,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: "LoginView" });
 import Alert from "@/components/ui/alert/Alert.vue";
 import AlertDescription from "@/components/ui/alert/AlertDescription.vue";
 import AlertTitle from "@/components/ui/alert/AlertTitle.vue";
@@ -234,8 +235,15 @@ const vrcStatusStore = useVrcStatusStore();
 
 const { t } = useI18n();
 
-const savedCredentials = ref({});
-const hasSavedCredentials = computed(() => Object.keys(savedCredentials.value).length !== 0);
+type SavedCredentials = Awaited<ReturnType<typeof getAllSavedCredentials>>;
+type SavedCredential = SavedCredentials[string];
+type SavedAccount = SavedCredential & { user: NonNullable<SavedCredential["user"]> };
+
+const isSavedAccount = (entry: SavedCredential): entry is SavedAccount => entry.user !== undefined;
+
+const savedCredentials = ref<SavedCredentials>({});
+const savedAccounts = computed(() => Object.values(savedCredentials.value).filter(isSavedAccount));
+const hasSavedCredentials = computed(() => savedAccounts.value.length !== 0);
 const qrActive = ref(false);
 const requiredMessage = "Required";
 
@@ -254,27 +262,29 @@ const { handleSubmit, resetForm, values } = useForm({
   },
 });
 
-watch(qrActive, (active) => {
-  if (active) {
+watch(qrActive, (isQrActive) => {
+  if (isQrActive) {
     resetForm({ values: { username: "", password: "" } });
   }
 });
 
-async function clickDeleteSavedLogin(userId) {
+async function clickDeleteSavedLogin(userId: string) {
   await deleteSavedLogin(userId);
   await updateSavedCredentials();
 }
 
-async function clickSavedLogin(user) {
+async function clickSavedLogin(user: SavedAccount) {
   try {
     await relogin(user);
-  } catch {}
+  } catch (error: unknown) {
+    console.error("Failed to relogin with saved account", error);
+  }
   await updateSavedCredentials();
 }
 
 const onSubmit = handleSubmit(async (formValues) => {
-  loginForm.value.username = formValues.username ?? "";
-  loginForm.value.password = formValues.password ?? "";
+  loginForm.value.username = formValues.username;
+  loginForm.value.password = formValues.password;
   await login();
   await updateSavedCredentials();
 });
@@ -287,7 +297,7 @@ async function updateSavedCredentials() {
 }
 
 function postLoginRedirect() {
-  const redirect = route.query.redirect;
+  const redirect = route.query["redirect"];
   if (typeof redirect === "string" && redirect.startsWith("/") && redirect !== "/login") {
     return redirect;
   }
@@ -298,34 +308,35 @@ watch(
   () => watchState.isLoggedIn,
   (isLoggedIn) => {
     if (isLoggedIn) {
-      router.replace(postLoginRedirect());
+      void router.replace(postLoginRedirect()).catch((error: unknown) => console.error("Failed to redirect after login", error));
     }
   }
 );
 
 watch(
   () => loginForm.value.loading,
-  (loading) => {
-    if (!loading) {
-      updateSavedCredentials();
+  (isLoading) => {
+    if (!isLoading) {
+      void updateSavedCredentials().catch((error: unknown) => console.error("Failed to load saved accounts", error));
     }
   }
 );
 let isActive = true;
+const isStillActive = (): boolean => isActive;
 let isLanguagePromptOpen = false;
 
 async function detectAndPromptLanguage() {
   try {
     const savedLanguage = await configRepository.getString("VRCX_appLanguage");
-    if (savedLanguage || !isActive) return;
+    if (savedLanguage || !isStillActive()) return;
 
-    const systemLanguage = await AppApi.CurrentLanguage();
-    if (!systemLanguage || !isActive) return;
+    const systemLanguage = await window.AppApi.CurrentLanguage();
+    if (!systemLanguage || !isStillActive()) return;
 
     const matchedCode = resolveSystemLanguage(systemLanguage, languageCodes);
 
     if (!matchedCode || matchedCode === "en") {
-      if (isActive) await changeAppLanguage("en");
+      if (isStillActive()) await changeAppLanguage("en");
       return;
     }
 
@@ -348,10 +359,10 @@ async function detectAndPromptLanguage() {
     });
     isLanguagePromptOpen = false;
 
-    if (!isActive) return;
+    if (!isStillActive()) return;
 
     const currentLanguage = await configRepository.getString("VRCX_appLanguage");
-    if (currentLanguage || !isActive) return;
+    if (currentLanguage || !isStillActive()) return;
 
     if (ok) {
       await changeAppLanguage(matchedCode);
@@ -364,9 +375,9 @@ async function detectAndPromptLanguage() {
   }
 }
 
-onBeforeMount(async () => {
-  updateSavedCredentials();
-  detectAndPromptLanguage();
+onBeforeMount(() => {
+  void updateSavedCredentials().catch((error: unknown) => console.error("Failed to load saved accounts", error));
+  void detectAndPromptLanguage().catch((error: unknown) => console.error("Failed to detect language", error));
 });
 
 onBeforeUnmount(() => {

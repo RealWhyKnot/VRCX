@@ -1,15 +1,25 @@
 <script setup lang="ts">
+import type { VariantProps } from "class-variance-authority";
+import type { ClassValue } from "clsx";
+import type { buttonVariants } from "@/components/ui/button";
 import { ArrowRight } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";
 
 import { useCarousel } from "./use-carousel";
 
-const props = defineProps({
-  variant: { type: String, required: false, default: "outline" },
-  size: { type: String, required: false, default: "icon" },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    variant?: VariantProps<typeof buttonVariants>["variant"] | undefined;
+    size?: VariantProps<typeof buttonVariants>["size"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    variant: "outline",
+    size: "icon",
+    class: undefined,
+  }
+);
 
 const { orientation, canScrollNext, scrollNext } = useCarousel();
 </script>

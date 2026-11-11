@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ClassValue } from "clsx";
 import { computed, useAttrs, useSlots } from "vue";
 import { useVModel } from "@vueuse/core";
 
@@ -7,17 +8,27 @@ import InputGroupText from "./InputGroupText.vue";
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  class: { type: null, required: false },
-  inputClass: { type: null, required: false },
-  prefixText: { type: String, default: "" },
-  suffixText: { type: String, default: "" },
-  clearable: { type: Boolean, default: false },
-  size: { type: String, default: "default" },
-});
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null | undefined;
+    class?: ClassValue | undefined;
+    inputClass?: ClassValue | undefined;
+    prefixText?: string;
+    suffixText?: string;
+    clearable?: boolean;
+    size?: string;
+  }>(),
+  {
+    modelValue: "",
+    class: undefined,
+    inputClass: undefined,
+    prefixText: "",
+    suffixText: "",
+    size: "default",
+  }
+);
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits<{ "update:modelValue": [value: string | number] }>();
 const attrs = useAttrs();
 const slots = useSlots();
 
@@ -26,8 +37,14 @@ const modelValue = useVModel(props, "modelValue", emit, {
   defaultValue: props.modelValue,
 });
 
-const hasLeading = computed(() => Boolean(props.prefixText) || Boolean(slots.leading));
-const hasTrailing = computed(() => Boolean(props.suffixText) || Boolean(slots.trailing));
+const hasLeading = computed(() => {
+  const { leading } = slots;
+  return Boolean(props.prefixText) || Boolean(leading);
+});
+const hasTrailing = computed(() => {
+  const { trailing } = slots;
+  return Boolean(props.suffixText) || Boolean(trailing);
+});
 </script>
 
 <template>

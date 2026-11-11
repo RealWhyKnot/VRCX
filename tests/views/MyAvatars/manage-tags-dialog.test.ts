@@ -1,10 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
+import type { AvatarTag } from "../../../src/views/MyAvatars/types";
 
 vi.mock("vue-i18n", () => ({
   useI18n: () => ({
-    t: (key) => key,
+    t: (key: string) => key,
   }),
 }));
 
@@ -91,7 +92,7 @@ vi.mock("@/components/ui/tags-input/TagsInputItemText.vue", () => ({
 
 import ManageTagsDialog from "../../../src/views/MyAvatars/ManageTagsDialog.vue";
 
-function mountDialog(props = {}) {
+function mountDialog(props: { open?: boolean; avatarName?: string; avatarId?: string; initialTags?: AvatarTag[] } = {}) {
   return mount(ManageTagsDialog, {
     props: {
       open: false,
@@ -114,7 +115,7 @@ describe("ManageTagsDialog.vue", () => {
 
     const tags = wrapper.findAll('[data-testid="tag-item"]');
     expect(tags).toHaveLength(1);
-    expect(tags[0].text()).toContain("cute");
+    expect(tags[0]?.text()).toContain("cute");
   });
 
   test("emits save payload and closes dialog", async () => {
@@ -128,15 +129,15 @@ describe("ManageTagsDialog.vue", () => {
     const okButton = wrapper.findAll('[data-testid="button"]').find((node) => node.text().includes("prompt.rename_avatar.ok"));
 
     expect(okButton).toBeTruthy();
-    await okButton.trigger("click");
+    await okButton?.trigger("click");
 
     expect(wrapper.emitted("save")).toBeTruthy();
-    expect(wrapper.emitted("save")[0][0]).toEqual({
+    expect(wrapper.emitted("save")?.[0]?.[0]).toEqual({
       avatarId: "avtr_1",
       tags: [{ tag: "cute", color: null }],
     });
     expect(wrapper.emitted("update:open")).toBeTruthy();
-    expect(wrapper.emitted("update:open").at(-1)).toEqual([false]);
+    expect(wrapper.emitted("update:open")?.at(-1)).toEqual([false]);
   });
 
   test("cancel button closes dialog without save", async () => {
@@ -145,10 +146,10 @@ describe("ManageTagsDialog.vue", () => {
     const cancelButton = wrapper.findAll('[data-testid="button"]').find((node) => node.text().includes("prompt.rename_avatar.cancel"));
 
     expect(cancelButton).toBeTruthy();
-    await cancelButton.trigger("click");
+    await cancelButton?.trigger("click");
 
     expect(wrapper.emitted("save")).toBeFalsy();
     expect(wrapper.emitted("update:open")).toBeTruthy();
-    expect(wrapper.emitted("update:open").at(-1)).toEqual([false]);
+    expect(wrapper.emitted("update:open")?.at(-1)).toEqual([false]);
   });
 });

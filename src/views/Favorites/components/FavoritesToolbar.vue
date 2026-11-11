@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
     <div>
-      <Select :model-value="sortValue" @update:model-value="$emit('update:sortValue', $event)">
+      <Select :model-value="sortValue" @update:model-value="emitSortValue">
         <SelectTrigger size="sm" class="min-w-[200px]">
           <span class="flex items-center gap-2">
             <ArrowUpDown class="h-4 w-4" />
@@ -28,18 +28,11 @@
         :model-value="searchQuery"
         class="flex-1"
         :placeholder="searchPlaceholder"
-        @update:model-value="$emit('update:searchQuery', $event)"
+        @update:model-value="emitSearchQuery"
         @input="$emit('search')"
       >
         <template v-if="searchModeVisible" #trailing>
-          <ToggleGroup
-            type="single"
-            :model-value="searchMode"
-            variant="outline"
-            size="xs"
-            class="mr-0.5"
-            @update:model-value="$emit('update:searchMode', $event)"
-          >
+          <ToggleGroup type="single" :model-value="searchMode" variant="outline" size="xs" class="mr-0.5" @update:model-value="emitSearchMode">
             <ToggleGroupItem value="name" class="h-5! px-1.5! text-[11px]">
               {{ t("view.favorite.worlds.search_mode_name") }}
             </ToggleGroupItem>
@@ -65,7 +58,7 @@
               :min="cardScaleSlider.min"
               :max="cardScaleSlider.max"
               :step="cardScaleSlider.step"
-              @update:model-value="$emit('update:cardScaleValue', $event)"
+              @update:model-value="emitCardScaleValue"
             />
           </li>
           <li class="list-none px-4 pt-3 pb-2 min-w-[220px] cursor-default" @click.stop>
@@ -79,7 +72,7 @@
               :min="cardSpacingSlider.min"
               :max="cardSpacingSlider.max"
               :step="cardSpacingSlider.step"
-              @update:model-value="$emit('update:cardSpacingValue', $event)"
+              @update:model-value="emitCardSpacingValue"
             />
           </li>
           <DropdownMenuSeparator />
@@ -115,36 +108,84 @@ import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
 import Slider from "@/components/ui/slider/Slider.vue";
 import { useI18n } from "vue-i18n";
 
-defineProps({
-  sortValue: { type: String, default: "name" },
-  extraSortOptions: {
-    type: Array,
-    default: () => [],
-  },
-  searchQuery: { type: String, default: "" },
-  searchPlaceholder: { type: String, default: "" },
-  searchMode: { type: String, default: "name" },
-  searchModeVisible: { type: Boolean, default: false },
-  toolbarMenuOpen: { type: Boolean, default: false },
-  cardScaleValue: { type: Array, default: () => [50] },
-  cardScalePercent: { type: Number, default: 100 },
-  cardScaleSlider: { type: Object, default: () => ({ min: 0, max: 100, step: 1 }) },
-  cardSpacingValue: { type: Array, default: () => [50] },
-  cardSpacingPercent: { type: Number, default: 100 },
-  cardSpacingSlider: { type: Object, default: () => ({ min: 0, max: 100, step: 1 }) },
+type FavoritesToolbarSlider = {
+  min: number;
+  max: number;
+  step: number;
+};
+
+type FavoritesToolbarSortOption = {
+  value: string;
+  label: string;
+};
+
+type FavoritesToolbarProps = {
+  sortValue?: string;
+  extraSortOptions?: FavoritesToolbarSortOption[];
+  searchQuery?: string;
+  searchPlaceholder?: string;
+  searchMode?: string;
+  searchModeVisible?: boolean;
+  toolbarMenuOpen?: boolean;
+  cardScaleValue?: number[];
+  cardScalePercent?: number;
+  cardScaleSlider?: FavoritesToolbarSlider;
+  cardSpacingValue?: number[];
+  cardSpacingPercent?: number;
+  cardSpacingSlider?: FavoritesToolbarSlider;
+};
+
+withDefaults(defineProps<FavoritesToolbarProps>(), {
+  sortValue: "name",
+  extraSortOptions: () => [],
+  searchQuery: "",
+  searchPlaceholder: "",
+  searchMode: "name",
+  searchModeVisible: false,
+  toolbarMenuOpen: false,
+  cardScaleValue: () => [50],
+  cardScalePercent: 100,
+  cardScaleSlider: () => ({ min: 0, max: 100, step: 1 }),
+  cardSpacingValue: () => [50],
+  cardSpacingPercent: 100,
+  cardSpacingSlider: () => ({ min: 0, max: 100, step: 1 }),
 });
 
-defineEmits([
-  "update:sortValue",
-  "update:searchQuery",
-  "update:searchMode",
-  "update:toolbarMenuOpen",
-  "update:cardScaleValue",
-  "update:cardSpacingValue",
-  "search",
-  "import",
-  "export",
-]);
+const emit = defineEmits<{
+  "update:sortValue": [value: string];
+  "update:searchQuery": [value: string];
+  "update:searchMode": [value: string];
+  "update:toolbarMenuOpen": [value: boolean];
+  "update:cardScaleValue": [value: number[]];
+  "update:cardSpacingValue": [value: number[]];
+  search: [];
+  import: [];
+  export: [];
+}>();
 
 const { t } = useI18n();
+
+function emitSortValue(value: unknown) {
+  emit("update:sortValue", String(value));
+}
+
+function emitSearchQuery(value: unknown) {
+  emit("update:searchQuery", String(value));
+}
+
+function emitSearchMode(value: unknown) {
+  emit("update:searchMode", String(value));
+}
+
+function emitCardScaleValue(value: number[] | undefined) {
+  if (value) {
+    emit("update:cardScaleValue", value);
+  }
+}
+
+function emitCardSpacingValue(value: number[] | undefined) {
+  if (value) {
+    emit("update:cardSpacingValue", value);
+  }
+}
 </script>

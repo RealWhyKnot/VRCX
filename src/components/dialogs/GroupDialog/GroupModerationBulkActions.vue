@@ -36,7 +36,7 @@
 
     <ScrollArea class="flex-1 min-h-24 rounded-md border">
       <div v-if="selectedUsersArray.length" class="p-1">
-        <div v-for="user in selectedUsersArray" :key="user.id" class="flex items-center gap-1.5 rounded px-2 py-1 text-sm hover:bg-muted">
+        <div v-for="user in selectedUsersArray" :key="user.id ?? user.userId ?? ''" class="flex items-center gap-1.5 rounded px-2 py-1 text-sm hover:bg-muted">
           <TooltipWrapper v-if="user.membershipStatus !== 'member'" side="top">
             <template #content>
               <span>{{ t("dialog.group_member_moderation.user_isnt_in_group") }}</span>
@@ -61,12 +61,12 @@
 
     <div class="flex flex-col gap-2">
       <span class="text-sm font-semibold">{{ t("dialog.group_member_moderation.roles") }}</span>
-      <Select :model-value="selectedRoles" multiple @update:model-value="$emit('update:selectedRoles', $event)">
+      <Select :model-value="selectedRoles" multiple @update:model-value="emitSelectedRoles">
         <SelectTrigger class="w-full">
           <SelectValue :placeholder="t('dialog.group_member_moderation.choose_roles_placeholder')" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem v-for="role in groupRef.roles" :key="role.id" :value="role.id">
+          <SelectItem v-for="role in selectableRoles" :key="role.id" :value="role.id">
             {{ role.name }}
           </SelectItem>
         </SelectContent>
@@ -128,6 +128,7 @@
 import { AlertTriangle, Plus, Trash2, X } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import type { AcceptableValue } from "reka-ui";
 import Button from "@/components/ui/button/Button.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import Progress from "@/components/ui/progress/Progress.vue";
@@ -141,40 +142,60 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import { hasGroupPermission } from "@/shared/utils/group";
+import type { SelectedRow } from "./group-moderation-types";
+import type { VrcxGroup } from "../../../types/vrcx";
 
-const props = defineProps({
-  selectUserId: { type: String, default: "" },
-  selectedUsersArray: {
-    type: Array,
-    default: () => [],
-  },
-  selectedRoles: { type: Array, default: () => [] },
-  note: { type: String, default: "" },
-  progressCurrent: { type: Number, default: 0 },
-  progressTotal: { type: Number, default: 0 },
-  groupRef: { type: Object, default: () => ({}) },
-});
+const props = withDefaults(
+  defineProps<{
+    selectUserId?: string;
+    selectedUsersArray?: SelectedRow[];
+    selectedRoles?: string[];
+    note?: string;
+    progressCurrent?: number;
+    progressTotal?: number;
+    groupRef?: Partial<VrcxGroup>;
+  }>(),
+  {
+    selectUserId: "",
+    selectedUsersArray: () => [],
+    selectedRoles: () => [],
+    note: "",
+    progressCurrent: 0,
+    progressTotal: 0,
+    groupRef: () => ({}),
+  }
+);
 
-defineEmits([
-  "update:selectUserId",
-  "update:note",
-  "update:selectedRoles",
-  "select-user",
-  "clear-all",
-  "delete-user",
-  "add-roles",
-  "remove-roles",
-  "save-note",
-  "kick",
-  "ban",
-  "unban",
-  "cancel-progress",
-]);
+const emit = defineEmits<{
+  "update:selectUserId": [value: string];
+  "update:note": [value: string];
+  "update:selectedRoles": [value: string[]];
+  "select-user": [];
+  "clear-all": [];
+  "delete-user": [user: SelectedRow];
+  "add-roles": [];
+  "remove-roles": [];
+  "save-note": [];
+  kick: [];
+  ban: [];
+  unban: [];
+  "cancel-progress": [];
+}>();
 
 const { t } = useI18n();
 
-function isActionDisabled(permission) {
+function isActionDisabled(permission: string) {
   return Boolean(!props.selectedUsersArray.length || props.progressCurrent || !hasGroupPermission(props.groupRef, permission));
+}
+
+const selectableRoles = computed(() => (props.groupRef.roles ?? []).filter((role): role is typeof role & { id: string } => typeof role.id === "string"));
+
+function emitSelectedRoles(value: AcceptableValue | AcceptableValue[]) {
+  const roleIds: readonly unknown[] = Array.isArray(value) ? value : [];
+  emit(
+    "update:selectedRoles",
+    roleIds.filter((roleId): roleId is string => typeof roleId === "string")
+  );
 }
 
 const rolesDisabled = computed(() => !props.selectedRoles.length || isActionDisabled("group-roles-assign"));

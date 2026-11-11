@@ -1,5 +1,6 @@
 import { useEventListener } from "@vueuse/core";
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, type Ref } from "vue";
+import type { Router } from "vue-router";
 
 import { configRepository } from "../../../services/config";
 import { DASHBOARD_NAV_KEY_PREFIX } from "../../../shared/constants/dashboard";
@@ -11,23 +12,45 @@ import { createBaseDefaultNavLayout, insertDashboardEntries } from "../nav-layou
 import { dispatchNavLayoutUpdated, NAV_LAYOUT_UPDATED_EVENT } from "../nav-layout-events";
 import { buildNavDefinitionsForLayout, createNavDefinitionMap, generateNavFolderId, loadStoredNavConfig, NAV_CONFIG_KEY } from "../nav-config-utils";
 import { normalizeHiddenKeys, sanitizeLayout } from "../nav-menu-utils";
+import type { NavDashboardStore, NavDefinition, NavEntryTarget, NavLayoutEntry, NavTranslate } from "../nav-menu-types";
 
-export function useNavLayout({ t, locale, router, dashboardStore, dashboards, directAccessPaste, triggerTool }) {
-  const navLayout = ref([]);
+type UseNavLayoutOptions = {
+  t: NavTranslate;
+  locale: Ref<string>;
+  router: Router;
+  dashboardStore: NavDashboardStore;
+  dashboards: Ref<unknown[]>;
+  directAccessPaste: () => void;
+  triggerTool: (toolKey: string) => Promise<unknown>;
+};
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function resolveRouteNavKeys(meta: Record<string, unknown>, routeName: string | undefined): string[] {
+  const navKeys = meta["navKeys"];
+  if (Array.isArray(navKeys)) {
+    return navKeys.filter(isString);
+  }
+  const metaNavKey = meta["navKey"];
+  const navKey = isString(metaNavKey) && metaNavKey !== "" ? metaNavKey : routeName;
+  return navKey ? [navKey] : [];
+}
+
+export function useNavLayout({ t, locale, router, dashboardStore, dashboards, directAccessPaste, triggerTool }: UseNavLayoutOptions) {
+  const navLayout = ref<NavLayoutEntry[]>([]);
   const navLayoutReady = ref(false);
-  const navHiddenKeys = ref([]);
+  const navHiddenKeys = ref<string[]>([]);
 
-  const allNavDefinitions = computed(() => [...navDefinitions, ...dashboardStore.getDashboardNavDefinitions()]);
+  const allNavDefinitions = computed<NavDefinition[]>(() => [...navDefinitions, ...dashboardStore.getDashboardNavDefinitions()]);
 
   const navDefinitionMap = computed(() => {
     const map = createNavDefinitionMap(allNavDefinitions.value);
     return map;
   });
 
-  const getDefaultHiddenKeys = (layout = []) => {
-    void layout;
-    return [];
-  };
+  const getDefaultHiddenKeys = (_layout: NavLayoutEntry[]): string[] => [];
 
   const createDefaultNavLayout = () => createBaseDefaultNavLayout(t);
 
@@ -35,28 +58,34 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     return buildMenuItems(navLayout.value, navDefinitionMap.value, t);
   });
 
-  const getFirstNavEntryLocal = (layout) => {
+  const getFirstNavEntryLocal = (layout: NavLayoutEntry[]) => {
     return findFirstNavEntry(layout, navDefinitionMap.value);
   };
 
-  const getFirstNavKeyLocal = (layout) => {
+  const getFirstNavKeyLocal = (layout: NavLayoutEntry[]) => {
     return findFirstNavKey(layout, navDefinitionMap.value);
+  };
+
+  const getFallbackNavKey = (): string => {
+    const firstKey = getFirstNavKeyLocal(navLayout.value) ?? "";
+    return firstKey === "" ? "feed" : firstKey;
   };
 
   const activeMenuIndex = computed(() => {
     const currentRoute = router.currentRoute.value;
-    if (currentRoute?.name === "dashboard" && currentRoute.params?.id) {
-      return `${DASHBOARD_NAV_KEY_PREFIX}${currentRoute.params.id}`;
+    if (currentRoute.name === "dashboard" && currentRoute.params["id"]) {
+      return `${DASHBOARD_NAV_KEY_PREFIX}${String(currentRoute.params["id"])}`;
     }
-    const currentRouteName = currentRoute?.name;
-    const navKeys = Array.isArray(currentRoute?.meta?.navKeys) ? currentRoute.meta.navKeys : [currentRoute?.meta?.navKey || currentRouteName].filter(Boolean);
+    const routeMeta: Record<string, unknown> = currentRoute.meta;
+    const currentRouteName = isString(currentRoute.name) ? currentRoute.name : undefined;
+    const navKeys = resolveRouteNavKeys(routeMeta, currentRouteName);
 
-    if (currentRoute?.meta?.hidesActiveMenuItem) {
+    if (routeMeta["hidesActiveMenuItem"]) {
       return "";
     }
 
     if (!navKeys.length) {
-      return getFirstNavKeyLocal(navLayout.value) || "feed";
+      return getFallbackNavKey();
     }
 
     for (const entry of navLayout.value) {
@@ -64,20 +93,20 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
         return entry.key;
       }
       if (entry.type === "folder") {
-        const matchedKey = navKeys.find((key) => entry.items?.includes(key));
+        const matchedKey = navKeys.find((key) => entry.items.includes(key));
         if (matchedKey) {
           return matchedKey;
         }
       }
     }
-    return getFirstNavKeyLocal(navLayout.value) || "feed";
+    return getFallbackNavKey();
   });
 
-  const getAppendDefinitions = (layout, hiddenKeys = []) => {
+  const getAppendDefinitions = (layout: NavLayoutEntry[], hiddenKeys: string[] = []) => {
     return buildNavDefinitionsForLayout(navDefinitions, dashboardStore.getDashboardNavDefinitions(), layout, hiddenKeys);
   };
 
-  const sanitizeLayoutLocal = (layout, hiddenKeys = []) => {
+  const sanitizeLayoutLocal = (layout: NavLayoutEntry[], hiddenKeys: string[] = []) => {
     return sanitizeLayout(layout, hiddenKeys, navDefinitionMap.value, getAppendDefinitions(layout, hiddenKeys), t, generateNavFolderId);
   };
 
@@ -86,17 +115,17 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     return sanitizeLayoutLocal(base, getDefaultHiddenKeys(base));
   });
 
-  const triggerNavAction = (entry) => {
+  const triggerNavAction = (entry: NavEntryTarget) => {
     const action = triggerNavEntryAction(entry, {
       router,
       directAccessPaste,
     });
     if (action?.type === "tool" && action.toolKey) {
-      triggerTool?.(action.toolKey);
+      void triggerTool(action.toolKey).catch((error: unknown) => console.error("Failed to trigger tool", error));
     }
   };
 
-  const saveNavLayout = async (layout, hiddenKeys = []) => {
+  const saveNavLayout = async (layout: NavLayoutEntry[], hiddenKeys: string[] = []) => {
     const normalizedHiddenKeys = normalizeHiddenKeys([...hiddenKeys, ...getDefaultHiddenKeys(layout)], navDefinitionMap.value);
     try {
       await configRepository.setString(
@@ -114,7 +143,7 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     dispatchNavLayoutUpdated();
   };
 
-  const applyCustomNavLayout = async (layout, hiddenKeys = []) => {
+  const applyCustomNavLayout = async (layout: NavLayoutEntry[], hiddenKeys: string[] = []) => {
     const normalizedHiddenKeys = normalizeHiddenKeys([...hiddenKeys, ...getDefaultHiddenKeys(layout)], navDefinitionMap.value);
     const sanitized = sanitizeLayoutLocal(layout, normalizedHiddenKeys);
     navLayout.value = sanitized;
@@ -133,16 +162,16 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     }
     hasNavigatedToInitialRoute = true;
     if (
-      router.currentRoute.value?.name !== firstEntry.routeName ||
-      (firstEntry.routeParams?.id && router.currentRoute.value?.params?.id !== firstEntry.routeParams.id)
+      router.currentRoute.value.name !== firstEntry.routeName ||
+      (firstEntry.routeParams?.id && router.currentRoute.value.params["id"] !== firstEntry.routeParams.id)
     ) {
       triggerNavAction(firstEntry);
     }
   };
 
   const loadNavMenuConfig = async () => {
-    let layoutData = null;
-    let hiddenKeysData = [];
+    let layoutData: NavLayoutEntry[] | null = null;
+    let hiddenKeysData: string[] = [];
     try {
       const loaded = await loadStoredNavConfig(configRepository, createDefaultNavLayout(), {
         configKey: NAV_CONFIG_KEY,
@@ -169,29 +198,27 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     }
   };
 
-  const cleanDashboardEntries = (layout, dashboardKeys) => {
-    const normalized = [];
+  const cleanDashboardEntries = (layout: NavLayoutEntry[], dashboardKeys: Set<string>): NavLayoutEntry[] => {
+    const normalized: NavLayoutEntry[] = [];
     layout.forEach((entry) => {
       if (entry.type === "item") {
-        if (entry.key?.startsWith(DASHBOARD_NAV_KEY_PREFIX) && !dashboardKeys.has(entry.key)) {
+        if (entry.key.startsWith(DASHBOARD_NAV_KEY_PREFIX) && !dashboardKeys.has(entry.key)) {
           return;
         }
         normalized.push(entry);
         return;
       }
 
-      if (entry.type === "folder") {
-        const nextItems = (entry.items || []).filter((key) => {
-          if (!key?.startsWith(DASHBOARD_NAV_KEY_PREFIX)) {
-            return true;
-          }
-          return dashboardKeys.has(key);
-        });
-        if (nextItems.length === 0) {
-          return;
+      const nextItems = entry.items.filter((key) => {
+        if (!key.startsWith(DASHBOARD_NAV_KEY_PREFIX)) {
+          return true;
         }
-        normalized.push({ ...entry, items: nextItems });
+        return dashboardKeys.has(key);
+      });
+      if (nextItems.length === 0) {
+        return;
       }
+      normalized.push({ ...entry, items: nextItems });
     });
     return normalized;
   };
@@ -221,7 +248,7 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
         return;
       }
       const cleanedLayout = cleanDashboardEntries(navLayout.value, dashboardStore.dashboardNavKeys);
-      const cleanedHidden = navHiddenKeys.value.filter((key) => !key?.startsWith(DASHBOARD_NAV_KEY_PREFIX) || dashboardStore.dashboardNavKeys.has(key));
+      const cleanedHidden = navHiddenKeys.value.filter((key) => !key.startsWith(DASHBOARD_NAV_KEY_PREFIX) || dashboardStore.dashboardNavKeys.has(key));
       if (JSON.stringify(cleanedLayout) !== JSON.stringify(navLayout.value) || JSON.stringify(cleanedHidden) !== JSON.stringify(navHiddenKeys.value)) {
         await applyCustomNavLayout(cleanedLayout, cleanedHidden);
       }
@@ -229,8 +256,8 @@ export function useNavLayout({ t, locale, router, dashboardStore, dashboards, di
     { deep: true }
   );
 
-  const handleExternalNavLayoutUpdate = async () => {
-    await loadNavMenuConfig();
+  const handleExternalNavLayoutUpdate = () => {
+    void loadNavMenuConfig().catch((error: unknown) => console.error("Failed to reload custom nav", error));
   };
 
   useEventListener(typeof window !== "undefined" ? window : undefined, NAV_LAYOUT_UPDATED_EVENT, handleExternalNavLayoutUpdate);

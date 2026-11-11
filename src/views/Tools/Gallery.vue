@@ -61,12 +61,9 @@
           </ButtonGroup>
           <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
             <Item v-for="image in galleryTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
-              <div
-                v-if="image.versions && image.versions.length > 0 && image.versions[image.versions.length - 1].file.url"
-                class="overflow-hidden rounded-[inherit]"
-              >
-                <ItemHeader class="cursor-pointer" @click="showFullscreenImageDialog(image.versions[image.versions.length - 1].file.url)">
-                  <img :src="image.versions[image.versions.length - 1].file.url" loading="lazy" class="aspect-[4/3] w-full rounded-t-md object-cover" />
+              <div v-if="latestFileUrl(image)" class="overflow-hidden rounded-[inherit]">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image))">
+                  <img :src="latestFileUrl(image)" loading="lazy" class="aspect-[4/3] w-full rounded-t-md object-cover" />
                 </ItemHeader>
                 <ItemFooter class="p-2 gap-1">
                   <Button size="icon-sm" variant="ghost" class="rounded-full text-destructive" @click="deleteGalleryImage(image.id)">
@@ -106,12 +103,9 @@
               :class="compareCurrentVRCPlusIcon(image.id) ? 'x-highlight-ring' : ''"
               as-child
             >
-              <div
-                v-if="image.versions && image.versions.length > 0 && image.versions[image.versions.length - 1].file.url"
-                class="overflow-hidden rounded-[inherit]"
-              >
-                <ItemHeader class="cursor-pointer" @click="showFullscreenImageDialog(image.versions[image.versions.length - 1].file.url)">
-                  <img :src="image.versions[image.versions.length - 1].file.url" loading="lazy" class="aspect-square w-full rounded-t-md object-cover" />
+              <div v-if="latestFileUrl(image)" class="overflow-hidden rounded-[inherit]">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image))">
+                  <img :src="latestFileUrl(image)" loading="lazy" class="aspect-square w-full rounded-t-md object-cover" />
                 </ItemHeader>
                 <ItemFooter class="p-2 gap-1">
                   <Button size="icon-sm" variant="ghost" class="rounded-full text-destructive" @click="deleteVRCPlusIcon(image.id)">
@@ -159,7 +153,7 @@
                   <template #item="{ item, selected }">
                     <div class="flex w-full items-center gap-2">
                       <div class="h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-black/5">
-                        <img class="h-full w-full object-cover" :src="`${emojiAnimationStyleUrl}${item.fileName}`" loading="lazy" />
+                        <img class="h-full w-full object-cover" :src="emojiStyleImageUrl(item.value)" loading="lazy" />
                       </div>
                       <span class="truncate text-sm" v-text="item.label"></span>
                       <span v-if="selected" class="ml-auto opacity-70">✓</span>
@@ -201,12 +195,9 @@
           </div>
           <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
             <Item v-for="image in emojiTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
-              <div v-if="image.versions && image.versions.length > 0 && image.versions[image.versions.length - 1].file.url" class="overflow-hidden">
-                <ItemHeader
-                  class="cursor-pointer"
-                  @click="showFullscreenImageDialog(image.versions[image.versions.length - 1].file.url, getEmojiFileName(image))"
-                >
-                  <Emoji :image-url="image.versions[image.versions.length - 1].file.url" class="aspect-square w-full rounded-t-md" />
+              <div v-if="latestFileUrl(image)" class="overflow-hidden">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image), emojiFileName(image))">
+                  <Emoji :image-url="latestFileUrl(image)" class="aspect-square w-full rounded-t-md" />
                 </ItemHeader>
                 <ItemContent class="min-w-0 px-2.5 pt-1.5 pb-0">
                   <ItemDescription class="text-xs flex items-center gap-1 flex-wrap">
@@ -244,9 +235,9 @@
           </ButtonGroup>
           <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
             <Item v-for="image in stickerTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
-              <div v-if="image.versions && image.versions.length > 0 && image.versions[image.versions.length - 1].file.url" class="overflow-hidden">
-                <ItemHeader class="cursor-pointer" @click="showFullscreenImageDialog(image.versions[image.versions.length - 1].file.url)">
-                  <img :src="image.versions[image.versions.length - 1].file.url" loading="lazy" class="aspect-square w-full rounded-t-md object-cover" />
+              <div v-if="latestFileUrl(image)" class="overflow-hidden">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image))">
+                  <img :src="latestFileUrl(image)" loading="lazy" class="aspect-square w-full rounded-t-md object-cover" />
                 </ItemHeader>
                 <ItemFooter class="p-2 gap-1">
                   <Button size="icon-sm" variant="ghost" class="rounded-full text-destructive" @click="deleteSticker(image.id)">
@@ -289,7 +280,7 @@
           <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))">
             <Item v-for="image in printTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
               <div class="overflow-hidden">
-                <ItemHeader class="cursor-pointer" @click="showFullscreenImageDialog(image.files.image, getPrintFileName(image))">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(image.files.image, getPrintFileName(image))">
                   <img :src="image.files.image" loading="lazy" class="aspect-[16/9] w-full rounded-t-md object-cover" />
                 </ItemHeader>
                 <ItemContent class="min-w-0 px-2.5 pt-1.5 pb-0">
@@ -359,7 +350,7 @@
               as-child
             >
               <div class="overflow-hidden">
-                <ItemHeader class="cursor-pointer" @click="showFullscreenImageDialog(item.imageUrl)">
+                <ItemHeader class="cursor-pointer" @click="openFullscreen(item.imageUrl)">
                   <img :src="item.imageUrl" loading="lazy" class="aspect-square w-full rounded-t-md object-cover" />
                 </ItemHeader>
                 <ItemContent class="min-w-0 px-2.5 pt-1.5 pb-0">
@@ -398,6 +389,9 @@
 </template>
 
 <script setup lang="ts">
+import Location from "@/components/Location.vue";
+defineOptions({ name: "GalleryView" });
+
 import { ArrowLeft, Check, Gift, RefreshCw, Trash2, Upload, X, Star } from "lucide-vue-next";
 import NumberField from "@/components/ui/number-field/NumberField.vue";
 import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
@@ -428,6 +422,7 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
+import type { ImageAnimationStyle, ImageLoopStyle, ImageMask } from "vrchat";
 
 import { extractFileId } from "../../shared/utils/file-utils";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
@@ -441,24 +436,103 @@ import { vrcPlusImageRequest } from "../../api/vrc-plus-image";
 import { useAdvancedSettingsStore } from "../../stores/settings/advanced";
 import { useAuthStore } from "../../stores/auth";
 import { useGalleryStore } from "../../stores/gallery";
+import type { GalleryFile } from "../../stores/gallery-types";
 import { useModalStore } from "../../stores/modal";
 import { useUserStore } from "../../stores/user";
 import { readFileAsBase64, withUploadTimeout } from "../../shared/utils/image-upload";
 import { handleImageUploadInput } from "../../coordinators/image-upload-coordinator";
 import { emojiAnimationStyleList, emojiAnimationStyleUrl } from "../../shared/constants/emoji";
 import { AppDebug } from "../../services/app-config";
+import { parseLeadingInt } from "../../stores/vrcx-messages";
 
 import Emoji from "../../components/Emoji.vue";
 import ImageCropDialog from "../../components/dialogs/ImageCropDialog.vue";
 import { database } from "../../services/database";
 
+type EmojiFileNameInfo = {
+  name: string;
+  animationStyle: string;
+  frames?: number;
+  framesOverTime?: number;
+  loopStyle?: ImageLoopStyle;
+};
+
+type EmojiUploadParams = {
+  tag: "emoji" | "emojianimated";
+  animationStyle: ImageAnimationStyle;
+  maskTag: ImageMask;
+  frames?: number;
+  framesOverTime?: number;
+  loopStyle?: ImageLoopStyle;
+};
+
+type MaskUploadParams = {
+  tag: "sticker";
+  maskTag: ImageMask;
+};
+
+type ImageUploadPayload = {
+  file: File;
+  blob: Blob;
+  base64Body: string;
+};
+
+type ImageUploadFlowOptions = {
+  inputSelector: string;
+  aspectRatio: number;
+  beforeCrop?: (file: File) => void;
+  upload: (payload: ImageUploadPayload) => Promise<void>;
+  errorMessage?: string;
+};
+
+type CropUploadHandler = (blob: Blob) => Promise<void>;
+
+const imageAnimationStyles = [
+  "aura",
+  "bats",
+  "bees",
+  "bounce",
+  "cloud",
+  "confetti",
+  "crying",
+  "dislike",
+  "fire",
+  "idea",
+  "lasers",
+  "like",
+  "magnet",
+  "mistletoe",
+  "money",
+  "noise",
+  "orbit",
+  "pizza",
+  "rain",
+  "rotate",
+  "shake",
+  "snow",
+  "snowball",
+  "spin",
+  "splash",
+  "stop",
+  "zzz",
+] as const satisfies readonly ImageAnimationStyle[];
+
+function isImageAnimationStyle(value: string): value is ImageAnimationStyle {
+  return imageAnimationStyles.some((style) => style === value);
+}
+
+function logError(error: unknown) {
+  console.error(error);
+}
+
 const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
-const activeTab = ref(String(route.query.tab || "gallery"));
+const initialTab = route.query["tab"];
+const activeTab = ref(initialTab ? String(initialTab) : "gallery");
 
 watch(
-  () => route.query.tab,
+  () => route.query["tab"],
   (tab) => {
     if (tab) {
       activeTab.value = String(tab);
@@ -485,7 +559,6 @@ const {
   refreshVRCPlusIconsTable,
   refreshStickerTable,
   refreshPrintTable,
-  refreshPrintFavorites,
   refreshEmojiTable,
   getInventory,
   handleStickerAdd,
@@ -509,18 +582,23 @@ const emojiAnimFps = ref(15);
 const emojiAnimFrameCount = ref(4);
 const emojiAnimType = ref(false);
 const emojiAnimationStyle = ref("Stop");
-const emojiAnimLoopPingPong = ref(false);
+const emojiAnimLoopPingPong = ref<boolean | string>(false);
 const inventoryTypeFilter = ref("all");
+
+const emojiStyleFileNames = new Map(Object.entries(emojiAnimationStyleList));
+
+function emojiStyleImageUrl(value: string | number): string {
+  return `${emojiAnimationStyleUrl}${emojiStyleFileNames.get(String(value)) ?? ""}`;
+}
 
 const emojiStylePickerGroups = computed(() => [
   {
     key: "emojiAnimationStyles",
     label: t("dialog.gallery_icons.emoji_animation_styles"),
-    items: Object.entries(emojiAnimationStyleList).map(([styleName, fileName]) => ({
+    items: Object.keys(emojiAnimationStyleList).map((styleName) => ({
       value: styleName,
       label: styleName,
       search: styleName,
-      fileName,
     })),
   },
 ]);
@@ -529,7 +607,7 @@ const pendingUploads = ref(0);
 const isUploading = computed(() => pendingUploads.value > 0);
 
 const inventoryTypeOptions = computed(() => {
-  const optionsByType = new Set();
+  const optionsByType = new Set<string>();
   for (const item of inventoryTable.value) {
     if (optionsByType.has(item.itemTypeLabel)) {
       continue;
@@ -551,8 +629,8 @@ const filteredInventoryTable = computed(() => {
 const cropDialogOpen = ref(false);
 const cropDialogTitle = ref("");
 const cropDialogAspectRatio = ref(4 / 3);
-const cropDialogFile = ref(null);
-const cropDialogUploadHandler = ref(null);
+const cropDialogFile = ref<File | null>(null);
+const cropDialogUploadHandler = ref<CropUploadHandler | null>(null);
 
 onMounted(() => {
   galleryDialogVisible.value = true;
@@ -562,6 +640,32 @@ onMounted(() => {
 onBeforeUnmount(() => {
   galleryDialogVisible.value = false;
 });
+
+function latestFileUrl(file: GalleryFile): string {
+  const latestVersion = file.versions.at(-1);
+  return latestVersion?.file?.url ?? "";
+}
+
+function emojiFileName(image: GalleryFile): string {
+  const info: EmojiFileNameInfo = {
+    name: image.name,
+    animationStyle: String(image.animationStyle),
+  };
+  if (image.frames !== undefined) {
+    info.frames = image.frames;
+  }
+  if (image.framesOverTime !== undefined) {
+    info.framesOverTime = image.framesOverTime;
+  }
+  if (image.loopStyle !== undefined) {
+    info.loopStyle = image.loopStyle;
+  }
+  return getEmojiFileName(info);
+}
+
+function openFullscreen(imageUrl: string | undefined, fileName?: string) {
+  showFullscreenImageDialog(imageUrl ?? "", fileName ?? "");
+}
 
 function startUpload() {
   pendingUploads.value += 1;
@@ -573,24 +677,24 @@ function finishUpload() {
 
 function goBack() {
   galleryDialogVisible.value = false;
-  router.push({ name: "tools" });
+  void router.push({ name: "tools" }).catch(logError);
 }
 
-function triggerFileInput(id) {
+function triggerFileInput(id: string) {
   document.getElementById(id)?.click();
 }
 
-function removeItemById(array, itemId) {
+function removeItemById(array: { id: string }[], itemId: string) {
   const { length } = array;
   for (let i = 0; i < length; ++i) {
-    if (itemId === array[i].id) {
+    if (itemId === array[i]?.id) {
       array.splice(i, 1);
       break;
     }
   }
 }
 
-function openCropDialog(file, title, aspectRatio, handler) {
+function openCropDialog(file: File, title: string, aspectRatio: number, handler: CropUploadHandler) {
   cropDialogTitle.value = title;
   cropDialogAspectRatio.value = aspectRatio;
   cropDialogFile.value = file;
@@ -598,13 +702,17 @@ function openCropDialog(file, title, aspectRatio, handler) {
   cropDialogOpen.value = true;
 }
 
-async function onCropConfirm(blob) {
-  if (!cropDialogUploadHandler.value) {
+async function onCropConfirm(blob: File | Blob | null) {
+  const handler = cropDialogUploadHandler.value;
+  if (!handler) {
     return;
   }
-  const handler = cropDialogUploadHandler.value;
   cropDialogUploadHandler.value = null;
   cropDialogFile.value = null;
+  if (blob === null) {
+    cropDialogOpen.value = false;
+    return;
+  }
   try {
     await handler(blob);
   } finally {
@@ -612,18 +720,20 @@ async function onCropConfirm(blob) {
   }
 }
 
-function deleteFileAndRemove(fileId, array) {
-  miscRequest.deleteFile(fileId).then((args) => {
-    removeItemById(array, args.fileId);
-    return args;
-  });
+function deleteFileAndRemove(fileId: string, array: GalleryFile[]) {
+  void miscRequest
+    .deleteFile(fileId)
+    .then((args) => {
+      removeItemById(array, args.fileId);
+    })
+    .catch(logError);
 }
 
-function isCurrentFile(currentUrl, fileId) {
+function isCurrentFile(currentUrl: string, fileId: string) {
   return fileId === extractFileId(currentUrl);
 }
 
-function openImageUploadFlow(e, { inputSelector, aspectRatio, beforeCrop, upload, errorMessage = "Failed to upload" }) {
+function openImageUploadFlow(e: Event, { inputSelector, aspectRatio, beforeCrop, upload, errorMessage = "Failed to upload" }: ImageUploadFlowOptions) {
   const { file, clearInput } = handleImageUploadInput(e, {
     inputSelector,
     tooLargeMessage: () => t("message.file.too_large"),
@@ -657,12 +767,12 @@ function openImageUploadFlow(e, { inputSelector, aspectRatio, beforeCrop, upload
   });
 }
 
-async function uploadGalleryImage(base64Body) {
+async function uploadGalleryImage(base64Body: string) {
   const args = await vrcPlusImageRequest.uploadGalleryImage(base64Body);
   handleGalleryImageAdd(args);
 }
 
-function onFileChangeGallery(e) {
+function onFileChangeGallery(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#GalleryUploadButton",
     aspectRatio: 4 / 3,
@@ -676,18 +786,18 @@ function displayGalleryUpload() {
   triggerFileInput("GalleryUploadButton");
 }
 
-function deleteGalleryImage(fileId) {
+function deleteGalleryImage(fileId: string) {
   deleteFileAndRemove(fileId, galleryTable.value);
 }
 
-async function uploadVRCPlusIcon(base64Body) {
+async function uploadVRCPlusIcon(base64Body: string) {
   const args = await vrcPlusIconRequest.uploadVRCPlusIcon(base64Body);
   if (VRCPlusIconsTable.value.length > 0) {
     VRCPlusIconsTable.value.unshift(args.json);
   }
 }
 
-function onFileChangeVRCPlusIcon(e) {
+function onFileChangeVRCPlusIcon(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#VRCPlusIconUploadButton",
     aspectRatio: 1 / 1,
@@ -702,7 +812,7 @@ function displayVRCPlusIconUpload() {
   triggerFileInput("VRCPlusIconUploadButton");
 }
 
-function setUserIcon(fileId) {
+function setUserIcon(fileId: string) {
   if (!isLocalUserVrcPlusSupporter.value) {
     toast.error(t("message.vrcplus.required"));
     return;
@@ -714,38 +824,38 @@ function setUserIcon(fileId) {
   if (userIcon === currentUser.value.iconUrl) {
     return;
   }
-  userRequest
+  void userRequest
     .saveProfile({
       userIcon,
     })
     .then(() => {
       toast.success(t("message.gallery.profile_icon_changed"));
-    });
+    })
+    .catch(logError);
 }
 
-function compareCurrentVRCPlusIcon(userIcon) {
+function compareCurrentVRCPlusIcon(userIcon: string) {
   return isCurrentFile(currentUser.value.iconUrl, userIcon);
 }
 
-function deleteVRCPlusIcon(fileId) {
+function deleteVRCPlusIcon(fileId: string) {
   deleteFileAndRemove(fileId, VRCPlusIconsTable.value);
 }
 
-function parseEmojiFileName(fileName) {
-  fileName = fileName.replace(/\.[^/.]+$/, "");
-  const array = fileName.split("_");
-  for (let i = 0; i < array.length; ++i) {
-    const value = array[i];
+function parseEmojiFileName(fileName: string) {
+  const baseName = fileName.replace(/\.[^/.]+$/, "");
+  const array = baseName.split("_");
+  for (const value of array) {
     if (value.endsWith("animationStyle")) {
       emojiAnimType.value = false;
       emojiAnimationStyle.value = value.replace("animationStyle", "").toLowerCase();
     }
     if (value.endsWith("frames")) {
       emojiAnimType.value = true;
-      emojiAnimFrameCount.value = parseInt(value.replace("frames", ""));
+      emojiAnimFrameCount.value = parseLeadingInt(value.replace("frames", ""));
     }
     if (value.endsWith("fps")) {
-      emojiAnimFps.value = parseInt(value.replace("fps", ""));
+      emojiAnimFps.value = parseLeadingInt(value.replace("fps", ""));
     }
     if (value.endsWith("loopStyle")) {
       emojiAnimLoopPingPong.value = value.replace("loopStyle", "").toLowerCase();
@@ -753,10 +863,14 @@ function parseEmojiFileName(fileName) {
   }
 }
 
-async function uploadEmoji(base64Body) {
-  const params = {
+async function uploadEmoji(base64Body: string) {
+  const animationStyle = emojiAnimationStyle.value.toLowerCase();
+  if (!isImageAnimationStyle(animationStyle)) {
+    throw new Error(`unsupported emoji animation style: ${animationStyle}`);
+  }
+  const params: EmojiUploadParams = {
     tag: emojiAnimType.value ? "emojianimated" : "emoji",
-    animationStyle: emojiAnimationStyle.value.toLowerCase(),
+    animationStyle,
     maskTag: "square",
   };
   if (emojiAnimType.value) {
@@ -772,7 +886,7 @@ async function uploadEmoji(base64Body) {
   }
 }
 
-function onFileChangeEmoji(e) {
+function onFileChangeEmoji(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#EmojiUploadButton",
     aspectRatio: 1 / 1,
@@ -789,12 +903,12 @@ function displayEmojiUpload() {
   triggerFileInput("EmojiUploadButton");
 }
 
-function deleteEmoji(fileId) {
+function deleteEmoji(fileId: string) {
   deleteFileAndRemove(fileId, emojiTable.value);
 }
 
-async function uploadSticker(base64Body) {
-  const params = {
+async function uploadSticker(base64Body: string) {
+  const params: MaskUploadParams = {
     tag: "sticker",
     maskTag: "square",
   };
@@ -802,7 +916,7 @@ async function uploadSticker(base64Body) {
   handleStickerAdd(args);
 }
 
-function onFileChangeSticker(e) {
+function onFileChangeSticker(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#StickerUploadButton",
     aspectRatio: 1 / 1,
@@ -816,25 +930,25 @@ function displayStickerUpload() {
   triggerFileInput("StickerUploadButton");
 }
 
-function deleteSticker(fileId) {
+function deleteSticker(fileId: string) {
   deleteFileAndRemove(fileId, stickerTable.value);
 }
 
-async function uploadPrint(base64Body, date) {
+async function uploadPrint(base64Body: string, date: Date) {
   const timestamp = date.toISOString().slice(0, 19);
   const params = {
     note: printUploadNote.value,
 
     timestamp,
   };
-  const cropWhiteBorder = printCropBorder.value;
-  const args = await vrcPlusImageRequest.uploadPrint(base64Body, cropWhiteBorder, params);
+  const isCropWhiteBorder = printCropBorder.value;
+  const args = await vrcPlusImageRequest.uploadPrint(base64Body, isCropWhiteBorder, params);
   if (printTable.value.length > 0) {
     printTable.value.unshift(args.json);
   }
 }
 
-function onFileChangePrint(e) {
+function onFileChangePrint(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#PrintUploadButton",
     aspectRatio: 16 / 9,
@@ -850,108 +964,99 @@ function displayPrintUpload() {
   triggerFileInput("PrintUploadButton");
 }
 
-function deletePrint(printId) {
+function deletePrint(printId: string) {
   if (favoritePrintIds.value.has(printId)) {
     toast.warning("This print is in your favorites", {
       description: "Please remove it from your favorites before deleting it.",
     });
     return;
   }
-  vrcPlusImageRequest.deletePrint(printId).then((args) => {
-    removeItemById(printTable.value, args.printId);
-  });
+  void vrcPlusImageRequest
+    .deletePrint(printId)
+    .then((args) => {
+      removeItemById(printTable.value, args.printId);
+    })
+    .catch(logError);
 }
 
-async function toggleFavoritePrint(printId) {
+function toggleFavoritePrint(printId: string) {
   if (favoritePrintIds.value.has(printId)) {
-    await database.removePrintFromFavorites(printId);
+    database.removePrintFromFavorites(printId);
     favoritePrintIds.value.delete(printId);
   } else {
-    await database.addPrintToFavorites(printId);
+    database.addPrintToFavorites(printId);
     favoritePrintIds.value.add(printId);
   }
 }
 
-async function handleDropGallery(event) {
+function readFileDate(file: File): Date {
+  const lastModifiedDate: unknown = Reflect.get(file, "lastModifiedDate");
+  return lastModifiedDate instanceof Date ? lastModifiedDate : new Date();
+}
+
+async function readFileToBase64Str(file: File) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error(`unrecognized image format: ${file.type}`);
+  }
+  return readFileAsBase64(file);
+}
+
+async function handleDropGallery(event: DragEvent) {
   event.preventDefault();
-  for (const file of event.dataTransfer.files) {
+  for (const file of event.dataTransfer?.files ?? []) {
     const b64str = await readFileToBase64Str(file);
     await uploadGalleryImage(b64str);
   }
 }
 
-async function handleDropIcon(event) {
+async function handleDropIcon(event: DragEvent) {
   event.preventDefault();
-  for (const file of event.dataTransfer.files) {
+  for (const file of event.dataTransfer?.files ?? []) {
     const b64str = await readFileToBase64Str(file);
     await uploadVRCPlusIcon(b64str);
   }
 }
 
-async function handleDropEmoji(event) {
+async function handleDropEmoji(event: DragEvent) {
   event.preventDefault();
-  for (const file of event.dataTransfer.files) {
+  for (const file of event.dataTransfer?.files ?? []) {
     const b64str = await readFileToBase64Str(file);
     await uploadEmoji(b64str);
   }
 }
 
-async function handleDropSticker(event) {
+async function handleDropSticker(event: DragEvent) {
   event.preventDefault();
-  for (const file of event.dataTransfer.files) {
+  for (const file of event.dataTransfer?.files ?? []) {
     const b64str = await readFileToBase64Str(file);
     await uploadSticker(b64str);
   }
 }
 
-async function handleDropPrint(event) {
+async function handleDropPrint(event: DragEvent) {
   event.preventDefault();
-  for (const file of event.dataTransfer.files) {
+  for (const file of event.dataTransfer?.files ?? []) {
     const b64str = await readFileToBase64Str(file);
-    const fileDate = file.lastModifiedDate ?? new Date();
+    const fileDate = readFileDate(file);
     await uploadPrint(b64str, fileDate);
   }
 }
 
-function readFileAsDataUrlAsync(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function readFileToBase64Str(file) {
-  if (!file?.type.startsWith("image/")) {
-    throw new Error(`unrecognized image format: ${file.type}`);
-  }
-  const b64uri = await readFileAsDataUrlAsync(file);
-  return b64uri.split(",", 2)[1];
-}
-
-async function consumeInventoryBundle(inventoryId) {
+async function consumeInventoryBundle(inventoryId: string) {
   try {
     await inventoryRequest.consumeInventoryBundle({
       inventoryId,
     });
     currentUserInventory.value.delete(inventoryId);
-    const array = inventoryTable.value;
-    const { length } = array;
-    for (let i = 0; i < length; ++i) {
-      if (inventoryId === array[i].id) {
-        array.splice(i, 1);
-        break;
-      }
-    }
-    getInventory();
+    removeItemById(inventoryTable.value, inventoryId);
+    void getInventory().catch(logError);
   } catch (error) {
     console.error("Error consuming inventory bundle:", error);
   }
 }
 
-async function redeemReward() {
-  modalStore
+function redeemReward() {
+  void modalStore
     .prompt({
       title: t("prompt.redeem.header"),
       description: t("prompt.redeem.description"),
@@ -961,20 +1066,19 @@ async function redeemReward() {
     .then(({ ok, value }) => {
       if (!ok) return;
       if (value) {
-        inventoryRequest
+        void inventoryRequest
           .redeemReward({
             code: value.trim(),
           })
-          .then((args) => {
+          .then(() => {
             toast.success(t("prompt.redeem.success"));
-            getInventory();
-            return args;
+            void getInventory().catch(logError);
           })
-          .catch((error) => {
+          .catch((error: unknown) => {
             console.error("Error redeeming reward:", error);
           });
       }
     })
-    .catch(() => {});
+    .catch(logError);
 }
 </script>

@@ -1,19 +1,24 @@
 <script setup lang="ts">
+import type { PrimitiveProps } from "reka-ui";
+import type { ClassValue } from "clsx";
 import Separator from "@/components/ui/separator/Separator.vue";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";
 
-const props = defineProps({
-  orientation: {
-    type: String,
-    required: false,
-    default: "vertical",
-  },
-  decorative: { type: Boolean, required: false },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = withDefaults(
+  defineProps<{
+    orientation?: "horizontal" | "vertical";
+    decorative?: boolean;
+    asChild?: boolean;
+    as?: PrimitiveProps["as"] | undefined;
+    class?: ClassValue | undefined;
+  }>(),
+  {
+    orientation: "vertical",
+    as: undefined,
+    class: undefined,
+  }
+);
 const delegatedProps = reactiveOmit(props, "class");
 </script>
 

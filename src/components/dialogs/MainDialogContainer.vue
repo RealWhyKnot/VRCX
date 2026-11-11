@@ -46,7 +46,15 @@ const appearanceSettingsStore = useAppearanceSettingsStore();
 
 const { previousInstancesInfoDialog, previousInstancesListDialog } = storeToRefs(instanceStore);
 
-const previousIds = ref({
+type UserDialogPreviousIds = {
+  mutualFriend: string | null;
+  group: string | null;
+  avatar: string | null;
+  world: string | null;
+  favoriteWorld: string | null;
+};
+
+const previousIds = ref<{ userDialog: UserDialogPreviousIds }>({
   userDialog: {
     mutualFriend: null,
     group: null,
@@ -56,7 +64,7 @@ const previousIds = ref({
   },
 });
 
-function updateUserPreviousId(key, value) {
+function updateUserPreviousId(key: keyof UserDialogPreviousIds, value: string | null) {
   previousIds.value.userDialog[key] = value;
 }
 
@@ -113,6 +121,7 @@ const activeComponent = computed(() => {
       return GroupMemberModerationDialog;
     case "group-roles":
       return GroupRolesDialog;
+    case null:
     default:
       return null;
   }
@@ -127,14 +136,15 @@ const activeComponentProps = computed(() => {
       return { variant: "world" };
     case "previous-instances-group":
       return { variant: "group" };
+    case null:
     default:
       return {};
   }
 });
 const isOpen = computed({
   get: () => activeComponent.value !== null,
-  set: (value) => {
-    if (!value) {
+  set: (isVisible: boolean) => {
+    if (!isVisible) {
       uiStore.closeMainDialog();
     }
   },
@@ -155,6 +165,7 @@ const dialogClass = computed(() => {
     case "previous-instances-world":
     case "previous-instances-group":
       return "x-dialog translate-y-0 sm:max-w-250";
+    case null:
     default:
       return "x-dialog translate-y-0 sm:max-w-235 overflow-hidden flex flex-col";
   }
@@ -168,15 +179,21 @@ const middleBreadcrumbs = computed(() => {
   }
   return dialogCrumbs.value.slice(1, -2);
 });
+function crumbLabel(crumb: { label?: string | undefined; id?: string | undefined } | undefined) {
+  if (crumb?.label) {
+    return crumb.label;
+  }
+  return crumb?.id ?? "";
+}
+
 const backCrumbLabel = computed(() => {
   if (dialogCrumbs.value.length < 2) {
     return "";
   }
-  const backCrumb = dialogCrumbs.value[dialogCrumbs.value.length - 2];
-  return backCrumb?.label || backCrumb?.id || "";
+  return crumbLabel(dialogCrumbs.value[dialogCrumbs.value.length - 2]);
 });
 
-function handleBreadcrumbClick(index) {
+function handleBreadcrumbClick(index: number) {
   uiStore.handleBreadcrumbClick(index);
 }
 
@@ -194,12 +211,12 @@ const dialogStyle = computed(() => {
   const textureOverlay = appearanceSettingsStore.isDarkMode ? `rgba(0, 0, 0, ${opacity})` : `rgba(255, 255, 255, ${opacity})`;
   if (userStore.userDialog.publicProfileRef?.backgroundType === "gradient") {
     const bgTopColor = getReadableProfileThemeColor(
-      `#${userStore.userDialog.publicProfileRef?.backgroundGradientTop}`,
+      `#${userStore.userDialog.publicProfileRef.backgroundGradientTop}`,
       "var(--background)",
       !appearanceSettingsStore.isDarkMode
     );
     const bgBottomColor = getReadableProfileThemeColor(
-      `#${userStore.userDialog.publicProfileRef?.backgroundGradientBottom}`,
+      `#${userStore.userDialog.publicProfileRef.backgroundGradientBottom}`,
       "var(--background)",
       !appearanceSettingsStore.isDarkMode
     );
@@ -304,7 +321,7 @@ const dialogStyle = computed(() => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <component :is="activeComponent" v-if="activeComponent" v-bind="activeComponentProps" :key="activeType" />
+      <component :is="activeComponent" v-if="activeComponent" v-bind="activeComponentProps" :key="activeType ?? ''" />
     </DialogContent>
   </Dialog>
 </template>

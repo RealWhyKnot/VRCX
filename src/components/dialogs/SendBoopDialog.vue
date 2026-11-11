@@ -27,14 +27,14 @@
       <div v-if="isLocalUserVrcPlusSupporter" class="grid max-h-[60vh] grid-cols-[repeat(auto-fill,minmax(88px,1fr))] -m-1 gap-2 overflow-y-auto p-1">
         <template v-for="image in emojiTable" :key="image.id">
           <button
-            v-if="image.versions?.length && image.versions[image.versions.length - 1].file.url"
+            v-if="emojiImageUrl(image)"
             type="button"
             class="flex aspect-square cursor-pointer items-center justify-center rounded-md border p-0.5 transition-colors"
             :class="image.id === fileId ? 'border-primary' : 'border-transparent hover:bg-accent'"
             :aria-pressed="image.id === fileId"
-            @click="fileId = image.id"
+            @click="fileId = image.id ?? ''"
           >
-            <Emoji :image-url="image.versions[image.versions.length - 1].file.url" class="size-full" />
+            <Emoji :image-url="emojiImageUrl(image)" class="size-full" />
           </button>
         </template>
       </div>
@@ -65,8 +65,10 @@ import { miscRequest } from "../../api/misc";
 import { notificationRequest } from "../../api/notification";
 import { queryRequest } from "../../api/query-request";
 import { useGalleryStore } from "../../stores/gallery";
+import type { GalleryFile } from "../../stores/gallery-types";
 import { useNotificationStore } from "../../stores/notification";
 import { useUserStore } from "../../stores/user";
+import { logFailure } from "../../stores/log-failure";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { photonEmojis } from "../../shared/constants/photon.ts";
 
@@ -86,14 +88,17 @@ const displayName = ref("");
 
 watch(
   () => sendBoopDialog.value.visible,
-  (visible) => {
-    if (visible) {
+  (isVisible) => {
+    if (isVisible) {
       displayName.value = "";
-      queryRequest.fetch("user.dialog", { userId: sendBoopDialog.value.userId }).then((user) => {
-        displayName.value = user.ref.displayName;
-      });
+      void queryRequest
+        .fetch("user.dialog", { userId: sendBoopDialog.value.userId })
+        .then((user) => {
+          displayName.value = user.ref.displayName;
+        })
+        .catch(logFailure("Loading the user for the boop dialog failed:"));
     }
-    if (visible && isLocalUserVrcPlusSupporter.value && emojiTable.value.length === 0) {
+    if (isVisible && isLocalUserVrcPlusSupporter.value && emojiTable.value.length === 0) {
       refreshEmojiTable();
     }
   }
@@ -104,13 +109,17 @@ function closeDialog() {
 }
 
 const emojiModel = computed({
-  get: () => (fileId.value ? String(fileId.value) : null),
-  set: (value) => {
-    fileId.value = value ? String(value) : "";
+  get: () => (fileId.value ? fileId.value : null),
+  set: (value: string | null) => {
+    fileId.value = value ?? "";
   },
 });
 
-function getEmojiValue(emojiName) {
+function emojiImageUrl(image: GalleryFile) {
+  return image.versions.at(-1)?.file?.url ?? "";
+}
+
+function getEmojiValue(emojiName: string) {
   if (!emojiName) {
     return "";
   }
@@ -132,26 +141,27 @@ const emojiPickerGroups = computed(() => [
 function sendBoop() {
   const D = sendBoopDialog.value;
   dismissBoop(D.userId);
-  const params = {
+  const params: { userId: string; emojiId?: string } = {
     userId: D.userId,
   };
   if (fileId.value) {
     params.emojiId = fileId.value;
   }
-  miscRequest.sendBoop(params);
+  void miscRequest.sendBoop(params).catch(logFailure("Sending the boop failed:"));
   D.visible = false;
 }
 
-function dismissBoop(userId) {
+function dismissBoop(userId: string) {
   const array = notificationTable.value.data;
   for (let i = array.length - 1; i >= 0; i--) {
-    const ref = array[i];
-    if (ref.type !== "boop" || isNotificationExpired(ref) || ref.link !== `user:${userId}`) {
+    const notification = array[i];
+    if (notification?.id === undefined || notification.type !== "boop" || isNotificationExpired(notification) || notification.link !== `user:${userId}`) {
       continue;
     }
-    console.log("Dismissing boop notification with id", ref.id);
-    handleNotificationV2Hide(ref.id);
-    notificationRequest.hideNotificationV2(ref.id);
+    const notificationId = notification.id;
+    console.log("Dismissing boop notification with id", notificationId);
+    handleNotificationV2Hide(notificationId);
+    void notificationRequest.hideNotificationV2(notificationId).catch(logFailure("Hiding the boop notification failed:"));
   }
 }
 </script>

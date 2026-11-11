@@ -1,11 +1,30 @@
 import { computed } from "vue";
+import type { Ref } from "vue";
+import type { useI18n } from "vue-i18n";
+import type { toast as vueSonnerToast } from "vue-sonner";
 import { commaNumber } from "../../../shared/utils/base/string";
 import { compareUnityVersion } from "../../../shared/utils/avatar";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { timeToText } from "../../../shared/utils/base/format";
 import { database } from "../../../services/database";
+import type { useWorldStore } from "../../../stores/world";
 
-export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
+type Translate = ReturnType<typeof useI18n>["t"];
+type WorldDialogState = ReturnType<typeof useWorldStore>["worldDialog"];
+type SdkUnityVersion = Parameters<typeof compareUnityVersion>[1];
+
+export function useWorldDialogInfo(
+  worldDialog: Ref<WorldDialogState>,
+  {
+    t,
+    toast,
+    sdkUnityVersion,
+  }: {
+    t: Translate;
+    toast: Pick<typeof vueSonnerToast, "success" | "error">;
+    sdkUnityVersion: SdkUnityVersion;
+  }
+) {
   const { memo, onWorldMemoChange } = useWorldMemo(worldDialog);
 
   const isTimeInLabVisible = computed(() => {
@@ -18,15 +37,16 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
   });
 
   const timeInLab = computed(() => {
-    return timeToText(new Date(worldDialog.value.ref.publicationDate).getTime() - new Date(worldDialog.value.ref.labsPublicationDate).getTime());
+    return timeToText(new Date(worldDialog.value.ref.publicationDate ?? "").getTime() - new Date(worldDialog.value.ref.labsPublicationDate ?? "").getTime());
   });
 
   const favoriteRate = computed(() => {
-    return Math.round((((worldDialog.value.ref?.favorites - worldDialog.value.ref?.visits) / worldDialog.value.ref?.visits) * 100 + 100) * 100) / 100;
+    const { favorites, visits } = worldDialog.value.ref;
+    return Math.round((((Number(favorites) - Number(visits)) / Number(visits)) * 100 + 100) * 100) / 100;
   });
 
   const worldTags = computed(() => {
-    return worldDialog.value.ref?.tags
+    return worldDialog.value.ref.tags
       ?.filter((tag) => tag.startsWith("author_tag"))
       .map((tag) => tag.replace("author_tag_", ""))
       .join(", ");
@@ -34,7 +54,7 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
 
   const worldDialogPlatform = computed(() => {
     const { ref } = worldDialog.value;
-    const platforms = [];
+    const platforms: string[] = [];
     if (ref.unityPackages) {
       for (const unityPackage of ref.unityPackages) {
         if (!compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
@@ -63,18 +83,19 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
     if (!ref.unityPackages) {
       return null;
     }
-    const newest = {};
+    const newest = new Map<string, string | null | undefined>();
     for (const unityPackage of ref.unityPackages) {
       if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
         continue;
       }
       const platform = unityPackage.platform;
       const createdAt = unityPackage.created_at;
-      if (!newest[platform] || new Date(createdAt) > new Date(newest[platform])) {
-        newest[platform] = createdAt;
+      const newestCreatedAt = newest.get(platform);
+      if (!newestCreatedAt || new Date(createdAt ?? "") > new Date(newestCreatedAt)) {
+        newest.set(platform, createdAt);
       }
     }
-    return newest;
+    return Object.fromEntries(newest);
   });
 
   function copyWorldId() {
@@ -83,7 +104,7 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
       .then(() => {
         toast.success(t("message.world.id_copied"));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("copy failed:", err);
         toast.error(t("message.copy_failed"));
       });
@@ -95,7 +116,7 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
       .then(() => {
         toast.success(t("message.world.url_copied"));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("copy failed:", err);
         toast.error(t("message.copy_failed"));
       });
@@ -103,11 +124,11 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
 
   function copyWorldName() {
     navigator.clipboard
-      .writeText(worldDialog.value.ref.name)
+      .writeText(String(worldDialog.value.ref.name))
       .then(() => {
         toast.success(t("message.world.name_copied"));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("copy failed:", err);
         toast.error(t("message.copy_failed"));
       });
@@ -130,12 +151,12 @@ export function useWorldDialogInfo(worldDialog, { t, toast, sdkUnityVersion }) {
   };
 }
 
-export function useWorldMemo(worldDialog) {
+export function useWorldMemo(worldDialog: Ref<WorldDialogState>) {
   const memo = computed({
     get() {
       return worldDialog.value.memo;
     },
-    set(value) {
+    set(value: string) {
       worldDialog.value.memo = value;
     },
   });

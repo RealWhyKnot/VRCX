@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { PrimitiveProps, RangeCalendarRootEmits, RangeCalendarRootProps } from "reka-ui";
 import { RangeCalendarRoot, useForwardPropsEmits } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
 import RangeCalendarCell from "./RangeCalendarCell.vue";
 import RangeCalendarCellTrigger from "./RangeCalendarCellTrigger.vue";
@@ -15,72 +17,72 @@ import RangeCalendarHeading from "./RangeCalendarHeading.vue";
 import RangeCalendarNextButton from "./RangeCalendarNextButton.vue";
 import RangeCalendarPrevButton from "./RangeCalendarPrevButton.vue";
 
-const props = defineProps({
-  defaultPlaceholder: { type: null, required: false },
-  defaultValue: {
-    type: Object,
-    required: false,
-  },
-  modelValue: {
-    type: [Object, null],
-    required: false,
-  },
-  placeholder: { type: null, required: false },
-  allowNonContiguousRanges: { type: Boolean, required: false },
-  pagedNavigation: { type: Boolean, required: false },
-  preventDeselect: { type: Boolean, required: false },
-  maximumDays: { type: Number, required: false },
-  weekStartsOn: {
-    type: Number,
-    required: false,
-  },
-  weekdayFormat: {
-    type: String,
-    required: false,
-  },
-  calendarLabel: { type: String, required: false },
-  fixedWeeks: { type: Boolean, required: false },
-  maxValue: { type: null, required: false },
-  minValue: { type: null, required: false },
-  locale: { type: String, required: false },
-  numberOfMonths: { type: Number, required: false },
-  disabled: { type: Boolean, required: false },
-  readonly: { type: Boolean, required: false },
-  initialFocus: { type: Boolean, required: false },
-  isDateDisabled: {
-    type: Function,
-    required: false,
-  },
-  isDateUnavailable: {
-    type: Function,
-    required: false,
-  },
-  isDateHighlightable: {
-    type: Function,
-    required: false,
-  },
-  dir: { type: String, required: false },
-  nextPage: {
-    type: Function,
-    required: false,
-  },
-  prevPage: {
-    type: Function,
-    required: false,
-  },
-  disableDaysOutsideCurrentView: { type: Boolean, required: false },
-  fixedDate: {
-    type: String,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+const props = defineProps<{
+  defaultPlaceholder?: RangeCalendarRootProps["defaultPlaceholder"] | undefined;
+  defaultValue?: RangeCalendarRootProps["defaultValue"] | undefined;
+  modelValue?: RangeCalendarRootProps["modelValue"] | undefined;
+  placeholder?: RangeCalendarRootProps["placeholder"] | undefined;
+  allowNonContiguousRanges?: boolean;
+  pagedNavigation?: boolean;
+  preventDeselect?: boolean;
+  maximumDays?: number | undefined;
+  weekStartsOn?: RangeCalendarRootProps["weekStartsOn"] | undefined;
+  weekdayFormat?: RangeCalendarRootProps["weekdayFormat"] | undefined;
+  calendarLabel?: string | undefined;
+  fixedWeeks?: boolean;
+  maxValue?: RangeCalendarRootProps["maxValue"] | undefined;
+  minValue?: RangeCalendarRootProps["minValue"] | undefined;
+  locale?: string | undefined;
+  numberOfMonths?: number | undefined;
+  disabled?: boolean;
+  readonly?: boolean;
+  initialFocus?: boolean;
+  isDateDisabled?: RangeCalendarRootProps["isDateDisabled"] | undefined;
+  isDateUnavailable?: RangeCalendarRootProps["isDateUnavailable"] | undefined;
+  isDateHighlightable?: RangeCalendarRootProps["isDateHighlightable"] | undefined;
+  dir?: RangeCalendarRootProps["dir"] | undefined;
+  nextPage?: RangeCalendarRootProps["nextPage"] | undefined;
+  prevPage?: RangeCalendarRootProps["prevPage"] | undefined;
+  disableDaysOutsideCurrentView?: boolean;
+  fixedDate?: RangeCalendarRootProps["fixedDate"] | undefined;
+  asChild?: boolean;
+  as?: PrimitiveProps["as"] | undefined;
+  class?: ClassValue | undefined;
+}>();
 
-const emits = defineEmits(["update:modelValue", "update:validModelValue", "update:placeholder", "update:startValue"]);
+const emits = defineEmits<RangeCalendarRootEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.defaultPlaceholder === undefined ? {} : { defaultPlaceholder: props.defaultPlaceholder }),
+  ...(props.defaultValue === undefined ? {} : { defaultValue: props.defaultValue }),
+  ...(props.modelValue === undefined ? {} : { modelValue: props.modelValue }),
+  ...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
+  allowNonContiguousRanges: props.allowNonContiguousRanges,
+  pagedNavigation: props.pagedNavigation,
+  preventDeselect: props.preventDeselect,
+  ...(props.maximumDays === undefined ? {} : { maximumDays: props.maximumDays }),
+  ...(props.weekStartsOn === undefined ? {} : { weekStartsOn: props.weekStartsOn }),
+  ...(props.weekdayFormat === undefined ? {} : { weekdayFormat: props.weekdayFormat }),
+  ...(props.calendarLabel === undefined ? {} : { calendarLabel: props.calendarLabel }),
+  fixedWeeks: props.fixedWeeks,
+  ...(props.maxValue === undefined ? {} : { maxValue: props.maxValue }),
+  ...(props.minValue === undefined ? {} : { minValue: props.minValue }),
+  ...(props.locale === undefined ? {} : { locale: props.locale }),
+  ...(props.numberOfMonths === undefined ? {} : { numberOfMonths: props.numberOfMonths }),
+  disabled: props.disabled,
+  readonly: props.readonly,
+  initialFocus: props.initialFocus,
+  ...(props.isDateDisabled === undefined ? {} : { isDateDisabled: props.isDateDisabled }),
+  ...(props.isDateUnavailable === undefined ? {} : { isDateUnavailable: props.isDateUnavailable }),
+  ...(props.isDateHighlightable === undefined ? {} : { isDateHighlightable: props.isDateHighlightable }),
+  ...(props.dir === undefined ? {} : { dir: props.dir }),
+  ...(props.nextPage === undefined ? {} : { nextPage: props.nextPage }),
+  ...(props.prevPage === undefined ? {} : { prevPage: props.prevPage }),
+  disableDaysOutsideCurrentView: props.disableDaysOutsideCurrentView,
+  ...(props.fixedDate === undefined ? {} : { fixedDate: props.fixedDate }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

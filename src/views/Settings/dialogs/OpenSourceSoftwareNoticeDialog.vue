@@ -128,17 +128,27 @@ import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  ossDialog: {
-    type: Boolean,
-    default: false,
-  },
-});
+const LICENSE_MANIFEST_TIMEOUT_MS = 10_000;
 
-const emit = defineEmits(["update:ossDialog"]);
+type LicenseEntry = {
+  id: string;
+  name: string;
+  version: string;
+  license: string;
+  sourceLabel: string;
+  projects?: string[];
+  projectUrl?: string;
+  licenseUrl?: string;
+  noticeText?: string;
+  needsReview?: boolean;
+};
+
+const props = withDefaults(defineProps<{ ossDialog?: boolean }>(), { ossDialog: false });
+
+const emit = defineEmits<{ "update:ossDialog": [value: boolean] }>();
 const isLoading = ref(false);
 const loadError = ref(false);
-const licenses = ref([]);
+const licenses = ref<LicenseEntry[]>([]);
 const noticeRelativePath = ref("licenses/THIRD_PARTY_NOTICES.txt");
 const searchQuery = ref("");
 const selectedEntryId = ref("");
@@ -152,16 +162,16 @@ const filteredEntries = computed(() => {
   }
 
   return licenses.value.filter((entry) => {
-    const haystack = [entry.name, entry.version, entry.license, entry.sourceLabel, ...(entry.projects || [])].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [entry.name, entry.version, entry.license, entry.sourceLabel, ...(entry.projects ?? [])].filter(Boolean).join(" ").toLowerCase();
 
     return haystack.includes(normalizedQuery);
   });
 });
-const selectedEntry = computed(() => filteredEntries.value.find((entry) => entry.id === selectedEntryId.value) || filteredEntries.value[0] || null);
+const selectedEntry = computed(() => filteredEntries.value.find((entry) => entry.id === selectedEntryId.value) ?? filteredEntries.value[0] ?? null);
 watch(
   () => props.ossDialog,
-  async (open) => {
-    if (open && !hasLoadedLicenses) {
+  async (isOpen) => {
+    if (isOpen && !hasLoadedLicenses) {
       await loadLicenses();
     }
   },
@@ -170,7 +180,7 @@ watch(
 
 watch(filteredEntries, (entries) => {
   if (!entries.some((entry) => entry.id === selectedEntryId.value)) {
-    selectedEntryId.value = entries[0]?.id || "";
+    selectedEntryId.value = entries[0]?.id ?? "";
   }
 });
 
@@ -178,11 +188,11 @@ function closeDialog() {
   emit("update:ossDialog", false);
 }
 
-function buildAssetUrl(relativePath) {
+function buildAssetUrl(relativePath: string) {
   return new URL(relativePath, window.location.href).toString();
 }
 
-function getLicenseLabel(license) {
+function getLicenseLabel(license: string) {
   if (license.startsWith("Public Domain")) {
     return "Public Domain";
   }
@@ -190,21 +200,60 @@ function getLicenseLabel(license) {
   return license;
 }
 
+function readManifestField(manifest: unknown, key: string): unknown {
+  return typeof manifest === "object" && manifest !== null ? Reflect.get(manifest, key) : undefined;
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalStringArray(value: unknown): boolean {
+  return value === undefined || (Array.isArray(value) && value.every((item) => typeof item === "string"));
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === "boolean";
+}
+
+function isLicenseEntry(value: unknown): value is LicenseEntry {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return (
+    typeof readManifestField(value, "id") === "string" &&
+    typeof readManifestField(value, "name") === "string" &&
+    typeof readManifestField(value, "version") === "string" &&
+    typeof readManifestField(value, "license") === "string" &&
+    typeof readManifestField(value, "sourceLabel") === "string" &&
+    isOptionalStringArray(readManifestField(value, "projects")) &&
+    isOptionalString(readManifestField(value, "projectUrl")) &&
+    isOptionalString(readManifestField(value, "licenseUrl")) &&
+    isOptionalString(readManifestField(value, "noticeText")) &&
+    isOptionalBoolean(readManifestField(value, "needsReview"))
+  );
+}
+
 async function loadLicenses() {
   isLoading.value = true;
   loadError.value = false;
 
   try {
-    const response = await fetch(buildAssetUrl("licenses/third-party-licenses.json"), { cache: "no-store" });
+    const response = await fetch(buildAssetUrl("licenses/third-party-licenses.json"), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(LICENSE_MANIFEST_TIMEOUT_MS),
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to load third-party license manifest: ${response.status}`);
     }
 
-    const manifest = await response.json();
-    licenses.value = Array.isArray(manifest.entries) ? manifest.entries : [];
-    noticeRelativePath.value = typeof manifest.noticePath === "string" && manifest.noticePath ? manifest.noticePath : "licenses/THIRD_PARTY_NOTICES.txt";
-    selectedEntryId.value = licenses.value[0]?.id || "";
+    const manifest: unknown = await response.json();
+    const manifestEntries = readManifestField(manifest, "entries");
+    licenses.value = Array.isArray(manifestEntries) ? manifestEntries.filter(isLicenseEntry) : [];
+    const noticePath = readManifestField(manifest, "noticePath");
+    noticeRelativePath.value = typeof noticePath === "string" && noticePath ? noticePath : "licenses/THIRD_PARTY_NOTICES.txt";
+    selectedEntryId.value = licenses.value[0]?.id ?? "";
     hasLoadedLicenses = true;
   } catch (error) {
     console.error(error);

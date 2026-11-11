@@ -2,13 +2,41 @@ import { computed, nextTick, onBeforeMount, ref, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 
 import { configRepository } from "../../../services/config.ts";
+import { logFailure } from "../../../stores/log-failure.ts";
 
-function clamp(value, min, max) {
+export type AvatarCardGridOptions = {
+  scaleMin?: number;
+  scaleMax?: number;
+  scaleStep?: number;
+  spacingMin?: number;
+  spacingMax?: number;
+  spacingStep?: number;
+  baseCardWidth?: number;
+  baseGap?: number;
+  baseCardHeight?: number;
+  scaleConfigKey?: string;
+  spacingConfigKey?: string;
+};
+
+export type GridRow<T> = { key: string; items: T[] };
+
+type GridMetrics = { minWidth: number; gap: number; columns: number; cardWidth: number };
+
+function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min;
   return Math.min(max, Math.max(min, value));
 }
 
-export function useAvatarCardGrid(options = {}) {
+function parseStoredNumber(value: string): number {
+  if (value.trim() === "") return Number.NaN;
+  return Number(value);
+}
+
+function isItemList(items: unknown): items is unknown[] {
+  return Array.isArray(items);
+}
+
+export function useAvatarCardGrid(options: AvatarCardGridOptions = {}) {
   const scaleSlider = {
     min: options.scaleMin ?? 0.3,
     max: options.scaleMax ?? 0.9,
@@ -28,33 +56,33 @@ export function useAvatarCardGrid(options = {}) {
 
   const cardScaleBase = ref(0.6);
   const cardSpacingBase = ref(1);
-  const gridContainerRef = ref(null);
+  const gridContainerRef = ref<HTMLElement | null>(null);
   const containerWidth = ref(0);
 
-  const updateContainerWidth = (el) => {
+  const updateContainerWidth = (el?: HTMLElement | null) => {
     const element = el ?? gridContainerRef.value;
     if (!element) {
       containerWidth.value = 0;
       return;
     }
-    containerWidth.value = Math.max(element.clientWidth ?? element.offsetWidth ?? 0, 0);
+    containerWidth.value = Math.max(element.clientWidth, 0);
   };
 
   const cardScale = computed({
     get: () => cardScaleBase.value,
-    set: (value) => {
-      const next = clamp(Number(value) || 1, scaleSlider.min, scaleSlider.max);
+    set: (value: number) => {
+      const next = clamp(value || 1, scaleSlider.min, scaleSlider.max);
       cardScaleBase.value = next;
-      configRepository.setString(scaleConfigKey, String(next));
+      void configRepository.setString(scaleConfigKey, String(next)).catch(logFailure("Failed to save avatar card scale"));
     },
   });
 
   const cardSpacing = computed({
     get: () => cardSpacingBase.value,
-    set: (value) => {
-      const next = clamp(Number(value) || 1, spacingSlider.min, spacingSlider.max);
+    set: (value: number) => {
+      const next = clamp(value || 1, spacingSlider.min, spacingSlider.max);
       cardSpacingBase.value = next;
-      configRepository.setString(spacingConfigKey, String(next));
+      void configRepository.setString(spacingConfigKey, String(next)).catch(logFailure("Failed to save avatar card spacing"));
     },
   });
 
@@ -63,27 +91,27 @@ export function useAvatarCardGrid(options = {}) {
 
   const cardScaleValue = computed({
     get: () => [cardScale.value],
-    set: (value) => {
-      const next = value?.[0];
+    set: (value: number[]) => {
+      const next = value[0];
       if (typeof next === "number") cardScale.value = next;
     },
   });
 
   const cardSpacingValue = computed({
     get: () => [cardSpacing.value],
-    set: (value) => {
-      const next = value?.[0];
+    set: (value: number[]) => {
+      const next = value[0];
       if (typeof next === "number") cardSpacing.value = next;
     },
   });
 
-  const getGridMetrics = (count = 1) => {
+  const getGridMetrics = (count = 1): GridMetrics => {
     const scale = cardScale.value;
     const spacing = cardSpacing.value;
     const minWidth = baseCardWidth * scale;
     const gap = Math.max(4, baseGap * spacing);
     const width = Math.max(containerWidth.value, 0);
-    const itemCount = Math.max(Number(count) || 0, 0);
+    const itemCount = Math.max(count || 0, 0);
     const safeCount = itemCount > 0 ? itemCount : 1;
     const maxColumns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minWidth + gap)) || 1) : 1;
     const columns = Math.max(1, Math.min(safeCount, maxColumns));
@@ -106,7 +134,7 @@ export function useAvatarCardGrid(options = {}) {
     const minWidth = baseCardWidth * scale;
     const gap = Math.max(4, baseGap * spacing);
 
-    return (count = 1) => {
+    return (count = 1): Record<string, string> => {
       const { columns, cardWidth } = getGridMetrics(count);
       return {
         "--avatar-card-min-width": `${Math.round(minWidth)}px`,
@@ -117,11 +145,13 @@ export function useAvatarCardGrid(options = {}) {
     };
   });
 
-  const chunkIntoRows = (items, keyPrefix = "row") => {
-    if (!Array.isArray(items) || !items.length) return [];
+  function chunkIntoRows<T>(items: readonly T[] | null | undefined, keyPrefix?: string): GridRow<T>[];
+  function chunkIntoRows(items: unknown, keyPrefix?: string): GridRow<unknown>[];
+  function chunkIntoRows(items: unknown, keyPrefix = "row"): GridRow<unknown>[] {
+    if (!isItemList(items) || !items.length) return [];
     const { columns } = getGridMetrics(items.length);
     const safeColumns = Math.max(1, columns);
-    const rows = [];
+    const rows: GridRow<unknown>[] = [];
     for (let i = 0; i < items.length; i += safeColumns) {
       rows.push({
         key: `${keyPrefix}:${i}`,
@@ -129,7 +159,7 @@ export function useAvatarCardGrid(options = {}) {
       });
     }
     return rows;
-  };
+  }
 
   const estimateRowHeight = (itemCount = 0) => {
     const scale = cardScale.value;
@@ -149,14 +179,15 @@ export function useAvatarCardGrid(options = {}) {
         containerWidth.value = 0;
         return;
       }
-      nextTick(() => updateContainerWidth(element));
+      void nextTick(() => updateContainerWidth(element)).catch(logFailure("Failed to update avatar grid width"));
     },
     { immediate: true }
   );
 
   useResizeObserver(gridContainerRef, (entries) => {
     const [entry] = entries;
-    containerWidth.value = Math.max(entry?.contentRect?.width ?? gridContainerRef.value?.clientWidth ?? 0, 0);
+    const width = entry ? entry.contentRect.width : (gridContainerRef.value?.clientWidth ?? 0);
+    containerWidth.value = Math.max(width, 0);
   });
 
   onBeforeMount(async () => {
@@ -166,12 +197,12 @@ export function useAvatarCardGrid(options = {}) {
         configRepository.getString(spacingConfigKey, "1"),
       ]);
 
-      const parsedScale = parseFloat(storedScale);
+      const parsedScale = parseStoredNumber(storedScale);
       if (!Number.isNaN(parsedScale)) {
         cardScaleBase.value = clamp(parsedScale, scaleSlider.min, scaleSlider.max);
       }
 
-      const parsedSpacing = parseFloat(storedSpacing);
+      const parsedSpacing = parseStoredNumber(storedSpacing);
       if (!Number.isNaN(parsedSpacing)) {
         cardSpacingBase.value = clamp(parsedSpacing, spacingSlider.min, spacingSlider.max);
       }

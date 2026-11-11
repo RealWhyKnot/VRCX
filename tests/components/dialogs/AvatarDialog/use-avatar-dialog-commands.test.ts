@@ -29,7 +29,7 @@ vi.mock("../../../../src/shared/utils/app-actions", () => ({
   openExternalLink: vi.fn(),
 }));
 vi.mock("../../../../src/shared/utils/url-utils", () => ({
-  replaceVrcPackageUrl: vi.fn((url) => url),
+  replaceVrcPackageUrl: vi.fn((url: string) => url),
 }));
 
 vi.mock("../../../../src/shared/utils/image-upload", () => ({
@@ -51,6 +51,19 @@ const { copyToClipboard, openExternalLink } = await import("../../../../src/shar
 const { favoriteRequest } = await import("../../../../src/api/favorite");
 const { avatarRequest } = await import("../../../../src/api/avatar");
 const { avatarModerationRequest } = await import("../../../../src/api/avatar-moderation");
+
+type Deps = Parameters<typeof useAvatarDialogCommands>[1];
+
+const requestSpies = {
+  deleteFavorite: vi.spyOn(favoriteRequest, "deleteFavorite"),
+  selectFallbackAvatar: vi.spyOn(avatarRequest, "selectFallbackAvatar"),
+  saveAvatar: vi.spyOn(avatarRequest, "saveAvatar"),
+  deleteAvatar: vi.spyOn(avatarRequest, "deleteAvatar"),
+  createImposter: vi.spyOn(avatarRequest, "createImposter"),
+  deleteImposter: vi.spyOn(avatarRequest, "deleteImposter"),
+  sendAvatarModeration: vi.spyOn(avatarModerationRequest, "sendAvatarModeration"),
+  deleteAvatarModeration: vi.spyOn(avatarModerationRequest, "deleteAvatarModeration"),
+};
 
 function createMockAvatarDialog() {
   return ref({
@@ -77,34 +90,37 @@ function createMockAvatarDialog() {
   });
 }
 
-function createMockDeps(overrides = {}) {
+function pendingRequest(): Promise<never> {
+  return new Promise<never>(() => undefined);
+}
+
+function createMockDeps(overrides: Partial<Deps> = {}): Deps {
   return {
-    t: vi.fn((key) => key),
-    toast: Object.assign(vi.fn(), {
-      success: vi.fn(),
-      error: vi.fn(),
-      promise: vi.fn(),
-    }),
+    t: vi.fn((key: string) => key),
+    toast: {
+      success: vi.fn<Deps["toast"]["success"]>(),
+      error: vi.fn<Deps["toast"]["error"]>(),
+    },
     modalStore: {
-      confirm: vi.fn(() => Promise.resolve({ ok: true })),
-      prompt: vi.fn(() => Promise.resolve({ ok: true, value: "new_value" })),
+      confirm: vi.fn<Deps["modalStore"]["confirm"]>(() => Promise.resolve({ ok: true, reason: "ok", checked: false })),
+      prompt: vi.fn<Deps["modalStore"]["prompt"]>(() => Promise.resolve({ ok: true, reason: "ok", value: "new_value" })),
     },
     userDialog: ref({ id: "usr_author" }),
-    cachedAvatars: new Map([["avtr_test123", { id: "avtr_test123", authorId: "usr_author" }]]),
+    cachedAvatars: new Map(),
     cachedAvatarModerations: new Map(),
-    showAvatarDialog: vi.fn(),
-    showFavoriteDialog: vi.fn(),
-    applyAvatarModeration: vi.fn((json) => json),
-    applyAvatar: vi.fn((json) => json),
-    sortUserDialogAvatars: vi.fn(),
-    uiStore: { jumpBackDialogCrumb: vi.fn() },
+    showAvatarDialog: vi.fn<Deps["showAvatarDialog"]>(),
+    showFavoriteDialog: vi.fn<Deps["showFavoriteDialog"]>(),
+    applyAvatarModeration: vi.fn<Deps["applyAvatarModeration"]>(),
+    applyAvatar: vi.fn<Deps["applyAvatar"]>(),
+    sortUserDialogAvatars: vi.fn<Deps["sortUserDialogAvatars"]>(),
+    uiStore: { jumpBackDialogCrumb: vi.fn<() => void>() },
     ...overrides,
   };
 }
 
 describe("useAvatarDialogCommands", () => {
-  let avatarDialog;
-  let deps;
+  let avatarDialog: ReturnType<typeof createMockAvatarDialog>;
+  let deps: Deps;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,22 +167,21 @@ describe("useAvatarDialogCommands", () => {
       expect(deps.modalStore.prompt).toHaveBeenCalled();
     });
 
-    it("Change Image: triggers file input (DOM-dependent, skip in node)", () => {
-      if (typeof document === "undefined") {
-        return;
-      }
-      const mockBtn = { click: vi.fn() };
-      vi.spyOn(document, "getElementById").mockReturnValue(mockBtn);
+    it("Change Image: triggers file input", () => {
+      const button = document.createElement("button");
+      button.id = "AvatarImageUploadButton";
+      document.body.appendChild(button);
+      const clickSpy = vi.spyOn(button, "click").mockImplementation(() => undefined);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Change Image");
-      expect(mockBtn.click).toHaveBeenCalled();
-      vi.restoreAllMocks();
+      expect(clickSpy).toHaveBeenCalled();
+      button.remove();
     });
   });
 
   describe("string callback commands", () => {
     it("should delegate to registered callbacks", () => {
-      const showSetAvatarTagsDialog = vi.fn();
+      const showSetAvatarTagsDialog = vi.fn<() => void>();
       const { avatarDialogCommand, registerCallbacks } = useAvatarDialogCommands(avatarDialog, deps);
       registerCallbacks({ showSetAvatarTagsDialog });
       avatarDialogCommand("Change Content Tags");
@@ -181,45 +196,44 @@ describe("useAvatarDialogCommands", () => {
 
   describe("confirmed commands", () => {
     it("Delete Favorite: should confirm then delete", async () => {
+      requestSpies.deleteFavorite.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Delete Favorite");
       await vi.waitFor(() => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
       });
       await vi.waitFor(() => {
-        expect(favoriteRequest.deleteFavorite).toHaveBeenCalledWith({
+        expect(requestSpies.deleteFavorite).toHaveBeenCalledWith({
           objectId: "avtr_test123",
         });
       });
     });
 
     it("confirmed command should not execute when cancelled", async () => {
-      deps.modalStore.confirm = vi.fn(() => Promise.resolve({ ok: false }));
+      deps.modalStore.confirm = vi.fn<Deps["modalStore"]["confirm"]>(() => Promise.resolve({ ok: false, reason: "cancel", checked: false }));
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Delete Favorite");
       await vi.waitFor(() => {
         expect(deps.modalStore.confirm).toHaveBeenCalled();
       });
-      expect(favoriteRequest.deleteFavorite).not.toHaveBeenCalled();
+      expect(requestSpies.deleteFavorite).not.toHaveBeenCalled();
     });
 
     it("Select Fallback Avatar: should confirm then select", async () => {
-      avatarRequest.selectFallbackAvatar.mockResolvedValue({ json: {} });
+      requestSpies.selectFallbackAvatar.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Select Fallback Avatar");
       await vi.waitFor(() => {
-        expect(avatarRequest.selectFallbackAvatar).toHaveBeenCalledWith({ avatarId: "avtr_test123" });
+        expect(requestSpies.selectFallbackAvatar).toHaveBeenCalledWith({ avatarId: "avtr_test123" });
       });
     });
 
     it("Block Avatar: should confirm then send moderation", async () => {
-      avatarModerationRequest.sendAvatarModeration.mockResolvedValue({
-        json: { targetAvatarId: "avtr_test123" },
-      });
+      requestSpies.sendAvatarModeration.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Block Avatar");
       await vi.waitFor(() => {
-        expect(avatarModerationRequest.sendAvatarModeration).toHaveBeenCalledWith({
+        expect(requestSpies.sendAvatarModeration).toHaveBeenCalledWith({
           avatarModerationType: "block",
           targetAvatarId: "avtr_test123",
         });
@@ -227,16 +241,11 @@ describe("useAvatarDialogCommands", () => {
     });
 
     it("Unblock Avatar: should confirm then delete moderation", async () => {
-      avatarModerationRequest.deleteAvatarModeration.mockResolvedValue({
-        params: {
-          targetAvatarId: "avtr_test123",
-          avatarModerationType: "block",
-        },
-      });
+      requestSpies.deleteAvatarModeration.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Unblock Avatar");
       await vi.waitFor(() => {
-        expect(avatarModerationRequest.deleteAvatarModeration).toHaveBeenCalledWith({
+        expect(requestSpies.deleteAvatarModeration).toHaveBeenCalledWith({
           avatarModerationType: "block",
           targetAvatarId: "avtr_test123",
         });
@@ -244,13 +253,11 @@ describe("useAvatarDialogCommands", () => {
     });
 
     it("Make Public: should save avatar with public status", async () => {
-      avatarRequest.saveAvatar.mockResolvedValue({
-        json: { releaseStatus: "public" },
-      });
+      requestSpies.saveAvatar.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Make Public");
       await vi.waitFor(() => {
-        expect(avatarRequest.saveAvatar).toHaveBeenCalledWith({
+        expect(requestSpies.saveAvatar).toHaveBeenCalledWith({
           id: "avtr_test123",
           releaseStatus: "public",
         });
@@ -258,13 +265,11 @@ describe("useAvatarDialogCommands", () => {
     });
 
     it("Make Private: should save avatar with private status", async () => {
-      avatarRequest.saveAvatar.mockResolvedValue({
-        json: { releaseStatus: "private" },
-      });
+      requestSpies.saveAvatar.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Make Private");
       await vi.waitFor(() => {
-        expect(avatarRequest.saveAvatar).toHaveBeenCalledWith({
+        expect(requestSpies.saveAvatar).toHaveBeenCalledWith({
           id: "avtr_test123",
           releaseStatus: "private",
         });
@@ -272,35 +277,33 @@ describe("useAvatarDialogCommands", () => {
     });
 
     it("Delete: should delete avatar and update cache", async () => {
-      avatarRequest.deleteAvatar.mockResolvedValue({
-        json: { _id: "avtr_test123", authorId: "usr_author" },
-      });
+      requestSpies.deleteAvatar.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Delete");
       await vi.waitFor(() => {
-        expect(avatarRequest.deleteAvatar).toHaveBeenCalledWith({
+        expect(requestSpies.deleteAvatar).toHaveBeenCalledWith({
           avatarId: "avtr_test123",
         });
       });
     });
 
     it("Create Imposter: should create imposter", async () => {
-      avatarRequest.createImposter.mockResolvedValue({ json: {} });
+      requestSpies.createImposter.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Create Imposter");
       await vi.waitFor(() => {
-        expect(avatarRequest.createImposter).toHaveBeenCalledWith({
+        expect(requestSpies.createImposter).toHaveBeenCalledWith({
           avatarId: "avtr_test123",
         });
       });
     });
 
     it("Delete Imposter: should delete imposter and refresh", async () => {
-      avatarRequest.deleteImposter.mockResolvedValue({ json: {} });
+      requestSpies.deleteImposter.mockImplementation(pendingRequest);
       const { avatarDialogCommand } = useAvatarDialogCommands(avatarDialog, deps);
       avatarDialogCommand("Delete Imposter");
       await vi.waitFor(() => {
-        expect(avatarRequest.deleteImposter).toHaveBeenCalledWith({
+        expect(requestSpies.deleteImposter).toHaveBeenCalledWith({
           avatarId: "avtr_test123",
         });
       });

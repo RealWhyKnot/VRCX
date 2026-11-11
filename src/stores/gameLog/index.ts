@@ -359,7 +359,7 @@ export const useGameLogStore = defineStore("GameLog", () => {
     }
   }
 
-  function gameLogIsFriend(row: GameLogEntry): boolean {
+  function gameLogIsFriend(row: Pick<GameLogEntry, "userId" | "isFriend">): boolean {
     if (typeof row.isFriend !== "undefined") {
       return row.isFriend;
     }
@@ -369,7 +369,7 @@ export const useGameLogStore = defineStore("GameLog", () => {
     return friendStore.friends.has(row.userId);
   }
 
-  function gameLogIsFavorite(row: GameLogEntry): boolean {
+  function gameLogIsFavorite(row: Pick<GameLogEntry, "userId" | "isFavorite">): boolean {
     if (typeof row.isFavorite !== "undefined") {
       return row.isFavorite;
     }

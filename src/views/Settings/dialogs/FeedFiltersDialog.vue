@@ -20,12 +20,7 @@
             variant="outline"
             size="sm"
             :model-value="currentSharedFeedFilters[setting.key]"
-            @update:model-value="
-              (value) => {
-                currentSharedFeedFilters[setting.key] = value;
-                saveSharedFeedFilters();
-              }
-            "
+            @update:model-value="(value) => handleSharedFeedFilterChange(setting.key, value)"
           >
             <ToggleGroupItem v-for="option in setting.options" :key="option.label" :value="option.label">
               {{ t(option.textKey) }}
@@ -46,12 +41,7 @@
               variant="outline"
               size="sm"
               :model-value="currentSharedFeedFilters[setting.key]"
-              @update:model-value="
-                (value) => {
-                  currentSharedFeedFilters[setting.key] = value;
-                  saveSharedFeedFilters();
-                }
-              "
+              @update:model-value="(value) => handleSharedFeedFilterChange(setting.key, value)"
             >
               <ToggleGroupItem v-for="option in setting.options" :key="option.label" :value="option.label">
                 {{ t(option.textKey) }}
@@ -89,6 +79,7 @@ import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem
 import { feedFiltersOptions, sharedFeedFiltersDefaults } from "../../../shared/constants/feed-filters";
 
 import { configRepository } from "../../../services/config";
+import { logError } from "../../../stores/notification/errors";
 
 const { t } = useI18n();
 
@@ -97,13 +88,7 @@ const { notyFeedFiltersOptions, wristFeedFiltersOptions, photonFeedFiltersOption
 const { sharedFeedFilters } = storeToRefs(useNotificationsSettingsStore());
 const { loadSharedFeed } = useSharedFeedStore();
 
-const props = defineProps({
-  feedFiltersDialogMode: {
-    type: String,
-    required: true,
-    default: "",
-  },
-});
+const props = withDefaults(defineProps<{ feedFiltersDialogMode?: string }>(), { feedFiltersDialogMode: "" });
 
 const currentOptions = computed(() => {
   return props.feedFiltersDialogMode === "noty" ? notyFeedFiltersOptions : wristFeedFiltersOptions;
@@ -122,11 +107,11 @@ const currentResetFunction = computed(() => {
   return props.feedFiltersDialogMode === "noty" ? resetNotyFeedFilters : resetWristFeedFilters;
 });
 
-const emit = defineEmits(["update:feedFiltersDialogMode"]);
+const emit = defineEmits<{ "update:feedFiltersDialogMode": [value: string] }>();
 
 function saveSharedFeedFilters() {
-  configRepository.setString("sharedFeedFilters", JSON.stringify(sharedFeedFilters.value));
-  loadSharedFeed();
+  void configRepository.setString("sharedFeedFilters", JSON.stringify(sharedFeedFilters.value)).catch(logError);
+  void loadSharedFeed().catch(logError);
 }
 
 function resetNotyFeedFilters() {
@@ -136,10 +121,17 @@ function resetNotyFeedFilters() {
   saveSharedFeedFilters();
 }
 
-async function resetWristFeedFilters() {
+function resetWristFeedFilters() {
   sharedFeedFilters.value.wrist = {
     ...sharedFeedFiltersDefaults.wrist,
   };
+  saveSharedFeedFilters();
+}
+
+function handleSharedFeedFilterChange(key: string, value: unknown) {
+  if (typeof value === "string") {
+    currentSharedFeedFilters.value[key] = value;
+  }
   saveSharedFeedFilters();
 }
 

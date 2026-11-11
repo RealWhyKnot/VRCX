@@ -2,29 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 
 const mocks = vi.hoisted(() => ({
-  emojiTable: [],
-  getCachedEmoji: vi.fn(async () => ({
-    frames: null,
-    framesOverTime: null,
-    loopStyle: null,
-    versions: [],
-  })),
-  extractFileId: vi.fn(() => "file_1"),
-  generateEmojiStyle: vi.fn(() => "background: red;"),
+  emojiTable: new Array<{ id: string; frames: number; framesOverTime: number; loopStyle: number; versions: unknown[] }>(),
+  getCachedEmoji: vi.fn((_fileId: string) =>
+    Promise.resolve({
+      frames: null,
+      framesOverTime: null,
+      loopStyle: null,
+      versions: [],
+    })
+  ),
+  extractFileId: vi.fn((_url: string) => "file_1"),
+  generateEmojiStyle: vi.fn((_url: string, _framesOverTime: number, _frames: number, _loopStyle: number, _size: number) => "background: red;"),
 }));
 
 vi.mock("../../src/stores/gallery", () => ({
   useGalleryStore: () => ({
-    getCachedEmoji: (...args) => mocks.getCachedEmoji(...args),
+    getCachedEmoji: mocks.getCachedEmoji,
     emojiTable: mocks.emojiTable,
   }),
 }));
 
 vi.mock("../../src/shared/utils/file-utils", () => ({
-  extractFileId: (...args) => mocks.extractFileId(...args),
+  extractFileId: mocks.extractFileId,
 }));
 vi.mock("../../src/shared/utils/gallery", () => ({
-  generateEmojiStyle: (...args) => mocks.generateEmojiStyle(...args),
+  generateEmojiStyle: mocks.generateEmojiStyle,
 }));
 
 vi.mock("../../src/components/ui/avatar/Avatar.vue", () => ({

@@ -44,7 +44,13 @@
                 <div class="flex min-w-0 items-center">
                   <MapPin class="mr-1 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <div class="min-w-0 flex-1 truncate">
-                    <Location :location="item.location" :hint="item.worldName" :grouphint="item.groupName" enable-context-menu disable-tooltip />
+                    <Location
+                      :location="item.location ?? ''"
+                      :hint="item.worldName ?? ''"
+                      :grouphint="item.groupName ?? ''"
+                      enable-context-menu
+                      disable-tooltip
+                    />
                   </div>
                 </div>
               </template>
@@ -67,7 +73,10 @@
               </template>
               <template v-else-if="item.type === 'VideoPlay'">
                 <Play class="mr-1 inline-block h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <TooltipWrapper :content="item.videoId ? `${item.videoId}: ${item.videoName || item.videoUrl}` : item.videoName || item.videoUrl" side="top">
+                <TooltipWrapper
+                  :content="item.videoId ? `${item.videoId}: ${item.videoName || item.videoUrl}` : item.videoName || item.videoUrl || ''"
+                  side="top"
+                >
                   <span>
                     <span v-if="item.videoId" class="mr-1 text-muted-foreground">{{ item.videoId }}:</span>
                     <span
@@ -85,7 +94,7 @@
                 <span class="cursor-pointer hover:underline" @click="openUser(item.userId)">{{ item.displayName }}</span>
                 <span class="text-muted-foreground"> → </span>
                 <div v-if="item.location" class="min-w-0 flex-1 truncate">
-                  <Location :location="item.location" :hint="item.worldName" enable-context-menu disable-tooltip />
+                  <Location :location="item.location ?? ''" :hint="item.worldName ?? ''" enable-context-menu disable-tooltip />
                 </div>
                 <span v-else class="text-muted-foreground">{{ item.worldName || "" }}</span>
               </template>
@@ -125,6 +134,7 @@ import { useGameLogStore } from "@/stores/gameLog";
 import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { openExternalLink } from "@/shared/utils/app-actions";
 import { watchState } from "@/services/watch-state";
+import { logFailure } from "@/stores/log-failure";
 
 import Button from "@/components/ui/button/Button.vue";
 import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
@@ -139,44 +149,59 @@ import Table from "@/components/ui/table/Table.vue";
 import TableBody from "@/components/ui/table/TableBody.vue";
 import TableRow from "@/components/ui/table/TableRow.vue";
 import TableCell from "@/components/ui/table/TableCell.vue";
+import type { GameLogRow } from "@/services/database/game-log-union";
+
+type GameLogWidgetConfig = {
+  filters?: string[];
+  showDetail?: boolean;
+};
+
+type WithUndefinedValues<T> = { [K in keyof T]: T[K] | undefined };
+
+type GameLogWidgetRow = Partial<WithUndefinedValues<GameLogRow>> & {
+  isFriend?: boolean | undefined;
+  isFavorite?: boolean | undefined;
+  tagColour?: string | undefined;
+};
 
 const GAMELOG_TYPES = ["Location", "OnPlayerJoined", "OnPlayerLeft", "VideoPlay", "PortalSpawn", "Event", "External"];
 
-const props = defineProps({
-  config: {
-    type: Object,
-    default: () => ({}),
-  },
-  configUpdater: {
-    type: Function,
-    default: null,
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    config?: GameLogWidgetConfig;
+    configUpdater?: ((config: GameLogWidgetConfig) => void) | null;
+  }>(),
+  {
+    config: () => ({}),
+    configUpdater: null,
+  }
+);
 
 const { t } = useI18n();
 const friendStore = useFriendStore();
 const gameLogStore = useGameLogStore();
 
-const widgetData = shallowRef([]);
+const widgetData = shallowRef<GameLogWidgetRow[]>([]);
 const maxEntries = 200;
 
 const activeFilters = computed(() => {
-  if (props.config.filters && Array.isArray(props.config.filters) && props.config.filters.length > 0) {
-    return props.config.filters;
+  const filters = props.config.filters;
+  if (filters && Array.isArray(filters) && filters.length > 0) {
+    return filters;
   }
   return GAMELOG_TYPES;
 });
 
-function isFilterActive(filterType) {
+function isFilterActive(filterType: string) {
   const filters = props.config.filters;
   if (!filters || !Array.isArray(filters) || filters.length === 0) return true;
   return filters.includes(filterType);
 }
 
-function toggleFilter(filterType) {
+function toggleFilter(filterType: string) {
   if (!props.configUpdater) return;
   const currentFilters = props.config.filters;
-  let filters;
+  let filters: string[];
   if (!currentFilters || !Array.isArray(currentFilters) || currentFilters.length === 0) {
     filters = GAMELOG_TYPES.filter((f) => f !== filterType);
   } else if (currentFilters.includes(filterType)) {
@@ -189,28 +214,28 @@ function toggleFilter(filterType) {
   props.configUpdater({ ...props.config, filters });
 }
 
-function toggleBooleanConfig(key) {
+function toggleBooleanConfig(key: "showDetail") {
   if (!props.configUpdater) return;
   props.configUpdater({ ...props.config, [key]: !props.config[key] });
 }
 
 const showDetail = computed(() => {
-  return props.config.showDetail || false;
+  return props.config.showDetail ?? false;
 });
 
 const filteredData = computed(() => {
   const filters = activeFilters.value;
-  return widgetData.value.filter((item) => filters.includes(item.type)).slice(0, maxEntries);
+  return widgetData.value.filter((item) => filters.includes(item.type ?? "")).slice(0, maxEntries);
 });
 
 async function loadInitialData() {
   try {
     const rows = await database.lookupGameLogDatabase([], []);
-    for (const row of rows) {
-      row.isFriend = row.userId ? friendStore.friends.has(row.userId) : false;
-      row.isFavorite = row.userId ? friendStore.localFavoriteFriends.has(row.userId) : false;
-    }
-    widgetData.value = rows;
+    widgetData.value = rows.map((row) => ({
+      ...row,
+      isFriend: row.userId ? friendStore.friends.has(row.userId) : false,
+      isFavorite: row.userId ? friendStore.localFavoriteFriends.has(row.userId) : false,
+    }));
   } catch {
     widgetData.value = [];
   }
@@ -220,7 +245,7 @@ watch(
   () => gameLogStore.latestGameLogEntry,
   (entry) => {
     if (!entry) return;
-    const newEntry = { ...entry };
+    const newEntry: GameLogWidgetRow = { ...entry };
     newEntry.isFriend = newEntry.userId ? friendStore.friends.has(newEntry.userId) : false;
     newEntry.isFavorite = newEntry.userId ? friendStore.localFavoriteFriends.has(newEntry.userId) : false;
     widgetData.value = [newEntry, ...widgetData.value];
@@ -234,7 +259,7 @@ watch(
   () => watchState.isLoggedIn,
   (isLoggedIn) => {
     if (isLoggedIn) {
-      loadInitialData();
+      void loadInitialData().catch(logFailure("Failed to load game log widget data"));
     } else {
       widgetData.value = [];
     }
@@ -244,19 +269,19 @@ watch(
 
 onMounted(() => {
   if (watchState.isLoggedIn) {
-    loadInitialData();
+    void loadInitialData().catch(logFailure("Failed to load game log widget data"));
   }
 });
 
-function formatTime(dateStr) {
-  return formatDateFilter(dateStr, "short");
+function formatTime(dateStr: string | null | undefined) {
+  return formatDateFilter(dateStr ?? null, "short");
 }
 
-function formatExactTime(dateStr) {
-  return formatDateFilter(dateStr, "long");
+function formatExactTime(dateStr: string | null | undefined) {
+  return formatDateFilter(dateStr ?? null, "long");
 }
 
-function openUser(userId) {
+function openUser(userId: string | null | undefined) {
   if (userId) {
     showUserDialog(userId);
   }

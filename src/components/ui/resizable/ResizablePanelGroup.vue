@@ -1,27 +1,30 @@
 <script setup lang="ts">
+import type { PrimitiveProps, SplitterGroupEmits, SplitterGroupProps } from "reka-ui";
 import { SplitterGroup, useForwardPropsEmits } from "reka-ui";
+import type { ClassValue } from "clsx";
 import { cn } from "@/lib/utils";
-import { reactiveOmit } from "@vueuse/core";
+import { computed } from "vue";
 
-const props = defineProps({
-  id: { type: [String, null], required: false },
-  autoSaveId: { type: [String, null], required: false },
-  direction: {
-    type: String,
-    required: true,
-  },
-  keyboardResizeBy: { type: [Number, null], required: false },
-  storage: {
-    type: Object,
-    required: false,
-  },
-  asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-  class: { type: null, required: false },
-});
-const emits = defineEmits(["layout"]);
+const props = defineProps<{
+  id?: string | null | undefined;
+  autoSaveId?: string | null | undefined;
+  direction: SplitterGroupProps["direction"];
+  keyboardResizeBy?: number | null | undefined;
+  storage?: SplitterGroupProps["storage"] | undefined;
+  asChild?: boolean;
+  as?: PrimitiveProps["as"] | undefined;
+  class?: ClassValue | undefined;
+}>();
+const emits = defineEmits<SplitterGroupEmits>();
 
-const delegatedProps = reactiveOmit(props, "class");
+const delegatedProps = computed(() => ({
+  ...(props.id === undefined ? {} : { id: props.id }),
+  ...(props.autoSaveId === undefined ? {} : { autoSaveId: props.autoSaveId }),
+  ...(props.keyboardResizeBy === undefined ? {} : { keyboardResizeBy: props.keyboardResizeBy }),
+  ...(props.storage === undefined ? {} : { storage: props.storage }),
+  asChild: props.asChild,
+  ...(props.as === undefined ? {} : { as: props.as }),
+}));
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
 </script>

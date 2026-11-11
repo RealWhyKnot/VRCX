@@ -1,32 +1,33 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { ref } from "vue";
 
 const mocks = vi.hoisted(() => ({
-  openExternalLink: vi.fn(),
-  userImage: vi.fn(),
-  getFaviconUrl: vi.fn((link) => `https://icon/${encodeURIComponent(link)}`),
-  sortAlphabetically: vi.fn(() => 123),
-  onBlockChatbox: vi.fn(),
-  onUnblockChatbox: vi.fn(),
+  openExternalLink: vi.fn<(...args: unknown[]) => unknown>(),
+  userImage: vi.fn<(...args: unknown[]) => string>(() => ""),
+  getFaviconUrl: vi.fn<(...args: unknown[]) => string>((link: unknown) => `https://icon/${encodeURIComponent(String(link))}`),
+  sortAlphabetically: vi.fn<(...args: unknown[]) => number>(() => 123),
+  onBlockChatbox: vi.fn<(...args: unknown[]) => unknown>(),
+  onUnblockChatbox: vi.fn<(...args: unknown[]) => unknown>(),
 }));
 
 vi.mock("../../../src/plugins/i18n", () => ({
   i18n: {
     global: {
-      t: (key) => key,
+      t: (key: string) => key,
     },
   },
 }));
 
 vi.mock("../../../src/shared/utils/app-actions", () => ({
-  openExternalLink: (...args) => mocks.openExternalLink(...args),
+  openExternalLink: (...args: unknown[]) => mocks.openExternalLink(...args),
 }));
 vi.mock("../../../src/shared/utils/user", () => ({
-  userImage: (...args) => mocks.userImage(...args),
+  userImage: (...args: unknown[]) => mocks.userImage(...args),
   statusClass: () => "status-online",
-  languageClass: (lang) => `lang-${lang}`,
+  languageClass: (lang: unknown) => `lang-${String(lang)}`,
 }));
 vi.mock("../../../src/shared/utils/url-utils", () => ({
-  getFaviconUrl: (...args) => mocks.getFaviconUrl(...args),
+  getFaviconUrl: (...args: unknown[]) => mocks.getFaviconUrl(...args),
 }));
 
 vi.mock("../../../src/components/Timer.vue", () => ({ default: "Timer" }));
@@ -46,7 +47,17 @@ vi.mock("lucide-vue-next", () => ({
 
 import { createColumns } from "../../../src/views/PlayerList/columns.tsx";
 
-function createElement(type, props, ...children) {
+type TestNode = {
+  type: unknown;
+  props: Record<string, unknown>;
+  children: unknown[];
+};
+
+type CellRenderer = (context: { row: { original: unknown } }) => unknown;
+type SortFn = (rowA: { original: unknown }, rowB: { original: unknown }) => number;
+type ClickHandler = (event: { stopPropagation: () => void }) => void;
+
+function createElement(type: unknown, props: Record<string, unknown> | null, ...children: unknown[]): TestNode {
   return {
     type,
     props: props ?? {},
@@ -54,8 +65,11 @@ function createElement(type, props, ...children) {
   };
 }
 
-function findNode(node, predicate) {
-  if (!node) return null;
+function isTestNode(value: unknown): value is TestNode {
+  return typeof value === "object" && value !== null && "type" in value && "props" in value && "children" in value;
+}
+
+function findNode(node: unknown, predicate: (candidate: TestNode) => boolean): TestNode | null {
   if (Array.isArray(node)) {
     for (const item of node) {
       const result = findNode(item, predicate);
@@ -63,40 +77,67 @@ function findNode(node, predicate) {
     }
     return null;
   }
+  if (!isTestNode(node)) return null;
   if (predicate(node)) return node;
-  if (!node.children) return null;
   return findNode(node.children, predicate);
 }
 
-function makeRow(overrides = {}) {
-  const original = {
-    displayName: "Alice",
-    photonId: 7,
-    ref: {
-      id: "usr_1",
-      displayName: "Alice",
-      $trustSortNum: 10,
-      $trustLevel: "Known",
-      $trustClass: "known",
-      status: "online",
-      statusDescription: "Online",
-      $platform: "standalonewindows",
-      last_platform: "standalonewindows",
-      $languages: [],
-      bioLinks: [],
-      note: "",
-    },
-    ...overrides,
-  };
+function isCellRenderer(value: unknown): value is CellRenderer {
+  return typeof value === "function";
+}
+
+function isSortFn(value: unknown): value is SortFn {
+  return typeof value === "function";
+}
+
+function isClickHandler(value: unknown): value is ClickHandler {
+  return typeof value === "function";
+}
+
+function findColumn(columns: ReturnType<typeof createColumns>, id: string): { sortFn?: unknown; cell?: unknown } {
+  const column = columns.find((candidate) => candidate.id === id);
+  if (!column) {
+    throw new Error(`Missing column: ${id}`);
+  }
+  return column;
+}
+
+function cellOf(column: { cell?: unknown }): CellRenderer {
+  if (!isCellRenderer(column.cell)) {
+    throw new Error("Missing cell renderer");
+  }
+  return column.cell;
+}
+
+function sortFnOf(column: { sortFn?: unknown }): SortFn {
+  if (!isSortFn(column.sortFn)) {
+    throw new Error("Missing sort function");
+  }
+  return column.sortFn;
+}
+
+function clickButton(node: unknown, event: { stopPropagation: () => void }) {
+  const button = findNode(node, (candidate) => candidate.type === "button");
+  const handler = button?.props["onClick"];
+  if (!isClickHandler(handler)) {
+    throw new Error("Missing button click handler");
+  }
+  handler(event);
+}
+
+function baseOptions() {
   return {
-    original,
-    getValue: (key) => original[key],
+    randomUserColours: ref(false),
+    onBlockChatbox: mocks.onBlockChatbox,
+    onUnblockChatbox: mocks.onUnblockChatbox,
+    sortAlphabetically: mocks.sortAlphabetically,
+    userImage: mocks.userImage,
   };
 }
 
 describe("views/PlayerList/columns.tsx", () => {
   beforeEach(() => {
-    globalThis.React = { createElement };
+    Object.assign(globalThis, { React: { createElement } });
     mocks.openExternalLink.mockReset();
     mocks.userImage.mockReset();
     mocks.getFaviconUrl.mockClear();
@@ -107,65 +148,46 @@ describe("views/PlayerList/columns.tsx", () => {
 
   test("displayName sorting uses injected sortAlphabetically helper", () => {
     const cols = createColumns({
-      randomUserColours: { value: false, __v_isRef: true },
-      chatboxUserBlacklist: { value: new Map(), __v_isRef: true },
-      onBlockChatbox: mocks.onBlockChatbox,
-      onUnblockChatbox: mocks.onUnblockChatbox,
-      sortAlphabetically: mocks.sortAlphabetically,
+      ...baseOptions(),
+      chatboxUserBlacklist: ref(new Map<string, string>()),
     });
-    const displayNameCol = cols.find((c) => c.id === "displayName");
+    const sortFn = sortFnOf(findColumn(cols, "displayName"));
 
-    const result = displayNameCol.sortFn({ original: { displayName: "Alice" } }, { original: { displayName: "Bob" } });
+    const result = sortFn({ original: { displayName: "Alice" } }, { original: { displayName: "Bob" } });
 
     expect(result).toBe(123);
-    expect(mocks.sortAlphabetically).toHaveBeenCalledWith({ displayName: "Alice" }, { displayName: "Bob" }, "displayName");
+    expect(mocks.sortAlphabetically).toHaveBeenCalledWith("Alice", "Bob");
   });
 
   test("photonId cell triggers block and unblock actions", () => {
-    const row = makeRow();
+    const row = { original: { displayName: "Alice", photonId: 7, ref: { id: "usr_1", displayName: "Alice" } } };
     const cols = createColumns({
-      randomUserColours: { value: false, __v_isRef: true },
-      chatboxUserBlacklist: { value: new Map(), __v_isRef: true },
-      onBlockChatbox: mocks.onBlockChatbox,
-      onUnblockChatbox: mocks.onUnblockChatbox,
-      sortAlphabetically: mocks.sortAlphabetically,
+      ...baseOptions(),
+      chatboxUserBlacklist: ref(new Map<string, string>()),
     });
-    const photonCol = cols.find((c) => c.id === "photonId");
-    const blockCell = photonCol.cell({ row });
-    findNode(blockCell, (n) => n.type === "button").props.onClick({
-      stopPropagation: vi.fn(),
-    });
-    expect(mocks.onBlockChatbox).toHaveBeenCalledWith(row.original.ref);
+    const blockCell = cellOf(findColumn(cols, "photonId"))({ row });
+    clickButton(blockCell, { stopPropagation: vi.fn() });
+    expect(mocks.onBlockChatbox).toHaveBeenCalledWith("usr_1", "Alice");
 
-    const blockedMap = new Map([[row.original.ref.id, row.original.ref.displayName]]);
     const colsBlocked = createColumns({
-      randomUserColours: { value: false, __v_isRef: true },
-      chatboxUserBlacklist: { value: blockedMap, __v_isRef: true },
-      onBlockChatbox: mocks.onBlockChatbox,
-      onUnblockChatbox: mocks.onUnblockChatbox,
-      sortAlphabetically: mocks.sortAlphabetically,
+      ...baseOptions(),
+      chatboxUserBlacklist: ref(new Map([["usr_1", "Alice"]])),
     });
-    const photonBlocked = colsBlocked.find((c) => c.id === "photonId");
-    const unblockCell = photonBlocked.cell({ row });
-    findNode(unblockCell, (n) => n.type === "button").props.onClick({
-      stopPropagation: vi.fn(),
-    });
+    const unblockCell = cellOf(findColumn(colsBlocked, "photonId"))({ row });
+    clickButton(unblockCell, { stopPropagation: vi.fn() });
     expect(mocks.onUnblockChatbox).toHaveBeenCalledWith("usr_1");
   });
 
   test("icon sorting prefers higher weighted role flags", () => {
     const cols = createColumns({
-      randomUserColours: { value: false, __v_isRef: true },
-      chatboxUserBlacklist: { value: new Map(), __v_isRef: true },
-      onBlockChatbox: mocks.onBlockChatbox,
-      onUnblockChatbox: mocks.onUnblockChatbox,
-      sortAlphabetically: mocks.sortAlphabetically,
+      ...baseOptions(),
+      chatboxUserBlacklist: ref(new Map<string, string>()),
     });
-    const iconCol = cols.find((c) => c.id === "icon");
+    const sortFn = sortFnOf(findColumn(cols, "icon"));
 
     const master = { original: { isMaster: true } };
     const friend = { original: { isFriend: true } };
 
-    expect(iconCol.sortFn(master, friend, "icon")).toBeGreaterThan(0);
+    expect(sortFn(master, friend)).toBeGreaterThan(0);
   });
 });

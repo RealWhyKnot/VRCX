@@ -14,7 +14,10 @@
 
       <div class="flex flex-col gap-2 mb-2">
         <label v-for="option in exportBansOptions" :key="option.label" class="inline-flex items-center gap-2">
-          <Checkbox :model-value="checkedExportBansOptions.includes(option.label)" @update:model-value="(val) => toggleExportOption(option.label, val)" />
+          <Checkbox
+            :model-value="checkedExportBansOptions.includes(option.label)"
+            @update:model-value="(val) => toggleExportOption(option.label, val === true)"
+          />
           <span>{{ t(option.text) }}</span>
         </label>
       </div>
@@ -36,26 +39,31 @@ import { useI18n } from "vue-i18n";
 
 import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { formatCsvField } from "../../../shared/utils/csv";
+import type { ModerationRow } from "./group-moderation-types";
+import type { GroupMemberModerationTable } from "../../../stores/group-types";
+
+type BanExportKey = "userId" | "displayName" | "roles" | "managerNotes" | "joinedAt" | "bannedAt";
 
 const { t } = useI18n();
 
-const props = defineProps({
-  isGroupBansExportDialogVisible: {
-    type: Boolean,
-    default: false,
-  },
-  groupBansModerationTable: {
-    type: Object,
-    default: () => {},
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    isGroupBansExportDialogVisible?: boolean;
+    groupBansModerationTable: GroupMemberModerationTable<ModerationRow>;
+  }>(),
+  {
+    isGroupBansExportDialogVisible: false,
+  }
+);
 
-const emit = defineEmits(["update:isGroupBansExportDialogVisible"]);
+const emit = defineEmits<{
+  "update:isGroupBansExportDialogVisible": [value: boolean];
+}>();
 
 watch(
   () => props.isGroupBansExportDialogVisible,
-  (newVal) => {
-    if (newVal) {
+  (isVisible) => {
+    if (isVisible) {
       updateExportContent();
     }
   }
@@ -63,7 +71,7 @@ watch(
 
 const exportContent = ref("");
 
-const exportBansOptions = [
+const exportBansOptions: { label: BanExportKey; text: string }[] = [
   { label: "userId", text: "dialog.group_member_moderation.user_id" },
   { label: "displayName", text: "dialog.group_member_moderation.display_name" },
   { label: "roles", text: "dialog.group_member_moderation.roles" },
@@ -72,29 +80,33 @@ const exportBansOptions = [
   { label: "bannedAt", text: "dialog.group_member_moderation.banned_at" },
 ];
 
-const checkedExportBansOptions = ref(["userId", "displayName", "roles", "managerNotes", "joinedAt", "bannedAt"]);
+const checkedExportBansOptions = ref<BanExportKey[]>(["userId", "displayName", "roles", "managerNotes", "joinedAt", "bannedAt"]);
 
-function toggleExportOption(label, checked) {
+function toggleExportOption(label: BanExportKey, isChecked: boolean) {
   const selection = checkedExportBansOptions.value;
   const index = selection.indexOf(label);
-  if (checked && index === -1) {
+  if (isChecked && index === -1) {
     selection.push(label);
-  } else if (!checked && index !== -1) {
+  } else if (!isChecked && index !== -1) {
     selection.splice(index, 1);
   }
   updateExportContent();
 }
 
-function getRowValue(item, key) {
+function getRowValue(item: ModerationRow, key: BanExportKey): string {
   switch (key) {
     case "displayName":
-      return item?.user?.displayName ?? item?.$displayName ?? "";
-    case "roles": {
-      const ids = Array.isArray(item?.roleIds) ? item.roleIds : [];
-      return ids.join(";");
-    }
-    default:
-      return item?.[key] ?? "";
+      return item.user?.displayName ?? item.$displayName ?? "";
+    case "roles":
+      return (item.roleIds ?? []).join(";");
+    case "userId":
+      return item.userId ?? "";
+    case "managerNotes":
+      return item.managerNotes ?? "";
+    case "joinedAt":
+      return item.joinedAt ?? "";
+    case "bannedAt":
+      return item.bannedAt ?? "";
   }
 }
 
@@ -104,7 +116,7 @@ function updateExportContent() {
   const header = `${sortedCheckedOptions.join(",")}\n`;
 
   const content = props.groupBansModerationTable.data
-    .map((item) => sortedCheckedOptions.map((key) => formatCsvField(String(getRowValue(item, key)))).join(","))
+    .map((item) => sortedCheckedOptions.map((key) => formatCsvField(getRowValue(item, key))).join(","))
     .join("\n");
 
   exportContent.value = header + content;
