@@ -120,6 +120,8 @@
     <NvPatchSha256>3a38b6123ce6f2f9abb37f6a106e64a948ed534b06f6f89594fff3d77d6b1a18</NvPatchSha256>
     <NvPatchDirectory>$(BaseIntermediateOutputPath)build-tools\nvpatch-$(NvPatchVersion)\</NvPatchDirectory>
     <NvPatchPackageName>Topten.nvpatch.$(NvPatchVersion).nupkg</NvPatchPackageName>
+    <NvPatchHost>$(DOTNET_HOST_PATH)</NvPatchHost>
+    <NvPatchHost Condition="'$(NvPatchHost)' == ''">dotnet</NvPatchHost>
     <NvPatchMarker>$(NvPatchDirectory)restored</NvPatchMarker>
     <NvPatchAssembly>$(NvPatchDirectory)package\tools\net5.0\any\Topten.nvpatch.dll</NvPatchAssembly>
   </PropertyGroup>
@@ -133,7 +135,7 @@
   </Target>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" DependsOnTargets="RestoreNvPatch" Condition="$(IsWindows)">
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; exec --roll-forward Major &quot;$(NvPatchAssembly)&quot; --enable &quot;$(ProjectDir)..\build\Cef\VRCX.exe&quot;" />
+    <Exec Command="&quot;$(NvPatchHost)&quot; exec --roll-forward Major &quot;$(NvPatchAssembly)&quot; --enable &quot;$(ProjectDir)..\build\Cef\VRCX.exe&quot;" />
   </Target>
 
   <ItemGroup>

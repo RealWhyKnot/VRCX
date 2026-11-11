@@ -770,7 +770,13 @@ public partial class AppApiElectron
             if (resultExDword.StartsWith("hex(4)", StringComparison.Ordinal))
             {
                 string[] hexValues = resultExDword.Split(':')[1].Split(',');
-                if (!TryParseHexBytes(hexValues, out byte[] byteValues) || byteValues.Length != 8)
+                if (!TryParseHexBytes(hexValues, out byte[] byteValues))
+                {
+                    LogRegistryParseError("REG_DWORD", InvalidHexMessage);
+                    return;
+                }
+
+                if (byteValues.Length != 8)
                 {
                     LogRegistryParseError("REG_DWORD", "Input does not represent a valid 8-byte double-precision float.");
                     return;
