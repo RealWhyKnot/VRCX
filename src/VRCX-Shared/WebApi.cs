@@ -159,6 +159,11 @@ sealed class WebApi : IDisposable
                 { "@key", "default" },
             }
         );
+        if (values.Length == 0)
+        {
+            return;
+        }
+
         try
         {
             object[] item = values[0];
