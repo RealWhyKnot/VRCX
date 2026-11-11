@@ -2766,6 +2766,7 @@
       "purchases": "Purchases",
       "transactions": "Transactions",
       "from": "From",
+      "to": "To",
       "balance": "Balance"
     },
     "info_push": {

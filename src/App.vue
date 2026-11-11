@@ -1,5 +1,5 @@
 <template>
-  <TooltipProvider>
+  <TooltipProvider :skip-delay-duration="100">
     <MacOSTitleBar></MacOSTitleBar>
 
     <div id="x-app" class="flex w-screen h-screen overflow-hidden cursor-default [&>.x-container]:pt-[15px]" :class="{ 'pt-7': isMacOS }">

@@ -14,9 +14,9 @@ type MyAvatarFiltersOptions = {
 
 export function useMyAvatarFilters({ t, avatars, avatarTagsMap }: MyAvatarFiltersOptions) {
   const searchText = ref("");
-  const releaseStatusFilter = ref<string | undefined>("all");
+  const releaseStatusFilter = ref("all");
   const tagFilters = ref(new Set<string>());
-  const platformFilter = ref<PlatformFilter | undefined>("all");
+  const platformFilter = ref<PlatformFilter>("all");
 
   const allTags = computed(() => {
     const tagSet = new Set<string>();
@@ -48,15 +48,15 @@ export function useMyAvatarFilters({ t, avatars, avatarTagsMap }: MyAvatarFilter
     return count;
   });
 
-  function setReleaseStatusFilter(value: AcceptableValue | AcceptableValue[]) {
-    releaseStatusFilter.value = typeof value === "string" ? value : undefined;
+  function setReleaseStatusFilter(value: AcceptableValue | AcceptableValue[] | undefined) {
+    releaseStatusFilter.value = typeof value === "string" ? value : "all";
   }
 
-  function setPlatformFilter(value: AcceptableValue | AcceptableValue[]) {
-    platformFilter.value = isPlatformFilter(value) ? value : undefined;
+  function setPlatformFilter(value: AcceptableValue | AcceptableValue[] | undefined) {
+    platformFilter.value = isPlatformFilter(value) ? value : "all";
   }
 
-  function isPlatformFilter(value: AcceptableValue | AcceptableValue[]): value is PlatformFilter {
+  function isPlatformFilter(value: AcceptableValue | AcceptableValue[] | undefined): value is PlatformFilter {
     return value === "pc" || value === "android" || value === "ios" || value === "all";
   }
 
@@ -88,11 +88,7 @@ export function useMyAvatarFilters({ t, avatars, avatarTagsMap }: MyAvatarFilter
 
     const platform = platformFilter.value;
     if (platform !== "all") {
-      list = list.filter((a) => {
-        if (!platform) return false;
-        const info = getPlatformInfo(a.unityPackages);
-        return !!info[platform].performanceRating;
-      });
+      list = list.filter((a) => Boolean(getPlatformInfo(a.unityPackages)[platform].platform));
     }
 
     if (searchText.value) {

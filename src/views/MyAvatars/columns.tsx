@@ -109,7 +109,7 @@ export function getColumns({ onShowAvatarDialog, onContextMenuAction, currentAva
     },
     {
       id: "name",
-      accessorKey: "Name",
+      accessorKey: "name",
       header: ({ column }) =>
         sortButton({
           column,

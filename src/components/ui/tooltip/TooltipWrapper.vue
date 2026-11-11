@@ -16,8 +16,7 @@ const props = withDefaults(
     side?: TooltipContentProps["side"] | undefined;
     align?: TooltipContentProps["align"] | undefined;
     sideOffset?: number | undefined;
-    delayDuration?: number | undefined;
-    skipDelayDuration?: number | undefined;
+    delayDuration?: number;
     disableHoverableContent?: boolean;
     ignoreNonKeyboardFocus?: boolean;
     disabled?: boolean;
@@ -29,8 +28,7 @@ const props = withDefaults(
     side: undefined,
     align: undefined,
     sideOffset: undefined,
-    delayDuration: undefined,
-    skipDelayDuration: undefined,
+    delayDuration: 100,
     ignoreNonKeyboardFocus: true,
     triggerAsChild: true,
     contentClass: undefined,

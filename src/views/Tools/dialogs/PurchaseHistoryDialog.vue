@@ -90,7 +90,7 @@
                 </template>
                 <template v-if="transaction.fromUserDisplayName && transaction.toUserDisplayName"> · </template>
                 <template v-if="transaction.toUserDisplayName">
-                  {{ t("dialog.purchase_history.from") }}:
+                  {{ t("dialog.purchase_history.to") }}:
                   <span :class="{ 'cursor-pointer hover:underline': transaction.toUserId }" @click="openTransactionUser(transaction.toUserId)">
                     {{ transaction.toUserDisplayName }}
                   </span>
