@@ -43,12 +43,14 @@ if ($env:OS -eq 'Windows_NT') {
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
     if ($BuildArm64) {
         $buildArguments = @(
-            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0',
+            '-p:Platform=arm64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'linux-arm64'
         )
     } else {
         $buildArguments = @(
-            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0',
+            '-p:Platform=x64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'linux-x64'
         )
     }
@@ -59,12 +61,14 @@ if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::OSX)) {
     if ($BuildArm64) {
         $buildArguments = @(
-            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=arm64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0',
+            '-p:Platform=arm64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'osx-arm64'
         )
     } else {
         $buildArguments = @(
-            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0', '-p:Platform=x64',
+            'src/VRCX-Electron/VRCX-Electron.csproj', '-p:Configuration=Release', '-p:WarningLevel=0',
+            '-p:Platform=x64',
             '-t:Clean;Build', '-maxcpucount', '--runtime', 'osx-x64'
         )
     }

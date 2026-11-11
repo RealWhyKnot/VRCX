@@ -437,11 +437,12 @@ function main(): void {
 
   const frontendLicenseMarkdown = readFileIfExists(frontendLicensePath) ?? "";
   const frontendEntries = parseFrontendLicenses(frontendLicenseMarkdown);
-  const csprojFiles = [
-    path.join(rootDir, "src", "VRCX-Cef", "VRCX-Cef.csproj"),
-    path.join(rootDir, "src", "VRCX-Electron", "VRCX-Electron.csproj"),
-    path.join(rootDir, "src", "DBMerger", "DBMerger.csproj"),
-  ].filter((filePath, index, filePaths) => filePaths.indexOf(filePath) === index && fs.existsSync(filePath));
+  const sourceDir = path.join(rootDir, "src");
+  const csprojFiles = fs
+    .readdirSync(sourceDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(sourceDir, entry.name, `${entry.name}.csproj`))
+    .filter((filePath) => fs.existsSync(filePath));
 
   const dotnetEntries = enrichDotnetEntries(mergeDotnetEntries(csprojFiles));
   const manifest = {
