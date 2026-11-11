@@ -220,6 +220,13 @@ internal static class Program
         }
         while (File.Exists(backupPath));
 
+        using (var connection = new SQLiteConnection($"Data Source=\"{config.NewDBPath}\";Version=3;", parseViaFramework: true))
+        {
+            connection.Open();
+            using var command = new SQLiteCommand("PRAGMA wal_checkpoint(TRUNCATE);", connection);
+            _ = command.ExecuteNonQuery();
+        }
+
         File.Copy(config.NewDBPath, backupPath);
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Created backup of new DB at {backupPath}");
     }

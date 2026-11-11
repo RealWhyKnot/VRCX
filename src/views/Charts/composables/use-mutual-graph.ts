@@ -95,6 +95,7 @@ export function useMutualGraph({
   let hoveredNeighbors = new Set<string>();
   let resizeObserver: ResizeObserver | null = null;
   let mutualGraphResizeObserver: ResizeObserver | null = null;
+  let applySequence = 0;
   let pendingRender: number | null = null;
   let pendingLayoutUpdate: ReturnType<typeof setTimeout> | null = null;
   let lastMutualMap: MutualMap | null = null;
@@ -466,8 +467,10 @@ export function useMutualGraph({
   }
 
   async function applyGraph(mutualMap: MutualMap) {
+    const sequence = ++applySequence;
     lastMutualMap = mutualMap;
     const graph = await buildGraphFromMutualMap(mutualMap, graphMeta.value);
+    if (sequence !== applySequence) return;
     currentGraph = graph;
     renderGraph(graph);
   }
@@ -498,6 +501,7 @@ export function useMutualGraph({
   }
 
   function dispose() {
+    applySequence++;
     if (pendingLayoutUpdate) {
       clearTimeout(pendingLayoutUpdate);
       pendingLayoutUpdate = null;

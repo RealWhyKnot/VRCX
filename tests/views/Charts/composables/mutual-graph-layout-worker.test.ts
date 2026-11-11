@@ -109,9 +109,10 @@ describe("createMutualGraphLayoutWorker", () => {
     expect(worker.listenerCount()).toBe(0);
   });
 
-  it("does nothing on dispose when no worker was started", () => {
+  it("refuses requests after dispose without starting a worker", async () => {
     const client = createMutualGraphLayoutWorker();
     client.dispose();
+    await expect(client.request(body)).rejects.toThrow("Component unmounted");
     expect(workers).toHaveLength(0);
   });
 });

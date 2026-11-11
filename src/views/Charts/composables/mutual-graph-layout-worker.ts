@@ -22,6 +22,7 @@ function readLayoutMessage(value: unknown): LayoutMessage | null {
 export function createMutualGraphLayoutWorker() {
   let worker: Worker | null = null;
   let requestId = 0;
+  let isDisposed = false;
   const resolvers = new Map<number, LayoutResolver>();
 
   function handleMessage(event: MessageEvent<unknown>) {
@@ -67,6 +68,7 @@ export function createMutualGraphLayoutWorker() {
   }
 
   function request(body: LayoutRequestBody) {
+    if (isDisposed) return Promise.reject<LayoutPositions>(new Error("Component unmounted"));
     const activeWorker = getWorker();
     const id = ++requestId;
     return new Promise<LayoutPositions>((resolve, reject) => {
@@ -76,6 +78,7 @@ export function createMutualGraphLayoutWorker() {
   }
 
   function dispose() {
+    isDisposed = true;
     rejectPending(new Error("Component unmounted"));
     stopWorker();
   }
