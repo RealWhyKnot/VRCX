@@ -1,3 +1,5 @@
+import { ensureEmojiKeyframes } from "./emoji-keyframes";
+
 type PrintFileInfo = {
   id: string;
   authorName: string;
@@ -58,6 +60,7 @@ function generateEmojiStyle(url: string, fps: number, frameCount: number, loopSt
   const frameSize = 1024 / framesPerLine;
   const scale = 100 / (frameSize / size);
   const animStyle = loopStyle === "pingpong" ? "alternate" : "none";
+  ensureEmojiKeyframes(frameCount);
   const style = `
             transform: scale(${scale / 100});
             transform-origin: top left;
