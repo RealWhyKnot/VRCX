@@ -1,16 +1,13 @@
 import type { Ref } from "vue";
-import type { useUiStore } from "../ui";
-import type { NotificationJson, NotificationTable } from "./types";
+import type { NotificationJson } from "./types";
 import { notificationRequest } from "../../api/notification";
 import { executeWithBackoff } from "../../shared/utils/retry";
 import { isRateLimited, logError } from "./errors";
 
-type UiStore = ReturnType<typeof useUiStore>;
-
 export type SeenQueueDeps = {
-  notificationTable: Ref<NotificationTable>;
+  notificationTable: Ref<{ data: { id?: string | undefined; version?: number | undefined }[] }>;
   unseenNotifications: Ref<string[]>;
-  uiStore: UiStore;
+  uiStore: { removeNotify: (name: string) => void };
   handleNotificationSee: (notificationId: string) => void;
   handleNotificationV2Update: (args: { params: { notificationId: string }; json: NotificationJson }) => void;
   handleNotificationV2Hide: (notificationId: string) => void;
@@ -52,9 +49,11 @@ export function createSeenQueue(deps: SeenQueueDeps) {
             shouldRetry: isRateLimited,
           }
         );
-      } catch {
+      } catch (err) {
         console.warn("Failed to mark notification as seen:", id);
-        if (version >= 2) {
+        if (isRateLimited(err)) {
+          seenIds.delete(id);
+        } else if (version >= 2) {
           handleNotificationV2Hide(id);
         }
       }

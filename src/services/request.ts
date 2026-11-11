@@ -10,6 +10,7 @@ import { i18n } from "../plugins/i18n";
 import { statusCodes } from "../shared/constants/api.ts";
 import type { RequestOptions } from "../types/vrcx";
 import { watchState } from "./watch-state";
+import { requestGroup, requestLimiter } from "./request-limiter";
 
 import { webApiService } from "./webapi.ts";
 
@@ -86,6 +87,10 @@ export function buildRequestInit(endpoint: string, options: RequestOptions = {})
   return init;
 }
 
+function isRateLimitedResponse(parsed: ParsedApiResponse): boolean {
+  return parsed.status === 429 || codeField(readField(parsed.data, "error"), 0) === 429;
+}
+
 export function parseResponse(response: ApiResponse): ParsedApiResponse {
   if (!response.data) {
     return response;
@@ -127,8 +132,13 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
       pendingGetRequests.delete(init.url);
     }
   }
-  const req: Promise<unknown> = webApiService
-    .execute(init)
+  const group = requestGroup(endpoint, init.method ?? "GET");
+  const req: Promise<unknown> = requestLimiter
+    .scheduleRetrying(
+      group,
+      () => webApiService.execute(init),
+      (response) => isRateLimitedResponse(parseResponse(response))
+    )
     .catch((err: unknown) => {
       $throw(0, err, endpoint);
     })
@@ -137,6 +147,11 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
         throw new Error(`API request blocked while logged out: ${endpoint}`);
       }
       const parsed = parseResponse(response);
+      if (isRateLimitedResponse(parsed)) {
+        requestLimiter.reportRateLimited(group);
+      } else {
+        requestLimiter.reportSuccess(group);
+      }
       if (!isApiLogSuppressed()) {
         const tag = `[API ${init.method}]`;
         if (!parsed.data) {

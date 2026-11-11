@@ -482,20 +482,25 @@ function showBulkUnfriendSelectionConfirm() {
 async function bulkUnfriendSelection() {
   if (!selectedFriends.value.size) return;
   const selectedFriendsCount = selectedFriends.value.size;
+  let unfriendedCount = 0;
   for (const item of friendsListDisplayData.value) {
     if (selectedFriends.value.has(item.id)) {
       console.log(`Unfriending ${item.displayName} (${item.id})`);
-      await friendRequest.deleteFriend({ userId: item.id }).then((args) => handleFriendDelete(args));
-      selectedFriends.value.delete(item.id);
+      try {
+        await friendRequest.deleteFriend({ userId: item.id }).then((args) => handleFriendDelete(args));
+        selectedFriends.value.delete(item.id);
+        unfriendedCount += 1;
+      } catch (err) {
+        logFriendListError(err);
+      }
     }
   }
   modalStore
     .alert({
-      description: `Unfriended ${selectedFriendsCount} friends.`,
+      description: `Unfriended ${unfriendedCount} of ${selectedFriendsCount} friends.`,
       title: "Bulk Unfriend Complete",
     })
     .catch(logFriendListError);
-  selectedFriends.value.clear();
 }
 
 async function friendsListLoadUsers() {
