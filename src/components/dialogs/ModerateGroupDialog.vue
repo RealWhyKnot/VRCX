@@ -70,7 +70,7 @@ import { useI18n } from "vue-i18n";
 import { hasGroupModerationPermission } from "../../shared/utils/group";
 import { useUserDisplay } from "../../composables/use-user-display";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
-import queryRequest from "../../api/query-request";
+import { queryRequest } from "../../api/query-request";
 import { useGroupStore } from "../../stores/group";
 import { showGroupMemberModerationDialog } from "../../coordinators/group-coordinator";
 

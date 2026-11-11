@@ -38,7 +38,7 @@ async function decrypt(ciphertext, key) {
   return new TextDecoder().decode(new Uint8Array(plaintext));
 }
 
-export default {
+export const security = {
   decrypt,
   encrypt,
 };

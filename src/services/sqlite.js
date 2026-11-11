@@ -88,4 +88,4 @@ class SQLiteService {
 const self = new SQLiteService();
 window.sqliteService = self;
 
-export { self as default, SQLiteService };
+export { self as sqliteService, SQLiteService };

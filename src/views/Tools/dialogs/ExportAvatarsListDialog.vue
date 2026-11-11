@@ -32,7 +32,7 @@ import { useI18n } from "vue-i18n";
 import { useAvatarStore } from "../../../stores/avatar";
 import { useUserStore } from "../../../stores/user";
 import { applyAvatar, removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
-import avatarRequest from "../../../api/avatar";
+import { avatarRequest } from "../../../api/avatar";
 import { processBulk } from "../../../services/request";
 import Switch from "../../../components/ui/switch/Switch.vue";
 

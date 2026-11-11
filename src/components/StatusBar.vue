@@ -309,7 +309,7 @@ import utc from "dayjs/plugin/utc";
 
 import { defaultVisibility, formatAppUptime, formatUtcHour, normalizeClock, normalizeUtcHour, parseClockOffset } from "./status-bar-utils";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);

@@ -283,7 +283,7 @@ import Button from "../../components/ui/button/Button.vue";
 import Input from "../../components/ui/input/Input.vue";
 import Slider from "../../components/ui/slider/Slider.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
-import avatarRequest from "../../api/avatar";
+import { avatarRequest } from "../../api/avatar";
 import { database } from "../../services/database";
 import { getColumns } from "./columns";
 import { getPlatformInfo } from "../../shared/utils/avatar";
@@ -295,7 +295,7 @@ import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import ImageCropDialog from "../../components/dialogs/ImageCropDialog.vue";
 import ManageTagsDialog from "./ManageTagsDialog.vue";
 import MyAvatarCard from "./components/MyAvatarCard.vue";
-import configRepository from "../../services/config.js";
+import { configRepository } from "../../services/config.js";
 
 const { t } = useI18n();
 const appearanceSettingsStore = useAppearanceSettingsStore();

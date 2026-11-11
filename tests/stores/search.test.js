@@ -42,7 +42,7 @@ vi.mock("../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockResolvedValue("{}"),
     setString: vi.fn(),
@@ -59,7 +59,7 @@ vi.mock("../../src/services/config", () => ({
     remove: vi.fn(),
   },
 }));
-vi.mock("../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -134,9 +134,9 @@ function makeApiMock() {
     miscRequest: {},
   };
 }
-vi.mock("../../src/api/instance", () => ({ default: makeApiMock().instanceRequest }));
-vi.mock("../../src/api/user", () => ({ default: makeApiMock().userRequest }));
-vi.mock("../../src/api/group", () => ({ default: makeApiMock().groupRequest }));
+vi.mock("../../src/api/instance", () => ({ instanceRequest: makeApiMock().instanceRequest }));
+vi.mock("../../src/api/user", () => ({ userRequest: makeApiMock().userRequest }));
+vi.mock("../../src/api/group", () => ({ groupRequest: makeApiMock().groupRequest }));
 
 vi.mock("../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args) => mockShowUserDialog(...args),

@@ -13,7 +13,7 @@ import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 import { useGalleryStore } from "../stores/gallery";
 
-const notificationReq = {
+const notificationRequest = {
   getNotifications(params: GetNotifications["query"]): Promise<{ json: Json<Notification[]>; params: GetNotifications["query"] }> {
     return request("auth/user/notifications", {
       method: "GET",
@@ -251,4 +251,4 @@ const notificationReq = {
   },
 };
 
-export default notificationReq;
+export { notificationRequest };

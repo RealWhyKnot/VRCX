@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 import { DASHBOARD_NAV_KEY_PREFIX, DASHBOARD_STORAGE_KEY, DEFAULT_DASHBOARD_ICON } from "../shared/constants/dashboard";
 
 function clonePanel(panel) {

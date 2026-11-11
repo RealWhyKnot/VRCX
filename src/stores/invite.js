@@ -1,7 +1,7 @@
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
 
-import inviteMessagesRequest from "../api/invite-messages";
+import { inviteMessagesRequest } from "../api/invite-messages";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useGameStore } from "./game";
 import { watchState } from "../services/watch-state";

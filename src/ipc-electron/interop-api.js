@@ -30,4 +30,4 @@ class InteropApi {
   }
 }
 
-export default new InteropApi();
+export const interopApi = new InteropApi();

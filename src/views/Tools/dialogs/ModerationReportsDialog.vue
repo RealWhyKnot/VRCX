@@ -78,7 +78,7 @@ import { useAuthStore } from "../../../stores/auth";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
-import moderationReportRequest from "../../../api/moderation-report";
+import { moderationReportRequest } from "../../../api/moderation-report";
 import { showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

@@ -56,8 +56,8 @@ import { useI18n } from "vue-i18n";
 import { useAuthStore } from "../../../stores/auth";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
-import vrcPlusIconRequest from "../../../api/vrc-plus-icon";
-import vrcPlusImageRequest from "../../../api/vrc-plus-image";
+import { vrcPlusIconRequest } from "../../../api/vrc-plus-icon";
+import { vrcPlusImageRequest } from "../../../api/vrc-plus-image";
 import { computed, watch } from "vue";
 
 const { t } = useI18n();

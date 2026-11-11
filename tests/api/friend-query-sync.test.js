@@ -32,7 +32,7 @@ vi.mock("../../src/queries/policies", () => ({
   },
 }));
 
-import friendRequest from "../../src/api/friend";
+import { friendRequest } from "../../src/api/friend";
 
 describe("friend query sync", () => {
   beforeEach(() => {

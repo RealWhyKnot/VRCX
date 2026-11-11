@@ -180,7 +180,7 @@ import { useInstanceActivitySettings } from "../composables/use-instance-activit
 import { useIntersectionObserver } from "../composables/use-intersection-observer";
 
 import InstanceActivityDetail from "./InstanceActivityDetail.vue";
-import InstanceActivityTooltip from "./instance-activity-tooltip.jsx";
+import { InstanceActivityTooltip } from "./instance-activity-tooltip.jsx";
 
 import * as echarts from "echarts";
 import { renderToHtml } from "@/lib/utils";

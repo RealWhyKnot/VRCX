@@ -76,7 +76,7 @@ import ToolItem from "./components/ToolItem.vue";
 import { useToolActions } from "../../composables/use-tool-actions";
 import { useToolNavPinning } from "../../composables/use-tool-nav-pinning";
 import { getToolsByCategory, toolCategories } from "../../shared/constants/tools";
-import configRepository from "../../services/config.js";
+import { configRepository } from "../../services/config.js";
 
 const { t } = useI18n();
 const { triggerTool } = useToolActions();

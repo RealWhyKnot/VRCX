@@ -1,6 +1,6 @@
 import { computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-import configRepository from "../../../services/config.js";
+import { configRepository } from "../../../services/config.js";
 
 export function useFavoritesSplitter(options) {
   const configKey = options.configKey ?? "";

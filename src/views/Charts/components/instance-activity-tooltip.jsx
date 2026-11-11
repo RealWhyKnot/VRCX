@@ -22,4 +22,4 @@ const InstanceActivityTooltip = ({ color, displayName, icon, joinTime, leaveTime
   );
 };
 
-export default InstanceActivityTooltip;
+export { InstanceActivityTooltip };

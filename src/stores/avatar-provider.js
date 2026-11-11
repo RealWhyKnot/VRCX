@@ -5,7 +5,7 @@ import { router } from "../plugins/router";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export const useAvatarProviderStore = defineStore("AvatarProvider", () => {
   const advancedSettingsStore = useAdvancedSettingsStore();

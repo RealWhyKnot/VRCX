@@ -18,7 +18,7 @@ function refetchActiveGalleryQueries() {
       console.error("Failed to refresh gallery queries:", err);
     });
 }
-const vrcPlusImageReq = {
+const vrcPlusImageRequest = {
   uploadGalleryImage(imageData: string): Promise<{ json: Json<File>; params: { tag: string } }> {
     const params = {
       tag: "gallery",
@@ -135,4 +135,4 @@ const vrcPlusImageReq = {
   },
 };
 
-export default vrcPlusImageReq;
+export { vrcPlusImageRequest };

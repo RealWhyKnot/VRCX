@@ -95,15 +95,15 @@ import dayjs from "dayjs";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import Switch from "../../../components/ui/switch/Switch.vue";
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import { processBulk } from "../../../services/request";
 import { useGroupStore } from "../../../stores/group";
 import { showGroupDialog } from "@/coordinators/group-coordinator";
 
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 const groupStore = useGroupStore();
 const { applyGroupEvent } = groupStore;

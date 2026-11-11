@@ -1,9 +1,3 @@
-<script>
-export default {
-  render: () => null,
-};
-</script>
-
 <script setup>
 import { nextTick, watch } from "vue";
 import { useCommand } from "@/components/ui/command";
@@ -43,3 +37,7 @@ watch([() => allItems.value.size, () => allGroups.value.size], async () => {
   await syncVisibleResults();
 });
 </script>
+
+<template>
+  <span v-if="false" />
+</template>

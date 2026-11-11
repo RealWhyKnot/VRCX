@@ -31,9 +31,9 @@ vi.mock("../../src/queries/keys", () => ({
   },
 }));
 
-import miscRequest from "../../src/api/misc";
-import vrcPlusIconRequest from "../../src/api/vrc-plus-icon";
-import vrcPlusImageRequest from "../../src/api/vrc-plus-image";
+import { miscRequest } from "../../src/api/misc";
+import { vrcPlusIconRequest } from "../../src/api/vrc-plus-icon";
+import { vrcPlusImageRequest } from "../../src/api/vrc-plus-image";
 
 describe("media and inventory query sync", () => {
   beforeEach(() => {

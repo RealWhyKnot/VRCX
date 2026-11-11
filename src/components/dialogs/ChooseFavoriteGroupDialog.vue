@@ -113,7 +113,7 @@ import {
   addLocalFriendFavorite,
   removeLocalFriendFavorite,
 } from "../../coordinators/favorite-coordinator";
-import favoriteRequest from "../../api/favorite";
+import { favoriteRequest } from "../../api/favorite";
 
 const { t } = useI18n();
 

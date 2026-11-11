@@ -3,7 +3,7 @@ import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 import { handleConfig } from "../coordinators/user-coordinator";
 
-const loginReq = {
+const authRequest = {
   verifyOTP(params: TwoFactorAuthCode): Promise<{ json: Json<Verify2FaResult>; params: TwoFactorAuthCode }> {
     return request("auth/twofactorauth/otp/verify", {
       method: "POST",
@@ -107,4 +107,4 @@ const loginReq = {
   },
 };
 
-export default loginReq;
+export { authRequest };

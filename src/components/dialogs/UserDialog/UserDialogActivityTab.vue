@@ -239,8 +239,8 @@ import { useI18n } from "vue-i18n";
 
 import * as echarts from "echarts";
 
-import configRepository from "../../../services/config";
-import worldRequest from "../../../api/world";
+import { configRepository } from "../../../services/config";
+import { worldRequest } from "../../../api/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { timeToText } from "../../../shared/utils/base/format";

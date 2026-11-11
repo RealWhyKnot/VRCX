@@ -33,7 +33,7 @@ function refetchActiveFavoriteQueries() {
     });
 }
 
-const favoriteReq = {
+const favoriteRequest = {
   getFavoriteLimits(): Promise<{ json: Json<FavoriteLimits> }> {
     return request("auth/user/favoritelimits", {
       method: "GET",
@@ -163,4 +163,4 @@ const favoriteReq = {
   },
 };
 
-export default favoriteReq;
+export { favoriteRequest };

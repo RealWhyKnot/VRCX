@@ -28,7 +28,7 @@ vi.mock("../../src/queries/client", () => ({
   },
 }));
 
-import favoriteRequest from "../../src/api/favorite";
+import { favoriteRequest } from "../../src/api/favorite";
 
 describe("favorite query sync", () => {
   beforeEach(() => {

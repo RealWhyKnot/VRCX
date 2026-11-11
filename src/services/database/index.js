@@ -17,7 +17,7 @@ import { userProfile } from "./user-profile.js";
 import { worldFavorites } from "./world-favorites.js";
 import { printFavorites } from "./print-favorites.js";
 
-import sqliteService from "../sqlite.js";
+import { sqliteService } from "../sqlite.js";
 
 const dbVars = import.meta.hot?.data.dbVars ?? {
   userId: "",

@@ -1,7 +1,7 @@
 import { computed, nextTick, onBeforeMount, ref, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 
-import configRepository from "../../../services/config.js";
+import { configRepository } from "../../../services/config.js";
 
 function clamp(value, min, max) {
   if (Number.isNaN(value)) return min;

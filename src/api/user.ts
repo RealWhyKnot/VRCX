@@ -31,7 +31,7 @@ function getCurrentUserId(): string {
   return useUserStore().currentUser.id;
 }
 
-const userReq = {
+const userRequest = {
   getUser(params: { userId: string }): Promise<{ json: Json<User>; ref: VrcxUser; params: { userId: string } }> {
     return request(`users/${params.userId}`, {
       method: "GET",
@@ -312,4 +312,4 @@ const userReq = {
   },
 };
 
-export default userReq;
+export { userRequest };

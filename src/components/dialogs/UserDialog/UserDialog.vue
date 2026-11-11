@@ -102,7 +102,7 @@ import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
 import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
-import miscRequest from "../../../api/misc";
+import { miscRequest } from "../../../api/misc";
 import { useUserDialogCommands } from "./use-user-dialog-commands";
 import { showAvatarDialog, showAvatarAuthorDialog } from "../../../coordinators/avatar-coordinator";
 import { showUserDialog, refreshUserDialogAvatars } from "../../../coordinators/user-coordinator";

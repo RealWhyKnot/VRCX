@@ -1,7 +1,7 @@
 import { dbVars } from "../database";
 
 import { parseBioLinks } from "./user-profile.js";
-import sqliteService from "../sqlite.js";
+import { sqliteService } from "../sqlite.js";
 
 const feed = {
   async addGPSToDatabase(entry) {

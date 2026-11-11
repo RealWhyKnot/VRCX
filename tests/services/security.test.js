@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import security, { hexToUint8Array, stdAESKey, uint8ArrayToHex } from "../../src/services/security.js";
+import { security, hexToUint8Array, stdAESKey, uint8ArrayToHex } from "../../src/services/security.js";
 
 describe("hexToUint8Array", () => {
   test("converts hex string to Uint8Array", () => {

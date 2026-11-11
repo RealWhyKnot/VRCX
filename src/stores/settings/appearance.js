@@ -29,7 +29,7 @@ import { useVrStore } from "../vr";
 import { useVrcxStore } from "../vrcx";
 import { watchState } from "../../services/watch-state";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 export const useAppearanceSettingsStore = defineStore(
   "AppearanceSettings",

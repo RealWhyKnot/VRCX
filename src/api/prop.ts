@@ -2,7 +2,7 @@ import type { Prop } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 
-const propReq = {
+const propRequest = {
   getProp(params: { propId: string }): Promise<{ json: Json<Prop>; params }> {
     return request(`props/${params.propId}`, {
       method: "GET",
@@ -17,4 +17,4 @@ const propReq = {
   },
 };
 
-export default propReq;
+export { propRequest };

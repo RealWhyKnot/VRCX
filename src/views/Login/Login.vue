@@ -209,7 +209,7 @@ import { languageCodes } from "../../localization/locales";
 import { tForLocale } from "../../plugins/i18n";
 import { openExternalLink } from "../../shared/utils/app-actions";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 import { useUserDisplay } from "../../composables/use-user-display";
 import { watchState } from "../../services/watch-state";
 

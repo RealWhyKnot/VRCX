@@ -1,8 +1,8 @@
 import { computed, ref } from "vue";
 import { toast } from "vue-sonner";
 
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { removeFromArray } from "../../../shared/utils/base/array";
 

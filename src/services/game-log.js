@@ -128,4 +128,4 @@ class GameLogService {
 const self = new GameLogService();
 window.gameLogService = self;
 
-export { self as default, GameLogService as LogWatcherService };
+export { self as gameLogService, GameLogService as LogWatcherService };

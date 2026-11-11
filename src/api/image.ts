@@ -5,7 +5,7 @@ import { useWorldStore } from "../stores/world";
 import { applyWorld } from "../coordinators/world-coordinator";
 import { request } from "../services/request";
 
-const imageReq = {
+const imageRequest = {
   async uploadAvatarFailCleanup(id: string) {
     const avatarStore = useAvatarStore();
     try {
@@ -41,7 +41,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadAvatarFailCleanup(fileId);
+      imageRequest.uploadAvatarFailCleanup(fileId);
       throw err;
     }
   },
@@ -62,7 +62,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadAvatarFailCleanup(params.fileId);
+      imageRequest.uploadAvatarFailCleanup(params.fileId);
     }
   },
 
@@ -98,7 +98,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadAvatarFailCleanup(params.fileId);
+      imageRequest.uploadAvatarFailCleanup(params.fileId);
     }
   },
 
@@ -166,7 +166,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadWorldFailCleanup(fileId);
+      imageRequest.uploadWorldFailCleanup(fileId);
     }
     return void 0;
   },
@@ -187,7 +187,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadWorldFailCleanup(params.fileId);
+      imageRequest.uploadWorldFailCleanup(params.fileId);
     }
     return void 0;
   },
@@ -224,7 +224,7 @@ const imageReq = {
       });
     } catch (err) {
       console.error(err);
-      imageReq.uploadWorldFailCleanup(params.fileId);
+      imageRequest.uploadWorldFailCleanup(params.fileId);
     }
     return void 0;
   },
@@ -284,4 +284,4 @@ const imageReq = {
   },
 };
 
-export default imageReq;
+export { imageRequest };

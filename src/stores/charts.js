@@ -9,7 +9,7 @@ import { executeWithBackoff } from "../shared/utils/retry";
 import { database } from "../services/database";
 import { useFriendStore } from "./friend";
 import { useUserStore } from "./user";
-import userRequest from "../api/user";
+import { userRequest } from "../api/user";
 
 function createDefaultFetchState() {
   return {

@@ -22,7 +22,7 @@ import { useVrStore } from "../vr";
 import { useVrcxStore } from "../vrcx";
 import { watchState } from "../../services/watch-state";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 import * as workerTimers from "worker-timers";
 

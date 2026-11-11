@@ -308,7 +308,7 @@ import {
   handleGroupList,
 } from "../../../coordinators/group-coordinator";
 import { compareByMemberCount, compareByName } from "../../../shared/utils/compare";
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { userDialogGroupSortingOptions } from "../../../shared/constants/user";
 import { moveGroupInOrder, normalizeGroupOrder } from "../../../shared/utils/group-order";

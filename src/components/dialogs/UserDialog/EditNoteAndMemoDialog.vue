@@ -58,8 +58,8 @@ import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTexta
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import miscRequest from "../../../api/misc";
-import userRequest from "../../../api/user";
+import { miscRequest } from "../../../api/misc";
+import { userRequest } from "../../../api/user";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { saveUserMemo } from "../../../coordinators/memo-coordinator";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";

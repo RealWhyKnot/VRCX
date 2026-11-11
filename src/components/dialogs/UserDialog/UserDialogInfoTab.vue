@@ -391,8 +391,8 @@ import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { useGalleryStore } from "../../../stores/gallery";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import queryRequest from "../../../api/query-request";
-import userRequest from "../../../api/user";
+import { queryRequest } from "../../../api/query-request";
+import { userRequest } from "../../../api/user";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

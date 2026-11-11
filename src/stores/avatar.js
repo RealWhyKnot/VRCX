@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 
 import { checkVRChatCache } from "../coordinators/cache-coordinator";
 import { formatFileSize } from "../shared/utils/base/format";
-import queryRequest from "../api/query-request";
+import { queryRequest } from "../api/query-request";
 import { getAvatarHistory, preloadOwnAvatars } from "../coordinators/avatar-coordinator";
 import { database } from "../services/database";
 import { watchState } from "../services/watch-state";

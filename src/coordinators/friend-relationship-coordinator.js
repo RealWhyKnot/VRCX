@@ -1,8 +1,8 @@
 import { i18n } from "../plugins/i18n";
 
 import { database } from "../services/database";
-import friendRequest from "../api/friend";
-import userRequest from "../api/user";
+import { friendRequest } from "../api/friend";
+import { userRequest } from "../api/user";
 import { getNameColour } from "../shared/utils/user";
 import { handleFavoriteDelete } from "./favorite-coordinator";
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
@@ -15,7 +15,7 @@ import { useUserStore } from "../stores/user";
 import { removeFriendSearchIndex, syncFriendSearchIndex } from "./search-index-coordinator";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 import { storeToRefs } from "pinia";
 
 export function handleFriendStatus(args) {

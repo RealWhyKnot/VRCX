@@ -607,8 +607,8 @@ import {
   setGroupEventAnnouncements,
   getGroupDialogCalendar,
 } from "../../../coordinators/group-coordinator";
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import { queryKeys } from "../../../queries/keys";
 import { refetchActiveEntityQuery } from "../../../queries/entity-cache";
 import Badge from "../../ui/badge/Badge.vue";

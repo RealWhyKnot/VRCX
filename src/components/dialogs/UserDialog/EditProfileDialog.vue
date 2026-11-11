@@ -622,7 +622,7 @@ import SelectTrigger from "../../ui/select/SelectTrigger.vue";
 import SelectValue from "../../ui/select/SelectValue.vue";
 import Badge from "../../ui/badge/Badge.vue";
 
-import userRequest from "../../../api/user";
+import { userRequest } from "../../../api/user";
 import { languageClass } from "../../../shared/utils/user";
 import { getFaviconUrl } from "../../../shared/utils/url-utils";
 import { arraysMatch } from "../../../shared/utils/base/array";

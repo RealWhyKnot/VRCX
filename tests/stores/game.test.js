@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
 vi.mock("../../src/services/config.js", () => ({
-  default: {
+  configRepository: {
     getBool: vi.fn(),
     getString: vi.fn(),
   },
 }));
 
-import configRepository from "../../src/services/config.js";
+import { configRepository } from "../../src/services/config.js";
 import { useGameStore } from "../../src/stores/game";
 
 function flushPromises() {

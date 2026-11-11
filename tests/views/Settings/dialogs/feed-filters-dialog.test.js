@@ -34,7 +34,7 @@ vi.mock("../../../../src/stores/shared-feed", () => ({
 }));
 
 vi.mock("../../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     setString: (...a) => mocks.setString(...a),
   },
 }));

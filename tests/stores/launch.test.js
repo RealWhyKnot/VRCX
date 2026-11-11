@@ -42,7 +42,7 @@ vi.mock("../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockResolvedValue(""),
     setString: vi.fn(),
@@ -59,7 +59,7 @@ vi.mock("../../src/services/config", () => ({
     remove: vi.fn(),
   },
 }));
-vi.mock("../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -81,13 +81,13 @@ vi.mock("vue-i18n", async (importOriginal) => {
 
 const mockGetInstanceShortName = vi.fn();
 vi.mock("../../src/api/instance", () => ({
-  default: {
+  instanceRequest: {
     getInstanceShortName: (...args) => mockGetInstanceShortName(...args),
     selfInvite: vi.fn().mockResolvedValue({}),
   },
 }));
 vi.mock("../../src/api/misc", () => ({
-  default: {},
+  miscRequest: {},
 }));
 vi.mock("vue-sonner", () => ({
   toast: {

@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { compareByName } from "../shared/utils/compare";
 import { createDefaultFavoriteGroupRef } from "../shared/utils/entity-transforms";
 import { replaceReactiveObject } from "../shared/utils/base/array";
-import favoriteRequest from "../api/favorite";
+import { favoriteRequest } from "../api/favorite";
 import { database } from "../services/database";
 import { processBulk } from "../services/request";
 import { useAppearanceSettingsStore } from "./settings/appearance";

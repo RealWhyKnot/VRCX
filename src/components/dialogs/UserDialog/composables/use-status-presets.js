@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import configRepository from "../../../../services/config";
+import { configRepository } from "../../../../services/config";
 
 const STORAGE_KEY = "VRCX_statusPresets";
 const MAX_PRESETS = 10;

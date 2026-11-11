@@ -558,8 +558,8 @@ import { useLocationStore } from "../../../stores/location";
 import { useUserStore } from "../../../stores/user";
 import ToggleGroup from "../../ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../ui/toggle-group/ToggleGroupItem.vue";
-import instanceRequest from "../../../api/instance";
-import queryRequest from "../../../api/query-request";
+import { instanceRequest } from "../../../api/instance";
+import { queryRequest } from "../../../api/query-request";
 import VirtualCombobox from "../../ui/virtual-combobox/VirtualCombobox.vue";
 import { useNewInstanceBuilder } from "./use-new-instance-builder";
 

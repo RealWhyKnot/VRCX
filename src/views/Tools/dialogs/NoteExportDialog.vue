@@ -62,7 +62,7 @@ import { useFriendStore } from "../../../stores/friend";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
 import { createColumns } from "./note-export-columns.jsx";
-import miscRequest from "../../../api/misc";
+import { miscRequest } from "../../../api/misc";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 import * as workerTimers from "worker-timers";

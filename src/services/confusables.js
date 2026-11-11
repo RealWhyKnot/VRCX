@@ -117,4 +117,4 @@ const removeWhitespace = function (a) {
   return a.replace(/\s/g, "");
 };
 
-export { removeConfusables as default, confusablesToChar, charToConfusables, removeWhitespace };
+export { removeConfusables, confusablesToChar, charToConfusables, removeWhitespace };

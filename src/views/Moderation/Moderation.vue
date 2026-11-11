@@ -85,10 +85,10 @@ import { runRefreshPlayerModerationsFlow as refreshPlayerModerations } from "../
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { createColumns } from "./columns.jsx";
 import { moderationTypes } from "../../shared/constants/moderation";
-import playerModerationRequest from "../../api/player-moderation";
+import { playerModerationRequest } from "../../api/player-moderation";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
-import configRepository from "../../services/config.js";
+import { configRepository } from "../../services/config.js";
 
 const { t } = useI18n();
 const { playerModerationTable } = storeToRefs(useModerationStore());

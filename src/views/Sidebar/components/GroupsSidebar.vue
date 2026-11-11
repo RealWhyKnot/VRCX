@@ -88,7 +88,7 @@ import { useAppearanceSettingsStore } from "../../../stores/settings/appearance"
 import { useGroupStore } from "../../../stores/group";
 import { useLaunchStore } from "../../../stores/launch";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
-import instanceRequest from "../../../api/instance";
+import { instanceRequest } from "../../../api/instance";
 
 import BackToTop from "../../../components/BackToTop.vue";
 import Location from "../../../components/Location.vue";

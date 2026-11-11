@@ -10,7 +10,7 @@ import {
 import { APP_CJK_FONT_PACK_DEFAULT_KEY, APP_FONT_DEFAULT_KEY } from "../shared/constants/fonts";
 import { i18n, loadLocalizedStrings } from "./i18n";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export async function initUi() {
   try {

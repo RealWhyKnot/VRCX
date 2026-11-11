@@ -64,7 +64,7 @@ vi.mock("../../../../src/services/database", () => ({
 }));
 
 vi.mock("../../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
     setString: vi.fn(),
@@ -82,7 +82,7 @@ vi.mock("../../../../src/services/config", () => ({
   },
 }));
 
-vi.mock("../../../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -97,7 +97,7 @@ vi.mock("../../../../src/services/request", () => ({
 }));
 
 import UserDialogInfoTab from "../../../../src/components/dialogs/UserDialog/UserDialogInfoTab.vue";
-import queryRequest from "../../../../src/api/query-request";
+import { queryRequest } from "../../../../src/api/query-request";
 import { useAdvancedSettingsStore } from "../../../../src/stores/settings/advanced";
 import { useAppearanceSettingsStore } from "../../../../src/stores/settings/appearance";
 import { useLocationStore } from "../../../../src/stores/location";

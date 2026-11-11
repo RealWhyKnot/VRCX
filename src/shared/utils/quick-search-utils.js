@@ -1,5 +1,5 @@
 import { localeIncludes } from "./base/string";
-import removeConfusables, { removeWhitespace } from "../../services/confusables";
+import { removeConfusables, removeWhitespace } from "../../services/confusables";
 
 export function matchName(name, query, comparer) {
   if (!name || !query) {

@@ -81,7 +81,7 @@ import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 import { showGroupDialog } from "../../../coordinators/group-coordinator";
 import { useModalStore } from "../../../stores/modal";
 

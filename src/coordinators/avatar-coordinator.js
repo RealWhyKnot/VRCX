@@ -9,9 +9,9 @@ import { getBundleDateSize } from "./cache-coordinator";
 import { getPlatformInfo, storeAvatarImage } from "../shared/utils/avatar";
 import { replaceBioSymbols } from "../shared/utils/base/string";
 import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
-import avatarRequest from "../api/avatar";
-import miscRequest from "../api/misc";
-import queryRequest from "../api/query-request";
+import { avatarRequest } from "../api/avatar";
+import { miscRequest } from "../api/misc";
+import { queryRequest } from "../api/query-request";
 import { logWebRequest } from "../services/app-config";
 import { database } from "../services/database";
 import { patchAvatarFromEvent } from "../queries/entity-cache";
@@ -28,7 +28,7 @@ import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
 import { useVRCXUpdaterStore } from "../stores/vrcx-updater";
 
-import webApiService from "../services/webapi";
+import { webApiService } from "../services/webapi";
 
 export function applyAvatar(json) {
   const avatarStore = useAvatarStore();

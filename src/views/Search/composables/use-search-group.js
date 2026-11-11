@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 
 import { useSearchStore } from "../../../stores/search";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 
 function createDefaultSearchGroupParams() {
   return {

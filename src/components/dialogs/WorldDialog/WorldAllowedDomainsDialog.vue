@@ -38,7 +38,7 @@ import { Trash2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import worldRequest from "../../../api/world";
+import { worldRequest } from "../../../api/world";
 
 const props = defineProps({
   worldAllowedDomainsDialog: {

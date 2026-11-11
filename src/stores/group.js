@@ -2,7 +2,7 @@ import { reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 
 import { replaceBioSymbols } from "../shared/utils/base/string";
-import groupRequest from "../api/group";
+import { groupRequest } from "../api/group";
 import { initUserGroups } from "../coordinators/group-coordinator";
 import { watchState } from "../services/watch-state";
 

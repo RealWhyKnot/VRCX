@@ -131,7 +131,7 @@ vi.mock("../../src/stores/world", () => ({
 }));
 
 vi.mock("../../src/services/config", () => ({
-  default: mocks.configRepository,
+  configRepository: mocks.configRepository,
 }));
 
 vi.mock("worker-timers", () => ({

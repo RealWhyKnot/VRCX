@@ -60,16 +60,16 @@ vi.mock("../../../src/composables/use-invite-checks", () => ({
   useInviteChecks: () => ({ checkCanInvite: () => true }),
 }));
 vi.mock("../../../src/api/instance", () => ({
-  default: {
+  instanceRequest: {
     selfInvite: (...a) => mocks.selfInvite(...a),
     getInstanceShortName: vi.fn(),
   },
 }));
 vi.mock("../../../src/api/query-request", () => ({
-  default: { fetch: vi.fn() },
+  queryRequest: { fetch: vi.fn() },
 }));
 vi.mock("../../../src/services/config", () => ({
-  default: { getBool: (...a) => mocks.getBool(...a), setBool: vi.fn() },
+  configRepository: { getBool: (...a) => mocks.getBool(...a), setBool: vi.fn() },
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
   default: { template: "<div><slot /></div>" },

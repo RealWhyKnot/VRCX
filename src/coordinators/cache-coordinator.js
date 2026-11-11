@@ -8,7 +8,7 @@ import { useWorldStore } from "../stores/world";
 import { extractFileId, extractFileVersion, extractVariantVersion } from "../shared/utils/file-utils";
 import { compareUnityVersion } from "../shared/utils/avatar";
 import { formatFileSize } from "../shared/utils/base/format";
-import queryRequest from "../api/query-request";
+import { queryRequest } from "../api/query-request";
 
 async function deleteVRChatCache(ref) {
   const authStore = useAuthStore();

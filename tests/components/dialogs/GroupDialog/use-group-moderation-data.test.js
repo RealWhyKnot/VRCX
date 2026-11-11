@@ -57,7 +57,7 @@ vi.mock("../../../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
     setString: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock("../../../../src/services/config", () => ({
     remove: vi.fn(),
   },
 }));
-vi.mock("../../../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -88,13 +88,13 @@ vi.mock("../../../../src/services/request", () => ({
   failedGetRequests: new Map(),
 }));
 vi.mock("../../../../src/api/group", () => ({
-  default: {},
+  groupRequest: {},
 }));
 vi.mock("../../../../src/api/user", () => ({
-  default: {},
+  userRequest: {},
 }));
 vi.mock("../../../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: vi.fn(),
   },
 }));
@@ -105,7 +105,7 @@ vi.mock("worker-timers", () => ({
 }));
 
 import { useGroupModerationData } from "../../../../src/components/dialogs/GroupDialog/use-group-moderation-data";
-import queryRequest from "../../../../src/api/query-request";
+import { queryRequest } from "../../../../src/api/query-request";
 
 function createTables() {
   return {

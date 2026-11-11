@@ -8,7 +8,7 @@ import StatusBar from "../../src/components/StatusBar.vue";
 import en from "../../src/localization/en.json";
 
 vi.mock("../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? "{}"),
     setString: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock("../../src/services/websocket", () => ({
 }));
 
 vi.mock("../../src/services/webapi", () => ({
-  default: {
+  webApiService: {
     execute: vi.fn().mockResolvedValue({
       status: 200,
       data: JSON.stringify({
@@ -53,7 +53,7 @@ vi.mock("worker-timers", () => ({
 }));
 
 vi.mock("../../src/services/json-storage", () => ({
-  default: vi.fn(),
+  VrcxJsonStorage: vi.fn(),
 }));
 vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },

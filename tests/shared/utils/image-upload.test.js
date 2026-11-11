@@ -17,7 +17,7 @@ vi.mock("../../../src/shared/utils/file-utils", () => ({
 }));
 
 vi.mock("../../../src/api/image", () => ({
-  default: {},
+  imageRequest: {},
 }));
 
 import { toast } from "vue-sonner";

@@ -19,7 +19,7 @@ import { useUserStore } from "../stores/user";
 import { useVrStore } from "../stores/vr";
 import { useWorldStore } from "../stores/world";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 

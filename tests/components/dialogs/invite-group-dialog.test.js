@@ -52,16 +52,16 @@ vi.mock("../../../src/stores/modal", () => ({
   useModalStore: () => ({ confirm: (...a) => mocks.confirm(...a) }),
 }));
 vi.mock("../../../src/api/group", () => ({
-  default: {
+  groupRequest: {
     sendGroupInvite: (...a) => mocks.sendGroupInvite(...a),
     getGroup: (...a) => mocks.getGroup(...a),
   },
 }));
 vi.mock("../../../src/api/query-request", () => ({
-  default: { fetch: (...a) => mocks.fetch(...a) },
+  queryRequest: { fetch: (...a) => mocks.fetch(...a) },
 }));
 vi.mock("../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     getString: (...a) => mocks.getString(...a),
     setString: (...a) => mocks.setString(...a),
   },

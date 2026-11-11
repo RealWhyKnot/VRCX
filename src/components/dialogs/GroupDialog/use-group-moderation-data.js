@@ -3,7 +3,7 @@ import { toast } from "vue-sonner";
 
 import { debounce } from "../../../shared/utils/common";
 import { mergeGroupMemberSearchResults } from "../../../shared/utils/group";
-import queryRequest from "../../../api/query-request";
+import { queryRequest } from "../../../api/query-request";
 
 import * as workerTimers from "worker-timers";
 

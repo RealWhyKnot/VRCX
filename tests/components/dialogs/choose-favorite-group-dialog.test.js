@@ -53,7 +53,7 @@ vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({ isLocalUserVrcPlusSupporter: ref(true) }),
 }));
 vi.mock("../../../src/api/favorite", () => ({
-  default: { addFavorite: (...a) => mocks.addFavorite(...a) },
+  favoriteRequest: { addFavorite: (...a) => mocks.addFavorite(...a) },
 }));
 vi.mock("@/components/ui/dialog/Dialog.vue", () => ({
   default: { template: "<div><slot /></div>" },

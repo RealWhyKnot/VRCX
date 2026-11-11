@@ -9,8 +9,8 @@ import { executeWithBackoff } from "../shared/utils/retry";
 import { getFriendsSortFunction } from "../shared/utils/friend";
 import { isRealInstance } from "../shared/utils/instance";
 import { getUserMemo } from "../coordinators/memo-coordinator";
-import friendRequest from "../api/friend";
-import userRequest from "../api/user";
+import { friendRequest } from "../api/friend";
+import { userRequest } from "../api/user";
 import { runInitFriendsListFlow } from "../coordinators/friend-sync-coordinator";
 import { runPendingOfflineTickFlow, runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { updateFriendship, runUpdateFriendshipsFlow } from "../coordinators/friend-relationship-coordinator";
@@ -26,7 +26,7 @@ import { useUserStore } from "./user";
 import { useDashboardStore } from "./dashboard";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 

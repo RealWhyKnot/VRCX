@@ -1,6 +1,6 @@
 let VRCXStorage = {};
 
-export default class {
+export class VrcxJsonStorage {
   constructor(_VRCXStorage) {
     VRCXStorage = _VRCXStorage;
     this.init();

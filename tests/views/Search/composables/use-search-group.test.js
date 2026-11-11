@@ -20,7 +20,7 @@ vi.mock("../../../../src/shared/utils/base/string", () => ({
 }));
 
 vi.mock("../../../../src/api/group", () => ({
-  default: {
+  groupRequest: {
     groupSearch: (...args) => mocks.groupSearch(...args),
   },
 }));

@@ -16,7 +16,7 @@ import { AppDebug, logWebRequest } from "../services/app-config";
 import { database } from "../services/database";
 import { runLastLocationResetFlow, runUpdateCurrentUserLocationFlow } from "./location-coordinator";
 import { getGroupName } from "../shared/utils/group";
-import userRequest from "../api/user";
+import { userRequest } from "../api/user";
 import { watchState } from "../services/watch-state";
 import { toast } from "vue-sonner";
 
@@ -36,7 +36,7 @@ import { useUserStore } from "../stores/user";
 import { useVrStore } from "../stores/vr";
 import { useVrcxStore } from "../stores/vrcx";
 
-import gameLogService from "../services/game-log.js";
+import { gameLogService } from "../services/game-log.js";
 
 import * as workerTimers from "worker-timers";
 
@@ -521,4 +521,4 @@ export async function disableGameLogDialog() {
   }
 }
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";

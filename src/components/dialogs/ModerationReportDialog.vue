@@ -95,7 +95,7 @@ import { useI18n } from "vue-i18n";
 
 import { useAuthStore } from "../../stores/auth";
 import { useModerationStore } from "../../stores/moderation";
-import moderationReportRequest from "../../api/moderation-report";
+import { moderationReportRequest } from "../../api/moderation-report";
 
 const { t } = useI18n();
 

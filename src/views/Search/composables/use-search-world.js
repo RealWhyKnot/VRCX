@@ -5,7 +5,7 @@ import { replaceBioSymbols } from "../../../shared/utils/base/string";
 import { useAuthStore } from "../../../stores/auth";
 import { useSearchStore } from "../../../stores/search";
 import { useWorldStore } from "../../../stores/world";
-import worldRequest from "../../../api/world";
+import { worldRequest } from "../../../api/world";
 
 function createDefaultSearchWorldParams() {
   return {

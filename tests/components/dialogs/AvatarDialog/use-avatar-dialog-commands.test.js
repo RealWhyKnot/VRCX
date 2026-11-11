@@ -3,13 +3,13 @@ import { ref } from "vue";
 import { useAvatarDialogCommands } from "../../../../src/components/dialogs/AvatarDialog/use-avatar-dialog-commands";
 
 vi.mock("../../../../src/api/avatar-moderation", () => ({
-  default: {
+  avatarModerationRequest: {
     sendAvatarModeration: vi.fn(),
     deleteAvatarModeration: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/avatar", () => ({
-  default: {
+  avatarRequest: {
     saveAvatar: vi.fn(),
     deleteAvatar: vi.fn(),
     selectFallbackAvatar: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock("../../../../src/api/avatar", () => ({
   },
 }));
 vi.mock("../../../../src/api/favorite", () => ({
-  default: {
+  favoriteRequest: {
     deleteFavorite: vi.fn(),
   },
 }));
@@ -48,9 +48,9 @@ vi.mock("../../../../src/coordinators/avatar-coordinator", () => ({
 }));
 
 const { copyToClipboard, openExternalLink } = await import("../../../../src/shared/utils/app-actions");
-const { default: favoriteRequest } = await import("../../../../src/api/favorite");
-const { default: avatarRequest } = await import("../../../../src/api/avatar");
-const { default: avatarModerationRequest } = await import("../../../../src/api/avatar-moderation");
+const { favoriteRequest } = await import("../../../../src/api/favorite");
+const { avatarRequest } = await import("../../../../src/api/avatar");
+const { avatarModerationRequest } = await import("../../../../src/api/avatar-moderation");
 
 function createMockAvatarDialog() {
   return ref({

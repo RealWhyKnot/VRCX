@@ -1,7 +1,7 @@
 import { router } from "./router";
 import { startRendererMemoryThresholdReport } from "./renderer-memory-report";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export async function isSentryOptedIn() {
   return NIGHTLY && configRepository.getBool("VRCX_SentryEnabled", false);

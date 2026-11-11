@@ -242,7 +242,7 @@ import { useI18n } from "vue-i18n";
 import { useGroupStore } from "../../../stores/group";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { loadGroupRolesDialogRoles } from "../../../coordinators/group-coordinator";
 

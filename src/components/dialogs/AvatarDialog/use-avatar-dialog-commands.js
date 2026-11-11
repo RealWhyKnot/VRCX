@@ -1,8 +1,8 @@
 import { ref } from "vue";
 
-import avatarModerationRequest from "../../../api/avatar-moderation";
-import avatarRequest from "../../../api/avatar";
-import favoriteRequest from "../../../api/favorite";
+import { avatarModerationRequest } from "../../../api/avatar-moderation";
+import { avatarRequest } from "../../../api/avatar";
+import { favoriteRequest } from "../../../api/favorite";
 import { removeAvatarFromCache } from "../../../coordinators/avatar-coordinator";
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";

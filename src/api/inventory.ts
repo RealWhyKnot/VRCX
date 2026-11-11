@@ -23,7 +23,7 @@ function refetchActiveInventoryQueries() {
     });
 }
 
-const inventoryReq = {
+const inventoryRequest = {
   getUserInventoryItem(params: { inventoryId: string; userId: string; flags }): Promise<{ json: Json<InventoryItem>; params }> {
     return request(`user/${params.userId}/inventory/${params.inventoryId}`, {
       method: "GET",
@@ -174,4 +174,4 @@ const inventoryReq = {
   },
 };
 
-export default inventoryReq;
+export { inventoryRequest };

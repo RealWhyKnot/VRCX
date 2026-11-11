@@ -45,7 +45,7 @@ vi.mock("../../../../src/coordinators/favorite-coordinator", () => ({
 }));
 
 vi.mock("../../../../src/api/favorite", () => ({
-  default: {
+  favoriteRequest: {
     deleteFavorite: (...args) => mocks.deleteFavorite(...args),
   },
 }));

@@ -270,7 +270,7 @@ import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { database } from "../../../services/database";
 import { watchState } from "../../../services/watch-state";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 const { userImage, userStatusClass } = useUserDisplay();
 const { t } = useI18n();

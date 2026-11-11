@@ -102,7 +102,7 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import worldRequest from "../../../api/world";
+import { worldRequest } from "../../../api/world";
 import { removeFromArray } from "../../../shared/utils/base/array";
 
 const props = defineProps({

@@ -7,7 +7,7 @@ import { i18n } from "../../../plugins/i18n";
 import { router } from "../../../plugins/router";
 import { textToHex } from "./string";
 
-import configRepository from "../../../services/config.js";
+import { configRepository } from "../../../services/config.js";
 
 const THEME_COLOR_STORAGE_KEY = "VRCX_themeColor";
 const THEME_COLOR_STYLE_ID = "app-theme-color-style";

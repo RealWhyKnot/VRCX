@@ -13,8 +13,8 @@ import { useUserStore } from "../stores/user";
 import { applyCurrentUser } from "./user-coordinator";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
-import webApiService from "../services/webapi";
+import { configRepository } from "../services/config";
+import { webApiService } from "../services/webapi";
 
 export async function runLogoutFlow() {
   const authStore = useAuthStore();

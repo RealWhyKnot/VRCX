@@ -8,7 +8,7 @@ import { isRpcWorld } from "../../shared/utils/world";
 import { parseLocation } from "../../shared/utils/location-parser";
 import { getPlatformLabel, getRpcWorldConfig, getStatusInfo, isPopcornPalaceWorld } from "../../shared/utils/discord-presence";
 import { ActivityType, StatusDisplayType } from "../../shared/constants/discord";
-import queryRequest from "../../api/query-request";
+import { queryRequest } from "../../api/query-request";
 import { useGameLogStore } from "../gameLog";
 import { useGameStore } from "../game";
 import { useLocationStore } from "../location";
@@ -16,7 +16,7 @@ import { useUpdateLoopStore } from "../update-loop";
 import { useUserStore } from "../user";
 import { useInstanceStore } from "../instance";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 export const useDiscordPresenceSettingsStore = defineStore("DiscordPresenceSettings", () => {
   const locationStore = useLocationStore();

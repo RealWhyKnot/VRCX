@@ -33,7 +33,7 @@ vi.mock("../../src/queries/policies", () => ({
   },
 }));
 
-import groupRequest from "../../src/api/group";
+import { groupRequest } from "../../src/api/group";
 
 describe("group query sync", () => {
   beforeEach(() => {

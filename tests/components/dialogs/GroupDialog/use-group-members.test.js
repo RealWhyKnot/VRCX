@@ -2,17 +2,17 @@ import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 import { ref } from "vue";
 
 vi.mock("../../../../src/api/group", () => ({
-  default: {
+  groupRequest: {
     getGroupMembersSearch: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/user", () => ({
-  default: {},
+  userRequest: {},
 }));
 vi.mock("../../../../src/plugins/router", async () => {
   const vue = await import("vue");
@@ -56,7 +56,7 @@ vi.mock("../../../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
     setString: vi.fn(),
@@ -73,7 +73,7 @@ vi.mock("../../../../src/services/config", () => ({
     remove: vi.fn(),
   },
 }));
-vi.mock("../../../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -105,8 +105,8 @@ vi.mock("worker-timers", () => ({
 }));
 
 import { useGroupMembers } from "../../../../src/components/dialogs/GroupDialog/use-group-members";
-import groupRequest from "../../../../src/api/group";
-import queryRequest from "../../../../src/api/query-request";
+import { groupRequest } from "../../../../src/api/group";
+import { queryRequest } from "../../../../src/api/query-request";
 import { FILTER_EVERYONE } from "../../../../src/shared/constants/group";
 
 function createGroupDialog(overrides = {}) {

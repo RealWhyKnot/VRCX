@@ -61,9 +61,9 @@ import { Check as CheckIcon } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import miscRequest from "../../api/misc";
-import notificationRequest from "../../api/notification";
-import queryRequest from "../../api/query-request";
+import { miscRequest } from "../../api/misc";
+import { notificationRequest } from "../../api/notification";
+import { queryRequest } from "../../api/query-request";
 import { useGalleryStore } from "../../stores/gallery";
 import { useNotificationStore } from "../../stores/notification";
 import { useUserStore } from "../../stores/user";

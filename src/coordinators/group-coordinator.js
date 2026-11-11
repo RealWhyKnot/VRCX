@@ -6,9 +6,9 @@ import { convertFileUrlToImageUrl } from "../shared/utils/common";
 import { createDefaultGroupRef } from "../shared/utils/group-transforms";
 import { hasGroupPermission } from "../shared/utils/group";
 import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
-import groupRequest from "../api/group";
-import instanceRequest from "../api/instance";
-import queryRequest from "../api/query-request";
+import { groupRequest } from "../api/group";
+import { instanceRequest } from "../api/instance";
+import { queryRequest } from "../api/query-request";
 import { database } from "../services/database";
 import { FILTER_EVERYONE } from "../shared/constants/group";
 import { patchGroupFromEvent } from "../queries/entity-cache";
@@ -22,7 +22,7 @@ import { useGroupStore } from "../stores/group";
 import { syncGroupSearchIndex, removeGroupSearchIndex, clearGroupSearchIndex } from "./search-index-coordinator";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 

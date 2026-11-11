@@ -6,7 +6,17 @@ import { formatDateFilter } from "../coordinators/date-coordinator";
 
 const utils = Object.assign(
   {},
-  ...Object.values(import.meta.glob(["../shared/utils/*.js", "../shared/utils/base/*.js", "!../shared/utils/localization-helper-cli.js"], { eager: true })),
+  ...Object.values(
+    import.meta.glob(
+      [
+        "../shared/utils/base/{array,devtool,format,string}.js",
+        "../shared/utils/{avatar,chart,common,compare,csv,file-utils,friend,group,instance,platform-utils,setting,url-utils,user,gallery}.js",
+        "../shared/utils/{location,location-parser,invite,world,throttle,retry,game-log,entity-transforms,user-transforms,world-transforms}.js",
+        "../shared/utils/{avatar-transforms,group-transforms,instance-transforms,cache-utils,notification-transforms,discord-presence}.js",
+      ],
+      { eager: true }
+    )
+  ),
   { formatDateFilter }
 );
 

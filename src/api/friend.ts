@@ -17,7 +17,7 @@ function refetchActiveFriendListQueries() {
     });
 }
 
-const friendReq = {
+const friendRequest = {
   getFriends(params: GetFriends["query"]): Promise<{ json: (Json<LimitedUserFriend> & { state?: string })[]; params: GetFriends["query"] }> {
     const userStore = useUserStore();
     return request("auth/user/friends", {
@@ -119,4 +119,4 @@ const friendReq = {
   },
 };
 
-export default friendReq;
+export { friendRequest };

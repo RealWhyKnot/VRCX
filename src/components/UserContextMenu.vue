@@ -60,9 +60,9 @@ import { useGameStore } from "../stores/game";
 import { useLaunchStore } from "../stores/launch";
 import { useLocationStore } from "../stores/location";
 import { useUserStore } from "../stores/user";
-import instanceRequest from "../api/instance";
-import notificationRequest from "../api/notification";
-import queryRequest from "../api/query-request";
+import { instanceRequest } from "../api/instance";
+import { notificationRequest } from "../api/notification";
+import { queryRequest } from "../api/query-request";
 import { useInviteChecks } from "../composables/use-invite-checks";
 import { isActionRecent, recordRecentAction } from "../composables/use-recent-actions";
 

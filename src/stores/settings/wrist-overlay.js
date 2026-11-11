@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 import { useSharedFeedStore } from "../shared-feed";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 export const useWristOverlaySettingsStore = defineStore("WristOverlaySettings", () => {
   const sharedFeed = useSharedFeedStore();

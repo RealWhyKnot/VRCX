@@ -145,7 +145,7 @@ import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/strin
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
-import marketplaceRequest from "../../../api/marketplace";
+import { marketplaceRequest } from "../../../api/marketplace";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const props = defineProps({

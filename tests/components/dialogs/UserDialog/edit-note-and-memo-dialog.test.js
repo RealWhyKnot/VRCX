@@ -31,10 +31,10 @@ vi.mock("../../../../src/stores/settings/appearance", () => ({
   }),
 }));
 vi.mock("../../../../src/api/misc", () => ({
-  default: { saveNote: (...a) => mocks.saveNote(...a) },
+  miscRequest: { saveNote: (...a) => mocks.saveNote(...a) },
 }));
 vi.mock("../../../../src/api/user", () => ({
-  default: { getUser: (...a) => mocks.getUser(...a) },
+  userRequest: { getUser: (...a) => mocks.getUser(...a) },
 }));
 vi.mock("../../../../src/coordinators/memo-coordinator", () => ({
   saveUserMemo: (...a) => mocks.saveUserMemo(...a),

@@ -111,7 +111,7 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import favoriteRequest from "../../../api/favorite";
+import { favoriteRequest } from "../../../api/favorite";
 import { selectAvatarWithConfirmation, showAvatarDialog } from "../../../coordinators/avatar-coordinator";
 import { removeLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
 import { useFavoriteStore } from "../../../stores/favorite";

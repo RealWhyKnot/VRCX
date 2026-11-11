@@ -9,7 +9,7 @@ import { useNotificationStore } from "../stores/notification";
 import { syncFriendSearchIndex } from "./search-index-coordinator";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUserStore } from "../stores/user";
-import userRequest from "../api/user";
+import { userRequest } from "../api/user";
 import { watchState } from "../services/watch-state";
 
 export async function runUpdateFriendDelayedCheckFlow(ctx, newState, location, $location_at, { now = Date.now, nowIso = () => new Date().toJSON() } = {}) {

@@ -21,7 +21,7 @@ function getCurrentUserId() {
   return useUserStore().currentUser.id;
 }
 
-const miscReq = {
+const miscRequest = {
   getFile(params: { fileId: string }): Promise<{ json: Json<File>; params: { fileId: string } }> {
     return request(`file/${params.fileId}`, {
       method: "GET",
@@ -189,4 +189,4 @@ const miscReq = {
   },
 };
 
-export default miscReq;
+export { miscRequest };

@@ -1,7 +1,7 @@
 import Button from "@/components/ui/button/Button.vue";
 import Progress from "@/components/ui/progress/Progress.vue";
 
-export default {
+export const InvalidAvatarsProgressToast = {
   name: "InvalidAvatarsProgressToast",
   props: {
     t: { type: Function, required: true },

@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
-import marketplaceRequest from "../../../api/marketplace";
+import { marketplaceRequest } from "../../../api/marketplace";
 import { VRCHAT_STORE_IDS } from "../../../shared/constants/marketplace";
 
 export function useStoreShelves() {

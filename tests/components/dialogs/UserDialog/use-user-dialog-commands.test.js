@@ -3,19 +3,19 @@ import { ref } from "vue";
 import { useUserDialogCommands } from "../../../../src/components/dialogs/UserDialog/use-user-dialog-commands";
 
 vi.mock("../../../../src/api/favorite", () => ({
-  default: {
+  favoriteRequest: {
     deleteFavorite: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/friend", () => ({
-  default: {
+  friendRequest: {
     sendFriendRequest: vi.fn(),
     cancelFriendRequest: vi.fn(),
     deleteFriend: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/notification", () => ({
-  default: {
+  notificationRequest: {
     sendRequestInvite: vi.fn(() => Promise.resolve({})),
     sendInvite: vi.fn(() => Promise.resolve({})),
     acceptFriendRequestNotification: vi.fn(() => Promise.resolve({})),
@@ -23,13 +23,13 @@ vi.mock("../../../../src/api/notification", () => ({
   },
 }));
 vi.mock("../../../../src/api/player-moderation", () => ({
-  default: {
+  playerModerationRequest: {
     sendPlayerModeration: vi.fn(),
     deletePlayerModeration: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/world", () => ({
-  default: {},
+  worldRequest: {},
 }));
 
 vi.mock("../../../../src/shared/utils/app-actions", () => ({
@@ -53,9 +53,9 @@ vi.mock("../../../../src/composables/use-recent-actions", () => ({
   }),
 }));
 
-const { default: favoriteRequest } = await import("../../../../src/api/favorite");
-const { default: friendRequest } = await import("../../../../src/api/friend");
-const { default: playerModerationRequest } = await import("../../../../src/api/player-moderation");
+const { favoriteRequest } = await import("../../../../src/api/favorite");
+const { friendRequest } = await import("../../../../src/api/friend");
+const { playerModerationRequest } = await import("../../../../src/api/player-moderation");
 const { database } = await import("../../../../src/services/database");
 
 function createMockUserDialog() {

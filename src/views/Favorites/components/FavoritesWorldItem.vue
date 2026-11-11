@@ -100,7 +100,7 @@ import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 
-import favoriteRequest from "../../../api/favorite";
+import { favoriteRequest } from "../../../api/favorite";
 import WorldActionMenuItems from "../../../components/WorldActionMenuItems.vue";
 import { removeLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
 import { runNewInstanceSelfInviteFlow as newInstanceSelfInvite } from "../../../coordinators/invite-coordinator";

@@ -2,7 +2,7 @@ import type { InventoryTemplate } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 
-const cosmeticsReq = {
+const cosmeticsRequest = {
   getProfileEffects(): Promise<{ json: Json<InventoryTemplate[]> }> {
     return request("cosmetics/index/profileEffect", {
       method: "GET",
@@ -37,4 +37,4 @@ const cosmeticsReq = {
   },
 };
 
-export default cosmeticsReq;
+export { cosmeticsRequest };

@@ -3,22 +3,22 @@ import { ref } from "vue";
 import { useWorldDialogCommands } from "../../../../src/components/dialogs/WorldDialog/use-world-dialog-commands";
 
 vi.mock("../../../../src/api/favorite", () => ({
-  default: {
+  favoriteRequest: {
     deleteFavorite: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/misc", () => ({
-  default: {
+  miscRequest: {
     deleteWorldPersistData: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/user", () => ({
-  default: {
+  userRequest: {
     saveCurrentUser: vi.fn(),
   },
 }));
 vi.mock("../../../../src/api/world", () => ({
-  default: {
+  worldRequest: {
     saveWorld: vi.fn(),
     publishWorld: vi.fn(),
     unpublishWorld: vi.fn(),
@@ -48,10 +48,10 @@ vi.mock("../../../../src/coordinators/world-coordinator", () => ({
   removeWorldFromCache: vi.fn(),
 }));
 
-const { default: favoriteRequest } = await import("../../../../src/api/favorite");
-const { default: miscRequest } = await import("../../../../src/api/misc");
-const { default: userRequest } = await import("../../../../src/api/user");
-const { default: worldRequest } = await import("../../../../src/api/world");
+const { favoriteRequest } = await import("../../../../src/api/favorite");
+const { miscRequest } = await import("../../../../src/api/misc");
+const { userRequest } = await import("../../../../src/api/user");
+const { worldRequest } = await import("../../../../src/api/world");
 const { openExternalLink } = await import("../../../../src/shared/utils/app-actions");
 
 function createWorldDialog(overrides = {}) {

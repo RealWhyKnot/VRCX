@@ -28,7 +28,7 @@ import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTexta
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import inviteMessagesRequest from "../../../api/invite-messages";
+import { inviteMessagesRequest } from "../../../api/invite-messages";
 
 const { t } = useI18n();
 

@@ -2,7 +2,7 @@ import type { ModerateUserRequest, PlayerModeration, Success } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 
-const playerModerationReq = {
+const playerModerationRequest = {
   getPlayerModerations(): Promise<{ json: Json<PlayerModeration[]> }> {
     return request("auth/user/playermoderations", {
       method: "GET",
@@ -54,4 +54,4 @@ const playerModerationReq = {
   },
 };
 
-export default playerModerationReq;
+export { playerModerationRequest };

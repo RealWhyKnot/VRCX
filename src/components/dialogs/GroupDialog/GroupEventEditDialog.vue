@@ -443,8 +443,8 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import { useGroupStore } from "../../../stores/group";
 import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";

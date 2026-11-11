@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/services/config", () => ({
-  default: mocks.configRepository,
+  configRepository: mocks.configRepository,
 }));
 
 vi.mock("../../src/shared/utils/base/string", () => ({

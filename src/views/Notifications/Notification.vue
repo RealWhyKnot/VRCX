@@ -120,7 +120,7 @@ import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import SendInviteRequestResponseDialog from "./dialogs/SendInviteRequestResponseDialog.vue";
 import SendInviteResponseDialog from "./dialogs/SendInviteResponseDialog.vue";
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 const { refreshInviteMessageTableData } = useInviteStore();
 const { clearInviteImageUpload } = useGalleryStore();

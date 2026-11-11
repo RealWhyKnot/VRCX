@@ -13,8 +13,8 @@ import { useVRCXUpdaterStore } from "../vrcx-updater";
 import { useVrcxStore } from "../vrcx";
 import { watchState } from "../../services/watch-state";
 
-import configRepository from "../../services/config";
-import webApiService from "../../services/webapi";
+import { configRepository } from "../../services/config";
+import { webApiService } from "../../services/webapi";
 
 export const useAdvancedSettingsStore = defineStore("AdvancedSettings", () => {
   const gameStore = useGameStore();

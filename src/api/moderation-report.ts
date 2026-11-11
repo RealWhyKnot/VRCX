@@ -2,7 +2,7 @@ import type { GetModerationReports, ModerationReport, PaginatedModerationReportL
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 
-const moderationReportReq = {
+const moderationReportRequest = {
   getModerationReports(params: GetModerationReports["query"]): Promise<{ json: Json<PaginatedModerationReportList>; params: GetModerationReports["query"] }> {
     return request("moderationReports", {
       method: "GET",
@@ -42,4 +42,4 @@ const moderationReportReq = {
   },
 };
 
-export default moderationReportReq;
+export { moderationReportRequest };

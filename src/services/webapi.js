@@ -42,4 +42,4 @@ class WebApiService {
 const self = new WebApiService();
 window.webApiService = self;
 
-export { self as default, WebApiService };
+export { self as webApiService, WebApiService };

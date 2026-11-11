@@ -8,7 +8,7 @@ import { branches } from "../shared/constants/settings";
 import { getWhatsNewRelease, normalizeReleaseVersion } from "../shared/constants/whats-new-releases";
 import { changeLogRemoveLinks } from "../shared/utils/base/string";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 

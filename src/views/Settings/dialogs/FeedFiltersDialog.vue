@@ -88,7 +88,7 @@ import ToggleGroup from "../../../components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../../components/ui/toggle-group/ToggleGroupItem.vue";
 import { feedFiltersOptions, sharedFeedFiltersDefaults } from "../../../shared/constants/feed-filters";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 const { t } = useI18n();
 

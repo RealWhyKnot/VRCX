@@ -15,15 +15,15 @@ vi.mock("../../src/services/database", () => ({
 }));
 
 vi.mock("../../src/api/friend", () => ({
-  default: {},
+  friendRequest: {},
 }));
 vi.mock("../../src/api/instance", () => ({
-  default: {
+  instanceRequest: {
     getInstance: vi.fn(),
   },
 }));
 vi.mock("../../src/api/notification", () => ({
-  default: {
+  notificationRequest: {
     hideNotification: vi.fn(() => Promise.resolve({})),
     getNotifications: vi.fn(() => Promise.resolve({ json: [] })),
     getNotificationsV2: vi.fn(() => Promise.resolve({ json: [] })),
@@ -31,7 +31,7 @@ vi.mock("../../src/api/notification", () => ({
   },
 }));
 vi.mock("../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: vi.fn(),
   },
 }));
@@ -50,7 +50,7 @@ vi.mock("vue-i18n", () => ({
   }),
 }));
 vi.mock("../../src/services/config", () => ({
-  default: {
+  configRepository: {
     getBool: vi.fn((key, defaultValue) => {
       if (key === "VRCX_autoDeclineFriendRequests") {
         return Promise.resolve(true);
@@ -93,7 +93,7 @@ vi.mock("../../src/plugins/router", () => ({
   },
 }));
 const { database } = await import("../../src/services/database");
-const { default: notificationRequest } = await import("../../src/api/notification");
+const { notificationRequest } = await import("../../src/api/notification");
 
 const { useNotificationStore } = await import("../../src/stores/notification");
 const { useGeneralSettingsStore } = await import("../../src/stores/settings/general");

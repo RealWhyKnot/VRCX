@@ -41,7 +41,7 @@ import { useGalleryStore } from "../../../stores/gallery";
 import { useWorldStore } from "../../../stores/world";
 import { AppDebug } from "@/services/app-config";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
-import miscRequest from "../../../api/misc";
+import { miscRequest } from "../../../api/misc";
 
 const { worldDialog } = storeToRefs(useWorldStore());
 const { showFullscreenImageDialog } = useGalleryStore();

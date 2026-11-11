@@ -189,21 +189,21 @@ vi.mock("../../src/queries/keys", () => ({
 }));
 
 vi.mock("../../src/api/user", () => ({
-  default: {
+  userRequest: {
     getUser: (...args) => mockGetUser(...args),
     getMutualCounts: vi.fn(),
   },
 }));
 
 vi.mock("../../src/api/world", () => ({
-  default: {
+  worldRequest: {
     getWorlds: (...args) => mockGetWorlds(...args),
     getWorld: vi.fn(),
   },
 }));
 
 vi.mock("../../src/api/group", () => ({
-  default: {
+  groupRequest: {
     getGroupCalendar: (...args) => mockGetGroupCalendar(...args),
     getGroup: vi.fn(),
     getGroupPosts: vi.fn(),
@@ -218,15 +218,15 @@ vi.mock("../../src/api/group", () => ({
 }));
 
 vi.mock("../../src/api/avatar", () => ({
-  default: {
+  avatarRequest: {
     getAvatar: vi.fn(),
     getAvatarGallery: vi.fn(),
     getAvatars: vi.fn(),
   },
 }));
-vi.mock("../../src/api/friend", () => ({ default: { getFriends: vi.fn() } }));
+vi.mock("../../src/api/friend", () => ({ friendRequest: { getFriends: vi.fn() } }));
 vi.mock("../../src/api/favorite", () => ({
-  default: {
+  favoriteRequest: {
     getFavoriteLimits: vi.fn(),
     getFavorites: vi.fn(),
     getFavoriteGroups: vi.fn(),
@@ -234,12 +234,12 @@ vi.mock("../../src/api/favorite", () => ({
     getFavoriteAvatars: vi.fn(),
   },
 }));
-vi.mock("../../src/api/vrc-plus-icon", () => ({ default: { getFileList: vi.fn() } }));
+vi.mock("../../src/api/vrc-plus-icon", () => ({ vrcPlusIconRequest: { getFileList: vi.fn() } }));
 vi.mock("../../src/api/vrc-plus-image", () => ({
-  default: { getPrints: vi.fn(), getPrint: vi.fn() },
+  vrcPlusImageRequest: { getPrints: vi.fn(), getPrint: vi.fn() },
 }));
 vi.mock("../../src/api/inventory", () => ({
-  default: {
+  inventoryRequest: {
     getUserInventoryItem: vi.fn(),
     getInventoryItem: vi.fn(),
     getInventoryItems: vi.fn(),
@@ -247,7 +247,7 @@ vi.mock("../../src/api/inventory", () => ({
   },
 }));
 vi.mock("../../src/api/misc", () => ({
-  default: {
+  miscRequest: {
     getFile: vi.fn(),
     getFileAnalysis: vi.fn(),
     getVisits: vi.fn(),
@@ -255,7 +255,7 @@ vi.mock("../../src/api/misc", () => ({
   },
 }));
 
-import queryRequest from "../../src/api/query-request";
+import { queryRequest } from "../../src/api/query-request";
 
 describe("queryRequest", () => {
   beforeEach(() => {

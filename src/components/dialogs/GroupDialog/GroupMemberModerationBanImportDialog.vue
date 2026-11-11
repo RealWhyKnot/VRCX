@@ -81,7 +81,7 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { TriangleAlert } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";
 
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 
 import * as workerTimers from "worker-timers";
 

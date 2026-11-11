@@ -67,8 +67,8 @@ import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { hasGroupPermission } from "../../../shared/utils/group";
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import GroupCalendarEventDetails from "./GroupCalendarEventDetails.vue";
 

@@ -92,12 +92,12 @@ import { useUserDisplay } from "../../composables/use-user-display";
 import { useFriendStore } from "../../stores/friend";
 import { useGroupStore } from "../../stores/group";
 import { useModalStore } from "../../stores/modal";
-import groupRequest from "../../api/group";
-import queryRequest from "../../api/query-request";
+import { groupRequest } from "../../api/group";
+import { queryRequest } from "../../api/query-request";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
 import { applyGroup } from "../../coordinators/group-coordinator";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 const { userImage, userStatusClass } = useUserDisplay();
 const { vipFriends, onlineFriends, activeFriends, offlineFriends } = storeToRefs(useFriendStore());

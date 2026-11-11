@@ -14,7 +14,7 @@ function refetchActiveGalleryQueries() {
     });
 }
 
-const VRCPlusIconsReq = {
+const vrcPlusIconRequest = {
   getFileList(params: GetFiles["query"]): Promise<{ json: Json<File[]>; params: GetFiles["query"] }> {
     return request("files", {
       method: "GET",
@@ -61,4 +61,4 @@ const VRCPlusIconsReq = {
   },
 };
 
-export default VRCPlusIconsReq;
+export { vrcPlusIconRequest };

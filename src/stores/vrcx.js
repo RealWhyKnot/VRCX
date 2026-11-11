@@ -4,8 +4,8 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { DEFAULT_MAX_TABLE_SIZE, DEFAULT_SEARCH_LIMIT, SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN } from "../shared/constants/settings";
-import avatarRequest from "../api/avatar";
-import queryRequest from "../api/query-request";
+import { avatarRequest } from "../api/avatar";
+import { queryRequest } from "../api/query-request";
 import { debounce } from "../shared/utils/common";
 import { parseLocation } from "../shared/utils/location-parser";
 import { AppDebug } from "../services/app-config";
@@ -32,7 +32,7 @@ import { clearVRCXCache } from "../coordinators/vrcx-coordinator";
 import { resetSearchIndexOnLogin } from "../coordinators/search-index-coordinator";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export const useVrcxStore = defineStore("Vrcx", () => {
   const gameStore = useGameStore();

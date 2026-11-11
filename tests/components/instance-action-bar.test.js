@@ -108,12 +108,12 @@ vi.mock("../../src/coordinators/date-coordinator", () => ({
 }));
 
 vi.mock("../../src/api/instance", () => ({
-  default: {
+  instanceRequest: {
     selfInvite: (...args) => mocks.selfInvite(...args),
   },
 }));
 vi.mock("../../src/api/misc", () => ({
-  default: {
+  miscRequest: {
     closeInstance: (...args) => mocks.closeInstance(...args),
   },
 }));

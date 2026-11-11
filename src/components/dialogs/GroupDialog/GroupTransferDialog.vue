@@ -82,7 +82,7 @@ import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
-import groupRequest from "@/api/group";
+import { groupRequest } from "@/api/group";
 import { showGroupDialog } from "@/coordinators/group-coordinator";
 import { useUserDisplay } from "@/composables/use-user-display";
 import { useModalStore } from "@/stores/modal";

@@ -10,8 +10,8 @@ import { getWorldName } from "../shared/utils/world";
 import { removeFromArray } from "../shared/utils/base/array";
 import { replaceBioSymbols } from "../shared/utils/base/string";
 import { timeToText } from "../shared/utils/base/format";
-import instanceRequest from "../api/instance";
-import userRequest from "../api/user";
+import { instanceRequest } from "../api/instance";
+import { userRequest } from "../api/user";
 import { photonEmojis, photonEventType } from "../shared/constants/photon";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
@@ -29,7 +29,7 @@ import { useSharedFeedStore } from "./shared-feed";
 import { useUserStore } from "./user";
 import { useVrStore } from "./vr";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 import * as workerTimers from "worker-timers";
 

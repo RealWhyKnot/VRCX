@@ -86,7 +86,7 @@ vi.mock("../../../src/stores/location", () => ({
 }));
 
 vi.mock("../../../src/services/config.js", () => ({
-  default: {
+  configRepository: {
     getString: (...args) => mocks.configGetString(...args),
     getBool: (...args) => mocks.configGetBool(...args),
     setString: (...args) => mocks.configSetString(...args),

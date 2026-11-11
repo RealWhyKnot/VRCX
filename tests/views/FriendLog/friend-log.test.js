@@ -117,7 +117,7 @@ vi.mock("../../../src/components/ui/input-group/InputGroupField.vue", () => ({
 }));
 
 vi.mock("../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     setString: (...args) => mocks.configSetString(...args),
   },
 }));

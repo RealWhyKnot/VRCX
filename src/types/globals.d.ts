@@ -27,10 +27,10 @@ declare global {
     request: Record<string, unknown>;
     utils: Record<string, unknown>;
     dayjs: (typeof import("dayjs"))["default"];
-    configRepository: (typeof import("../services/config.js"))["default"];
+    configRepository: (typeof import("../services/config.js"))["configRepository"];
     database: (typeof import("../services/database"))["database"];
-    gameLogService: (typeof import("../services/game-log.js"))["default"];
-    sqliteService: (typeof import("../services/sqlite.js"))["default"];
+    gameLogService: (typeof import("../services/game-log.js"))["gameLogService"];
+    sqliteService: (typeof import("../services/sqlite.js"))["sqliteService"];
     isVrOverlay: boolean;
     interopApi: {
       callDotNetMethod: (className: any, methodName: any, args: any) => Promise<any>;

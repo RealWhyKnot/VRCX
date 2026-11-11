@@ -1,10 +1,10 @@
 import { ref } from "vue";
 
-import favoriteRequest from "../../../api/favorite";
-import friendRequest from "../../../api/friend";
-import notificationRequest from "../../../api/notification";
-import playerModerationRequest from "../../../api/player-moderation";
-import queryRequest from "../../../api/query-request";
+import { favoriteRequest } from "../../../api/favorite";
+import { friendRequest } from "../../../api/friend";
+import { notificationRequest } from "../../../api/notification";
+import { playerModerationRequest } from "../../../api/player-moderation";
+import { queryRequest } from "../../../api/query-request";
 import { copyToClipboard } from "../../../shared/utils/app-actions";
 import { parseLocation } from "../../../shared/utils/location-parser";
 import { database } from "../../../services/database";

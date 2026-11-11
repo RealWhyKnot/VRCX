@@ -79,7 +79,7 @@ function refetchActiveGroupScope(groupId) {
       console.error("Failed to refresh scoped group queries:", err);
     });
 }
-const groupReq = {
+const groupRequest = {
   setGroupRepresentation(groupId: string, params: UpdateGroupRepresentation["body"]) {
     return request(`groups/${groupId}/representation`, {
       method: "PUT",
@@ -1010,4 +1010,4 @@ const groupReq = {
   },
 };
 
-export default groupReq;
+export { groupRequest };

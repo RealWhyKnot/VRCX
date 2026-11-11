@@ -73,7 +73,7 @@ import Badge from "../../../components/ui/badge/Badge.vue";
 import { openExternalLink } from "../../../shared/utils/app-actions";
 import { useLaunchStore } from "../../../stores/launch";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 const { t } = useI18n();
 

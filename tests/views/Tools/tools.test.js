@@ -66,7 +66,7 @@ vi.mock("../../../src/composables/use-tool-nav-pinning", () => ({
 }));
 
 vi.mock("../../../src/services/config.js", () => ({
-  default: {
+  configRepository: {
     getString: (...args) => getString(...args),
     setString: (...args) => setString(...args),
   },

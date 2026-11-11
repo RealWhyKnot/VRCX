@@ -104,7 +104,7 @@ vi.mock("../../src/services/request", () => ({
 }));
 
 vi.mock("../../src/api/auth", () => ({
-  default: mocks.authRequest,
+  authRequest: mocks.authRequest,
 }));
 
 vi.mock("../../src/coordinators/auth-coordinator", () => ({
@@ -143,11 +143,11 @@ vi.mock("../../src/services/database", () => ({
 }));
 
 vi.mock("../../src/services/security", () => ({
-  default: mocks.security,
+  security: mocks.security,
 }));
 
 vi.mock("../../src/services/webapi", () => ({
-  default: mocks.webApiService,
+  webApiService: mocks.webApiService,
 }));
 
 vi.mock("../../src/services/watch-state", () => ({
@@ -155,7 +155,7 @@ vi.mock("../../src/services/watch-state", () => ({
 }));
 
 vi.mock("../../src/services/config", () => ({
-  default: mocks.configRepository,
+  configRepository: mocks.configRepository,
 }));
 
 vi.mock("../../src/services/websocket", () => ({

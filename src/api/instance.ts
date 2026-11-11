@@ -6,7 +6,7 @@ import { i18n } from "../plugins/i18n";
 import { request } from "../services/request";
 import { useInstanceStore } from "../stores/instance";
 
-const instanceReq = {
+const instanceRequest = {
   getInstance(params: {
     worldId: string;
     instanceId: string;
@@ -161,4 +161,4 @@ const instanceReq = {
   },
 };
 
-export default instanceReq;
+export { instanceRequest };

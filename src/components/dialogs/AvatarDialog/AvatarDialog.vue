@@ -592,9 +592,9 @@ import DropdownMenuSubContent from "../../ui/dropdown-menu/DropdownMenuSubConten
 import DropdownMenuSubTrigger from "../../ui/dropdown-menu/DropdownMenuSubTrigger.vue";
 import DropdownMenuTrigger from "../../ui/dropdown-menu/DropdownMenuTrigger.vue";
 import Badge from "../../ui/badge/Badge.vue";
-import avatarRequest from "../../../api/avatar";
-import marketplaceRequest from "../../../api/marketplace";
-import miscRequest from "../../../api/misc";
+import { avatarRequest } from "../../../api/avatar";
+import { marketplaceRequest } from "../../../api/marketplace";
+import { miscRequest } from "../../../api/misc";
 import { database } from "../../../services/database";
 import { formatJsonVars } from "../../../shared/utils/base/ui";
 import { handleImageUploadInput, resizeImageToFitLimits } from "../../../coordinators/image-upload-coordinator";

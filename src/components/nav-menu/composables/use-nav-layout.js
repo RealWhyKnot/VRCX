@@ -1,7 +1,7 @@
 import { useEventListener } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 import { DASHBOARD_NAV_KEY_PREFIX } from "../../../shared/constants/dashboard";
 import { isToolNavKey } from "../../../shared/constants/tools";
 import { navDefinitions } from "../../../shared/constants/ui";

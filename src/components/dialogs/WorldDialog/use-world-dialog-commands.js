@@ -1,9 +1,9 @@
 import { nextTick, ref } from "vue";
 
-import favoriteRequest from "../../../api/favorite";
-import miscRequest from "../../../api/misc";
-import userRequest from "../../../api/user";
-import worldRequest from "../../../api/world";
+import { favoriteRequest } from "../../../api/favorite";
+import { miscRequest } from "../../../api/misc";
+import { userRequest } from "../../../api/user";
+import { worldRequest } from "../../../api/world";
 import { handleImageUploadInput, resizeImageToFitLimits, uploadImageLegacy } from "../../../coordinators/image-upload-coordinator";
 import { openExternalLink } from "../../../shared/utils/app-actions";
 import { replaceVrcPackageUrl } from "../../../shared/utils/url-utils";

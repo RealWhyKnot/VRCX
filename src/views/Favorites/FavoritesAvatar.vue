@@ -396,8 +396,8 @@ import { useModalStore } from "../../stores/modal";
 import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
-import avatarRequest from "../../api/avatar";
-import favoriteRequest from "../../api/favorite";
+import { avatarRequest } from "../../api/avatar";
+import { favoriteRequest } from "../../api/favorite";
 import { debounce } from "../../shared/utils/common";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
@@ -418,7 +418,7 @@ import FavoritesAvatarItem from "./components/FavoritesAvatarItem.vue";
 import FavoritesAvatarLocalHistoryItem from "./components/FavoritesAvatarLocalHistoryItem.vue";
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
-import InvalidAvatarsProgressToast from "./components/invalid-avatars-progress-toast.jsx";
+import { InvalidAvatarsProgressToast } from "./components/invalid-avatars-progress-toast.jsx";
 
 import * as workerTimers from "worker-timers";
 

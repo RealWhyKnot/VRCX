@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../../src/services/config.js", () => ({
-  default: {
+  configRepository: {
     getString: (...args) => mocks.getString(...args),
     setString: (...args) => mocks.setString(...args),
   },

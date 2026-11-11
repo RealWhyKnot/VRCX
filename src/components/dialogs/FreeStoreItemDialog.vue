@@ -44,7 +44,7 @@ import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
-import marketplaceRequest from "../../api/marketplace";
+import { marketplaceRequest } from "../../api/marketplace";
 import { AppDebug } from "../../services/app-config";
 import { useNotificationStore } from "../../stores/notification";
 import { useNotificationsSettingsStore } from "../../stores/settings/notifications";

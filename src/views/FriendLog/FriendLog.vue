@@ -61,7 +61,7 @@ import { database } from "../../services/database";
 import { removeFromArray } from "../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 const appearanceSettingsStore = useAppearanceSettingsStore();
 const vrcxStore = useVrcxStore();

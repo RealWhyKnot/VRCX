@@ -16,7 +16,7 @@ import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { applyCurrentUser } from "../coordinators/user-coordinator";
 
-const avatarReq = {
+const avatarRequest = {
   getAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params: { avatarId: string } }> {
     return request(`avatars/${params.avatarId}`, {
       method: "GET",
@@ -244,4 +244,4 @@ const avatarReq = {
   },
 };
 
-export default avatarReq;
+export { avatarRequest };

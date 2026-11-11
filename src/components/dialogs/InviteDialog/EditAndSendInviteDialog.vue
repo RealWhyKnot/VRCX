@@ -42,9 +42,9 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import instanceRequest from "../../../api/instance";
-import inviteMessagesRequest from "../../../api/invite-messages";
-import notificationRequest from "../../../api/notification";
+import { instanceRequest } from "../../../api/instance";
+import { inviteMessagesRequest } from "../../../api/invite-messages";
+import { notificationRequest } from "../../../api/notification";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
 import { parseLocation } from "../../../shared/utils/location-parser";

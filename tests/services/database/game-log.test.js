@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../src/services/sqlite.js", () => ({
-  default: {
+  sqliteService: {
     execute: mocks.execute,
     executeNonQuery: vi.fn(),
   },

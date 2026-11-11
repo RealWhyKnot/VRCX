@@ -5,7 +5,7 @@ import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { applyWorld } from "../coordinators/world-coordinator";
 
-const worldReq = {
+const worldRequest = {
   getWorld(params: { worldId: string }): Promise<{ json: Json<World>; ref: any; params: { worldId: string } }> {
     return request(`worlds/${params.worldId}`, {
       method: "GET",
@@ -163,4 +163,4 @@ const worldReq = {
   },
 };
 
-export default worldReq;
+export { worldRequest };

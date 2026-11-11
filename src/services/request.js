@@ -10,7 +10,7 @@ import { i18n } from "../plugins/i18n";
 import { statusCodes } from "../shared/constants/api.js";
 import { watchState } from "./watch-state";
 
-import webApiService from "./webapi.js";
+import { webApiService } from "./webapi.js";
 
 const pendingGetRequests = new Map();
 export const failedGetRequests = new Map();

@@ -81,7 +81,7 @@ import { processBulk } from "../../../services/request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 import { useUserStore } from "../../../stores/user";
 import { userDialogMutualFriendSortingOptions } from "../../../shared/constants/user";
-import userRequest from "../../../api/user";
+import { userRequest } from "../../../api/user";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 const { t } = useI18n();

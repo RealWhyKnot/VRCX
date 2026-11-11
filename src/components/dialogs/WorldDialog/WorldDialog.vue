@@ -400,7 +400,7 @@ import { useModalStore } from "../../../stores/modal";
 import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
-import worldRequest from "../../../api/world";
+import { worldRequest } from "../../../api/world";
 import DropdownMenu from "../../ui/dropdown-menu/DropdownMenu.vue";
 import DropdownMenuContent from "../../ui/dropdown-menu/DropdownMenuContent.vue";
 import DropdownMenuItem from "../../ui/dropdown-menu/DropdownMenuItem.vue";

@@ -34,7 +34,7 @@ vi.mock("../../../../src/stores/launch", () => ({
 }));
 
 vi.mock("../../../../src/services/config", () => ({
-  default: mocks.configRepository,
+  configRepository: mocks.configRepository,
 }));
 
 vi.mock("../../../../src/shared/utils/app-actions", () => ({

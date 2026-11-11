@@ -7,7 +7,7 @@ import Noty from "noty";
 
 import { runLoginSuccessFlow, runLogoutFlow } from "../coordinators/auth-coordinator";
 import { AppDebug } from "../services/app-config";
-import authRequest from "../api/auth";
+import { authRequest } from "../api/auth";
 import { database } from "../services/database";
 import { escapeTag } from "../shared/utils/base/string";
 import { links } from "../shared/constants/link";
@@ -23,9 +23,9 @@ import { useUserStore } from "./user";
 import { useVrcxStore } from "./vrcx";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
-import security from "../services/security";
-import webApiService from "../services/webapi";
+import { configRepository } from "../services/config";
+import { security } from "../services/security";
+import { webApiService } from "../services/webapi";
 
 import * as workerTimers from "worker-timers";
 import { useActivityStore } from "./activity";

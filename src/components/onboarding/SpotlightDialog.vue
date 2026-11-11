@@ -57,7 +57,7 @@ import { useI18n } from "vue-i18n";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import Button from "@/components/ui/button/Button.vue";
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 import vrcxLogo from "../../../images/VRCX.png";
 
 const { t } = useI18n();

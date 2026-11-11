@@ -2,7 +2,7 @@ import type { AvatarModeration, AvatarModerationCreated, CreateAvatarModerationR
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
 
-const avatarModerationReq = {
+const avatarModerationRequest = {
   getAvatarModerations(): Promise<{ json: Json<AvatarModeration[]> }> {
     return request("auth/user/avatarmoderations", {
       method: "GET",
@@ -45,4 +45,4 @@ const avatarModerationReq = {
   },
 };
 
-export default avatarModerationReq;
+export { avatarModerationRequest };

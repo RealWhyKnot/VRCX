@@ -1,6 +1,6 @@
 import { dbVars } from "../database";
 
-import sqliteService from "../sqlite.js";
+import { sqliteService } from "../sqlite.js";
 
 const notifications = {
   async getNotifications() {

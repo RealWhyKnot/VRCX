@@ -19,12 +19,12 @@ import { parseLocation } from "../../shared/utils/location-parser";
 import { removeFromArray } from "../../shared/utils/base/array";
 import { replaceBioSymbols } from "../../shared/utils/base/string";
 import { getUserMemo } from "../../coordinators/memo-coordinator";
-import friendRequest from "../../api/friend";
-import instanceRequest from "../../api/instance";
-import inventoryRequest from "../../api/inventory";
-import marketplaceRequest from "../../api/marketplace";
-import notificationRequest from "../../api/notification";
-import queryRequest from "../../api/query-request";
+import { friendRequest } from "../../api/friend";
+import { instanceRequest } from "../../api/instance";
+import { inventoryRequest } from "../../api/inventory";
+import { marketplaceRequest } from "../../api/marketplace";
+import { notificationRequest } from "../../api/notification";
+import { queryRequest } from "../../api/query-request";
 import { VRCHAT_STORE_IDS } from "../../shared/constants/marketplace";
 import { getNotificationMessage, getUserIdFromNoty as getUserIdFromNotyBase, toNotificationText } from "../../shared/utils/notification-message";
 import { database, dbVars } from "../../services/database";
@@ -50,7 +50,7 @@ import { useUserStore } from "../user";
 import { useWristOverlaySettingsStore } from "../settings/wrist-overlay";
 import { watchState } from "../../services/watch-state";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 export const useNotificationStore = defineStore("Notification", () => {
   const { t } = useI18n();

@@ -6,7 +6,7 @@ import { sharedFeedFiltersDefaults } from "../../shared/constants/feed-filters";
 import { useModalStore } from "../modal";
 import { useVrStore } from "../vr";
 
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 export const useNotificationsSettingsStore = defineStore("NotificationsSettings", () => {
   const vrStore = useVrStore();

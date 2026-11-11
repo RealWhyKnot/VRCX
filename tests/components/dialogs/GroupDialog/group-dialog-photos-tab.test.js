@@ -58,7 +58,7 @@ vi.mock("../../../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_k, d) => d ?? "{}"),
     setString: vi.fn(),
@@ -75,7 +75,7 @@ vi.mock("../../../../src/services/config", () => ({
     remove: vi.fn(),
   },
 }));
-vi.mock("../../../../src/services/json-storage", () => ({ default: vi.fn() }));
+vi.mock("../../../../src/services/json-storage", () => ({ VrcxJsonStorage: vi.fn() }));
 vi.mock("../../../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },
 }));
@@ -89,12 +89,12 @@ vi.mock("../../../../src/services/request", () => ({
   failedGetRequests: new Map(),
 }));
 vi.mock("../../../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: vi.fn().mockResolvedValue({ json: [], params: {} }),
   },
 }));
 vi.mock("../../../../src/api/user", () => ({
-  default: {},
+  userRequest: {},
 }));
 
 import GroupDialogPhotosTab from "../../../../src/components/dialogs/GroupDialog/GroupDialogPhotosTab.vue";

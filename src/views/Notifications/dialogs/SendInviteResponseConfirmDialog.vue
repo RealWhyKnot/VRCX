@@ -28,7 +28,7 @@ import { useI18n } from "vue-i18n";
 
 import { useGalleryStore } from "../../../stores/gallery";
 import { useNotificationStore } from "../../../stores/notification";
-import notificationRequest from "../../../api/notification";
+import { notificationRequest } from "../../../api/notification";
 
 const { t } = useI18n();
 

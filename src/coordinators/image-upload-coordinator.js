@@ -3,7 +3,7 @@ import { toast } from "vue-sonner";
 import { $throw } from "../services/request";
 import { AppDebug } from "../services/app-config.js";
 import { extractFileId } from "../shared/utils/file-utils";
-import imageRequest from "../api/image";
+import { imageRequest } from "../api/image";
 
 function resolveMessage(message) {
   if (typeof message === "function") {

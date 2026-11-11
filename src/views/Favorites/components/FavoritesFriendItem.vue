@@ -119,10 +119,10 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import favoriteRequest from "../../../api/favorite";
-import instanceRequest from "../../../api/instance";
-import notificationRequest from "../../../api/notification";
-import queryRequest from "../../../api/query-request";
+import { favoriteRequest } from "../../../api/favorite";
+import { instanceRequest } from "../../../api/instance";
+import { notificationRequest } from "../../../api/notification";
+import { queryRequest } from "../../../api/query-request";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { removeLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

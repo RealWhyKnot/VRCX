@@ -64,7 +64,7 @@ import FieldGroup from "@/components/ui/field/FieldGroup.vue";
 import FieldLabel from "@/components/ui/field/FieldLabel.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 
-import instanceRequest from "../../api/instance";
+import { instanceRequest } from "../../api/instance";
 import { useGalleryStore } from "../../stores/gallery";
 import { useGroupStore } from "../../stores/group";
 import GallerySelectDialog from "./GroupDialog/GallerySelectDialog.vue";

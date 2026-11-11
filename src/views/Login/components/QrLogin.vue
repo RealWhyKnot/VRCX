@@ -21,11 +21,11 @@ import { useI18n } from "vue-i18n";
 import QRCode from "qrcode";
 
 import { AppDebug } from "../../../services/app-config";
-import authRequest from "../../../api/auth";
+import { authRequest } from "../../../api/auth";
 import { getCurrentUser } from "../../../coordinators/user-coordinator";
 import { useAuthStore } from "../../../stores/auth";
 
-import webApiService from "../../../services/webapi";
+import { webApiService } from "../../../services/webapi";
 import * as workerTimers from "worker-timers";
 
 const { t } = useI18n();

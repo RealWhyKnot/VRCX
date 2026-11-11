@@ -51,7 +51,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 import { AppDebug } from "../../../services/app-config";
-import authRequest from "../../../api/auth";
+import { authRequest } from "../../../api/auth";
 import { useAuthStore } from "../../../stores/auth";
 
 const { t } = useI18n();

@@ -2,17 +2,17 @@ import { entityQueryPolicies } from "../queries/policies";
 import { fetchWithEntityPolicy } from "../queries/entity-cache";
 import { queryKeys } from "../queries/keys";
 
-import avatarRequest from "./avatar";
-import favoriteRequest from "./favorite";
+import { avatarRequest } from "./avatar";
+import { favoriteRequest } from "./favorite";
 
-import groupRequest from "./group";
-import instanceRequest from "./instance";
-import inventoryRequest from "./inventory";
-import marketplaceRequest from "./marketplace";
-import miscRequest from "./misc";
-import userRequest from "./user";
+import { groupRequest } from "./group";
+import { instanceRequest } from "./instance";
+import { inventoryRequest } from "./inventory";
+import { marketplaceRequest } from "./marketplace";
+import { miscRequest } from "./misc";
+import { userRequest } from "./user";
 
-import worldRequest from "./world";
+import { worldRequest } from "./world";
 
 const registry = Object.freeze({
   user: {
@@ -225,4 +225,4 @@ const queryRequest = {
   },
 };
 
-export default queryRequest;
+export { queryRequest };

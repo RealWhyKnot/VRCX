@@ -87,7 +87,7 @@ vi.mock("../../../../src/coordinators/group-coordinator", () => ({
 }));
 
 vi.mock("../../../../src/api/instance", () => ({
-  default: {
+  instanceRequest: {
     selfInvite: (...a) => mocks.selfInvite(...a),
   },
 }));

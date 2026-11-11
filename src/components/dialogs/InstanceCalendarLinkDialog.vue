@@ -67,8 +67,8 @@ import SelectItem from "@/components/ui/select/SelectItem.vue";
 import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 
-import groupRequest from "../../api/group";
-import instanceRequest from "../../api/instance";
+import { groupRequest } from "../../api/group";
+import { instanceRequest } from "../../api/instance";
 import { useGroupStore } from "../../stores/group";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import { parseLocation } from "../../shared/utils/location-parser";

@@ -49,7 +49,7 @@ vi.mock("../../src/services/database", () => ({
   ),
 }));
 vi.mock("../../src/services/config", () => ({
-  default: {
+  configRepository: {
     init: vi.fn(),
     getString: vi.fn().mockImplementation((_key, defaultValue) => defaultValue ?? "{}"),
     setString: vi.fn(),
@@ -67,7 +67,7 @@ vi.mock("../../src/services/config", () => ({
   },
 }));
 vi.mock("../../src/services/json-storage", () => ({
-  default: vi.fn(),
+  VrcxJsonStorage: vi.fn(),
 }));
 vi.mock("../../src/services/watch-state", () => ({
   watchState: { isLoggedIn: false },

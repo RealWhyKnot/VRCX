@@ -140,11 +140,11 @@ import { useModalStore } from "../../stores/modal";
 import { getLaunchURL, isRealInstance } from "../../shared/utils/instance";
 import { parseLocation } from "../../shared/utils/location-parser";
 import { useInviteChecks } from "../../composables/use-invite-checks";
-import instanceRequest from "../../api/instance";
-import queryRequest from "../../api/query-request";
+import { instanceRequest } from "../../api/instance";
+import { queryRequest } from "../../api/query-request";
 
 import InviteDialog from "./InviteDialog/InviteDialog.vue";
-import configRepository from "../../services/config";
+import { configRepository } from "../../services/config";
 
 const { t } = useI18n();
 

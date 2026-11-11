@@ -41,7 +41,7 @@ import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 import { AppDebug } from "@/services/app-config";
 import { commaNumber, replaceBioSymbols } from "../../../shared/utils/base/string";
-import miscRequest from "../../../api/misc";
+import { miscRequest } from "../../../api/misc";
 
 const { groupDialog } = storeToRefs(useGroupStore());
 const { showFullscreenImageDialog } = useGalleryStore();

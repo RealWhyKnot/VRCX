@@ -11,7 +11,7 @@ import { useUserStore } from "../stores/user";
 import { getCurrentUser } from "./user-coordinator";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export async function runRefreshFriendsListFlow() {
   const updateLoopStore = useUpdateLoopStore();

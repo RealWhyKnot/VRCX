@@ -301,7 +301,7 @@ import ResizableHandle from "../../components/ui/resizable/ResizableHandle.vue";
 import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
 import { debounce } from "../../shared/utils/common";
-import favoriteRequest from "../../api/favorite";
+import { favoriteRequest } from "../../api/favorite";
 import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
 import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
 import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";

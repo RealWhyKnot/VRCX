@@ -2,13 +2,13 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 
 vi.mock("../../../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: vi.fn(),
   },
 }));
 
 import { useGroupGalleries } from "../../../../src/components/dialogs/GroupDialog/use-group-galleries";
-import queryRequest from "../../../../src/api/query-request";
+import { queryRequest } from "../../../../src/api/query-request";
 
 function createGroupDialog(overrides = {}) {
   return ref({

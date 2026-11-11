@@ -152,7 +152,7 @@ import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { openExternalLink } from "../../../shared/utils/app-actions";
-import miscRequest from "../../../api/misc";
+import { miscRequest } from "../../../api/misc";
 import { useGalleryStore } from "../../../stores/gallery";
 
 const BANNER_CATEGORIES = ["quick-menu-banner", "loading-screen-banners"];

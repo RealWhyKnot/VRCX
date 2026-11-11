@@ -14,7 +14,7 @@ import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-rela
 import { parseLocation } from "../shared/utils/location-parser";
 import { debounce } from "../shared/utils/common";
 import { AppDebug } from "./app-config";
-import groupRequest from "../api/group";
+import { groupRequest } from "../api/group";
 import { request } from "./request";
 import { runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { runSetCurrentUserLocationFlow } from "../coordinators/location-coordinator";

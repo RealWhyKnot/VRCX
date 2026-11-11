@@ -15,10 +15,10 @@ import { getGroupName, hasGroupPermission } from "../shared/utils/group";
 import { getWorldName } from "../shared/utils/world";
 import { isRealInstance } from "../shared/utils/instance";
 import { replaceBioSymbols } from "../shared/utils/base/string";
-import instanceRequest from "../api/instance";
-import queryRequest from "../api/query-request";
-import userRequest from "../api/user";
-import worldRequest from "../api/world";
+import { instanceRequest } from "../api/instance";
+import { queryRequest } from "../api/query-request";
+import { userRequest } from "../api/user";
+import { worldRequest } from "../api/world";
 import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
 import { instanceContentSettings } from "../shared/constants/instance";
 import { database } from "../services/database";
@@ -35,7 +35,7 @@ import { useUserStore } from "./user";
 import { useWorldStore } from "./world";
 import { watchState } from "../services/watch-state";
 
-import configRepository from "../services/config";
+import { configRepository } from "../services/config";
 
 export const useInstanceStore = defineStore("Instance", () => {
   const locationStore = useLocationStore();

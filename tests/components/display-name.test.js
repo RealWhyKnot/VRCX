@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/api/query-request", () => ({
-  default: {
+  queryRequest: {
     fetch: (...args) => mocks.fetch(...args),
   },
 }));

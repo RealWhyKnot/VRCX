@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 
 import { useSearchStore } from "../../../stores/search";
 import { replaceBioSymbols } from "../../../shared/utils/base/string";
-import marketplaceRequest from "../../../api/marketplace";
+import { marketplaceRequest } from "../../../api/marketplace";
 
 function createDefaultSearchMarketplaceParams() {
   return {

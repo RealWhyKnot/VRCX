@@ -1,8 +1,8 @@
 import { computed, ref } from "vue";
 
 import { groupDialogFilterOptions, groupDialogSortingOptions, FILTER_EVERYONE, FILTER_NO_ROLE } from "../../../shared/constants/group";
-import groupRequest from "../../../api/group";
-import queryRequest from "../../../api/query-request";
+import { groupRequest } from "../../../api/group";
+import { queryRequest } from "../../../api/query-request";
 import { debounce } from "../../../shared/utils/common";
 import { mergeGroupMemberSearchResults } from "../../../shared/utils/group";
 

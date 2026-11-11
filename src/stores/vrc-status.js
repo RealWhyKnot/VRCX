@@ -4,7 +4,7 @@ import { useVrcxStore } from "./vrcx";
 
 import { openExternalLink } from "../shared/utils/app-actions";
 
-import webApiService from "../services/webapi";
+import { webApiService } from "../services/webapi";
 
 import * as workerTimers from "worker-timers";
 

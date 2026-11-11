@@ -101,7 +101,7 @@ import { useFavoriteStore } from "../../../stores/favorite";
 import { useUserStore } from "../../../stores/user";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { handleFavoriteWorldList } from "../../../coordinators/favorite-coordinator";
-import favoriteRequest from "../../../api/favorite";
+import { favoriteRequest } from "../../../api/favorite";
 
 const { t } = useI18n();
 

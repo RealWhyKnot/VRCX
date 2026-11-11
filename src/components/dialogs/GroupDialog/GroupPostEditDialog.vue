@@ -143,8 +143,8 @@ import SelectTrigger from "../../ui/select/SelectTrigger.vue";
 import SelectValue from "../../ui/select/SelectValue.vue";
 import RadioGroup from "../../ui/radio-group/RadioGroup.vue";
 import RadioGroupItem from "../../ui/radio-group/RadioGroupItem.vue";
-import groupRequest from "../../../api/group";
-import vrcPlusIconRequest from "../../../api/vrc-plus-icon";
+import { groupRequest } from "../../../api/group";
+import { vrcPlusIconRequest } from "../../../api/vrc-plus-icon";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useGroupStore } from "../../../stores/group";
 

@@ -6,10 +6,10 @@ import { parseLocation } from "../../../shared/utils/location-parser";
 import { useGroupStore } from "../../../stores/group";
 import { useInstanceStore } from "../../../stores/instance";
 import { useUserStore } from "../../../stores/user";
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 import { handleGroupPermissions } from "../../../coordinators/group-coordinator";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 export function useNewInstanceBuilder(locationTagRef) {
   const { cachedGroups } = useGroupStore();

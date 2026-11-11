@@ -309,7 +309,7 @@ import { storeToRefs } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import vrcPlusImageRequest from "@/api/vrc-plus-image";
+import { vrcPlusImageRequest } from "@/api/vrc-plus-image";
 import { lookupUser } from "@/coordinators/user-coordinator";
 
 const router = useRouter();

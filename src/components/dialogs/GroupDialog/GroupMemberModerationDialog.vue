@@ -156,7 +156,7 @@ import { applyGroupMember, handleGroupMember, handleGroupMemberProps } from "../
 import { hasGroupPermission } from "../../../shared/utils/group";
 import { useUserDisplay } from "../../../composables/use-user-display";
 import { groupDialogFilterOptions, groupDialogSortingOptions } from "../../../shared/constants/group";
-import groupRequest from "../../../api/group";
+import { groupRequest } from "../../../api/group";
 import { resolveRoleNames } from "./group-moderation-utils";
 import { useGroupBatchOperations } from "./use-group-batch-operations";
 import { useGroupModerationData } from "./use-group-moderation-data";

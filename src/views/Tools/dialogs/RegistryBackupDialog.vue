@@ -47,7 +47,7 @@ import Switch from "../../../components/ui/switch/Switch.vue";
 import { createColumns } from "../../Settings/dialogs/registry-backup-columns.jsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
-import configRepository from "../../../services/config";
+import { configRepository } from "../../../services/config";
 
 const { backupVrcRegistry } = useVrcxStore();
 const { isRegistryBackupDialogVisible } = storeToRefs(useVrcxStore());

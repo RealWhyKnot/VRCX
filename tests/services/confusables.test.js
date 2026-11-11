@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import removeConfusables, { removeWhitespace } from "../../src/services/confusables.js";
+import { removeConfusables, removeWhitespace } from "../../src/services/confusables.js";
 
 describe("removeConfusables", () => {
   test("returns ASCII strings unchanged (fast path)", () => {

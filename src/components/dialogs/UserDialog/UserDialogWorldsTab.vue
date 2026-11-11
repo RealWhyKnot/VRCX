@@ -91,7 +91,7 @@ import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
 import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { userDialogWorldOrderOptions, userDialogWorldSortingOptions } from "../../../shared/constants/user";
-import queryRequest from "../../../api/query-request";
+import { queryRequest } from "../../../api/query-request";
 import { useOptionKeySelect } from "../../../composables/use-option-key-select";
 
 const { t } = useI18n();

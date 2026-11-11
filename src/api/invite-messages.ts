@@ -7,7 +7,7 @@ function getCurrentUserId() {
   return useUserStore().currentUser.id;
 }
 
-const inviteMessagesReq = {
+const inviteMessagesRequest = {
   refreshInviteMessageTableData(messageType: InviteMessageType): Promise<{ json: Json<InviteMessage[]>; messageType: InviteMessageType }> {
     return request(`message/${getCurrentUserId()}/${messageType}`, {
       method: "GET",
@@ -45,4 +45,4 @@ const inviteMessagesReq = {
   },
 };
 
-export default inviteMessagesReq;
+export { inviteMessagesRequest };

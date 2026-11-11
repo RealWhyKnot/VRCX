@@ -55,9 +55,9 @@ vi.mock("../../src/queries/policies", () => ({
   },
 }));
 
-import avatarRequest from "../../src/api/avatar";
-import userRequest from "../../src/api/user";
-import worldRequest from "../../src/api/world";
+import { avatarRequest } from "../../src/api/avatar";
+import { userRequest } from "../../src/api/user";
+import { worldRequest } from "../../src/api/world";
 
 describe("entity mutation query sync", () => {
   beforeEach(() => {

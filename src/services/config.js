@@ -1,4 +1,4 @@
-import sqliteService from "./sqlite.js";
+import { sqliteService } from "./sqlite.js";
 
 function transformKey(key) {
   return `config:${String(key).toLowerCase()}`;
@@ -122,4 +122,4 @@ class ConfigRepository {
 const self = new ConfigRepository();
 window.configRepository = self;
 
-export { self as default, ConfigRepository, transformKey };
+export { self as configRepository, ConfigRepository, transformKey };

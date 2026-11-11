@@ -98,7 +98,7 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { watch } from "vue";
 
-import avatarRequest from "../../../api/avatar";
+import { avatarRequest } from "../../../api/avatar";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { useAvatarStore } from "../../../stores/avatar";
 import { showAvatarDialog, applyAvatar } from "../../../coordinators/avatar-coordinator";

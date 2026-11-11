@@ -19,7 +19,7 @@ type MarketplaceAvatarSearchResponse = {
   results: Json<Avatar>[];
 };
 
-const marketplaceReq = {
+const marketplaceRequest = {
   searchAvatars(params: MarketplaceAvatarSearchParams): Promise<{ json: MarketplaceAvatarSearchResponse; params: MarketplaceAvatarSearchParams }> {
     const query = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined));
     return request("avatars", {
@@ -127,4 +127,4 @@ const marketplaceReq = {
   },
 };
 
-export default marketplaceReq;
+export { marketplaceRequest };
