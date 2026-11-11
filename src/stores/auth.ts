@@ -34,6 +34,7 @@ import { createLoginNetworkHint, shouldCountLoginFailureForNetworkHint } from ".
 import { createTwoFactorPrompts } from "./auth-two-factor";
 import { createPrimaryPassword } from "./auth-primary-password";
 import { createStoredUserUpdater } from "./auth-stored-user";
+import { markStartup } from "../services/startup-trace";
 import {
   errorMessageIncludes,
   isAuthUserResponse,
@@ -527,7 +528,9 @@ export const useAuthStore = defineStore("Auth", () => {
       console.error("No current user after login complete, aborting post-login flow.");
       return;
     }
+    markStartup("signed in");
     await database.initUserTables(userStore.currentUser.id);
+    markStartup("account tables ready");
     advancedSettingsStore.runAvatarAutoCleanup(userStore.currentUser.id).catch(logFailure("Avatar auto cleanup failed:"));
     watchState.isLoggedIn = true;
     AppApi.CheckGameRunning().catch(logFailure("Checking the game state failed:"));

@@ -11,9 +11,12 @@ import { queryClient } from "./queries/client";
 
 import App from "./App.vue";
 import "./api/request-global";
+import { markStartup } from "./services/startup-trace";
 
+markStartup("scripts loaded");
 await initPlugins();
 await initPiniaPlugins();
+markStartup("plugins and stores ready");
 
 const app = createApp(App);
 
@@ -23,3 +26,4 @@ initRouter(app);
 await initSentry(app);
 
 app.mount("#root");
+markStartup("app mounted");

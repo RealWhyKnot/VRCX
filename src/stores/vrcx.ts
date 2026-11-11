@@ -31,6 +31,7 @@ import { configRepository } from "../services/config";
 import { isIpcMessage, logError, param254, parseLeadingInt, type IpcVrcxMessage } from "./vrcx-messages";
 import { createVrcxLaunchCommands } from "./vrcx-launch-commands";
 import { createVrcxRegistryBackup } from "./vrcx-registry-backup";
+import { markStartup } from "../services/startup-trace";
 
 export const useVrcxStore = defineStore("Vrcx", () => {
   const gameStore = useGameStore();
@@ -158,6 +159,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
       database.setSearchTableSize(searchLimit.value);
 
       refreshCustomScript().catch(logError);
+      markStartup("database and settings ready");
       databaseReadyForAutoLogin.value = true;
     } finally {
       resolveDatabaseInit();

@@ -32,6 +32,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "perf:database": "node ./build-scripts/perf-database.ts",
+    "perf:frontend": "vitest bench --run",
+    "perf:process": "node ./build-scripts/perf-process.ts",
     "build:licenses": "node ./build-scripts/generate-third-party-licenses.ts",
     "prod": "vite build src && vite build --config src-electron/vite.config.js && npm run build:licenses",
     "build-electron": "vite build --config src-electron/vite.config.js && node ./build-scripts/download-dotnet-runtime.ts --arch=x64 && node ./build-scripts/patch-package-version.ts && cross-env DEBUG=electron-builder electron-builder --config electron-builder.config.js --x64 --publish never",

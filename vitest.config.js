@@ -20,6 +20,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["tests/**/*.{test,spec}.ts"],
+    benchmark: {
+      include: ["tests/**/*.bench.ts"],
+    },
     coverage: {
       reporter: ["text", "text-summary"],
       exclude: [

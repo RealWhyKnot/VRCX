@@ -46,6 +46,7 @@ import type {
 } from "./friend-types";
 import { isFriendLogHistoryRow, isVrcxUser } from "./friend-types";
 import { createFriendDerived } from "./friend-derived";
+import { markStartup, reportStartup } from "../services/startup-trace";
 import type { VrcxUser } from "../types/vrcx";
 
 function logFailure(err: unknown): void {
@@ -375,6 +376,8 @@ export const useFriendStore = defineStore("Friend", () => {
     database.setFriendLogCurrentArray(sqlValues);
     await configRepository.setBool(`friendLogInit_${currentUser.id}`, true);
     watchState.isFriendsLoaded = true;
+    markStartup("friends loaded");
+    reportStartup();
   }
 
   async function migrateFriendLog(userId: string): Promise<void> {
@@ -410,6 +413,8 @@ export const useFriendStore = defineStore("Friend", () => {
 
     await refreshFriends();
     watchState.isFriendsLoaded = true;
+    markStartup("friends loaded");
+    reportStartup();
 
     for (const friend of friendLogCurrentArray) {
       if (friend.userId === null) {
