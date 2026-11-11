@@ -41,7 +41,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import Separator from "@/components/ui/separator/Separator.vue";

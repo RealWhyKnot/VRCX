@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { AlertDialogAction } from "reka-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

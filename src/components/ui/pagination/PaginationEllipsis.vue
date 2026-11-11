@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { MoreHorizontal } from "lucide-vue-next";
 import { PaginationEllipsis } from "reka-ui";
 import { cn } from "@/lib/utils";

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Command from "@/components/ui/command/Command.vue";
 import CommandGroup from "@/components/ui/command/CommandGroup.vue";
 import CommandInput from "@/components/ui/command/CommandInput.vue";

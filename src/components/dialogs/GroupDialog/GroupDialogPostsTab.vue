@@ -79,7 +79,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Eye, Image, Pencil, Trash2 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { TooltipProvider } from "reka-ui";

@@ -80,7 +80,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Copy, Download, RefreshCcw, RotateCcw, RotateCw, X, ZoomIn, ZoomOut } from "lucide-vue-next";
 import { useEventListener } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, watch } from "vue";

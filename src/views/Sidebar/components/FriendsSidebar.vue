@@ -178,7 +178,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { ChevronDown, Clock, User } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
@@ -218,7 +218,7 @@ import { userRequest } from "../../../api/user";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
 import { isActionRecent, recordRecentAction } from "../../../composables/use-recent-actions";
 import { useUserDisplay } from "../../../composables/use-user-display";
-import { getFriendsLocations } from "../../../shared/utils/location.js";
+import { getFriendsLocations } from "../../../shared/utils/location.ts";
 import { parseLocation } from "../../../shared/utils/location-parser";
 
 import BackToTop from "../../../components/BackToTop.vue";

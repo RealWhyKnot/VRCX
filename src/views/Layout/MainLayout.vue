@@ -88,7 +88,7 @@
   </template>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";

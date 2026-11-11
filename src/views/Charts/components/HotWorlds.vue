@@ -173,7 +173,7 @@
   </Sheet>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineOptions({ name: "ChartsHotWorlds" });
 
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";

@@ -1,0 +1,33 @@
+export class InteropApi {
+  constructor(dotnet) {
+    this.dotnet = dotnet;
+    this.createdObjects = {};
+  }
+
+  getDotNetClass(className) {
+    return this.dotnet.VRCX[className] ?? this.dotnet.VRCX.Overlay.Electron[className];
+  }
+
+  getDotNetObject(className) {
+    if (!this.createdObjects[className]) {
+      console.log(`Creating new instance of ${className}`);
+
+      const DotNetClass = this.getDotNetClass(className);
+      this.createdObjects[className] = new DotNetClass();
+    }
+    return this.createdObjects[className];
+  }
+
+  callMethod(className, methodName, args) {
+    try {
+      const obj = this.getDotNetObject(className);
+      if (typeof obj[methodName] !== "function") {
+        throw new Error(`Method ${methodName} does not exist on class ${className}`);
+      }
+      return obj[methodName](...args);
+    } catch (e) {
+      console.error("Error calling .NET method", `${className}.${methodName}`, e);
+      throw e;
+    }
+  }
+}

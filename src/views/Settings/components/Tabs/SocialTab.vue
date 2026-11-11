@@ -69,7 +69,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Switch from "@/components/ui/switch/Switch.vue";
 
 import NumberField from "@/components/ui/number-field/NumberField.vue";

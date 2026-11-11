@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import DropdownMenu from "@/components/ui/dropdown-menu/DropdownMenu.vue";
 import DropdownMenuContent from "@/components/ui/dropdown-menu/DropdownMenuContent.vue";
 import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue";

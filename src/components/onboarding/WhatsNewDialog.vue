@@ -87,7 +87,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { markRaw } from "vue";
 import { Search, FolderHeart, RefreshCw, MousePointerClick } from "lucide-vue-next";
 import { storeToRefs } from "pinia";

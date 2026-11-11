@@ -123,7 +123,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useResizeObserver } from "@vueuse/core";
 import { computed, nextTick, onBeforeMount, onMounted, reactive, ref, watch } from "vue";
 import { ChevronDown, Loader2, Settings } from "lucide-vue-next";
@@ -149,12 +149,12 @@ import { useFriendStore } from "../../stores/friend";
 import { useLocationStore } from "../../stores/location";
 import Slider from "../../components/ui/slider/Slider.vue";
 import Switch from "../../components/ui/switch/Switch.vue";
-import { getFriendsLocations } from "../../shared/utils/location.js";
+import { getFriendsLocations } from "../../shared/utils/location.ts";
 import { debounce } from "../../shared/utils/common";
 import { getFriendsSortFunction } from "../../shared/utils/friend";
 
 import FriendLocationCard from "./components/FriendsLocationsCard.vue";
-import { configRepository } from "../../services/config.js";
+import { configRepository } from "../../services/config.ts";
 
 const { t } = useI18n();
 

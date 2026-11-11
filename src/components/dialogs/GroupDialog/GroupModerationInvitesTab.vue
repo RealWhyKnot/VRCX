@@ -83,7 +83,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Button from "@/components/ui/button/Button.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { RefreshCw } from "lucide-vue-next";
@@ -94,11 +94,11 @@ import { hasGroupPermission } from "@/shared/utils/group";
 import { useI18n } from "vue-i18n";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { createColumns as createInvitesColumns } from "./group-member-moderation-invites-columns.jsx";
-import { createColumns as createJoinRequestsColumns } from "./group-member-moderation-join-requests-columns.jsx";
-import { createColumns as createBlockedColumns } from "./group-member-moderation-blocked-columns.jsx";
+import { createColumns as createInvitesColumns } from "./group-member-moderation-invites-columns.tsx";
+import { createColumns as createJoinRequestsColumns } from "./group-member-moderation-join-requests-columns.tsx";
+import { createColumns as createBlockedColumns } from "./group-member-moderation-blocked-columns.tsx";
 import { storeToRefs } from "pinia";
-import { useGroupStore } from "@/stores/group.js";
+import { useGroupStore } from "@/stores/group.ts";
 
 const { groupMemberModeration } = storeToRefs(useGroupStore());
 

@@ -174,7 +174,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ChevronDown, Copy } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";

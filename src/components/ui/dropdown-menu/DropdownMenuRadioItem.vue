@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { DropdownMenuItemIndicator, DropdownMenuRadioItem, useForwardPropsEmits } from "reka-ui";
 import { Circle } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

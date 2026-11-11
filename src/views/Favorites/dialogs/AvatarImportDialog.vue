@@ -102,7 +102,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -129,7 +129,7 @@ import { useUserStore } from "../../../stores/user";
 import { addLocalAvatarFavorite } from "../../../coordinators/favorite-coordinator";
 import { avatarRequest } from "../../../api/avatar";
 import { favoriteRequest } from "../../../api/favorite";
-import { createColumns } from "./avatar-import-columns.jsx";
+import { createColumns } from "./avatar-import-columns.tsx";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 

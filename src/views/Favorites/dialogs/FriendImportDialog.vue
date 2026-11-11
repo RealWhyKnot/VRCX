@@ -99,7 +99,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -127,7 +127,7 @@ import { useUserStore } from "../../../stores/user";
 import { addLocalFriendFavorite } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../../api/favorite";
 import { userRequest } from "../../../api/user";
-import { createColumns } from "./friend-import-columns.jsx";
+import { createColumns } from "./friend-import-columns.tsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 

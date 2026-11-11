@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { DialogClose, DialogContent, DialogDescription, DialogPortal, useForwardPropsEmits, VisuallyHidden } from "reka-ui";
 import { inject, onBeforeUnmount, ref, watch } from "vue";
 import { X } from "lucide-vue-next";

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TreeItem as RekaTreeItem } from "reka-ui";
 import { cn } from "@/lib/utils";
 

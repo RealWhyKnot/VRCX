@@ -336,7 +336,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Trash2, TriangleAlert } from "lucide-vue-next";
 import { computed, reactive, ref } from "vue";
 import Button from "@/components/ui/button/Button.vue";

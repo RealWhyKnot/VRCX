@@ -140,7 +140,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
 import { computed, ref, watch } from "vue";

@@ -360,7 +360,7 @@
   <EditNoteAndMemoDialog v-model:visible="isEditNoteAndMemoDialogVisible" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Copy, Info, Languages, Pencil, Trash2, User } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";

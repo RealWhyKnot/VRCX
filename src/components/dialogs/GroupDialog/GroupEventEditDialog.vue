@@ -417,7 +417,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { Repeat, Trash2 } from "lucide-vue-next";

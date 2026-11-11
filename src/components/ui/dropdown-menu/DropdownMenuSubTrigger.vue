@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { DropdownMenuSubTrigger, useForwardProps } from "reka-ui";
 import { ChevronRight } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

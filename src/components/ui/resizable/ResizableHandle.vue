@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { SplitterResizeHandle, useForwardPropsEmits } from "reka-ui";
 import { GripVertical } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

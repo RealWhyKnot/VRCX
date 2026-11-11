@@ -15,7 +15,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft, ArrowRight } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import ButtonGroup from "@/components/ui/button-group/ButtonGroup.vue";

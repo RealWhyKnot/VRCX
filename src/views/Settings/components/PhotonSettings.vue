@@ -90,7 +90,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Button from "@/components/ui/button/Button.vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";

@@ -25,7 +25,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineOptions({ name: "PreviousInstancesListDialog" });
 
 import { computed, ref, watch } from "vue";
@@ -48,7 +48,7 @@ import { parseLocation } from "../../../shared/utils/location-parser";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { timeToText } from "../../../shared/utils/base/format";
 import DataTableLayout from "../../ui/data-table/DataTableLayout.vue";
-import { createPreviousInstancesColumns } from "./previous-instances-columns.jsx";
+import { createPreviousInstancesColumns } from "./previous-instances-columns.tsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 

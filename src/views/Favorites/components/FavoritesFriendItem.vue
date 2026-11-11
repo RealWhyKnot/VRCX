@@ -94,7 +94,7 @@
   </template>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { MoreHorizontal, Trash2, User } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";

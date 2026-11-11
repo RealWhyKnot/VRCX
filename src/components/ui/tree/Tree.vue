@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TreeRoot } from "reka-ui";
 import { cn } from "@/lib/utils";
 

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { reactiveOmit } from "@vueuse/core";
 import { ContextMenuSubContent, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";

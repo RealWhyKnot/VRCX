@@ -44,7 +44,7 @@
   </UserContextMenu>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";

@@ -217,7 +217,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Plus, RefreshCw, Trash2, UserMinus, UserPlus } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";

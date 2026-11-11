@@ -110,7 +110,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -132,7 +132,7 @@ import { useVrcxStore } from "../../stores/vrcx";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { database } from "../../services/database";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import GameLogSessions from "./components/GameLogSessions.vue";

@@ -246,7 +246,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import { DragDropProvider } from "@dnd-kit/vue";
 import { FlexRender } from "@tanstack/vue-table";
@@ -279,7 +279,7 @@ import SelectContent from "../select/SelectContent.vue";
 import SelectItem from "../select/SelectItem.vue";
 import SelectTrigger from "../select/SelectTrigger.vue";
 import SelectValue from "../select/SelectValue.vue";
-import { getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./data-table-helpers.js";
+import { getColStyle, getToggleableColumns, isReorderable as isReorderableHelper, isSpacer, resolveHeaderLabel } from "./data-table-helpers.ts";
 
 import DataTableEmpty from "./DataTableEmpty.vue";
 import SortableTableHead from "./SortableTableHead.vue";

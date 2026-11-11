@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { reactiveOmit } from "@vueuse/core";
 import { ChevronRight } from "lucide-vue-next";
 import { ContextMenuSubTrigger, useForwardProps } from "reka-ui";

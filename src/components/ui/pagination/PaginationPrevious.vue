@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { PaginationPrev, useForwardProps } from "reka-ui";
 import { ChevronLeftIcon } from "lucide-vue-next";
 import { buttonVariants } from "@/components/ui/button";

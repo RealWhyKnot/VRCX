@@ -30,7 +30,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { RefreshCw } from "lucide-vue-next";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
@@ -44,7 +44,7 @@ import SelectTrigger from "@/components/ui/select/SelectTrigger.vue";
 import SelectValue from "@/components/ui/select/SelectValue.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { getAuditLogTypeName } from "./group-moderation-utils";
-import { createColumns } from "./group-member-moderation-logs-columns.jsx";
+import { createColumns } from "./group-member-moderation-logs-columns.tsx";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 const props = defineProps({

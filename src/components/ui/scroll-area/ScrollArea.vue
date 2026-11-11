@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 defineOptions({ inheritAttrs: false });
 
 import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from "reka-ui";

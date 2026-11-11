@@ -45,7 +45,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { Loader2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";

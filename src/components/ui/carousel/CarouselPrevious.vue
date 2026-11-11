@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import { cn } from "@/lib/utils";

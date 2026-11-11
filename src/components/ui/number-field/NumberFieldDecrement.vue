@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { NumberFieldDecrement, useForwardProps } from "reka-ui";
 import { Minus } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

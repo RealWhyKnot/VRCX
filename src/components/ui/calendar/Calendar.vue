@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from "reka-ui";
 import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core";
 import { createYear, createYearRange, toDate } from "reka-ui/date";

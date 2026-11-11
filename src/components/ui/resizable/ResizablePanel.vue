@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { SplitterPanel, useForwardExpose, useForwardPropsEmits } from "reka-ui";
 
 const props = defineProps({

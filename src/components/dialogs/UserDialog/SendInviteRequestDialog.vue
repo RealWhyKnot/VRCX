@@ -47,7 +47,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
@@ -63,7 +63,7 @@ import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useInviteStore } from "../../../stores/invite";
 import { useUserStore } from "../../../stores/user";
-import { createColumns } from "./send-invite-request-columns.jsx";
+import { createColumns } from "./send-invite-request-columns.tsx";
 
 import EditAndSendInviteDialog from "../InviteDialog/EditAndSendInviteDialog.vue";
 import SendInviteConfirmDialog from "../InviteDialog/SendInviteConfirmDialog.vue";

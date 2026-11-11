@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Separator from "@/components/ui/separator/Separator.vue";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";

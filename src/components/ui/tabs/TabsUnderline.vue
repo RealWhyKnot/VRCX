@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TabsContent, TabsIndicator, TabsList, TabsRoot, TabsTrigger } from "reka-ui";
 import { computed, nextTick, onMounted, onUpdated, ref, toRefs, watch } from "vue";
 import { usePreferredReducedMotion, useResizeObserver } from "@vueuse/core";

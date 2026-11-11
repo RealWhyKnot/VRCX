@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import { FlexRender } from "@tanstack/vue-table";
 import { GripVertical } from "lucide-vue-next";

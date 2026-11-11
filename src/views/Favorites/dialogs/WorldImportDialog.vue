@@ -100,7 +100,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -128,7 +128,7 @@ import { showWorldDialog } from "../../../coordinators/world-coordinator";
 import { addLocalWorldFavorite } from "../../../coordinators/favorite-coordinator";
 import { favoriteRequest } from "../../../api/favorite";
 import { worldRequest } from "../../../api/world";
-import { createColumns } from "./world-import-columns.jsx";
+import { createColumns } from "./world-import-columns.tsx";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { showUserDialog } from "../../../coordinators/user-coordinator";

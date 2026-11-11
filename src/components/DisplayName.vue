@@ -2,7 +2,7 @@
   <span class="cursor-pointer" @click="openUserDialog">{{ username }}</span>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from "vue";
 
 import { queryRequest } from "../api/query-request";

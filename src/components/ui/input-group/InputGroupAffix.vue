@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, useAttrs, useSlots } from "vue";
 import { useVModel } from "@vueuse/core";
 

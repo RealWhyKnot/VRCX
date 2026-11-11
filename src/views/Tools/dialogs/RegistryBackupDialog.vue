@@ -26,7 +26,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
@@ -44,7 +44,7 @@ import { useVrcxStore } from "../../../stores/vrcx";
 import { downloadAndSaveJson } from "../../../shared/utils/app-actions";
 import { removeFromArray } from "../../../shared/utils/base/array";
 import Switch from "../../../components/ui/switch/Switch.vue";
-import { createColumns } from "../../Settings/dialogs/registry-backup-columns.jsx";
+import { createColumns } from "../../Settings/dialogs/registry-backup-columns.tsx";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 
 import { configRepository } from "../../../services/config";

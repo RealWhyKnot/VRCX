@@ -134,7 +134,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ChevronRight, RefreshCw, Video } from "lucide-vue-next";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";

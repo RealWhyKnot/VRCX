@@ -11,7 +11,7 @@
   <Button v-else size="lg" variant="outline" class="mt-4 w-full" @click="stop">{{ t("view.login.qr.cancel") }}</Button>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import { QrCode } from "lucide-vue-next";

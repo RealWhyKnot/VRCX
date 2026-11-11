@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TabsRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";

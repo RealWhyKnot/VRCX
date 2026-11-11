@@ -65,7 +65,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { ChevronDown, Users } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";

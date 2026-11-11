@@ -44,7 +44,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
@@ -61,7 +61,7 @@ import { useUserDisplay } from "../../../composables/use-user-display";
 import { useFriendStore } from "../../../stores/friend";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
-import { createColumns } from "./note-export-columns.jsx";
+import { createColumns } from "./note-export-columns.tsx";
 import { miscRequest } from "../../../api/misc";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 

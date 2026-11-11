@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { AlertDialogTrigger } from "reka-ui";
 
 const props = defineProps({

@@ -24,7 +24,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
 import Button from "@/components/ui/button/Button.vue";

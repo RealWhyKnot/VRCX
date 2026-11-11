@@ -73,7 +73,7 @@
   <NewInstanceDialog :new-instance-dialog-location-tag="newInstanceDialogLocationTag" :last-location="lastLocation" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { AlertTriangle, Image, Lock, MoreHorizontal } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";

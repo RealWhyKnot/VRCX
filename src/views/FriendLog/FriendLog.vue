@@ -37,7 +37,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
@@ -56,7 +56,7 @@ import { useModalStore } from "../../stores/modal";
 import { useVrcxStore } from "../../stores/vrcx";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { database } from "../../services/database";
 import { removeFromArray } from "../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";

@@ -181,7 +181,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Download, Eye, MessageSquare, Pencil, RefreshCcw, Tag, User } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";

@@ -52,7 +52,7 @@
   </Popover>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Image, Pencil, Repeat, Share2, Star } from "lucide-vue-next";
 import Popover from "@/components/ui/popover/Popover.vue";
 import PopoverContent from "@/components/ui/popover/PopoverContent.vue";

@@ -113,7 +113,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { LogIn, LogOut, MapPin, Settings, Play, Waypoints } from "lucide-vue-next";

@@ -137,7 +137,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
@@ -161,7 +161,7 @@ import InputGroupField from "../ui/input-group/InputGroupField.vue";
 import Separator from "../ui/separator/Separator.vue";
 import Tree from "../ui/tree/Tree.vue";
 import { isToolNavKey } from "../../shared/constants/tools";
-import { navDefinitions } from "../../shared/constants/ui.js";
+import { navDefinitions } from "../../shared/constants/ui.ts";
 import { DASHBOARD_NAV_KEY_PREFIX, DEFAULT_DASHBOARD_ICON } from "../../shared/constants/dashboard";
 import { useDashboardStore } from "../../stores/dashboard";
 import { useModalStore } from "../../stores/modal";

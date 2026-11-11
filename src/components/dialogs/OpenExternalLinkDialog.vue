@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import AlertDialog from "@/components/ui/alert-dialog/AlertDialog.vue";
 import AlertDialogContent from "@/components/ui/alert-dialog/AlertDialogContent.vue";
 import AlertDialogDescription from "@/components/ui/alert-dialog/AlertDialogDescription.vue";

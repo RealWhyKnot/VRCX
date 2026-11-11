@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Label from "@/components/ui/label/Label.vue";
 import { cn } from "@/lib/utils";
 

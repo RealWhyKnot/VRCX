@@ -24,7 +24,7 @@ import { timeToText } from "../../../shared/utils/base/format";
 import * as echarts from "echarts";
 import type { BarSeriesOption, EChartsOption, EChartsType, ECElementEvent, TooltipComponentFormatterCallbackParams } from "echarts";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
-import { InstanceActivityTooltip } from "@/views/Charts/components/instance-activity-tooltip.jsx";
+import { InstanceActivityTooltip } from "@/views/Charts/components/instance-activity-tooltip.tsx";
 import { renderToHtml } from "@/lib/utils";
 
 const { isDarkMode, dtHour12 } = storeToRefs(useAppearanceSettingsStore());

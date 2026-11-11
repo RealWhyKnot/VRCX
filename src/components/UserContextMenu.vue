@@ -41,7 +41,7 @@
   </ContextMenu>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Clock, ExternalLink, LogIn, Mail, MessageSquare, Hand } from "lucide-vue-next";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";

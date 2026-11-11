@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { SelectIcon, SelectTrigger, useForwardProps } from "reka-ui";
 import { ChevronDown } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

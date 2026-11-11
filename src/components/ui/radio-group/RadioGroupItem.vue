@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { RadioGroupIndicator, RadioGroupItem, useForwardProps } from "reka-ui";
 import { CircleIcon } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

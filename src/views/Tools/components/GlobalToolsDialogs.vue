@@ -14,7 +14,7 @@
   <InfoPushDialog :is-info-push-dialog-visible="infoPush" @close="closeDialog('infoPush')" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { storeToRefs } from "pinia";
 
 import { useFriendStore } from "../../../stores/friend";

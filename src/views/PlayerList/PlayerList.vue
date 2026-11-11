@@ -138,7 +138,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onActivated, onMounted, ref, watch } from "vue";
 import { Apple, Home, Image, Monitor, Smartphone } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
@@ -154,7 +154,7 @@ import { commaNumber } from "../../shared/utils/base/string";
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import Badge from "../../components/ui/badge/Badge.vue";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import ChatboxBlacklistDialog from "./dialogs/ChatboxBlacklistDialog.vue";

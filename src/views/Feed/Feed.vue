@@ -84,7 +84,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import { ListFilter, Star } from "lucide-vue-next";
 import { getLocalTimeZone, today } from "@internationalized/date";
@@ -107,7 +107,7 @@ import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue"
 import InputGroupField from "../../components/ui/input-group/InputGroupField.vue";
 import RangeCalendar from "../../components/ui/range-calendar/RangeCalendar.vue";
 import Toggle from "../../components/ui/toggle/Toggle.vue";
-import { columns as baseColumns } from "./columns.jsx";
+import { columns as baseColumns } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 const { feedTable, feedTableData } = storeToRefs(useFeedStore());

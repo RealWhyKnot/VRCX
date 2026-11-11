@@ -66,7 +66,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineOptions({ name: "PreviousInstancesInfoDialog" });
 
 import { computed, nextTick, ref, watch } from "vue";
@@ -89,7 +89,7 @@ import InputGroupField from "../../ui/input-group/InputGroupField.vue";
 import ToggleGroup from "../../ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "../../ui/toggle-group/ToggleGroupItem.vue";
 import TooltipWrapper from "../../ui/tooltip/TooltipWrapper.vue";
-import { createColumns } from "./previous-instances-info-columns.jsx";
+import { createColumns } from "./previous-instances-info-columns.tsx";
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { lookupUser } from "../../../coordinators/user-coordinator";

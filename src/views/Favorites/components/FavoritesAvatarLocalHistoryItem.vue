@@ -52,7 +52,7 @@
   </ContextMenu>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Image, MoreHorizontal } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";

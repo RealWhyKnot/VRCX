@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { reactiveOmit, useVModel } from "@vueuse/core";
 import { ChevronDownIcon } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

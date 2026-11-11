@@ -91,7 +91,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -115,7 +115,7 @@ import { useNotificationStore } from "../../stores/notification";
 import { useVrcxStore } from "../../stores/vrcx";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
 import { convertFileUrlToImageUrl } from "../../shared/utils/common";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import SendInviteRequestResponseDialog from "./dialogs/SendInviteRequestResponseDialog.vue";

@@ -48,7 +48,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogDescription from "@/components/ui/dialog/DialogDescription.vue";
@@ -68,7 +68,7 @@ import { useGalleryStore } from "../../stores/gallery";
 import { useNotificationStore } from "../../stores/notification";
 import { useUserStore } from "../../stores/user";
 import VirtualCombobox from "../ui/virtual-combobox/VirtualCombobox.vue";
-import { photonEmojis } from "../../shared/constants/photon.js";
+import { photonEmojis } from "../../shared/constants/photon.ts";
 
 import Emoji from "../Emoji.vue";
 

@@ -73,7 +73,7 @@
   </Popover>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, shallowRef, watch } from "vue";
 import Popover from "@/components/ui/popover/Popover.vue";
 import PopoverContent from "@/components/ui/popover/PopoverContent.vue";

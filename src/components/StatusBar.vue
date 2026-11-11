@@ -262,7 +262,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "@/components/ui/context-menu/ContextMenuCheckboxItem.vue";
 import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";

@@ -248,7 +248,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Check, Eye, Image as ImageIcon, LayoutGrid, List, ListFilter, Pencil, RefreshCw, Settings as SettingsIcon, Tag, User } from "lucide-vue-next";
 import { computed, nextTick, onBeforeMount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
@@ -295,7 +295,7 @@ import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 import ImageCropDialog from "../../components/dialogs/ImageCropDialog.vue";
 import ManageTagsDialog from "./ManageTagsDialog.vue";
 import MyAvatarCard from "./components/MyAvatarCard.vue";
-import { configRepository } from "../../services/config.js";
+import { configRepository } from "../../services/config.ts";
 
 const { t } = useI18n();
 const appearanceSettingsStore = useAppearanceSettingsStore();

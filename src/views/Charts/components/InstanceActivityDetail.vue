@@ -18,7 +18,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";
 import { storeToRefs } from "pinia";
@@ -31,7 +31,7 @@ import { timeToText } from "../../../shared/utils/base/format";
 
 import * as echarts from "echarts";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
-import { InstanceActivityTooltip } from "./instance-activity-tooltip.jsx";
+import { InstanceActivityTooltip } from "./instance-activity-tooltip.tsx";
 import { renderToHtml } from "@/lib/utils";
 
 const { isDarkMode, dtHour12 } = storeToRefs(useAppearanceSettingsStore());

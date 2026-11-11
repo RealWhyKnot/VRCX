@@ -63,7 +63,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowDown, RefreshCw } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -76,7 +76,7 @@ import DropdownMenuItem from "@/components/ui/dropdown-menu/DropdownMenuItem.vue
 import DropdownMenuTrigger from "@/components/ui/dropdown-menu/DropdownMenuTrigger.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { hasGroupPermission } from "@/shared/utils/group";
-import { createColumns } from "./group-member-moderation-members-columns.jsx";
+import { createColumns } from "./group-member-moderation-members-columns.tsx";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 const props = defineProps({

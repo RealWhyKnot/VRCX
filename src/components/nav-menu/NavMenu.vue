@@ -150,7 +150,7 @@
   />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, h, onMounted, ref, watch } from "vue";
 
 import { storeToRefs } from "pinia";

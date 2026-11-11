@@ -116,7 +116,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -151,7 +151,7 @@ import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue"
 import Switch from "../../components/ui/switch/Switch.vue";
 import Toggle from "../../components/ui/toggle/Toggle.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { localeIncludes, replaceBioSymbols } from "../../shared/utils/base/string";
 import { removeConfusables, removeWhitespace } from "../../services/confusables";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";

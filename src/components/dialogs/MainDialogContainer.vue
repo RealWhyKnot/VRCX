@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Breadcrumb from "@/components/ui/breadcrumb/Breadcrumb.vue";
 import BreadcrumbEllipsis from "@/components/ui/breadcrumb/BreadcrumbEllipsis.vue";
 import BreadcrumbItem from "@/components/ui/breadcrumb/BreadcrumbItem.vue";

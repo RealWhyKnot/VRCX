@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-vue-next";
 import { Toaster as Sonner } from "vue-sonner";
 import { cn } from "@/lib/utils";

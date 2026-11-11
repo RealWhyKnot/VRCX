@@ -21,7 +21,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { AlertTriangle, Lock, Unlock } from "lucide-vue-next";
 import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";

@@ -4,7 +4,7 @@ module.exports = {
   icon: "images/VRCX.png",
   files: [
     "build/html/**/*",
-    "src-electron/*",
+    "build/main/**/*",
     "images/VRCX.png",
     "images/VRCX.ico",
     "images/VRCX_notify.png",

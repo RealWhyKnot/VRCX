@@ -160,7 +160,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Expand, FlipHorizontal, FlipVertical, Frame, RefreshCw, RotateCcw, RotateCw, ZoomIn, ZoomOut } from "lucide-vue-next";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";

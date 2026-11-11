@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, provide, unref } from "vue";
 import { ToggleGroupRoot, useForwardPropsEmits } from "reka-ui";
 import { cn } from "@/lib/utils";

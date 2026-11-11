@@ -141,7 +141,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineOptions({ name: "ChartsInstance" });
 
 import { computed, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -180,7 +180,7 @@ import { useInstanceActivitySettings } from "../composables/use-instance-activit
 import { useIntersectionObserver } from "../composables/use-intersection-observer";
 
 import InstanceActivityDetail from "./InstanceActivityDetail.vue";
-import { InstanceActivityTooltip } from "./instance-activity-tooltip.jsx";
+import { InstanceActivityTooltip } from "./instance-activity-tooltip.tsx";
 
 import * as echarts from "echarts";
 import { renderToHtml } from "@/lib/utils";

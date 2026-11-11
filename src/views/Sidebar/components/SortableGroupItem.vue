@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import Item from "@/components/ui/item/Item.vue";
 import ItemContent from "@/components/ui/item/ItemContent.vue";
 import ItemMedia from "@/components/ui/item/ItemMedia.vue";

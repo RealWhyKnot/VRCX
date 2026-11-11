@@ -11,7 +11,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Info } from "lucide-vue-next";
 
 import Switch from "../../../components/ui/switch/Switch.vue";

@@ -49,7 +49,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { markRaw, onMounted, ref } from "vue";
 import { LayoutDashboard, MousePointerClick, Search, Sparkles, UserSearch } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";

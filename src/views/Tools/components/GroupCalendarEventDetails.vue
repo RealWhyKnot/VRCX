@@ -57,7 +57,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Calendar, Download } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import dayjs from "dayjs";

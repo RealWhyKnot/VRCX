@@ -64,7 +64,7 @@
   </Dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from "vue";
 import { Check, User } from "lucide-vue-next";
 import { useI18n } from "vue-i18n";

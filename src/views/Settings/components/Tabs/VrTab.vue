@@ -190,7 +190,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import NumberField from "@/components/ui/number-field/NumberField.vue";
 import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";

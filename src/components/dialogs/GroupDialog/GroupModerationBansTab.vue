@@ -32,7 +32,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { RefreshCw } from "lucide-vue-next";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -41,7 +41,7 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
 import { hasGroupPermission } from "@/shared/utils/group";
-import { createColumns } from "./group-member-moderation-bans-columns.jsx";
+import { createColumns } from "./group-member-moderation-bans-columns.tsx";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
 const props = defineProps({

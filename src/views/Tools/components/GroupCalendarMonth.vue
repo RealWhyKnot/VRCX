@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import CalendarCell from "@/components/ui/calendar/CalendarCell.vue";
 import CalendarCellTrigger from "@/components/ui/calendar/CalendarCellTrigger.vue";
 import CalendarGrid from "@/components/ui/calendar/CalendarGrid.vue";

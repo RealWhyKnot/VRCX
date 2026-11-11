@@ -200,7 +200,7 @@
   </HoverCard>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Ban, Bell, BellOff, CalendarDays, Check, Link, Mail, MessageCircle, Reply, Send, Tag, Trash2, UserPlus, Users, X } from "lucide-vue-next";
 import Item from "@/components/ui/item/Item.vue";
 import ItemContent from "@/components/ui/item/ItemContent.vue";

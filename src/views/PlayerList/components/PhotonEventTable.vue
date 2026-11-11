@@ -62,7 +62,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
@@ -87,7 +87,7 @@ import SelectContent from "../../../components/ui/select/SelectContent.vue";
 import SelectItem from "../../../components/ui/select/SelectItem.vue";
 import SelectTrigger from "../../../components/ui/select/SelectTrigger.vue";
 import SelectValue from "../../../components/ui/select/SelectValue.vue";
-import { createColumns } from "./photon-event-columns.jsx";
+import { createColumns } from "./photon-event-columns.tsx";
 import { photonEventTableTypeFilterList } from "../../../shared/constants/photon";
 import { lookupUser } from "../../../coordinators/user-coordinator";
 

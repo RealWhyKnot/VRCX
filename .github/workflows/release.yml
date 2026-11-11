@@ -196,9 +196,9 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          node build-scripts/download-dotnet-runtime.js --arch="${BUILD_ARCH}"
+          node build-scripts/download-dotnet-runtime.ts --arch="${BUILD_ARCH}"
           npx electron-builder --config electron-builder.config.js --"${BUILD_ARCH}" --publish never
-          node build-scripts/patch-node-api-dotnet.js --arch="${BUILD_ARCH}"
+          node build-scripts/patch-node-api-dotnet.ts --arch="${BUILD_ARCH}"
           mv -- "build/VRCX_Version.${PACKAGE_EXTENSION}" "build/VRCX_${RELEASE_VERSION}_${BUILD_ARCH}.${PACKAGE_EXTENSION}"
       - name: Checksums
         uses: RealWhyKnot/workflows/checksums@v1

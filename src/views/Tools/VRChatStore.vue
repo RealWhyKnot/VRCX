@@ -104,7 +104,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft, RefreshCw } from "lucide-vue-next";
 import { onActivated } from "vue";
 import { storeToRefs } from "pinia";

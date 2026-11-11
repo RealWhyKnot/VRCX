@@ -29,7 +29,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { RefreshCw } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import DataTableEmpty from "@/components/ui/data-table/DataTableEmpty.vue";

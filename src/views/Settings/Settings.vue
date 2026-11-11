@@ -34,7 +34,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeMount } from "vue";
 import TabsUnderline from "@/components/ui/tabs/TabsUnderline.vue";
 import { useI18n } from "vue-i18n";

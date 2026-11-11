@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { nextTick, watch } from "vue";
 import { useCommand } from "@/components/ui/command";
 

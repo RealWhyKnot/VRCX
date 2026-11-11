@@ -55,7 +55,7 @@
   </template>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
@@ -68,10 +68,10 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 
-import { columns as inviteMessageColumns } from "./edit-invite-messages-message-columns.jsx";
-import { columns as inviteRequestColumns } from "./edit-invite-messages-request-columns.jsx";
-import { columns as inviteRequestResponseColumns } from "./edit-invite-messages-request-response-columns.jsx";
-import { columns as inviteResponseColumns } from "./edit-invite-messages-response-columns.jsx";
+import { columns as inviteMessageColumns } from "./edit-invite-messages-message-columns.tsx";
+import { columns as inviteRequestColumns } from "./edit-invite-messages-request-columns.tsx";
+import { columns as inviteRequestResponseColumns } from "./edit-invite-messages-request-response-columns.tsx";
+import { columns as inviteResponseColumns } from "./edit-invite-messages-response-columns.tsx";
 import { useInviteStore } from "../../../stores/invite";
 
 import EditInviteMessageDialog from "./EditInviteMessageDialog.vue";

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ListboxRoot, useFilter, useForwardPropsEmits } from "reka-ui";
 import { reactive, ref, watch } from "vue";
 import { cn } from "@/lib/utils";

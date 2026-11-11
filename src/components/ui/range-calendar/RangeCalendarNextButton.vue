@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { RangeCalendarNext, useForwardProps } from "reka-ui";
 import { ChevronRight } from "lucide-vue-next";
 import { buttonVariants } from "@/components/ui/button";

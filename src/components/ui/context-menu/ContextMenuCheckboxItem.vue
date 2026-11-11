@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { reactiveOmit } from "@vueuse/core";
 import { Check } from "lucide-vue-next";
 import { ContextMenuCheckboxItem, ContextMenuItemIndicator, useForwardPropsEmits } from "reka-ui";

@@ -18,8 +18,8 @@ export default defineConfig({
     hookTimeout: 60_000,
     maxWorkers: 2,
     environment: "jsdom",
-    setupFiles: ["./tests/setup.js"],
-    include: ["tests/**/*.{test,spec}.js"],
+    setupFiles: ["./tests/setup.ts"],
+    include: ["tests/**/*.{test,spec}.ts"],
     coverage: {
       reporter: ["text", "text-summary"],
       exclude: [
@@ -31,7 +31,7 @@ export default defineConfig({
         "src/localization/**",
         "src/lib/**",
         "src/components/ui/**/*.vue",
-        "src/components/ui/**/index.js",
+        "src/components/ui/**/index.ts",
       ],
     },
   },

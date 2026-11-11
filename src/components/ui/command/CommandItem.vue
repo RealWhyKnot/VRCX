@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ListboxItem, useForwardPropsEmits, useId } from "reka-ui";
 import { reactiveOmit, useCurrentElement } from "@vueuse/core";

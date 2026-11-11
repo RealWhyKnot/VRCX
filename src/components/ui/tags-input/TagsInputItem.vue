@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TagsInputItem, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";

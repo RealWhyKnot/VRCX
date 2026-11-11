@@ -123,7 +123,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Button from "@/components/ui/button/Button.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
 import { storeToRefs } from "pinia";

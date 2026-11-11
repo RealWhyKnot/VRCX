@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ProgressIndicator, ProgressRoot } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { reactiveOmit } from "@vueuse/core";

@@ -273,7 +273,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Ellipsis, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
@@ -302,10 +302,10 @@ import ResizablePanel from "../../components/ui/resizable/ResizablePanel.vue";
 import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGroup.vue";
 import { debounce } from "../../shared/utils/common";
 import { favoriteRequest } from "../../api/favorite";
-import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
-import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
-import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";
-import { useFavoritesSplitter } from "./composables/use-favorites-splitter.js";
+import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.ts";
+import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
+import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
+import { useFavoritesSplitter } from "./composables/use-favorites-splitter.ts";
 import {
   refreshFavorites,
   getLocalWorldFavorites,

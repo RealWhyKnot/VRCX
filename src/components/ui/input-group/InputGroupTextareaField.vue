@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onMounted, ref, useAttrs, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

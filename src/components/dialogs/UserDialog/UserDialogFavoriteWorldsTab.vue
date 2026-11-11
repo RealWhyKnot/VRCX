@@ -85,7 +85,7 @@
   </template>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { Image } from "lucide-vue-next";
 import Input from "@/components/ui/input/Input.vue";

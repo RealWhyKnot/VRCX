@@ -113,7 +113,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Image, ImagePlus, Pencil, Plus, RefreshCw, Trash2 } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import Card from "@/components/ui/card/Card.vue";

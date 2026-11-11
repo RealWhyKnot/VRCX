@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { TagsInputItemDelete, useForwardProps } from "reka-ui";
 import { X } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

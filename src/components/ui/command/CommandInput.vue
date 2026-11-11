@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ListboxFilter, useForwardProps } from "reka-ui";
 import { Search } from "lucide-vue-next";
 import { cn } from "@/lib/utils";

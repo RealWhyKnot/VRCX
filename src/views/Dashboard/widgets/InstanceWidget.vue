@@ -83,7 +83,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onActivated, onMounted } from "vue";
 import { Apple, IdCard, Monitor, Settings, Smartphone } from "lucide-vue-next";
 import { storeToRefs } from "pinia";

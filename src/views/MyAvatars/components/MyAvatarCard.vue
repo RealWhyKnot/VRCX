@@ -186,7 +186,7 @@
   </HoverCard>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Apple, Check, ExternalLink, Eye, Image as ImageIcon, Monitor, Pencil, RefreshCw, Smartphone, Tag, User } from "lucide-vue-next";
 import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
 import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";

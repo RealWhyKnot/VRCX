@@ -18,7 +18,7 @@
   </TooltipProvider>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onBeforeMount, onMounted } from "vue";
 
 import { addGameLogEvent, getGameLogTable } from "./coordinators/game-log-coordinator";
@@ -50,12 +50,12 @@ initNoty();
 
 const store = createGlobalStores();
 
-const coordinatorModules = import.meta.glob("./coordinators/*.js", { eager: true });
+const coordinatorModules = import.meta.glob("./coordinators/*.ts", { eager: true });
 const coordinators = Object.fromEntries(
   Object.entries(coordinatorModules).map(([path, module]) => [
     path
       .replace("./coordinators/", "")
-      .replace("-coordinator.js", "")
+      .replace("-coordinator.ts", "")
       .replace(/-(?<letter>[a-z])/gu, (_match, letter) => letter.toUpperCase()),
     module,
   ])

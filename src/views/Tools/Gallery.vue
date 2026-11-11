@@ -397,7 +397,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft, Check, Gift, RefreshCw, Trash2, Upload, X, Star } from "lucide-vue-next";
 import NumberField from "@/components/ui/number-field/NumberField.vue";
 import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";

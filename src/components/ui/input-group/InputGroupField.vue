@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { Eye, EyeOff, X } from "lucide-vue-next";
 import { computed, ref, useAttrs } from "vue";
 import { cn } from "@/lib/utils";

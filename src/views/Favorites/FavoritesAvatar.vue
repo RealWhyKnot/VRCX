@@ -368,7 +368,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, markRaw, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { Ellipsis, Loader, MoreHorizontal, Plus, RefreshCcw, RefreshCw } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
@@ -399,10 +399,10 @@ import ResizablePanelGroup from "../../components/ui/resizable/ResizablePanelGro
 import { avatarRequest } from "../../api/avatar";
 import { favoriteRequest } from "../../api/favorite";
 import { debounce } from "../../shared/utils/common";
-import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.js";
-import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.js";
-import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.js";
-import { useFavoritesSplitter } from "./composables/use-favorites-splitter.js";
+import { useFavoritesCardScaling } from "./composables/use-favorites-card-scaling.ts";
+import { useFavoritesGroupPanel } from "./composables/use-favorites-group-panel.ts";
+import { useFavoritesLocalGroups } from "./composables/use-favorites-local-groups.ts";
+import { useFavoritesSplitter } from "./composables/use-favorites-splitter.ts";
 import {
   deleteLocalAvatarFavoriteGroup,
   renameLocalAvatarFavoriteGroup,
@@ -418,7 +418,7 @@ import FavoritesAvatarItem from "./components/FavoritesAvatarItem.vue";
 import FavoritesAvatarLocalHistoryItem from "./components/FavoritesAvatarLocalHistoryItem.vue";
 import FavoritesContentHeader from "./components/FavoritesContentHeader.vue";
 import FavoritesToolbar from "./components/FavoritesToolbar.vue";
-import { InvalidAvatarsProgressToast } from "./components/invalid-avatars-progress-toast.jsx";
+import { InvalidAvatarsProgressToast } from "./components/invalid-avatars-progress-toast.tsx";
 
 import * as workerTimers from "worker-timers";
 

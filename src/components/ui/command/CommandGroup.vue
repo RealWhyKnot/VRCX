@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ListboxGroup, ListboxGroupLabel, useId } from "reka-ui";
 import { computed, onMounted, onUnmounted } from "vue";
 import { cn } from "@/lib/utils";

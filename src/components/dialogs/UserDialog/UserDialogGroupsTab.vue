@@ -272,7 +272,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ArrowDown, ArrowUp, DownloadIcon, Eye, LogOut, Plus, RefreshCw, Tag, ToolCase, Trash2, Users } from "lucide-vue-next";
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";

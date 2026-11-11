@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { provide, toRef } from "vue";
 
 import { DIALOG_OPEN_INJECTION_KEY } from "./context";

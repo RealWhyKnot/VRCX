@@ -57,7 +57,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -83,12 +83,12 @@ import { useModalStore } from "../../stores/modal";
 import { useModerationStore } from "../../stores/moderation";
 import { runRefreshPlayerModerationsFlow as refreshPlayerModerations } from "../../coordinators/moderation-coordinator";
 import DataTableLayout from "../../components/ui/data-table/DataTableLayout.vue";
-import { createColumns } from "./columns.jsx";
+import { createColumns } from "./columns.tsx";
 import { moderationTypes } from "../../shared/constants/moderation";
 import { playerModerationRequest } from "../../api/player-moderation";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
-import { configRepository } from "../../services/config.js";
+import { configRepository } from "../../services/config.ts";
 
 const { t } = useI18n();
 const { playerModerationTable } = storeToRefs(useModerationStore());
