@@ -266,7 +266,7 @@
         "min_people": "Min people",
         "group_hosted": "Group hosted",
         "trending_only": "Trending worlds",
-        "search_placeholder": "Search results",
+        "search_placeholder": "Filter this list",
         "refresh": "Refresh",
         "full": "Full",
         "queue": "{count} in queue",
