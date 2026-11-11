@@ -193,7 +193,7 @@
         <Badge
           v-if="userDialog.ref.$customTag"
           variant="outline"
-          class="name h-5 px-1.5 text-[11px] leading-none text-[var(--custom-tag-colour,var(--foreground))] [border-color:var(--custom-tag-colour,currentcolor)]"
+          class="name h-5 px-1.5 text-[11px] leading-none text-[var(--custom-tag-colour,var(--foreground))] [border-color:var(--custom-tag-colour,var(--border))]"
           :style="{
             '--custom-tag-colour': userDialog.ref.$customTagColour,
           }"

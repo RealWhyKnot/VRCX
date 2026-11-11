@@ -7,12 +7,12 @@
       <div>
         <span class="block text-center">{{ t("dialog.favorite.vrchat_favorites") }}</span>
         <template v-if="favoriteDialog.currentGroup && favoriteDialog.currentGroup.key">
-          <Button variant="outline" class="my-1 w-full [white-space:initial]" @click="deleteFavoriteNoConfirm(favoriteDialog.objectId)">
+          <Button variant="outline" class="my-1 w-full whitespace-normal" @click="deleteFavoriteNoConfirm(favoriteDialog.objectId)">
             <Check />{{ favoriteDialog.currentGroup.displayName }} ({{ favoriteDialog.currentGroup.count }} / {{ favoriteDialog.currentGroup.capacity }})
           </Button>
         </template>
         <template v-else>
-          <Button v-for="group in groups" :key="group.key" variant="outline" class="my-1 w-full [white-space:initial]" @click="addFavorite(group)">
+          <Button v-for="group in groups" :key="group.key" variant="outline" class="my-1 w-full whitespace-normal" @click="addFavorite(group)">
             {{ group.displayName }} ({{ group.count }} / {{ group.capacity }})
           </Button>
         </template>
@@ -23,12 +23,12 @@
           <Button
             v-if="hasLocalFriendFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            class="my-1 w-full [white-space:initial]"
+            class="my-1 w-full whitespace-normal"
             @click="removeLocalFriendFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localFriendFavGroupLength(group) }})
           </Button>
-          <Button v-else variant="outline" class="my-1 w-full [white-space:initial]" @click="addLocalFriendFavorite(favoriteDialog.objectId, group)">
+          <Button v-else variant="outline" class="my-1 w-full whitespace-normal" @click="addLocalFriendFavorite(favoriteDialog.objectId, group)">
             {{ group }} ({{ localFriendFavGroupLength(group) }})
           </Button>
         </template>
@@ -39,12 +39,12 @@
           <Button
             v-if="hasLocalWorldFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            class="my-1 w-full [white-space:initial]"
+            class="my-1 w-full whitespace-normal"
             @click="removeLocalWorldFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localWorldFavGroupLength(group) }})
           </Button>
-          <Button v-else variant="outline" class="my-1 w-full [white-space:initial]" @click="addLocalWorldFavorite(favoriteDialog.objectId, group)">
+          <Button v-else variant="outline" class="my-1 w-full whitespace-normal" @click="addLocalWorldFavorite(favoriteDialog.objectId, group)">
             {{ group }} ({{ localWorldFavGroupLength(group) }})
           </Button>
         </template>
@@ -55,7 +55,7 @@
           <Button
             v-if="hasLocalAvatarFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            class="my-1 w-full [white-space:initial]"
+            class="my-1 w-full whitespace-normal"
             @click="removeLocalAvatarFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localAvatarFavGroupLength(group) }})
@@ -63,7 +63,7 @@
           <Button
             v-else
             variant="outline"
-            class="my-1 w-full [white-space:initial]"
+            class="my-1 w-full whitespace-normal"
             :disabled="!isLocalUserVrcPlusSupporter"
             @click="addLocalAvatarFavorite(favoriteDialog.objectId, group)"
           >
@@ -91,14 +91,8 @@ import { useFavoriteStore } from "../../stores/favorite";
 import type { FavoriteGroupSlot } from "../../stores/favorite-types";
 import { useUserStore } from "../../stores/user";
 import { logFailure } from "../../stores/log-failure";
-import {
-  addLocalWorldFavorite,
-  removeLocalWorldFavorite,
-  addLocalAvatarFavorite,
-  removeLocalAvatarFavorite,
-  addLocalFriendFavorite,
-  removeLocalFriendFavorite,
-} from "../../coordinators/favorite-coordinator";
+import { addLocalWorldFavorite, removeLocalWorldFavorite, addLocalFriendFavorite, removeLocalFriendFavorite } from "../../coordinators/favorite-coordinator";
+import { addLocalAvatarFavorite, removeLocalAvatarFavorite } from "../../coordinators/favorite-local-avatars";
 import { favoriteRequest } from "../../api/favorite";
 
 const { t } = useI18n();
