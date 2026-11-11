@@ -1,15 +1,13 @@
 <template>
   <div
-    class="shrink-0 h-[22px] flex items-center bg-sidebar border-t border-border text-xs select-none overflow-hidden"
-    style="font-family: var(--font-mono-cjk)"
+    class="shrink-0 h-[22px] flex items-center bg-sidebar border-t border-border text-xs select-none overflow-hidden [font-family:var(--font-mono-cjk)]"
     @contextmenu.prevent
   >
     <ContextMenu>
       <ContextMenuTrigger as-child>
         <div class="flex items-center w-full h-full px-2">
           <div
-            class="flex items-center flex-1 min-w-0 overflow-hidden [&>*:first-child]:pl-0.5"
-            style="mask-image: linear-gradient(to right, black calc(100% - 20px), transparent 100%)"
+            class="flex items-center flex-1 min-w-0 overflow-hidden [&>*:first-child]:pl-0.5 [mask-image:linear-gradient(to_right,black_calc(100%_-_20px),transparent_100%)]"
           >
             <TooltipWrapper
               v-if="!isLinux && visibility.proxy"
@@ -139,11 +137,7 @@
                 <span class="text-[11px] text-foreground truncate cursor-pointer" @click="handleNowPlayingClick">{{ nowPlaying.name || nowPlaying.url }}</span>
               </TooltipWrapper>
               <template v-if="nowPlaying.playing">
-                <div
-                  class="shrink-0 h-[4px] rounded-full bg-muted overflow-hidden ml-1"
-                  style="width: 40px"
-                  :title="`${nowPlayingElapsedText} / ${nowPlayingLengthText}`"
-                >
+                <div class="shrink-0 h-[4px] rounded-full bg-muted overflow-hidden ml-1 w-[40px]" :title="`${nowPlayingElapsedText} / ${nowPlayingLengthText}`">
                   <div
                     class="h-full w-(--now-playing-progress) rounded-full bg-foreground/60 transition-[width] duration-1000 ease-linear"
                     :style="{ '--now-playing-progress': `${nowPlaying.percentage}%` }"

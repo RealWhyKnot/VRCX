@@ -9,14 +9,7 @@
           <InputGroupTextareaField v-model="exportFriendsListCsv" :rows="15" readonly input-class="resize-none mt-4" @click="selectTextareaOnClick" />
         </template>
         <template #json>
-          <InputGroupTextareaField
-            v-model="exportFriendsListJson"
-            :rows="15"
-            readonly
-            style="margin-top: 16px"
-            input-class="resize-none"
-            @click="selectTextareaOnClick"
-          />
+          <InputGroupTextareaField v-model="exportFriendsListJson" :rows="15" readonly class="mt-4" input-class="resize-none" @click="selectTextareaOnClick" />
         </template>
       </TabsUnderline>
     </DialogContent>

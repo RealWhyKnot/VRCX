@@ -3,7 +3,10 @@
     <div class="flex flex-col gap-2.5 mb-2.5">
       <div class="rounded-xl bg-(--profile-card) p-3">
         <div class="flex items-center justify-between mb-2 pb-1 border-b border-muted-foreground/20">
-          <span class="text-[10px] font-bold uppercase tracking-wide" :style="{ color: userDialog.theme.subtextColor }">
+          <span
+            class="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-subtext,inherit)]"
+            :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+          >
             {{ t("dialog.user.info.current_instance") }}
           </span>
           <span v-if="isRealInstance(userDialog.$location.tag)">
@@ -60,13 +63,12 @@
             <img
               v-if="!userDialog.loading"
               :src="userDialog.instance?.ref?.world?.thumbnailImageUrl"
-              class="cursor-pointer"
-              style="width: 80px; height: 60px; border-radius: var(--radius-xl)"
+              class="cursor-pointer w-[80px] h-[60px] rounded-[var(--radius-xl)]"
               loading="lazy"
               @click="showFullscreenImageDialog(userDialog.instance?.ref?.world?.imageUrl ?? '')"
             />
           </div>
-          <div class="flex flex-wrap items-start" style="flex: 1; max-height: 150px; overflow: auto">
+          <div class="flex flex-wrap items-start flex-1 max-h-[150px] overflow-auto">
             <div
               v-if="userDialog.$location.userId"
               class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-[167px] hover:rounded-[25px_5px_5px_25px]"
@@ -84,8 +86,8 @@
                 </div>
                 <div class="flex-1 overflow-hidden">
                   <span
-                    class="block truncate font-medium leading-[18px]"
-                    :style="{ color: userDialog.$location.user.$userColour }"
+                    class="block truncate font-medium leading-[18px] text-[var(--user-colour,inherit)]"
+                    :style="{ '--user-colour': userDialog.$location.user.$userColour }"
                     v-text="userDialog.$location.user.displayName || userDialog.$location.userId"
                   ></span>
                   <span class="block truncate text-xs">{{ t("dialog.user.info.instance_creator") }}</span>
@@ -109,7 +111,11 @@
                 <IconFrame :icon-frame="user.iconFrame ?? ''" />
               </div>
               <div class="flex-1 overflow-hidden">
-                <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName || user.id"></span>
+                <span
+                  class="block truncate font-medium leading-[18px] text-[var(--user-colour,inherit)]"
+                  :style="{ '--user-colour': user.$userColour }"
+                  v-text="user.displayName || user.id"
+                ></span>
                 <span v-if="user.location === 'traveling'" class="block truncate text-xs">
                   <Spinner class="inline-block mr-1" />
                   <Timer :epoch="user.$travelingToTime" />
@@ -126,24 +132,27 @@
   </template>
 
   <div class="@container">
-    <div class="grid gap-2.5 grid-cols-1 @[560px]:grid-cols-[minmax(0,1fr)_230px]" style="align-items: start">
+    <div class="grid gap-2.5 grid-cols-1 @[560px]:grid-cols-[minmax(0,1fr)_230px] [align-items:start]">
       <div class="flex flex-col gap-2.5">
         <div class="rounded-xl bg-(--profile-card) p-3">
           <div class="flex items-center justify-between mb-2 pb-2 border-b border-muted-foreground/20">
-            <span class="text-[10px] font-bold uppercase tracking-wide" :style="{ color: userDialog.theme.subtextColor }">
+            <span
+              class="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-subtext,inherit)]"
+              :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+            >
               {{ t("dialog.user.info.bio") }}
             </span>
             <div class="flex items-center gap-1">
               <Button v-if="translationApi && userDialog.publicProfileRef?.bio" class="h-5 w-5" size="icon-sm" variant="ghost" @click="translateBio">
                 <Spinner v-if="translateLoading" class="size-3" />
-                <Languages v-else class="h-3 w-3" :style="{ color: userDialog.theme.iconColor }" />
+                <Languages v-else class="h-3 w-3 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
               </Button>
               <Button v-if="userDialog.id === currentUser.id" class="h-5 w-5" size="icon-sm" variant="ghost" @click="showEditProfileDialog()">
-                <Pencil class="h-3 w-3" :style="{ color: userDialog.theme.iconColor }" />
+                <Pencil class="h-3 w-3 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
               </Button>
             </div>
           </div>
-          <pre class="text-xs font-[inherit]" style="white-space: pre-wrap; max-height: 210px; overflow-y: auto">{{
+          <pre class="text-xs font-[inherit] whitespace-pre-wrap max-h-[210px] overflow-y-auto">{{
             bioCache.translated || replaceBioSymbols(userDialog.publicProfileRef?.bio) || "—"
           }}</pre>
           <div v-if="userDialog.publicProfileRef?.bioLinks && userDialog.publicProfileRef?.bioLinks.length" class="flex flex-wrap items-center gap-1.5 mt-2">
@@ -151,43 +160,40 @@
               <template #content>
                 <span v-text="link"></span>
               </template>
-              <img
-                :src="getFaviconUrl(link)"
-                style="width: 16px; height: 16px; vertical-align: middle; cursor: pointer"
-                loading="lazy"
-                @click.stop="openExternalLink(link)"
-              />
+              <img :src="getFaviconUrl(link)" class="size-4 align-middle cursor-pointer" loading="lazy" @click.stop="openExternalLink(link)" />
             </TooltipWrapper>
           </div>
         </div>
 
         <div v-if="!hideUserNotes" class="rounded-xl bg-(--profile-card) p-3 cursor-pointer" @click="isEditNoteAndMemoDialogVisible = true">
           <div class="flex items-center justify-between mb-2 pb-2 border-b border-muted-foreground/20">
-            <span class="text-[10px] font-bold uppercase tracking-wide" :style="{ color: userDialog.theme.subtextColor }">
+            <span
+              class="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-subtext,inherit)]"
+              :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+            >
               {{ t("dialog.user.info.note") }}
             </span>
             <Button class="h-5 w-5" size="icon-sm" variant="ghost">
-              <Pencil class="h-3 w-3" :style="{ color: userDialog.theme.iconColor }" />
+              <Pencil class="h-3 w-3 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
             </Button>
           </div>
-          <pre v-if="userDialog.note" class="text-xs font-[inherit]" style="white-space: pre-wrap; max-height: 210px; overflow-y: auto">{{
-            userDialog.note
-          }}</pre>
+          <pre v-if="userDialog.note" class="text-xs font-[inherit] whitespace-pre-wrap max-h-[210px] overflow-y-auto">{{ userDialog.note }}</pre>
           <pre v-else class="text-xs font-[inherit] text-muted-foreground">—</pre>
         </div>
 
         <div v-if="!hideUserMemos" class="rounded-xl bg-(--profile-card) p-3 cursor-pointer" @click="isEditNoteAndMemoDialogVisible = true">
           <div class="flex items-center justify-between mb-2 pb-2 border-b border-muted-foreground/20">
-            <span class="text-[10px] font-bold uppercase tracking-wide" :style="{ color: userDialog.theme.subtextColor }">
+            <span
+              class="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-subtext,inherit)]"
+              :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+            >
               {{ t("dialog.user.info.memo") }}
             </span>
             <Button class="h-5 w-5" size="icon-sm" variant="ghost">
-              <Pencil class="h-3 w-3" :style="{ color: userDialog.theme.iconColor }" />
+              <Pencil class="h-3 w-3 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
             </Button>
           </div>
-          <pre v-if="userDialog.memo" class="text-xs font-[inherit]" style="white-space: pre-wrap; max-height: 210px; overflow-y: auto">{{
-            userDialog.memo
-          }}</pre>
+          <pre v-if="userDialog.memo" class="text-xs font-[inherit] whitespace-pre-wrap max-h-[210px] overflow-y-auto">{{ userDialog.memo }}</pre>
           <pre v-else class="text-xs font-[inherit] text-muted-foreground">—</pre>
         </div>
       </div>
@@ -195,11 +201,14 @@
       <div class="flex flex-col gap-2.5">
         <div class="rounded-xl bg-(--profile-card) p-3">
           <div class="flex items-center justify-between mb-2 pb-2 border-b border-muted-foreground/20">
-            <span class="text-[10px] font-bold uppercase tracking-wide" :style="{ color: userDialog.theme.subtextColor }">
+            <span
+              class="text-[10px] font-bold uppercase tracking-wide text-[var(--theme-subtext,inherit)]"
+              :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+            >
               {{ t("dialog.user.info.vrcx_info") }}
               <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                 <TooltipWrapper side="right" :content="t('dialog.user.info.vrcx_info_tooltip')">
-                  <Info class="h-3 w-3 shrink-0" :style="{ color: userDialog.theme.iconColor }" />
+                  <Info class="h-3 w-3 shrink-0 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
                 </TooltipWrapper>
               </span>
             </span>
@@ -279,8 +288,8 @@
 
         <div class="rounded-xl bg-(--profile-card) p-3">
           <div
-            class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20"
-            :style="{ color: userDialog.theme.subtextColor }"
+            class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20 text-[var(--theme-subtext,inherit)]"
+            :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
           >
             {{ t("dialog.user.info.header") }}
           </div>
@@ -342,15 +351,15 @@
 
         <div v-if="userDialog.ref.id === currentUser.id && currentUser.homeLocation" class="rounded-xl bg-(--profile-card) p-3">
           <div
-            class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20"
-            :style="{ color: userDialog.theme.subtextColor }"
+            class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20 text-[var(--theme-subtext,inherit)]"
+            :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
           >
             {{ t("dialog.user.info.home_location") }}
           </div>
           <div class="flex items-center justify-between gap-2 text-xs cursor-pointer" @click="showWorldDialog(currentUser.homeLocation)">
             <span class="truncate" v-text="userDialog.$homeLocationName"></span>
             <Button class="rounded-full h-5 w-5 flex-none" size="icon-sm" variant="ghost" @click.stop="resetHome()">
-              <Trash2 class="h-3 w-3" :style="{ color: userDialog.theme.iconColor }" />
+              <Trash2 class="h-3 w-3 text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
             </Button>
           </div>
         </div>

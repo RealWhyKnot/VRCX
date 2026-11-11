@@ -5,72 +5,57 @@
         <DialogTitle>{{ t("dialog.favorite.header") }}</DialogTitle>
       </DialogHeader>
       <div>
-        <span style="display: block; text-align: center">{{ t("dialog.favorite.vrchat_favorites") }}</span>
+        <span class="block text-center">{{ t("dialog.favorite.vrchat_favorites") }}</span>
         <template v-if="favoriteDialog.currentGroup && favoriteDialog.currentGroup.key">
-          <Button variant="outline" style="width: 100%; white-space: initial" class="my-1" @click="deleteFavoriteNoConfirm(favoriteDialog.objectId)">
+          <Button variant="outline" class="my-1 w-full [white-space:initial]" @click="deleteFavoriteNoConfirm(favoriteDialog.objectId)">
             <Check />{{ favoriteDialog.currentGroup.displayName }} ({{ favoriteDialog.currentGroup.count }} / {{ favoriteDialog.currentGroup.capacity }})
           </Button>
         </template>
         <template v-else>
-          <Button v-for="group in groups" :key="group.key" variant="outline" style="width: 100%; white-space: initial" class="my-1" @click="addFavorite(group)">
+          <Button v-for="group in groups" :key="group.key" variant="outline" class="my-1 w-full [white-space:initial]" @click="addFavorite(group)">
             {{ group.displayName }} ({{ group.count }} / {{ group.capacity }})
           </Button>
         </template>
       </div>
-      <div v-if="favoriteDialog.type === 'friend'" style="margin-top: 20px">
-        <span style="display: block; text-align: center">{{ t("dialog.favorite.local_favorites") }}</span>
+      <div v-if="favoriteDialog.type === 'friend'" class="mt-[20px]">
+        <span class="block text-center">{{ t("dialog.favorite.local_favorites") }}</span>
         <template v-for="group in localFriendFavoriteGroups" :key="group">
           <Button
             v-if="hasLocalFriendFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
+            class="my-1 w-full [white-space:initial]"
             @click="removeLocalFriendFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localFriendFavGroupLength(group) }})
           </Button>
-          <Button
-            v-else
-            variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
-            @click="addLocalFriendFavorite(favoriteDialog.objectId, group)"
-          >
+          <Button v-else variant="outline" class="my-1 w-full [white-space:initial]" @click="addLocalFriendFavorite(favoriteDialog.objectId, group)">
             {{ group }} ({{ localFriendFavGroupLength(group) }})
           </Button>
         </template>
       </div>
-      <div v-if="favoriteDialog.type === 'world'" style="margin-top: 20px">
-        <span style="display: block; text-align: center">{{ t("dialog.favorite.local_favorites") }}</span>
+      <div v-if="favoriteDialog.type === 'world'" class="mt-[20px]">
+        <span class="block text-center">{{ t("dialog.favorite.local_favorites") }}</span>
         <template v-for="group in localWorldFavoriteGroups" :key="group">
           <Button
             v-if="hasLocalWorldFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
+            class="my-1 w-full [white-space:initial]"
             @click="removeLocalWorldFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localWorldFavGroupLength(group) }})
           </Button>
-          <Button
-            v-else
-            variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
-            @click="addLocalWorldFavorite(favoriteDialog.objectId, group)"
-          >
+          <Button v-else variant="outline" class="my-1 w-full [white-space:initial]" @click="addLocalWorldFavorite(favoriteDialog.objectId, group)">
             {{ group }} ({{ localWorldFavGroupLength(group) }})
           </Button>
         </template>
       </div>
-      <div v-if="favoriteDialog.type === 'avatar'" style="margin-top: 20px">
-        <span style="display: block; text-align: center">{{ t("dialog.favorite.local_avatar_favorites") }}</span>
+      <div v-if="favoriteDialog.type === 'avatar'" class="mt-[20px]">
+        <span class="block text-center">{{ t("dialog.favorite.local_avatar_favorites") }}</span>
         <template v-for="group in localAvatarFavoriteGroups" :key="group">
           <Button
             v-if="hasLocalAvatarFavorite(favoriteDialog.objectId, group)"
             variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
+            class="my-1 w-full [white-space:initial]"
             @click="removeLocalAvatarFavorite(favoriteDialog.objectId, group)"
           >
             <Check />{{ group }} ({{ localAvatarFavGroupLength(group) }})
@@ -78,8 +63,7 @@
           <Button
             v-else
             variant="outline"
-            style="width: 100%; white-space: initial"
-            class="my-1"
+            class="my-1 w-full [white-space:initial]"
             :disabled="!isLocalUserVrcPlusSupporter"
             @click="addLocalAvatarFavorite(favoriteDialog.objectId, group)"
           >

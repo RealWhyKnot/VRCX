@@ -1,8 +1,8 @@
 <template>
-  <div class="x-container x-container--auto-height">
+  <div class="x-container x-container-auto-height">
     <div class="mb-4 flex items-center">
       <Select multiple :model-value="playerModerationTypeFilter" @update:model-value="handleModerationFilterChange">
-        <SelectTrigger class="w-full" style="flex: 1">
+        <SelectTrigger class="w-full flex-1">
           <SelectValue :placeholder="t('view.moderation.filter_placeholder')" />
         </SelectTrigger>
         <SelectContent>

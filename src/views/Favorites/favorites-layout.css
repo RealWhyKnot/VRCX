@@ -20,15 +20,15 @@
   box-shadow: var(--shadow-sm);
 }
 
-.group-item--public {
+.group-item-public {
   border-left: 3px solid var(--visibility-public);
 }
 
-.group-item--friends {
+.group-item-friends {
   border-left: 3px solid var(--visibility-friends);
 }
 
-.group-item--private {
+.group-item-private {
   border-left: 3px solid var(--visibility-private);
 }
 

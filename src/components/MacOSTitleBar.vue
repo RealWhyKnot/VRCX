@@ -34,11 +34,14 @@ onMounted(() => {
   left: 0;
   right: 0;
   height: 28px;
-  z-index: 9999;
+  z-index: var(--layer-title-bar);
   user-select: none;
   backdrop-filter: blur(20px);
   border-bottom: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    backdrop-filter 0.2s ease,
+    border-bottom-color 0.2s ease;
 }
 
 .macos-title-bar.draggable {
@@ -65,10 +68,10 @@ onMounted(() => {
 }
 
 .app-title {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .title-bar-right {
@@ -76,31 +79,31 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-:global(html:not(.dark)) .macos-title-bar {
-  border-bottom-color: rgb(0 0 0 / 6%);
-}
-
-:global(html:not(.dark)) .macos-title-bar .app-title {
-  color: rgb(29 29 31 / 90%);
-}
-
-:global(html.dark) .macos-title-bar {
-  border-bottom-color: rgb(255 255 255 / 6%);
-}
-
-:global(html.dark) .macos-title-bar .app-title {
-  color: rgb(245 245 247 / 90%);
-}
-
 .macos-title-bar:hover {
   backdrop-filter: blur(30px);
 }
 
-:global(html:not(.dark)) .macos-title-bar:hover {
-  background-color: rgb(248 248 248 / 95%);
+:root:not(.dark) .macos-title-bar {
+  border-bottom-color: var(--color-title-bar-light-border);
 }
 
-:global(html.dark) .macos-title-bar:hover {
-  background-color: rgb(30 30 30 / 95%);
+:root:not(.dark) .macos-title-bar .app-title {
+  color: var(--color-title-bar-light-text);
+}
+
+:root.dark .macos-title-bar {
+  border-bottom-color: var(--color-title-bar-dark-border);
+}
+
+:root.dark .macos-title-bar .app-title {
+  color: var(--color-title-bar-dark-text);
+}
+
+:root:not(.dark) .macos-title-bar:hover {
+  background-color: var(--color-title-bar-light-hover);
+}
+
+:root.dark .macos-title-bar:hover {
+  background-color: var(--color-title-bar-dark-hover);
 }
 </style>

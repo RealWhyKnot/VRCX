@@ -10,7 +10,7 @@
   box-shadow: 0 0 0 2px var(--background);
 }
 
-.status-icon.active::after {
+.status-icon.active-default::after {
   background: transparent;
   border: 2px solid var(--status-online);
   box-shadow:
@@ -70,6 +70,15 @@
     0 0 4px color-mix(in oklch, var(--status-busy) 50%, transparent);
 }
 
+.status-icon.mobile::after {
+  right: -2px;
+  bottom: -0.5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  mask-image: url("/images/masks/phone.svg");
+}
+
 .accessible-status-indicators .status-icon::after {
   box-shadow: none;
 }
@@ -86,6 +95,10 @@
   mask-image: url("/images/masks/busy.svg");
 }
 
+.accessible-status-indicators .status-icon.mobile::after {
+  mask-image: url("/images/masks/phone.svg");
+}
+
 .status-icon.offline::after {
   background: var(--status-offline);
   box-shadow: 0 0 0 1px var(--background);
@@ -93,11 +106,6 @@
 
 .offline img {
   filter: grayscale(1);
-}
-
-.friend-row:hover .active img,
-.friend-row:hover .offline img {
-  filter: none;
 }
 
 .status-icon img {
@@ -108,17 +116,13 @@
   mask-image: url("/images/masks/usercutoutmobile.svg");
 }
 
-.status-icon.mobile::after {
-  right: -2px;
-  bottom: -0.5px;
-  width: 14px;
-  height: 14px;
-  border-radius: 0;
-  mask-image: url("/images/masks/phone.svg") !important;
+.friend-row:hover .active-default img,
+.friend-row:hover .offline img {
+  filter: none;
 }
 
-i.x-user-status,
-i.x-status-icon {
+.x-user-status,
+.x-status-icon {
   display: inline-block;
   width: 10px;
   height: 10px;
@@ -126,71 +130,71 @@ i.x-status-icon {
   border-radius: 50%;
 }
 
-i.x-user-status::after,
-i.x-status-icon::after {
+.x-user-status::after,
+.x-status-icon::after {
   display: none;
 }
 
-i.x-user-status.active {
+.x-user-status.active-default {
   background: transparent;
   border: 2px solid var(--status-online);
 }
 
-i.x-user-status.active-joinme {
+.x-user-status.active-joinme {
   background: transparent;
   border: 2px solid var(--status-joinme);
 }
 
-i.x-user-status.active-askme {
+.x-user-status.active-askme {
   background: transparent;
   border: 2px solid var(--status-askme);
 }
 
-i.x-user-status.active-busy {
+.x-user-status.active-busy {
   background: transparent;
   border: 2px solid var(--status-busy);
 }
 
-i.x-user-status.online {
+.x-user-status.online {
   background: var(--status-online);
 }
 
-i.x-user-status.joinme {
+.x-user-status.joinme {
   background: var(--status-joinme);
 }
 
-i.x-user-status.askme {
+.x-user-status.askme {
   background: var(--status-askme);
 }
 
-i.x-user-status.busy {
+.x-user-status.busy {
   background: var(--status-busy);
 }
 
-.accessible-status-indicators i.x-user-status.joinme {
+.accessible-status-indicators .x-user-status.joinme {
   mask-image: url("/images/masks/joinme.svg");
 }
 
-.accessible-status-indicators i.x-user-status.askme {
+.accessible-status-indicators .x-user-status.askme {
   mask-image: url("/images/masks/askme.svg");
 }
 
-.accessible-status-indicators i.x-user-status.busy {
+.accessible-status-indicators .x-user-status.busy {
   mask-image: url("/images/masks/busy.svg");
 }
 
-i.x-status-icon.green {
+.x-status-icon.green {
   background: var(--status-online);
 }
 
-i.x-status-icon.blue {
+.x-status-icon.blue {
   background: var(--status-joinme);
 }
 
-i.x-status-icon.orange {
+.x-status-icon.orange {
   background: var(--status-askme);
 }
 
-i.x-status-icon.red {
+.x-status-icon.red {
   background: var(--status-busy);
 }

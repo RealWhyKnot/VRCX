@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-2 rounded-xl bg-(--profile-card)">
-    <div style="display: flex; align-items: center; justify-content: space-between">
-      <div style="display: flex; align-items: center">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center">
         <Button
           class="rounded-full"
           variant="ghost"
@@ -61,7 +61,7 @@
         <span class="text-muted-foreground text-sm">{{ t("dialog.user.activity.no_data_in_period") }}</span>
       </div>
 
-      <div v-show="filteredEventCount > 0" ref="activityChartRef" class="min-w-0" style="width: 100%; height: 240px" @contextmenu.prevent="onChartRightClick" />
+      <div v-show="filteredEventCount > 0" ref="activityChartRef" class="min-w-0 w-full h-[240px]" @contextmenu.prevent="onChartRightClick" />
 
       <DailyPlaytime v-if="isSelf" :sessions="cachedSessions" :range-days="currentRangeDays" />
 
@@ -101,10 +101,10 @@
             <span class="text-sm font-medium" :class="overlapPercent > 0 ? 'text-accent-foreground' : 'text-muted-foreground'"> {{ overlapPercent }}% </span>
             <div class="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <div
-                class="h-full rounded-full transition-all duration-500"
+                class="h-full rounded-full transition-all duration-500 w-(--overlap-width) bg-(--overlap-bar-colour)"
                 :style="{
-                  width: `${overlapPercent}%`,
-                  backgroundColor: isDarkMode ? 'hsl(260, 60%, 55%)' : 'hsl(260, 55%, 50%)',
+                  '--overlap-width': `${overlapPercent}%`,
+                  '--overlap-bar-colour': isDarkMode ? 'hsl(260, 60%, 55%)' : 'hsl(260, 55%, 50%)',
                 }"
               />
             </div>
@@ -118,8 +118,7 @@
         <div
           v-show="hasOverlapData || isOverlapLoadingVisible"
           ref="overlapChartRef"
-          class="min-w-0"
-          style="width: 100%; height: 240px"
+          class="min-w-0 w-full h-[240px]"
           @contextmenu.prevent="onOverlapChartRightClick"
         />
 
@@ -203,10 +202,10 @@
               </div>
               <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full" :class="isDarkMode ? 'bg-white/8' : 'bg-black/6'">
                 <div
-                  class="h-full rounded-full transition-all duration-500"
+                  class="h-full rounded-full transition-all duration-500 w-(--top-world-width)"
                   :class="isDarkMode ? 'bg-white/45' : 'bg-black/25'"
                   :style="{
-                    width: getTopWorldBarWidth(topWorldsSortBy === 'time' ? world.totalTime : (world.visitCount ?? 0)),
+                    '--top-world-width': getTopWorldBarWidth(topWorldsSortBy === 'time' ? world.totalTime : (world.visitCount ?? 0)),
                   }"
                 />
               </div>

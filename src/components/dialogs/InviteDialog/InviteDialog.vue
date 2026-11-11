@@ -40,7 +40,7 @@
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div class="mt-4" style="width: 100%">
+        <div class="mt-4 w-full">
           <VirtualCombobox
             :model-value="inviteDialog.userIds"
             :groups="userPickerGroups"

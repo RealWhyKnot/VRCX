@@ -1,17 +1,17 @@
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden p-2 rounded-xl bg-(--profile-card)">
-    <div class="shrink-0" style="display: flex; align-items: center; justify-content: space-between">
-      <div style="display: flex; align-items: center">
+    <div class="shrink-0 flex items-center justify-between">
+      <div class="flex items-center">
         <Button class="rounded-full" variant="ghost" size="icon-sm" :disabled="userDialog.isWorldsLoading" @click="refreshUserDialogWorlds()">
           <Spinner v-if="userDialog.isWorldsLoading" />
           <RefreshCw v-else />
         </Button>
         <span class="ml-1.5 text-sm">{{ t("dialog.user.worlds.total_count", { count: userDialog.worlds.length }) }}</span>
       </div>
-      <div style="display: flex; align-items: center">
+      <div class="flex items-center">
         <Input v-model="searchQuery" class="h-8 mr-2 w-32" :placeholder="t('dialog.user.worlds.search_placeholder')" @click.stop />
       </div>
-      <div style="display: flex; align-items: center">
+      <div class="flex items-center">
         <span class="mr-1">{{ t("dialog.user.worlds.sort_by") }}</span>
         <Select :model-value="userDialogWorldSortingKey" :disabled="userDialog.isWorldsLoading" @update:model-value="selectWorldSortingKey">
           <SelectTrigger size="sm" @click.stop>
@@ -24,7 +24,7 @@
           </SelectContent>
         </Select>
       </div>
-      <div style="display: flex; align-items: center">
+      <div class="flex items-center">
         <span class="ml-2 mr-1">{{ t("dialog.user.worlds.order_by") }}</span>
         <Select :model-value="userDialogWorldOrderKey" :disabled="userDialog.isWorldsLoading" @update:model-value="selectWorldOrderKey">
           <SelectTrigger size="sm" @click.stop>
@@ -39,7 +39,7 @@
       </div>
     </div>
     <div class="min-h-0 flex-1 overflow-auto">
-      <div class="flex flex-wrap items-start" style="margin-top: 8px; min-height: 60px">
+      <div class="flex flex-wrap items-start mt-2 min-h-[60px]">
         <template v-if="userDialog.worlds.length">
           <div
             v-for="world in filteredWorlds"
@@ -61,7 +61,7 @@
             </div>
           </div>
         </template>
-        <div v-else-if="!userDialog.isWorldsLoading" style="display: flex; justify-content: center; align-items: center; min-height: 120px; width: 100%">
+        <div v-else-if="!userDialog.isWorldsLoading" class="flex justify-center items-center min-h-[120px] w-full">
           <DataTableEmpty type="nodata" />
         </div>
       </div>

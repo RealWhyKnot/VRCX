@@ -1,13 +1,13 @@
 <template>
   <div class="flex h-full flex-col overflow-hidden">
     <div ref="scrollViewportRef" class="flex-1 overflow-y-auto">
-      <div v-if="allRows.length" class="relative w-full px-1.5 py-2" :style="virtualContainerStyle">
+      <div v-if="allRows.length" class="relative w-full px-1.5 py-2 h-[var(--virtual-height)]" :style="virtualContainerStyle">
         <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
           <div
             :ref="measureRowElement"
-            class="absolute left-0 top-0 w-full px-0.5 box-border"
+            class="absolute left-0 top-0 w-full px-0.5 box-border [transform:translateY(var(--row-start))]"
             :data-index="item.virtualItem.index"
-            :style="{ transform: `translateY(${item.virtualItem.start}px)` }"
+            :style="{ '--row-start': `${item.virtualItem.start}px` }"
           >
             <div v-if="item.row.type === 'section-header'" class="flex items-center gap-2 px-2.5 py-2">
               <Separator class="flex-1" />
@@ -160,8 +160,7 @@ const virtualItems = computed<VirtualListItem[]>(() =>
 );
 
 const virtualContainerStyle = computed(() => ({
-  height: `${virtualizer.value.getTotalSize()}px`,
-  width: "100%",
+  "--virtual-height": `${virtualizer.value.getTotalSize()}px`,
 }));
 
 function remeasureVirtualRows() {

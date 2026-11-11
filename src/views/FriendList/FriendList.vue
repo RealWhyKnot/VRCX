@@ -1,5 +1,5 @@
 <template>
-  <div class="x-container x-container--auto-height">
+  <div class="x-container x-container-auto-height">
     <div class="flex-1 min-h-0 flex flex-col">
       <DataTableLayout
         class="min-w-0 w-full"
@@ -97,12 +97,12 @@
           <DialogHeader>
             <DialogTitle>{{ t("view.friend_list.load_dialog_title") }}</DialogTitle>
           </DialogHeader>
-          <div style="margin-bottom: 8px" v-text="t('view.friend_list.load_dialog_message')"></div>
+          <div class="mb-2" v-text="t('view.friend_list.load_dialog_message')"></div>
           <div class="flex items-center gap-2">
             <Progress :model-value="friendsListLoadingPercent" class="h-4 w-full" />
             <span class="text-xs w-10 text-right">{{ friendsListLoadingPercent }}%</span>
           </div>
-          <div style="margin-top: 8px; text-align: right">
+          <div class="mt-2 text-right">
             <span>{{ friendsListLoadingCurrent }} / {{ friendsListLoadingTotal }}</span>
           </div>
           <DialogFooter>

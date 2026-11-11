@@ -50,7 +50,7 @@
   animation-fill-mode: both;
 }
 
-@keyframes bounceInLeft {
+@keyframes noty-bounce-in-left {
   0% {
     animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
     opacity: 0;
@@ -80,10 +80,10 @@
 }
 
 .animate__bounceInLeft {
-  animation-name: bounceInLeft;
+  animation-name: noty-bounce-in-left;
 }
 
-@keyframes bounceOutLeft {
+@keyframes noty-bounce-out-left {
   20% {
     opacity: 1;
     transform: translate3d(20px, 0, 0) scaleX(0.9);
@@ -96,10 +96,10 @@
 }
 
 .animate__bounceOutLeft {
-  animation-name: bounceOutLeft;
+  animation-name: noty-bounce-out-left;
 }
 
-@keyframes fadeIn {
+@keyframes noty-fade-in {
   from {
     opacity: 0;
   }
@@ -110,10 +110,10 @@
 }
 
 .animate__fadeIn {
-  animation-name: fadeIn;
+  animation-name: noty-fade-in;
 }
 
-@keyframes zoomOut {
+@keyframes noty-zoom-out {
   0% {
     opacity: 1;
   }
@@ -129,7 +129,7 @@
 }
 
 .animate__zoomOut {
-  animation-name: zoomOut;
+  animation-name: noty-zoom-out;
 }
 
 .noty_layout {
@@ -145,7 +145,7 @@
 
 .noty_theme__mint.noty_bar .noty_body {
   padding: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .noty_theme__mint.noty_bar .noty_buttons {

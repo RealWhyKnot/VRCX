@@ -7,13 +7,32 @@
 @import "./flags.css";
 @import "./animated-emoji.css";
 @import "./fonts.css";
-@import "./noty.css";
+@import "./noty.user.css";
 @import "./status-icon.css";
 @import "./options-container.css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --color-title-bar-light-border: rgb(0 0 0 / 6%);
+  --color-title-bar-light-text: rgb(29 29 31 / 90%);
+  --color-title-bar-light-hover: rgb(248 248 248 / 95%);
+  --color-title-bar-dark-border: rgb(255 255 255 / 6%);
+  --color-title-bar-dark-text: rgb(245 245 247 / 90%);
+  --color-title-bar-dark-hover: rgb(30 30 30 / 95%);
+  --color-shadow-strong: rgb(0 0 0 / 95%);
+  --color-shadow-medium: rgb(0 0 0 / 75%);
+  --color-shadow-soft: rgb(0 0 0 / 55%);
+  --color-feed-removed-text: #f00;
+  --color-feed-removed-bg: rgb(255 0 0 / 20%);
+  --color-feed-added-text: rgb(35 188 35);
+  --color-feed-added-bg: rgb(76 255 80 / 20%);
+  --color-position-preview-frame: #000;
+  --color-position-preview-screen: #c4c4c4;
+  --color-mask-opaque: #000;
+  --font-mono: monospace;
+  --layer-title-bar: 9999;
+  --layer-calendar-badge: 10;
   --background: oklch(100% 0 0deg);
   --foreground: oklch(14.5% 0 0deg);
   --card: oklch(100% 0 0deg);
@@ -187,10 +206,6 @@ html {
   overflow: hidden;
 }
 
-.lucide.is-loading {
-  animation: rotating 2s linear infinite;
-}
-
 .x-container {
   position: relative;
   padding: 8px;
@@ -204,7 +219,7 @@ html {
   border: 1px solid var(--border);
 }
 
-.x-container--auto-height {
+.x-container-auto-height {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -214,7 +229,7 @@ html {
   margin-right: 8px;
 }
 
-html.dark .x-container {
+:root.dark .x-container {
   background: var(--sidebar);
 }
 
@@ -224,7 +239,12 @@ html.dark .x-container {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
+    outline-color: var(--ring);
+
+    @supports (color: color-mix(in lab, red, red)) {
+      outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+    }
 
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
@@ -232,8 +252,8 @@ html.dark .x-container {
 }
 
 body {
-  @apply bg-background text-foreground;
-
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: var(--font-western), var(--font-symbol), var(--font-primary-cjk), var(--font-fallback-cjk);
   margin: 0;
 }
@@ -249,7 +269,6 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background-color: var(--border);
-  border-radius: var(--rounded-full);
   border: 2px solid transparent;
   background-clip: content-box;
 }
@@ -276,7 +295,13 @@ body {
 }
 
 .x-highlight-ring {
-  @apply ring-[3px] ring-ring border-ring;
+  border-color: var(--ring);
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 transparent),
+    var(--tw-inset-ring-shadow, 0 0 transparent),
+    var(--tw-ring-offset-shadow, 0 0 transparent),
+    0 0 0 3px var(--ring),
+    var(--tw-shadow, 0 0 transparent);
 }
 
 .x-hover-card {

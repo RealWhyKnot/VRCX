@@ -114,7 +114,7 @@
         </div>
       </div>
 
-      <div ref="activityChartRef" style="width: 100%"></div>
+      <div ref="activityChartRef" class="w-full"></div>
       <div v-if="!isLoading && activityData.length === 0" class="flex items-center justify-center mt-[100px]">
         <DataTableEmpty type="nodata" />
       </div>

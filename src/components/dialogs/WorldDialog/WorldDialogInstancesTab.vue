@@ -22,7 +22,7 @@
       </div>
       <div v-for="room in worldDialog.rooms" :key="room.id">
         <template v-if="isRoomVisible(room)">
-          <div style="margin: 6px 0">
+          <div class="[margin:6px_0]">
             <div class="flex flex-wrap gap-2 whitespace-nowrap overflow-hidden text-ellipsis">
               <LocationWorld
                 class="text-sm"
@@ -46,7 +46,7 @@
                 :on-history="() => showPreviousInstancesInfoDialog(room.location ?? '')"
               />
             </div>
-            <div v-if="room.$location.userId || room.users.length" class="flex flex-wrap items-start" style="margin: 8px 0; max-height: unset">
+            <div v-if="room.$location.userId || room.users.length" class="flex flex-wrap items-start [margin:8px_0] max-h-[unset]">
               <div
                 v-if="room.$location.userId"
                 class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-[167px] hover:rounded-[25px_5px_5px_25px]"

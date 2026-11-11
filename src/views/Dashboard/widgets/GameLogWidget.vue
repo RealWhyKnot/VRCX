@@ -56,16 +56,20 @@
               </template>
               <template v-else-if="item.type === 'OnPlayerJoined'">
                 <LogIn class="mr-1 inline-block h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span class="cursor-pointer" :style="item.tagColour ? { color: item.tagColour } : null" @click="openUser(item.userId)">{{
-                  item.displayName
-                }}</span>
+                <span
+                  class="cursor-pointer [color:var(--tag-colour,inherit)]"
+                  :style="item.tagColour ? { '--tag-colour': item.tagColour } : null"
+                  @click="openUser(item.userId)"
+                  >{{ item.displayName }}</span
+                >
                 <span v-if="item.isFriend">{{ item.isFavorite ? "⭐" : "💚" }}</span>
               </template>
               <template v-else-if="item.type === 'OnPlayerLeft'">
                 <LogOut class="mr-1 inline-block h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <span
-                  class="cursor-pointer text-muted-foreground/70 hover:underline"
-                  :style="item.tagColour ? { color: item.tagColour } : null"
+                  class="cursor-pointer hover:underline"
+                  :class="item.tagColour ? 'text-(--tag-colour)' : 'text-muted-foreground/70'"
+                  :style="item.tagColour ? { '--tag-colour': item.tagColour } : null"
                   @click="openUser(item.userId)"
                   >{{ item.displayName }}</span
                 >

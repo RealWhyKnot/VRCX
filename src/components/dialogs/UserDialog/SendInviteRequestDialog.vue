@@ -17,7 +17,7 @@
       </template>
 
       <DataTableLayout
-        style="margin-top: 8px"
+        class="mt-2"
         :table="inviteRequestMessageTanstackTable"
         :loading="false"
         :show-pagination="false"

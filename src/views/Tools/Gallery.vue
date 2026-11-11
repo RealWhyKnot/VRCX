@@ -48,7 +48,7 @@
       </template>
       <template #gallery>
         <div @dragover.prevent @drop.prevent="handleDropGallery">
-          <input id="GalleryUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeGallery" />
+          <input id="GalleryUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeGallery" />
           <ButtonGroup>
             <Button variant="outline" size="sm" @click="refreshGalleryTable">
               <RefreshCw />
@@ -59,7 +59,7 @@
               {{ t("dialog.gallery_icons.upload") }}
             </Button>
           </ButtonGroup>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
             <Item v-for="image in galleryTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
               <div v-if="latestFileUrl(image)" class="overflow-hidden rounded-[inherit]">
                 <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image))">
@@ -78,7 +78,7 @@
 
       <template #icons>
         <div @dragover.prevent @drop.prevent="handleDropIcon">
-          <input id="VRCPlusIconUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeVRCPlusIcon" />
+          <input id="VRCPlusIconUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeVRCPlusIcon" />
           <ButtonGroup>
             <Button variant="outline" size="sm" @click="refreshVRCPlusIconsTable">
               <RefreshCw />
@@ -93,7 +93,7 @@
               {{ t("dialog.gallery_icons.clear") }}
             </Button>
           </ButtonGroup>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
             <Item
               v-for="image in VRCPlusIconsTable"
               :key="image.id"
@@ -128,7 +128,7 @@
 
       <template #emojis>
         <div @dragover.prevent @drop.prevent="handleDropEmoji">
-          <input id="EmojiUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeEmoji" />
+          <input id="EmojiUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeEmoji" />
           <div class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
               <ButtonGroup>
@@ -193,7 +193,7 @@
             </div>
             <span v-if="emojiAnimType" class="basis-full text-sm text-muted-foreground">{{ t("dialog.gallery_icons.flipbook_info") }}</span>
           </div>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
             <Item v-for="image in emojiTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
               <div v-if="latestFileUrl(image)" class="overflow-hidden">
                 <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image), emojiFileName(image))">
@@ -222,7 +222,7 @@
 
       <template #stickers>
         <div @dragover.prevent @drop.prevent="handleDropSticker">
-          <input id="StickerUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeSticker" />
+          <input id="StickerUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeSticker" />
           <ButtonGroup>
             <Button variant="outline" size="sm" @click="refreshStickerTable">
               <RefreshCw />
@@ -233,7 +233,7 @@
               {{ t("dialog.gallery_icons.upload") }}
             </Button>
           </ButtonGroup>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
             <Item v-for="image in stickerTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
               <div v-if="latestFileUrl(image)" class="overflow-hidden">
                 <ItemHeader class="cursor-pointer" @click="openFullscreen(latestFileUrl(image))">
@@ -252,8 +252,8 @@
 
       <template #prints>
         <div @dragover.prevent @drop.prevent="handleDropPrint">
-          <input id="PrintUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangePrint" />
-          <div style="display: flex; align-items: center">
+          <input id="PrintUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangePrint" />
+          <div class="flex items-center">
             <ButtonGroup>
               <Button variant="outline" size="sm" @click="refreshPrintTable">
                 <RefreshCw />
@@ -268,16 +268,16 @@
               v-model="printUploadNote"
               :rows="1"
               :maxlength="32"
-              style="margin-left: 8px; width: 300px"
+              class="ml-2 w-[300px]"
               :placeholder="t('dialog.gallery_icons.note')"
               input-class="resize-none min-h-0"
             />
-            <label class="inline-flex items-center gap-2" style="margin-left: 8px; margin-right: 8px">
+            <label class="inline-flex items-center gap-2 ml-2 mr-2">
               <Checkbox v-model="printCropBorder" />
               <span>{{ t("dialog.gallery_icons.crop_print_border") }}</span>
             </label>
           </div>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
             <Item v-for="image in printTable" :key="image.id" variant="outline" size="sm" class="p-0 x-hover-card hover:bg-accent hover:shadow-sm" as-child>
               <div class="overflow-hidden">
                 <ItemHeader class="cursor-pointer" @click="openFullscreen(image.files.image, getPrintFileName(image))">
@@ -340,7 +340,7 @@
               </SelectContent>
             </Select>
           </div>
-          <ItemGroup class="grid gap-3 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+          <ItemGroup class="grid gap-3 mt-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
             <Item
               v-for="item in filteredInventoryTable"
               :key="item.id"

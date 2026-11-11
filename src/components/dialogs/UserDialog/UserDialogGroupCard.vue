@@ -12,13 +12,13 @@
       <span class="block truncate font-medium leading-4.5" v-text="group.name"></span>
       <span class="truncate text-xs inline-flex! items-center">
         <TooltipWrapper v-if="group.isRepresenting" side="top" :content="t('dialog.group.members.representing')">
-          <Tag style="margin-right: 6px" />
+          <Tag class="mr-1.5" />
         </TooltipWrapper>
         <TooltipWrapper v-if="memberVisibility !== 'visible'" side="top">
           <template #content>
             <span>{{ t("dialog.group.members.visibility") }} {{ memberVisibility }}</span>
           </template>
-          <Eye style="margin-right: 6px" />
+          <Eye class="mr-1.5" />
         </TooltipWrapper>
         <span>({{ group.memberCount }})</span>
       </span>

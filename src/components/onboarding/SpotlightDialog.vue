@@ -19,14 +19,14 @@
         <div
           v-for="(feature, index) in features"
           :key="feature.key"
-          class="flex h-full animate-[feature-appear_0.4s_ease-out_both] cursor-default flex-col items-center rounded-[10px] border border-transparent bg-muted/50 px-2 py-3.5 pb-3 text-center transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-muted/80 hover:shadow-[0_4px_16px_hsl(from_var(--primary)_h_s_l/0.08)]"
-          :style="{ animationDelay: `${0.1 + index * 0.1}s` }"
+          class="flex h-full feature-tile cursor-default flex-col items-center rounded-[10px] border border-transparent bg-muted/50 px-2 py-3.5 pb-3 text-center transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/25 hover:bg-muted/80 hover:shadow-[0_4px_16px_hsl(from_var(--primary)_h_s_l/0.08)]"
+          :style="{ '--feature-delay': `${0.1 + index * 0.1}s` }"
         >
           <div
-            class="mb-2.5 flex size-10 items-center justify-center rounded-[10px] transition-all duration-250"
+            class="mb-2.5 flex size-10 items-center justify-center rounded-[10px] transition-all duration-250 [background:var(--feature-background)] [color:var(--feature-colour)]"
             :style="{
-              background: `hsl(${feature.hue} 60% 50% / 0.12)`,
-              color: `hsl(${feature.hue} 60% 55%)`,
+              '--feature-background': `hsl(${feature.hue} 60% 50% / 0.12)`,
+              '--feature-colour': `hsl(${feature.hue} 60% 55%)`,
             }"
           >
             <component :is="feature.icon" class="size-5" />
@@ -86,7 +86,13 @@ async function handleDismiss() {
 }
 </script>
 
-<style>
+<style scoped>
+.feature-tile {
+  --feature-delay: 0s;
+
+  animation: feature-appear 0.4s ease-out var(--feature-delay) both;
+}
+
 @keyframes feature-appear {
   from {
     opacity: 0;

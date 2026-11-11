@@ -19,7 +19,7 @@
           </template>
         </InputGroupAction>
 
-        <Button size="sm" style="margin-top: 6px" @click="addProvider">
+        <Button size="sm" class="mt-[6px]" @click="addProvider">
           {{ t("dialog.avatar_database_provider.add_provider") }}
         </Button>
       </div>

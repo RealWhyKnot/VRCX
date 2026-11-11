@@ -1,8 +1,8 @@
 <template>
   <div class="mt-5">
-    <div class="gap-2 mb-2" style="display: flex; align-items: center; flex-wrap: wrap">
+    <div class="gap-2 mb-2 flex items-center flex-wrap">
       <Select :model-value="photonEventTableTypeFilter" multiple @update:model-value="handlePhotonEventTypeFilterChange">
-        <SelectTrigger style="width: 220px">
+        <SelectTrigger class="w-[220px]">
           <SelectValue :placeholder="t('view.player_list.photon.filter_placeholder')" />
         </SelectTrigger>
         <SelectContent>
@@ -13,7 +13,7 @@
         v-model="photonEventTableFilter"
         :placeholder="t('view.player_list.photon.search_placeholder')"
         clearable
-        style="width: 150px"
+        class="w-[150px]"
         @input="photonEventTableFilterChange"
       />
       <Button variant="outline" @click="emitShowChatboxBlacklist">{{ t("view.player_list.photon.chatbox_blacklist") }}</Button>
@@ -39,14 +39,13 @@
       </template>
       <template #previous>
         <DataTableLayout
-          class="min-w-0 w-full"
+          class="min-w-0 w-full mb-2"
           :table="previousTable"
           :loading="false"
           :table-style="tableStyle"
           :page-sizes="pageSizes"
           :total-items="previousTotal"
           :on-page-size-change="handlePreviousPageSizeChange"
-          style="margin-bottom: 8px"
         />
       </template>
     </TabsUnderline>

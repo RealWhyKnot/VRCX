@@ -19,10 +19,10 @@
           class="absolute inset-0 size-full mt-6"
         >
           <path
-            style="fill: black"
+            class="[fill:var(--color-position-preview-frame)]"
             d="M291.89,5A3.11,3.11,0,0,1,295,8.11V160.64a3.11,3.11,0,0,1-3.11,3.11H8.11A3.11,3.11,0,0,1,5,160.64V8.11A3.11,3.11,0,0,1,8.11,5H291.89m0-5H8.11A8.11,8.11,0,0,0,0,8.11V160.64a8.11,8.11,0,0,0,8.11,8.11H291.89a8.11,8.11,0,0,0,8.11-8.11V8.11A8.11,8.11,0,0,0,291.89,0Z"
           />
-          <rect style="fill: #c4c4c4" x="5" y="5" width="290" height="158.75" rx="2.5" />
+          <rect class="[fill:var(--color-position-preview-screen)]" x="5" y="5" width="290" height="158.75" rx="2.5" />
         </svg>
         <RadioGroup :model-value="notificationPosition" class="absolute inset-0" @update:model-value="handleNotificationPositionChange">
           <RadioGroupItem
@@ -78,7 +78,7 @@
       </div>
 
       <DialogFooter>
-        <div style="display: flex">
+        <div class="flex">
           <Button @click="closeDialog">
             {{ t("dialog.notification_position.ok") }}
           </Button>

@@ -7,7 +7,7 @@
       <div class="options-container-item">
         <span class="name">{{ t("view.settings.appearance.appearance.bio_language") }}</span>
         <Select :model-value="bioLanguage" @update:model-value="handleBioLanguageChange">
-          <SelectTrigger size="sm" style="float: right">
+          <SelectTrigger size="sm" class="float-right">
             <SelectValue :placeholder="String(getLanguageName(bioLanguage) || bioLanguage || '')" />
           </SelectTrigger>
           <SelectContent>
@@ -25,7 +25,7 @@
           <FieldLabel>{{ t("dialog.translation_api.mode") }}</FieldLabel>
           <FieldContent>
             <Select :model-value="form.translationApiType" @update:model-value="handleTranslationApiTypeChange">
-              <SelectTrigger size="sm" style="width: 100%">
+              <SelectTrigger size="sm" class="w-full">
                 <SelectValue :placeholder="t('dialog.translation_api.mode')" />
               </SelectTrigger>
               <SelectContent>
@@ -76,7 +76,7 @@
               <div class="flex gap-2 items-start">
                 <div class="flex-1">
                   <Select v-if="availableModels.length > 0" :model-value="form.translationApiModel" @update:model-value="handleTranslationApiModelChange">
-                    <SelectTrigger size="sm" style="width: 100%">
+                    <SelectTrigger size="sm" class="w-full">
                       <SelectValue :placeholder="t('dialog.translation_api.openai.model')" />
                     </SelectTrigger>
                     <SelectContent>

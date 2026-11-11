@@ -1,6 +1,6 @@
 <template>
-  <div style="width: 100%">
-    <div class="mt-15" style="height: 25px">
+  <div class="w-full">
+    <div class="mt-15 h-[25px]">
       <transition name="el-fade-in-linear">
         <Location
           v-show="!isLoading"
@@ -12,7 +12,7 @@
     </div>
 
     <div v-if="hasChartData" ref="activityDetailChartRef"></div>
-    <div v-else style="display: flex; justify-content: center; align-items: center; min-height: 160px; width: 100%">
+    <div v-else class="flex justify-center items-center min-h-[160px] w-full">
       <DataTableEmpty type="nodata" />
     </div>
   </div>

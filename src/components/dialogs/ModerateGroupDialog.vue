@@ -21,7 +21,7 @@
           </div>
         </div>
 
-        <div class="mt-4" style="width: 100%">
+        <div class="mt-4 w-full">
           <VirtualCombobox
             :model-value="moderateGroupDialog.groupId"
             :groups="groupPickerGroups"

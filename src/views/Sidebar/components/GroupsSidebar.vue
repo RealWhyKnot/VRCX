@@ -2,17 +2,20 @@
   <div class="relative h-full">
     <div ref="scrollViewportRef" class="h-full w-full overflow-auto">
       <div class="px-1.5 py-2.5">
-        <div v-if="virtualRows.length" class="relative w-full box-border" :style="virtualContainerStyle">
+        <div v-if="virtualRows.length" class="relative w-full box-border h-[var(--virtual-height)]" :style="virtualContainerStyle">
           <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
             <div
               v-if="item.row"
               :ref="measureRowElement"
-              class="absolute left-0 top-0 w-full box-border"
+              class="absolute left-0 top-0 w-full box-border [transform:translateY(var(--row-start))]"
               :data-index="item.virtualItem.index"
               :style="rowStyle(item)"
             >
               <template v-if="item.row.type === 'group-header'">
-                <div class="cursor-pointer pt-4 pb-1.5 text-xs" :style="item.row.headerPaddingTop ? { paddingTop: item.row.headerPaddingTop } : undefined">
+                <div
+                  class="cursor-pointer pb-1.5 text-xs [padding-top:var(--header-padding-top,1rem)]"
+                  :style="item.row.headerPaddingTop ? { '--header-padding-top': item.row.headerPaddingTop } : undefined"
+                >
                   <div class="flex items-center" @click="toggleGroupSidebarCollapse(item.row.groupId)">
                     <ChevronDown class="transition-transform duration-200 ease-in-out" :class="{ '-rotate-90': item.row.isCollapsed }" />
                     <span class="ml-1.5"> {{ item.row.label }} – {{ item.row.count }} </span>
@@ -179,13 +182,12 @@ const virtualItems = computed<VirtualRowItem[]>(() =>
 );
 
 const virtualContainerStyle = computed<CSSProperties>(() => ({
-  height: `${virtualizer.value.getTotalSize()}px`,
-  width: "100%",
+  "--virtual-height": `${virtualizer.value.getTotalSize()}px`,
 }));
 
 function rowStyle(item: VirtualRowItem): CSSProperties {
   return {
-    transform: `translateY(${item.virtualItem.start}px)`,
+    "--row-start": `${item.virtualItem.start}px`,
   };
 }
 

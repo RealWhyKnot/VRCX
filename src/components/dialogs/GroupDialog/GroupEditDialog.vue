@@ -141,8 +141,8 @@
                   @update:model-value="updateLink(index, $event)"
                 >
                   <template #leading>
-                    <img v-if="link" :src="getFaviconUrl(link)" style="width: 16px; height: 16px; vertical-align: middle" />
-                    <div v-else style="width: 16px; height: 16px" />
+                    <img v-if="link" :src="getFaviconUrl(link)" class="w-[16px] h-[16px] align-middle" />
+                    <div v-else class="w-[16px] h-[16px]" />
                   </template>
                   <template #actions>
                     <Button

@@ -11,7 +11,7 @@
           <br />
         </template>
         <template v-else>
-          <div v-if="VRCXUpdateDialog.updatePending" style="margin-bottom: 16px">
+          <div v-if="VRCXUpdateDialog.updatePending" class="mb-[16px]">
             <span>{{ pendingVRCXInstall }}</span>
             <br />
             <span>{{ t("dialog.vrcx_updater.ready_for_update") }}</span>

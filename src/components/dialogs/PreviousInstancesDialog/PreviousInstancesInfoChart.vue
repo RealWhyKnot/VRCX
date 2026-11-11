@@ -1,7 +1,7 @@
 <template>
   <div ref="chartContainerRef" class="w-full">
     <div v-if="hasChartData" ref="chartRef"></div>
-    <div v-else class="flex items-center justify-center" style="min-height: 200px">
+    <div v-else class="flex items-center justify-center min-h-[200px]">
       <DataTableEmpty type="nodata" />
     </div>
   </div>

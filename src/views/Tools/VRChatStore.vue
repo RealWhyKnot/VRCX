@@ -9,7 +9,7 @@
     </div>
 
     <div class="shrink-0 my-2 flex items-center justify-end gap-2">
-      <InputGroupSearch v-model="searchText" :placeholder="t('view.tools.marketplace.search_placeholder')" style="width: 200px" />
+      <InputGroupSearch v-model="searchText" :placeholder="t('view.tools.marketplace.search_placeholder')" class="w-[200px]" />
       <span v-if="currentUserCredits !== null" class="text-sm text-muted-foreground">
         {{ t("view.tools.marketplace.credits", { credits: commaNumber(currentUserCredits) }) }}
       </span>
@@ -53,7 +53,7 @@
             <span v-text="shelf.shelfTitle" />
           </div>
           <div v-if="shelf.shelfDescription" class="mb-2 text-sm text-muted-foreground" v-text="shelf.shelfDescription" />
-          <ItemGroup v-if="shelf.listings.length > 0" class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+          <ItemGroup v-if="shelf.listings.length > 0" class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
             <Item v-for="listing in shelf.listings" :key="listing.id" variant="outline" size="sm" class="p-3" as-child>
               <div class="overflow-hidden">
                 <ItemHeader class="relative">

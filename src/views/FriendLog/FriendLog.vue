@@ -1,5 +1,5 @@
 <template>
-  <div class="x-container x-container--auto-height">
+  <div class="x-container x-container-auto-height">
     <DataTableLayout
       :table="table"
       :loading="friendLogTable.loading"
@@ -9,9 +9,9 @@
       :on-page-size-change="handlePageSizeChange"
     >
       <template #toolbar>
-        <div class="mt-0 mx-0 mb-2" style="display: flex; align-items: center">
+        <div class="mt-0 mx-0 mb-2 flex items-center">
           <Select multiple :model-value="friendLogTypeFilter" @update:model-value="handleFriendLogFilterChange">
-            <SelectTrigger class="w-full" style="flex: 1">
+            <SelectTrigger class="w-full flex-1">
               <SelectValue :placeholder="t('view.friend_log.filter_placeholder')" />
             </SelectTrigger>
             <SelectContent>
@@ -26,7 +26,7 @@
               </SelectGroup>
             </SelectContent>
           </Select>
-          <InputGroupField v-model="friendLogSearch" class="ml-2" :placeholder="t('view.friend_log.search_placeholder')" style="flex: 0.4" />
+          <InputGroupField v-model="friendLogSearch" class="ml-2 flex-[0.4]" :placeholder="t('view.friend_log.search_placeholder')" />
         </div>
       </template>
     </DataTableLayout>

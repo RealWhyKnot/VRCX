@@ -296,7 +296,13 @@ const headerClass = computed(() => {
 
 .tabs-underline-viewport[data-scroll-left],
 .tabs-underline-viewport[data-scroll-right] {
-  mask-image: linear-gradient(to right, transparent, black var(--tabs-fade-left), black calc(100% - var(--tabs-fade-right)), transparent);
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    var(--color-mask-opaque) var(--tabs-fade-left),
+    var(--color-mask-opaque) calc(100% - var(--tabs-fade-right)),
+    transparent
+  );
 }
 
 .tabs-underline-viewport::-webkit-scrollbar {

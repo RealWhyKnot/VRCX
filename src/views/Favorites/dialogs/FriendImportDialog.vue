@@ -4,9 +4,9 @@
       <DialogHeader>
         <DialogTitle>{{ t("dialog.friend_import.header") }}</DialogTitle>
       </DialogHeader>
-      <div style="display: flex; align-items: center; justify-content: space-between">
+      <div class="flex items-center justify-between">
         <div class="text-xs">{{ t("dialog.friend_import.description") }}</div>
-        <div style="display: flex; align-items: center">
+        <div class="flex items-center">
           <div v-if="friendImportDialog.progress">
             {{ t("dialog.friend_import.process_progress") }} {{ friendImportDialog.progress }} /
             {{ friendImportDialog.progressTotal }}
@@ -84,17 +84,10 @@
         <Button size="sm" variant="secondary" @click="friendImportDialog.errors = ''">
           {{ t("dialog.friend_import.clear_errors") }}
         </Button>
-        <h2 class="my-1.5 mx-0" style="font-weight: bold">{{ t("dialog.friend_import.errors") }}</h2>
+        <h2 class="my-1.5 mx-0 font-bold">{{ t("dialog.friend_import.errors") }}</h2>
         <pre class="whitespace-pre-wrap text-xs" v-text="friendImportDialog.errors"></pre>
       </template>
-      <DataTableLayout
-        class="min-w-0 w-full"
-        :table="table"
-        :loading="friendImportDialog.loading"
-        :table-style="tableStyle"
-        :show-pagination="false"
-        style="margin-top: 8px"
-      />
+      <DataTableLayout class="min-w-0 w-full mt-2" :table="table" :loading="friendImportDialog.loading" :table-style="tableStyle" :show-pagination="false" />
     </DialogContent>
   </Dialog>
 </template>

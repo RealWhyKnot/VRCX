@@ -5,15 +5,14 @@
         t("dialog.group.members.all_members")
       }}</span>
       <span v-else class="text-base font-bold">{{ t("dialog.group.members.friends_only") }}</span>
-      <div style="margin-top: 8px">
+      <div class="mt-[8px]">
         <Button class="rounded-full h-6 w-6" variant="ghost" size="icon-sm" :loading="isGroupMembersLoading" circle @click="loadAllGroupMembers">
           <Spinner v-if="isGroupMembersLoading" /><RefreshCcw v-else
         /></Button>
         <Button
-          class="rounded-full h-6 w-6 ml-2"
+          class="rounded-full h-6 w-6 ml-[6px]"
           size="icon-sm"
           variant="ghost"
-          style="margin-left: 6px"
           @click="downloadAndSaveJson(`${groupDialog.id}_members`, groupDialog.members)"
         >
           <Download class="h-4 w-4" />
@@ -22,8 +21,8 @@
           >{{ groupDialog.memberSearchResults.length }}/{{ groupDialog.ref.memberCount }}</span
         >
         <span v-else class="text-sm mx-1.5">{{ groupDialog.members.length }}/{{ groupDialog.ref.memberCount }}</span>
-        <div v-if="hasGroupPermission(groupDialog.ref, 'group-members-manage')" style="float: right" class="flex items-center">
-          <span style="margin-right: 6px">{{ t("dialog.group.members.sort_by") }}</span>
+        <div v-if="hasGroupPermission(groupDialog.ref, 'group-members-manage')" class="float-right flex items-center">
+          <span class="mr-[6px]">{{ t("dialog.group.members.sort_by") }}</span>
           <Select v-model="groupDialogMemberSortValue" :disabled="isGroupMembersLoading || groupDialog.memberSearch.length > 0">
             <SelectTrigger class="h-8 w-45 mr-1">
               <SelectValue :placeholder="t('dialog.group.members.sort_by')" />
@@ -35,7 +34,7 @@
             </SelectContent>
           </Select>
           <span class="ml-2 mr-1">{{ t("dialog.group.members.filter") }}</span>
-          <div style="display: inline-block; width: 220px">
+          <div class="inline-block w-[220px]">
             <VirtualCombobox
               v-model="groupDialogMemberFilterKey"
               :groups="groupDialogMemberFilterGroups"
@@ -64,11 +63,7 @@
         />
       </div>
     </div>
-    <div
-      v-if="groupDialog.memberSearch.length"
-      class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-wrap items-start pt-2"
-      style="min-width: 130px"
-    >
+    <div v-if="groupDialog.memberSearch.length" class="min-h-0 min-w-[130px] flex-1 overflow-y-auto overflow-x-hidden flex flex-wrap items-start pt-2">
       <div
         v-for="user in groupDialog.memberSearchResults"
         :key="user.id"
@@ -85,20 +80,24 @@
           <IconFrame :icon-frame="user.user?.iconFrame ?? ''" />
         </div>
         <div class="flex-1 overflow-hidden">
-          <span class="block truncate font-medium leading-[18px]" :style="{ color: user.user?.$userColour }" v-text="user.user?.displayName" />
+          <span
+            class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+            :style="{ '--user-colour': user.user?.$userColour }"
+            v-text="user.user?.displayName"
+          />
           <span class="block truncate text-xs">
             <template v-if="hasGroupPermission(groupDialog.ref, 'group-members-manage')">
               <TooltipWrapper v-if="user.isRepresenting" side="top" :content="t('dialog.group.members.representing')">
-                <Tag style="margin-right: 6px" />
+                <Tag class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="user.visibility !== 'visible'" side="top">
                 <template #content>
                   <span>{{ t("dialog.group.members.visibility") }} {{ user.visibility }}</span>
                 </template>
-                <Eye style="margin-right: 6px" />
+                <Eye class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="!user.isSubscribedToAnnouncements" side="top" :content="t('dialog.group.members.unsubscribed_announcements')">
-                <MessageSquare style="margin-right: 6px" />
+                <MessageSquare class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="user.managerNotes" side="top">
                 <template #content>
@@ -106,7 +105,7 @@
                   <br />
                   <span>{{ user.managerNotes }}</span>
                 </template>
-                <Pencil style="margin-right: 6px" />
+                <Pencil class="mr-[6px]" />
               </TooltipWrapper>
             </template>
             <span :title="getUserRoleNamesText(user.roleIds)">
@@ -118,8 +117,7 @@
     </div>
     <ul
       v-else-if="groupDialog.members.length > 0"
-      class="infinite-list min-h-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-wrap items-start pt-2"
-      style="min-width: 130px"
+      class="infinite-list min-h-0 min-w-[130px] flex-1 overflow-y-auto overflow-x-hidden flex flex-wrap items-start pt-2"
     >
       <li
         v-for="user in groupDialog.members"
@@ -137,20 +135,24 @@
           <IconFrame :icon-frame="user.user?.iconFrame ?? ''" />
         </div>
         <div class="flex-1 overflow-hidden">
-          <span class="block truncate font-medium leading-[18px]" :style="{ color: user.user?.$userColour }" v-text="user.user?.displayName" />
+          <span
+            class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+            :style="{ '--user-colour': user.user?.$userColour }"
+            v-text="user.user?.displayName"
+          />
           <span class="block truncate text-xs">
             <template v-if="hasGroupPermission(groupDialog.ref, 'group-members-manage')">
               <TooltipWrapper v-if="user.isRepresenting" side="top" :content="t('dialog.group.members.representing')">
-                <Tag style="margin-right: 6px" />
+                <Tag class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="user.visibility !== 'visible'" side="top">
                 <template #content>
                   <span>{{ t("dialog.group.members.visibility") }} {{ user.visibility }}</span>
                 </template>
-                <Eye style="margin-right: 6px" />
+                <Eye class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="!user.isSubscribedToAnnouncements" side="top" :content="t('dialog.group.members.unsubscribed_announcements')">
-                <MessageSquare style="margin-right: 6px" />
+                <MessageSquare class="mr-[6px]" />
               </TooltipWrapper>
               <TooltipWrapper v-if="user.managerNotes" side="top">
                 <template #content>
@@ -158,7 +160,7 @@
                   <br />
                   <span>{{ user.managerNotes }}</span>
                 </template>
-                <Pencil style="margin-right: 6px" />
+                <Pencil class="mr-[6px]" />
               </TooltipWrapper>
             </template>
             <span :title="getUserRoleNamesText(user.roleIds)">
@@ -169,8 +171,7 @@
       </li>
       <div
         v-if="!isGroupMembersDone"
-        class="box-border flex items-center p-1.5 text-[13px] cursor-pointer"
-        style="width: 100%; height: 45px; text-align: center"
+        class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-full h-[45px] text-center"
         @click="loadMoreGroupMembers()"
       >
         <div v-if="!isGroupMembersLoading" class="flex-1 overflow-hidden">

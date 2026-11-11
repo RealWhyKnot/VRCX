@@ -358,8 +358,7 @@
               </div>
               <div
                 v-if="avatarDialog.galleryImages.length || isAvatarOwner"
-                class="h-full min-h-0 overflow-y-auto flex flex-wrap content-start items-start rounded-xl bg-(--profile-card) p-3"
-                style="max-height: unset"
+                class="h-full min-h-0 max-h-[unset] overflow-y-auto flex flex-wrap content-start items-start rounded-xl bg-(--profile-card) p-3"
               >
                 <div class="w-full">
                   <div class="flex justify-between text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
@@ -379,7 +378,7 @@
                       <Upload class="text-[10px]" />
                     </Button>
                   </div>
-                  <input id="AvatarGalleryUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeAvatarGallery" />
+                  <input id="AvatarGalleryUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeAvatarGallery" />
 
                   <div class="mt-2 w-[80%] ml-20">
                     <Carousel v-if="avatarDialog.galleryImages.length" class="w-full" @init-api="onGalleryCarouselInit">
@@ -388,7 +387,7 @@
                           <div class="relative h-50 w-full">
                             <img
                               :src="image.url"
-                              style="width: 100%; height: 100%; object-fit: contain; cursor: pointer"
+                              class="w-full h-full object-contain cursor-pointer"
                               loading="lazy"
                               @click="showFullscreenImageDialog(image.url)"
                             />
@@ -421,7 +420,7 @@
                                 <Trash2 />
                               </Button>
                             </div>
-                            <div class="absolute inset-0 items-center justify-center bg-muted" style="display: none">
+                            <div class="hidden absolute inset-0 items-center justify-center bg-muted">
                               <Image class="size-8 text-muted-foreground" />
                             </div>
                           </div>
@@ -456,8 +455,8 @@
                   </div>
                   <div class="flex-1 overflow-hidden">
                     <span class="block truncate font-medium leading-[18px]">{{ listing.displayName }}</span>
-                    <span class="block truncate text-xs" style="text-decoration: underline; font-style: italic">${{ commaNumber(listing.priceTokens) }}V</span>
-                    <span class="block truncate text-xs" style="text-overflow: ellipsis; text-wrap: auto" v-text="listing.description"></span>
+                    <span class="block truncate text-xs italic [text-decoration:underline]">${{ commaNumber(listing.priceTokens) }}V</span>
+                    <span class="block truncate text-xs [text-wrap:auto]" v-text="listing.description"></span>
                   </div>
                   <Button
                     size="sm"
@@ -502,7 +501,7 @@
       <template v-if="avatarDialog.visible">
         <SetAvatarTagsDialog v-model:set-avatar-tags-dialog="setAvatarTagsDialog" />
         <SetAvatarStylesDialog v-model:set-avatar-styles-dialog="setAvatarStylesDialog" />
-        <input id="AvatarImageUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeAvatarImage" />
+        <input id="AvatarImageUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeAvatarImage" />
         <ImageCropDialog
           :open="cropDialogOpen"
           :title="t('dialog.change_content_image.avatar')"

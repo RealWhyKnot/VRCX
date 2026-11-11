@@ -7,7 +7,7 @@
       }
     "
   >
-    <DialogContent class="x-dialog sm:max-w-125 translate-y-0" style="top: 10vh" :show-close-button="false">
+    <DialogContent class="x-dialog sm:max-w-125 translate-y-0 top-[10vh]" :show-close-button="false">
       <DialogHeader>
         <DialogTitle>{{ t("dialog.user.note_memo.header") }}</DialogTitle>
       </DialogHeader>

@@ -33,13 +33,13 @@
         <Button size="sm" variant="outline" @click="errors = ''">
           {{ t("dialog.note_export.clear_errors") }}
         </Button>
-        <h2 class="m-0" style="font-weight: bold">
+        <h2 class="m-0 font-bold">
           {{ t("dialog.note_export.errors") }}
         </h2>
         <pre class="whitespace-pre-wrap text-xs" v-text="errors"></pre>
       </template>
 
-      <DataTableLayout class="min-w-0 w-full" :table="table" :loading="loading" :table-style="tableStyle" :show-pagination="false" style="margin-top: 8px" />
+      <DataTableLayout class="min-w-0 w-full mt-2" :table="table" :loading="loading" :table-style="tableStyle" :show-pagination="false" />
     </DialogContent>
   </Dialog>
 </template>

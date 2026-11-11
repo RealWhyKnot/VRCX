@@ -11,7 +11,7 @@
         </span>
       </div>
     </div>
-    <div ref="chartRef" style="width: 100%; height: 200px" />
+    <div ref="chartRef" class="w-full h-[200px]" />
   </div>
 </template>
 

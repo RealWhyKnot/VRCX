@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden p-2 rounded-xl bg-(--profile-card)">
-    <div class="shrink-0" style="display: flex; align-items: center; justify-content: space-between">
-      <div style="display: flex; align-items: center">
+    <div class="shrink-0 flex items-center justify-between">
+      <div class="flex items-center">
         <Button class="rounded-full" variant="ghost" size="icon-sm" :disabled="userDialog.isGroupsLoading" @click="getUserGroups(userDialog.id)">
           <Spinner v-if="userDialog.isGroupsLoading" />
           <RefreshCw v-else />
@@ -11,10 +11,10 @@
           <span class="text-[10px] ml-2">{{ t("dialog.user.groups.hold_shift") }}</span>
         </template>
       </div>
-      <div style="display: flex; align-items: center">
+      <div class="flex items-center">
         <template v-if="!userDialogGroupEditMode">
           <Input v-model="groupSearchQuery" class="h-8 w-40 mr-2" :placeholder="t('dialog.user.groups.search_placeholder')" @click.stop />
-          <span style="margin-right: 6px">{{ t("dialog.user.groups.sort_by") }}</span>
+          <span class="mr-1.5">{{ t("dialog.user.groups.sort_by") }}</span>
           <Select :model-value="userDialogGroupSortingKey" :disabled="userDialog.isGroupsLoading" @update:model-value="selectUserDialogGroupSorting">
             <SelectTrigger size="sm" @click.stop>
               <SelectValue />
@@ -40,11 +40,11 @@
       </div>
     </div>
     <div class="min-h-0 flex-1 overflow-auto">
-      <div style="margin-top: 8px">
+      <div class="mt-2">
         <template v-if="userDialogGroupEditMode">
-          <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px; max-height: unset">
+          <div class="flex flex-wrap items-start mt-2 mb-4 max-h-[unset]">
             <Select :model-value="bulkGroupActionValue" @update:model-value="handleBulkGroupAction">
-              <SelectTrigger size="sm" style="margin-right: 6px; margin-bottom: 6px" @click.stop>
+              <SelectTrigger size="sm" class="mr-1.5 mb-1.5" @click.stop>
                 <SelectValue :placeholder="t('dialog.group.actions.manage_selected')" />
               </SelectTrigger>
               <SelectContent>
@@ -63,7 +63,7 @@
               </SelectContent>
             </Select>
 
-            <Button size="sm" variant="outline" style="padding: 7px 16px; margin-bottom: 6px" @click="selectAllGroups">
+            <Button size="sm" variant="outline" class="p-[7px_16px] mb-1.5" @click="selectAllGroups">
               {{ userDialogGroupAllSelected ? t("dialog.group.actions.deselect_all") : t("dialog.group.actions.select_all") }}
             </Button>
 
@@ -73,48 +73,38 @@
               class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-full hover:rounded-[25px_5px_5px_25px]"
               @click="showGroupDialog(group.id ?? '')"
             >
-              <div style="margin-left: 6px; margin-right: 6px; transform: scale(0.8); transform-origin: left center" @click.stop>
+              <div class="ml-1.5 mr-1.5 [transform:scale(0.8)] [transform-origin:left_center]" @click.stop>
                 <Checkbox
                   :model-value="userDialogGroupEditSelectedGroupIds.includes(group.id ?? '')"
                   @update:model-value="() => toggleGroupSelection(group.id ?? '')"
                 />
               </div>
 
-              <div style="margin-right: 3px; margin-left: 6px" @click.stop>
+              <div class="mr-[3px] ml-1.5" @click.stop>
                 <Button
                   size="icon-sm"
                   variant="outline"
                   :aria-label="t('dialog.vrcx_updater.download')"
-                  style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0"
+                  class="flex items-center justify-center p-[7px] ml-0"
                   @click="moveGroupTop(group.id ?? '')"
                 >
-                  <DownloadIcon class="size-3.5 shrink-0" style="transform: rotate(180deg)" />
+                  <DownloadIcon class="size-3.5 shrink-0 [transform:rotate(180deg)]" />
                 </Button>
                 <Button
                   size="icon-sm"
                   variant="outline"
                   :aria-label="t('dialog.vrcx_updater.download')"
-                  style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0; margin-top: 4px"
+                  class="flex items-center justify-center p-[7px] ml-0 mt-1"
                   @click="moveGroupBottom(group.id ?? '')"
                 >
                   <DownloadIcon class="size-3.5 shrink-0" />
                 </Button>
               </div>
-              <div style="margin-right: 8px" @click.stop>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0"
-                  @click="moveGroupUp(group.id ?? '')"
-                >
+              <div class="mr-2" @click.stop>
+                <Button size="icon-sm" variant="outline" class="flex items-center justify-center p-[7px] ml-0" @click="moveGroupUp(group.id ?? '')">
                   <ArrowUp class="size-3.5 shrink-0" />
                 </Button>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  style="display: flex; align-items: center; justify-content: center; padding: 7px; margin-left: 0; margin-top: 4px"
-                  @click="moveGroupDown(group.id ?? '')"
-                >
+                <Button size="icon-sm" variant="outline" class="flex items-center justify-center p-[7px] ml-0 mt-1" @click="moveGroupDown(group.id ?? '')">
                   <ArrowDown class="size-3.5 shrink-0" />
                 </Button>
               </div>
@@ -130,13 +120,13 @@
                 <span class="block truncate font-medium leading-[18px]" v-text="group.name"></span>
                 <span class="block truncate text-xs">
                   <TooltipWrapper v-if="group.isRepresenting" side="top" :content="t('dialog.group.members.representing')">
-                    <Tag style="margin-right: 6px" />
+                    <Tag class="mr-1.5" />
                   </TooltipWrapper>
                   <TooltipWrapper v-if="group.myMember?.visibility !== 'visible'" side="top">
                     <template #content>
                       <span>{{ t("dialog.group.members.visibility") }} {{ group.myMember?.visibility }}</span>
                     </template>
-                    <Eye style="margin-right: 6px" />
+                    <Eye class="mr-1.5" />
                   </TooltipWrapper>
                   <span>({{ group.memberCount }})</span>
                 </span>
@@ -179,10 +169,9 @@
               >
                 <Button
                   v-if="shiftHeld"
-                  class="rounded-full h-6 w-6"
+                  class="rounded-full h-6 w-6 ml-1.5"
                   size="icon-sm"
                   variant="outline"
-                  style="margin-left: 6px"
                   :aria-label="isSoleGroupOwner(group, currentUser.id) ? t('dialog.group.actions.delete') : t('dialog.user.groups.leave_group_tooltip')"
                   @click.stop="leaveGroup(group.id ?? '')"
                 >
@@ -191,10 +180,9 @@
                 </Button>
                 <Button
                   v-else
-                  class="rounded-full h-6 w-6 text-red-600"
+                  class="rounded-full h-6 w-6 text-red-600 ml-1.5"
                   size="icon-sm"
                   variant="outline"
-                  style="margin-left: 6px"
                   :aria-label="isSoleGroupOwner(group, currentUser.id) ? t('dialog.group.actions.delete') : t('dialog.user.groups.leave_group_tooltip')"
                   @click.stop="leaveGroupPrompt(group.id ?? '')"
                 >
@@ -206,7 +194,7 @@
           </div>
         </template>
         <template v-else-if="groupSearchActive">
-          <div class="flex flex-wrap items-start" style="margin-top: 8px">
+          <div class="flex flex-wrap items-start mt-2">
             <UserDialogGroupCard v-for="group in allFilteredGroups" :key="group.id ?? ''" :group="group" :can-manage="currentUser.id === userDialog.id" />
           </div>
         </template>
@@ -226,7 +214,7 @@
               </span>
             </TooltipWrapper>
           </div>
-          <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
+          <div class="flex flex-wrap items-start mt-2 mb-4">
             <UserDialogGroupCard
               v-for="group in userDialog.userGroups.ownGroups"
               :key="group.id ?? ''"
@@ -237,7 +225,7 @@
           <template v-if="userDialog.userGroups.mutualGroups.length > 0">
             <span class="text-base font-bold">{{ t("dialog.user.groups.mutual_groups") }}</span>
             <span class="text-xs ml-1.5">{{ userDialog.userGroups.mutualGroups.length }}</span>
-            <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
+            <div class="flex flex-wrap items-start mt-2 mb-4">
               <UserDialogGroupCard
                 v-for="group in userDialog.userGroups.mutualGroups"
                 :key="group.id ?? ''"
@@ -260,7 +248,7 @@
                 </template>
               </template>
             </span>
-            <div class="flex flex-wrap items-start" style="margin-top: 8px; margin-bottom: 16px">
+            <div class="flex flex-wrap items-start mt-2 mb-4">
               <UserDialogGroupCard
                 v-for="group in userDialog.userGroups.remainingGroups"
                 :key="group.id ?? ''"

@@ -1,24 +1,22 @@
 <template>
-  <div ref="playerListRef" class="x-container x-container--auto-height">
+  <div ref="playerListRef" class="x-container x-container-auto-height">
     <div class="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden">
-      <div v-if="currentInstanceWorld.ref.id" ref="playerListHeaderRef" style="display: flex; min-height: 120px" class="mb-7">
+      <div v-if="currentInstanceWorld.ref.id" ref="playerListHeaderRef" class="mb-7 flex min-h-[120px]">
         <img
           v-if="!worldImageError"
           :src="currentInstanceWorld.ref.thumbnailImageUrl"
-          class="cursor-pointer"
-          style="flex: none; width: 160px; height: 120px; border-radius: var(--radius-md)"
+          class="cursor-pointer flex-none w-[160px] h-[120px] rounded-(--radius-md)"
           loading="lazy"
           @click="showCurrentWorldImage"
           @error="worldImageError = true"
         />
-        <div v-else class="flex items-center justify-center bg-muted" style="flex: none; width: 160px; height: 120px; border-radius: var(--radius-md)">
+        <div v-else class="flex items-center justify-center bg-muted flex-none w-[160px] h-[120px] rounded-(--radius-md)">
           <Image class="size-8 text-muted-foreground" />
         </div>
-        <div class="ml-2" style="display: flex; flex-direction: column; min-width: 320px; width: 100%">
+        <div class="ml-2 flex flex-col min-w-[320px] w-full">
           <div class="flex items-center">
             <span
-              class="cursor-pointer"
-              style="font-weight: bold; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; line-clamp: 1"
+              class="cursor-pointer overflow-hidden text-ellipsis [font-weight:bold] [display:-webkit-box] [-webkit-box-orient:vertical] [line-clamp:1]"
               @click="showCurrentWorldDialog"
             >
               <Home v-if="currentUser.$homeLocation && currentUser.$homeLocation.worldId === currentInstanceWorld.ref.id" class="inline-block" />
@@ -89,7 +87,7 @@
             ></span>
           </div>
         </div>
-        <div class="ml-5" style="display: flex; flex-direction: column">
+        <div class="ml-5 flex flex-col">
           <div class="box-border flex items-center p-1.5 text-[13px] cursor-default">
             <div class="flex-1 overflow-hidden">
               <span class="block truncate font-medium leading-[18px]">{{ t("dialog.world.info.capacity") }}</span>

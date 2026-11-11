@@ -1,7 +1,7 @@
 <template>
   <div class="x-aside-container">
-    <div style="display: flex; align-items: baseline">
-      <div class="search-container p-2 pl-0" style="flex: 1">
+    <div class="flex items-baseline">
+      <div class="search-container p-2 pl-0 flex-1">
         <button
           type="button"
           class="border-input dark:bg-input/30 flex h-9 w-full items-center gap-2 rounded-md border bg-transparent px-3 shadow-xs transition-[color,box-shadow] hover:border-ring cursor-pointer overflow-hidden"
@@ -247,8 +247,7 @@
       :unmount-on-hide="false"
       variant="equal"
       fill
-      class="zero-margin-tabs"
-      style="height: calc(100% - 70px); margin-top: 6px"
+      class="zero-margin-tabs h-[calc(100%-70px)] mt-[6px]"
     >
       <template #label-friends>
         <span>{{ t("side_panel.friends") }}</span>
@@ -439,7 +438,7 @@ const sidebarTabs = computed(() => [
 }
 
 .sidebar-tab-count {
-  font-size: 12px;
+  font-size: 0.75rem;
   margin-left: 8px;
 }
 

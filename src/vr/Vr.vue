@@ -1,14 +1,14 @@
 <template>
   <div id="x-app" class="flex w-screen h-screen overflow-hidden cursor-default x-app-type">
     <div class="wrist" :class="{ background: config && config.backgroundEnabled }">
-      <div class="x-container" style="flex: 1">
-        <div ref="list" class="x-friend-list" style="color: var(--vr-text-secondary)">
+      <div class="x-container flex-1">
+        <div ref="list" class="x-friend-list [color:var(--vr-text-secondary)]">
           <WristFeedMinimal v-if="config && config.minimalFeed" :wrist-feed="wristFeed" :culture="currentCulture" :is-hour12="config.dtHour12" />
           <WristFeedFull v-else :wrist-feed="wristFeed" :culture="currentCulture" :is-hour12="config.dtHour12" />
         </div>
       </div>
       <div v-if="devices.length" class="x-containerbottom">
-        <div style="display: flex; flex-flow: row wrap">
+        <div class="flex [flex-flow:row_wrap]">
           <div v-for="(device, index) in devices" :key="`device-${index}-${device[0]}`" class="tracker-container">
             <div v-if="device[0] === 'headset'" class="tracker-device" :class="trackingResultToClass(device[4])">
               <img
@@ -65,35 +65,32 @@
       </div>
       <div class="x-containerbottom">
         <template v-if="nowPlaying.playing">
-          <span style="float: right; padding-left: 10px">{{ nowPlaying.remainingText }}</span>
+          <span class="float-right pl-[10px]">{{ nowPlaying.remainingText }}</span>
           <MarqueeText>{{ nowPlaying.name }}</MarqueeText>
           <div
-            class="np-progress-bar"
-            style="margin-left: 5px"
+            class="np-progress-bar ml-[5px]"
             :style="{ '--vr-np-progress': Number.isFinite(nowPlaying.percentage) ? nowPlaying.percentage + '%' : '0%' }"
           ></div>
         </template>
-        <div style="float: right">
-          <span v-if="!config?.minimalFeed" style="display: inline-block; margin-right: 5px">{{ t("vr.status.timer") }}</span>
-          <span v-if="lastLocationTimer" style="display: inline-block; margin-right: 5px">{{ lastLocationTimer }}</span>
-          <span v-if="lastLocationTimer && (onlineForTimer || pcUptime)" style="display: inline-block"> | </span>
-          <span v-if="onlineForTimer" style="display: inline-block; margin-left: 5px">{{ onlineForTimer }}</span>
-          <span v-if="pcUptime && onlineForTimer" style="display: inline-block; margin-left: 5px"> | </span>
-          <span v-if="pcUptime" style="display: inline-block; margin-left: 5px">{{ pcUptime }}</span>
+        <div class="float-right">
+          <span v-if="!config?.minimalFeed" class="inline-block mr-[5px]">{{ t("vr.status.timer") }}</span>
+          <span v-if="lastLocationTimer" class="inline-block mr-[5px]">{{ lastLocationTimer }}</span>
+          <span v-if="lastLocationTimer && (onlineForTimer || pcUptime)" class="inline-block"> | </span>
+          <span v-if="onlineForTimer" class="inline-block ml-[5px]">{{ onlineForTimer }}</span>
+          <span v-if="pcUptime && onlineForTimer" class="inline-block ml-[5px]"> | </span>
+          <span v-if="pcUptime" class="inline-block ml-[5px]">{{ pcUptime }}</span>
         </div>
         <template v-if="lastLocation.playerList.length">
-          <span v-if="!config?.minimalFeed" style="display: inline-block; margin-right: 5px">{{ t("vr.status.players") }}</span>
-          <span style="display: inline-block">{{ lastLocation.playerList.length }}</span>
+          <span v-if="!config?.minimalFeed" class="inline-block mr-[5px]">{{ t("vr.status.players") }}</span>
+          <span class="inline-block">{{ lastLocation.playerList.length }}</span>
         </template>
-        <span v-if="lastLocation.friendList.length" style="display: inline-block; font-weight: bold; margin-left: 5px"
-          >({{ lastLocation.friendList.length }})</span
-        >
+        <span v-if="lastLocation.friendList.length" class="inline-block font-bold ml-[5px]">({{ lastLocation.friendList.length }})</span>
 
         <br />
-        <span style="position: absolute; right: 10px">{{ currentTime }}</span>
-        <span v-if="config && cpuUsageEnabled" style="display: inline-block; margin-right: 5px">{{ t("vr.status.cpu") }} {{ cpuUsage }}%</span>
-        <span style="display: inline-block">{{ t("vr.status.online") }} {{ onlineFriendCount }}</span>
-        <span style="display: inline-block; margin-left: 5px">{{ customInfo }}</span>
+        <span class="absolute right-[10px]">{{ currentTime }}</span>
+        <span v-if="config && cpuUsageEnabled" class="inline-block mr-[5px]">{{ t("vr.status.cpu") }} {{ cpuUsage }}%</span>
+        <span class="inline-block">{{ t("vr.status.online") }} {{ onlineFriendCount }}</span>
+        <span class="inline-block ml-[5px]">{{ customInfo }}</span>
       </div>
     </div>
 
@@ -107,52 +104,52 @@
             <span v-if="feed.isMaster">👑</span><span v-if="feed.isModerator">⚔️</span
             ><strong class="name" :style="{ '--vr-name-colour': feed.colour }" v-text="feed.displayName"></strong>
             <template v-if="feed.type === 'ChangeAvatar'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">ChangeAvatar</span>
-              <span v-if="!feed.inCache" style="color: var(--vr-text-muted); margin-left: 10px"><Loader2 class="is-loading inline-block h-4 w-4" /> </span>
-              <span style="margin-left: 10px" v-text="feed.avatar.name"></span>
-              <span v-if="feed.avatar.releaseStatus === 'public'" style="margin-left: 10px; color: var(--status-online)">(Public)</span>
-              <span v-else-if="feed.avatar.releaseStatus === 'private'" style="margin-left: 10px; color: var(--status-askme)">(Private)</span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">ChangeAvatar</span>
+              <span v-if="!feed.inCache" class="[color:var(--vr-text-muted)] ml-[10px]"><Loader2 data-loading class="inline-block h-4 w-4" /> </span>
+              <span class="ml-[10px]" v-text="feed.avatar.name"></span>
+              <span v-if="feed.avatar.releaseStatus === 'public'" class="ml-[10px] [color:var(--status-online)]">(Public)</span>
+              <span v-else-if="feed.avatar.releaseStatus === 'private'" class="ml-[10px] [color:var(--status-askme)]">(Private)</span>
             </template>
             <template v-else-if="feed.type === 'ChangeStatus'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">ChangeStatus</span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">ChangeStatus</span>
               <span v-if="feed.status !== feed.previousStatus">
-                <i class="x-user-status" :class="statusClass(feed.previousStatus)" style="margin-left: 10px; width: 20px; height: 20px"></i>
+                <i class="x-user-status ml-[10px] w-[20px] h-[20px]" :class="statusClass(feed.previousStatus)"></i>
                 <span>
                   <ArrowRight class="mx-1 inline-block h-4 w-4" />
                 </span>
-                <i class="x-user-status" :class="statusClass(feed.status)" style="width: 20px; height: 20px"></i>
+                <i class="x-user-status w-[20px] h-[20px]" :class="statusClass(feed.status)"></i>
               </span>
-              <span v-if="feed.statusDescription !== feed.previousStatusDescription" style="margin-left: 10px" v-text="feed.statusDescription"></span>
+              <span v-if="feed.statusDescription !== feed.previousStatusDescription" class="ml-[10px]" v-text="feed.statusDescription"></span>
             </template>
             <template v-else-if="feed.type === 'ChangeGroup'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">ChangeGroup</span>
-              <span style="margin-left: 10px" v-text="feed.groupName"></span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">ChangeGroup</span>
+              <span class="ml-[10px]" v-text="feed.groupName"></span>
             </template>
             <template v-else-if="feed.type === 'ChatBoxMessage'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">ChatBox</span>
-              <span style="margin-left: 10px; white-space: normal" v-text="feed.text"></span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">ChatBox</span>
+              <span class="ml-[10px] whitespace-normal" v-text="feed.text"></span>
             </template>
             <template v-else-if="feed.type === 'PortalSpawn'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">PortalSpawn</span>
-              <VrLocation :location="feed.location" :hint="feed.worldName" :grouphint="feed.groupName" :link="false" style="margin-left: 10px"></VrLocation>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">PortalSpawn</span>
+              <VrLocation class="ml-[10px]" :location="feed.location" :hint="feed.worldName" :grouphint="feed.groupName" :link="false"></VrLocation>
             </template>
             <template v-else-if="feed.type === 'OnPlayerJoined'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">has joined</span>
-              <span v-if="feed.platform === 'Desktop'" style="color: var(--status-joinme); margin-left: 10px">Desktop</span>
-              <span v-else-if="feed.platform === 'VR'" style="color: var(--status-joinme); margin-left: 10px">VR</span>
-              <span v-else-if="feed.platform === 'Quest'" style="color: var(--platform-quest); margin-left: 10px">Android</span>
-              <span v-else-if="feed.platform === 'iOS'" style="color: var(--platform-ios); margin-left: 10px">iOS</span>
-              <span v-if="!feed.inCache" style="color: var(--vr-text-muted); margin-left: 10px"><Download class="inline-block h-4 w-4" /> </span>
-              <span style="margin-left: 10px" v-text="feed.avatar.name"></span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">has joined</span>
+              <span v-if="feed.platform === 'Desktop'" class="[color:var(--status-joinme)] ml-[10px]">Desktop</span>
+              <span v-else-if="feed.platform === 'VR'" class="[color:var(--status-joinme)] ml-[10px]">VR</span>
+              <span v-else-if="feed.platform === 'Quest'" class="[color:var(--platform-quest)] ml-[10px]">Android</span>
+              <span v-else-if="feed.platform === 'iOS'" class="[color:var(--platform-ios)] ml-[10px]">iOS</span>
+              <span v-if="!feed.inCache" class="[color:var(--vr-text-muted)] ml-[10px]"><Download class="inline-block h-4 w-4" /> </span>
+              <span class="ml-[10px]" v-text="feed.avatar.name"></span>
             </template>
             <template v-else-if="feed.type === 'SpawnEmoji'">
-              <span style="margin-left: 10px; color: var(--vr-text-secondary)">SpawnEmoji</span>
-              <span style="margin-left: 10px" v-text="feed.text"></span>
+              <span class="ml-[10px] [color:var(--vr-text-secondary)]">SpawnEmoji</span>
+              <span class="ml-[10px]" v-text="feed.text"></span>
             </template>
-            <span v-else-if="feed.color === 'yellow'" style="color: yellow; margin-left: 10px" v-text="feed.text"></span>
-            <span v-else style="margin-left: 10px; color: var(--vr-text-secondary)" v-text="feed.text"></span>
+            <span v-else-if="feed.color === 'yellow'" class="ml-[10px] [color:var(--vr-feed-yellow-text)]" v-text="feed.text"></span>
+            <span v-else class="ml-[10px] [color:var(--vr-text-secondary)]" v-text="feed.text"></span>
             <template v-if="feed.combo > 1">
-              <span class="combo" style="margin-left: 10px">x{{ feed.combo }}</span>
+              <span class="combo ml-[10px]">x{{ feed.combo }}</span>
             </template>
           </div>
         </div>

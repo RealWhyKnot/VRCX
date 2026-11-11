@@ -48,9 +48,9 @@
         <template v-else>
           <Button size="sm" variant="outline" @click="setAvatarTagsSelectToggle">{{ t("dialog.set_avatar_tags.select_all") }}</Button>
         </template>
-        <span style="margin-left: 6px">{{ setAvatarTagsDialog.selectedAvatarIds.length }} / {{ setAvatarTagsDialog.ownAvatars.length }}</span>
+        <span class="ml-[6px]">{{ setAvatarTagsDialog.selectedAvatarIds.length }} / {{ setAvatarTagsDialog.ownAvatars.length }}</span>
         <Spinner v-if="setAvatarTagsDialog.loading" class="inline-block ml-2" />
-        <div class="flex flex-wrap items-start max-h-[300px] overflow-auto" style="margin-top: 8px; min-height: 60px">
+        <div class="flex flex-wrap items-start max-h-[300px] overflow-auto mt-[8px] min-h-[60px]">
           <div
             v-for="avatar in setAvatarTagsDialog.ownAvatars"
             :key="avatar.id"
@@ -67,7 +67,7 @@
               <span v-else class="block truncate text-xs" v-text="avatar.releaseStatus"></span>
               <span class="block truncate text-xs" v-text="avatarTagStrings.get(avatar.id)"></span>
             </div>
-            <Button size="sm" variant="ghost" style="margin-left: 6px" @click.stop>
+            <Button size="sm" variant="ghost" class="ml-[6px]" @click.stop>
               <Checkbox
                 :model-value="setAvatarTagsDialog.selectedAvatarIds.includes(avatar.id)"
                 @update:model-value="(checked) => toggleAvatarSelection(avatar.id, checked)"

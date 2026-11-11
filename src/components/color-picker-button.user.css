@@ -1,0 +1,43 @@
+.color-picker-popover .vc-colorpicker {
+  box-shadow: none !important;
+  background-color: var(--popover) !important;
+}
+
+.color-picker-popover .vc-display .vc-color-input input {
+  cursor: text !important;
+}
+
+.color-picker-popover .vc-input-toggle {
+  width: 4ch !important;
+  padding-inline: 0 !important;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+:root.dark :is(.vc-color-input input, .vc-input-toggle, .vc-alpha-input, .vc-alpha-input__inner) {
+  color: var(--muted-foreground) !important;
+}
+
+.color-picker-popover.disable-alpha .vc-compact__row:last-child .vc-compact__color-cube--wrap:first-child,
+.color-picker-popover.disable-alpha .vc-color-input:nth-child(4) {
+  display: none !important;
+}
+
+.color-picker-popover.disable-alpha .vc-input-toggle {
+  width: 3ch !important;
+  overflow: hidden !important;
+}
+
+.color-picker-popover.disable-alpha .vc-compact__row:last-child > .vc-compact__color-cube--wrap:nth-child(2) {
+  width: 54px !important;
+}
+
+.color-picker-popover.disable-alpha .vc-colorPicker__record .color-list {
+  cursor: not-allowed;
+}
+
+.color-picker-popover.disable-alpha .color-item.transparent:has(.color-item__display[style*="rgba"]) {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+}

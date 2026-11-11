@@ -34,7 +34,7 @@
     </div>
     <div class="options-container-item">
       <Select :model-value="photonEventTableTypeOverlayFilter" multiple @update:model-value="handlePhotonEventTableTypeOverlayFilterChange">
-        <SelectTrigger style="flex: 1">
+        <SelectTrigger class="flex-1">
           <SelectValue :placeholder="t('view.settings.advanced.photon.event_hud.type_filter_placeholder')" />
         </SelectTrigger>
         <SelectContent>

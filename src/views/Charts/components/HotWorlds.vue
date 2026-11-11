@@ -94,9 +94,9 @@
 
                 <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full" :class="isDarkMode ? 'bg-white/[0.08]' : 'bg-black/[0.06]'">
                   <div
-                    class="h-full rounded-full transition-all duration-500"
+                    class="h-full rounded-full transition-all duration-500 w-[var(--bar-width)]"
                     :class="isDarkMode ? 'bg-white/[0.45]' : 'bg-black/[0.25]'"
-                    :style="{ width: getBarWidth(world.uniqueFriends) }"
+                    :style="{ '--bar-width': getBarWidth(world.uniqueFriends) }"
                   ></div>
                 </div>
               </div>

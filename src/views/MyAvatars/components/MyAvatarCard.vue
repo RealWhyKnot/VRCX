@@ -29,27 +29,30 @@
                   <span v-if="platformInfo.isIos" class="size-2.5 rounded-full border opacity-70 bg-platform-ios" />
                 </div>
               </div>
-              <div class="min-h-0 flex flex-col gap-0.5" :style="{ padding: `${Math.round(6 * cardScale)}px ${Math.round(8 * cardScale)}px` }">
+              <div
+                class="min-h-0 flex flex-col gap-0.5 p-[var(--card-padding)]"
+                :style="{ '--card-padding': `${Math.round(6 * cardScale)}px ${Math.round(8 * cardScale)}px` }"
+              >
                 <span
-                  class="block leading-snug overflow-hidden line-clamp-2 min-h-[2.75em]"
-                  :style="{ fontSize: `${Math.max(9, Math.round(18 * cardScale))}px` }"
+                  class="block leading-snug overflow-hidden line-clamp-2 min-h-[2.75em] [font-size:var(--card-name-size)]"
+                  :style="{ '--card-name-size': `${Math.max(9, Math.round(18 * cardScale))}px` }"
                 >
                   {{ avatar.name }}
                 </span>
                 <div
                   v-if="avatar.$tags?.length"
-                  class="flex gap-0.5 overflow-hidden flex-nowrap"
-                  :style="{ maxHeight: `${Math.max(14, Math.round(22 * cardScale))}px` }"
+                  class="flex gap-0.5 overflow-hidden flex-nowrap max-h-[var(--tag-row-max-height)]"
+                  :style="{ '--tag-row-max-height': `${Math.max(14, Math.round(22 * cardScale))}px` }"
                 >
                   <Badge
                     v-for="tagEntry in avatar.$tags"
                     :key="tagEntry.tag"
                     variant="outline"
-                    class="shrink-0 px-1 py-0 rounded-sm leading-tight"
+                    class="shrink-0 px-1 py-0 rounded-sm leading-tight text-(length:--tag-size) border-(--tag-border) text-(--tag-text)"
                     :style="{
-                      fontSize: `${Math.max(8, Math.round(14 * cardScale))}px`,
-                      borderColor: getAvatarTagColor(tagEntry.tag).bg,
-                      color: getAvatarTagColor(tagEntry.tag).text,
+                      '--tag-size': `${Math.max(8, Math.round(14 * cardScale))}px`,
+                      '--tag-border': getAvatarTagColor(tagEntry.tag).bg,
+                      '--tag-text': getAvatarTagColor(tagEntry.tag).text,
                     }"
                   >
                     {{ tagEntry.tag }}
@@ -119,10 +122,10 @@
             v-for="tagEntry in avatar.$tags"
             :key="tagEntry.tag"
             variant="outline"
-            class="text-xs px-1.5 py-0"
+            class="text-xs px-1.5 py-0 border-(--tag-border) text-(--tag-text)"
             :style="{
-              borderColor: getAvatarTagColor(tagEntry.tag).bg,
-              color: getAvatarTagColor(tagEntry.tag).text,
+              '--tag-border': getAvatarTagColor(tagEntry.tag).bg,
+              '--tag-text': getAvatarTagColor(tagEntry.tag).text,
             }"
           >
             {{ tagEntry.tag }}

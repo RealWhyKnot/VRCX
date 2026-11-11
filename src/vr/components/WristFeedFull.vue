@@ -55,7 +55,7 @@
       <div class="detail">
         <span class="extra flex items-center">
           <span class="time">{{ formatDate(feed.created_at) }}</span>
-          <span class="name" style="margin-right: 5px" v-text="feed.displayName"></span>
+          <span class="name mr-[5px]" v-text="feed.displayName"></span>
           <template v-if="feed.statusDescription === feed.previousStatusDescription">
             <i class="x-user-status" :class="statusClass(feed.previousStatus)"></i>
             <ArrowRight class="inline-block h-4 w-4" />
@@ -293,7 +293,7 @@
           <template v-if="feed.displayName">
             <span class="name" :style="{ '--vr-name-colour': feed.tagColour }" v-text="feed.displayName"></span>
             has spawned a portal to
-            <VrLocation :location="feed.instanceId" :hint="feed.worldName" :grouphint="feed.groupName" style="margin-left: 5px"></VrLocation>
+            <VrLocation class="ml-[5px]" :location="feed.instanceId" :hint="feed.worldName" :grouphint="feed.groupName"></VrLocation>
           </template>
           <template v-else> User has spawned a portal </template>
         </span>

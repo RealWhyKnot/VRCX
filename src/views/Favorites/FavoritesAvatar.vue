@@ -52,7 +52,7 @@
                     :key="group.key"
                     :class="[
                       'group-item x-hover-card hover:shadow-sm',
-                      `group-item--${group.visibility}`,
+                      `group-item-${group.visibility}`,
                       { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
                     ]"
                     @click="handleGroupClick('remote', group.key)"
@@ -278,11 +278,11 @@
                       class="favorites-search-card x-hover-card hover:shadow-sm"
                       @click="showAvatarDialog(favorite.id)"
                     >
-                      <div class="favorites-search-card__content">
-                        <div class="favorites-search-card__avatar" :class="{ 'is-empty': !favorite.thumbnailImageUrl }">
+                      <div class="favorites-search-card-content">
+                        <div class="favorites-search-card-thumbnail" :data-empty="favorite.thumbnailImageUrl ? undefined : ''">
                           <img v-if="favorite.thumbnailImageUrl" :src="favorite.thumbnailImageUrl" loading="lazy" />
                         </div>
-                        <div class="favorites-search-card__detail">
+                        <div class="favorites-search-card-detail">
                           <div class="flex items-center gap-2">
                             <span class="name truncate">{{ favorite.name }}</span>
                           </div>

@@ -14,7 +14,7 @@
           <Switch :model-value="vrcRegistryAskRestore" @update:model-value="setVrcRegistryAskRestore" />
         </div>
         <DataTableLayout class="min-w-0 w-full mt-2" :table="table" :loading="false" :table-style="tableStyle" :show-pagination="false" />
-        <div class="mt-2" style="display: flex; align-items: center; justify-content: space-between">
+        <div class="mt-2 flex items-center justify-between">
           <Button size="sm" variant="destructive" @click="deleteVrcRegistry">{{ t("dialog.registry_backup.reset") }}</Button>
           <div class="flex gap-2">
             <Button size="sm" variant="outline" @click="promptVrcRegistryBackupName">{{ t("dialog.registry_backup.backup") }}</Button>

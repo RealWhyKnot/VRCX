@@ -8,13 +8,7 @@
         <input class="inviteImageUploadButton" type="file" accept="image/*" @change="inviteImageUpload" />
       </template>
 
-      <DataTableLayout
-        style="margin-top: 8px"
-        :table="inviteResponseTable"
-        :loading="false"
-        :show-pagination="false"
-        :on-row-click="handleInviteResponseRowClick"
-      />
+      <DataTableLayout class="mt-2" :table="inviteResponseTable" :loading="false" :show-pagination="false" :on-row-click="handleInviteResponseRowClick" />
 
       <DialogFooter>
         <Button variant="secondary" class="mr-2" @click="cancelSendInviteResponse">{{ t("dialog.invite_response_message.cancel") }}</Button>

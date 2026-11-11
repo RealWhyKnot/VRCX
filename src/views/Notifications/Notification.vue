@@ -1,5 +1,5 @@
 <template>
-  <div class="x-container x-container--auto-height">
+  <div class="x-container x-container-auto-height">
     <DataTableLayout
       :table="table"
       :loading="isNotificationsLoading"
@@ -64,11 +64,10 @@
             />
             <TooltipWrapper side="bottom" :content="t('view.notification.refresh_tooltip')">
               <Button
-                class="rounded-full"
+                class="rounded-full flex-none"
                 variant="ghost"
                 size="icon-sm"
                 :disabled="isNotificationsLoading"
-                style="flex: none"
                 :aria-label="t('view.notification.refresh_tooltip')"
                 @click="refreshNotifications()"
               >

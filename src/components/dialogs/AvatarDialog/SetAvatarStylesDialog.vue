@@ -20,7 +20,7 @@
             :model-value="setAvatarStylesDialog.primaryStyle"
             @update:model-value="(v) => updateDialog({ primaryStyle: typeof v === 'string' && v !== SELECT_CLEAR_VALUE ? v : '' })"
           >
-            <SelectTrigger size="sm" style="display: inline-flex">
+            <SelectTrigger size="sm" class="inline-flex">
               <SelectValue :placeholder="t('dialog.set_avatar_styles.select_style')" />
             </SelectTrigger>
             <SelectContent>
@@ -39,7 +39,7 @@
             :model-value="setAvatarStylesDialog.secondaryStyle"
             @update:model-value="(v) => updateDialog({ secondaryStyle: typeof v === 'string' && v !== SELECT_CLEAR_VALUE ? v : '' })"
           >
-            <SelectTrigger size="sm" style="display: inline-flex">
+            <SelectTrigger size="sm" class="inline-flex">
               <SelectValue :placeholder="t('dialog.set_avatar_styles.select_style')" />
             </SelectTrigger>
             <SelectContent>

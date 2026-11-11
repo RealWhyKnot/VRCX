@@ -19,12 +19,7 @@
             @error="bannerError = true"
           />
           <div
-            class="absolute bottom-0 left-3 z-10 translate-y-1/2 overflow-hidden rounded-lg"
-            style="
-              width: 96px;
-              height: 96px;
-              filter: drop-shadow(0 0 1px rgb(0 0 0 / 95%)) drop-shadow(0 0 4px rgb(0 0 0 / 75%)) drop-shadow(0 2px 8px rgb(0 0 0 / 55%));
-            "
+            class="absolute bottom-0 left-3 z-10 h-[96px] w-[96px] translate-y-1/2 overflow-hidden rounded-lg [filter:drop-shadow(0_0_1px_var(--color-shadow-strong))_drop-shadow(0_0_4px_var(--color-shadow-medium))_drop-shadow(0_2px_8px_var(--color-shadow-soft))]"
           >
             <Image v-if="groupDialog.loading || imageError" class="w-full! h-full! object-cover text-muted-foreground bg-accent" />
             <img
@@ -57,10 +52,9 @@
               <template v-if="groupDialog.inGroup && groupDialog.ref?.myMember">
                 <TooltipWrapper v-if="groupDialog.ref.myMember?.isRepresenting" side="top" :content="t('dialog.group.actions.unrepresent_tooltip')">
                   <Button
-                    class="rounded-lg"
+                    class="rounded-lg ml-[6px]"
                     variant="secondary"
                     size="icon"
-                    style="margin-left: 6px"
                     :aria-label="t('dialog.group.actions.unrepresent_tooltip')"
                     @click="clearGroupRepresentation(groupDialog.id)"
                   >
@@ -379,12 +373,7 @@
                   <template #content>
                     <span v-text="link" />
                   </template>
-                  <img
-                    :src="getFaviconUrl(link)"
-                    style="width: 16px; height: 16px; vertical-align: middle; cursor: pointer"
-                    loading="lazy"
-                    @click.stop="openExternalLink(link)"
-                  />
+                  <img :src="getFaviconUrl(link)" class="w-[16px] h-[16px] align-middle cursor-pointer" loading="lazy" @click.stop="openExternalLink(link)" />
                 </TooltipWrapper>
               </template>
             </div>

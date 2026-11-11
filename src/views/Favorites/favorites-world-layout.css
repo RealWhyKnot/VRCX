@@ -1,26 +1,25 @@
-.favorites-content__scroll--local {
+.favorites-content-scroll-local {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
 
-.favorites-content__scroll--local::-webkit-scrollbar {
+.favorites-content-scroll-local::-webkit-scrollbar {
   width: 10px;
 }
 
-.favorites-content__scroll--local::-webkit-scrollbar-track {
+.favorites-content-scroll-local::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.favorites-content__scroll--local::-webkit-scrollbar-thumb {
+.favorites-content-scroll-local::-webkit-scrollbar-thumb {
   background-color: var(--border);
-  border-radius: var(--rounded-full);
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 .favorites-card-virtual {
   width: 100%;
-  height: var(--favorites-virtual-height, 0px);
+  height: var(--favorites-virtual-height, 0);
   position: relative;
   box-sizing: border-box;
 }
@@ -30,7 +29,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  transform: translateY(var(--favorites-virtual-start, 0px));
+  transform: translateY(var(--favorites-virtual-start, 0));
   box-sizing: border-box;
   padding-bottom: var(--favorites-card-gap, 12px);
 }

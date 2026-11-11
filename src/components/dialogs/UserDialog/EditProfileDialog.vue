@@ -189,8 +189,8 @@
             @update:model-value="(value) => (editProfileDialog.bioLinks[index] = String(value))"
           >
             <template #leading>
-              <img v-if="link" :src="getFaviconUrl(link)" style="width: 16px; height: 16px; vertical-align: middle" />
-              <div v-else style="width: 16px; height: 16px" />
+              <img v-if="link" :src="getFaviconUrl(link)" class="size-4 align-middle" />
+              <div v-else class="size-4" />
             </template>
             <template #actions>
               <Button variant="ghost" size="icon-sm" :aria-label="t('common.actions.delete')" @click="editProfileDialog.bioLinks.splice(index, 1)">
@@ -214,12 +214,11 @@
 
           <div v-for="item in currentLanguages" :key="item.key" class="my-2">
             <Badge class="mr-1.5" variant="outline">
-              <span class="flags mr-1.5" :class="languageClass(item.key)" style="display: inline-block"></span>
+              <span class="flags mr-1.5 inline-block" :class="languageClass(item.key)"></span>
               {{ item.value }} ({{ item.key.toUpperCase() }})
               <button
-                class="ml-2 p-0"
+                class="ml-2 p-0 [border:none] [background:transparent] inline-flex items-center [color:inherit] cursor-pointer"
                 type="button"
-                style="border: none; background: transparent; display: inline-flex; align-items: center; color: inherit; cursor: pointer"
                 @click="removeUserLanguage(item.key)"
               >
                 <X class="h-3 w-3" />
@@ -238,7 +237,7 @@
             <SelectContent>
               <SelectGroup>
                 <SelectItem v-for="item in availableLanguages" :key="item.key" :value="item.key" :text-value="item.value">
-                  <span class="flags mr-1.5" :class="languageClass(item.key)" style="display: inline-block"></span>
+                  <span class="flags mr-1.5 inline-block" :class="languageClass(item.key)"></span>
                   {{ item.value }} ({{ item.key.toUpperCase() }})
                 </SelectItem>
               </SelectGroup>
@@ -260,9 +259,21 @@
                   <SelectItem v-for="option in editProfileDialog.themes" :key="option.id" :value="option.id" :text-value="option.name">
                     <div class="flex w-full items-center justify-between gap-3">
                       <span class="inline-flex shrink-0 items-center gap-1">
-                        <span class="size-3 rounded-sm border" :style="{ backgroundColor: getThemeHexColor(option.buttonColor) }" title="Button color"></span>
-                        <span class="size-3 rounded-sm border" :style="{ backgroundColor: getThemeHexColor(option.iconColor) }" title="Icon color"></span>
-                        <span class="size-3 rounded-sm border" :style="{ backgroundColor: getThemeHexColor(option.subtextColor) }" title="Subtext color"></span>
+                        <span
+                          class="size-3 rounded-sm border bg-[var(--swatch-button)]"
+                          :style="{ '--swatch-button': getThemeHexColor(option.buttonColor) }"
+                          title="Button color"
+                        ></span>
+                        <span
+                          class="size-3 rounded-sm border bg-[var(--swatch-icon)]"
+                          :style="{ '--swatch-icon': getThemeHexColor(option.iconColor) }"
+                          title="Icon color"
+                        ></span>
+                        <span
+                          class="size-3 rounded-sm border bg-[var(--swatch-subtext)]"
+                          :style="{ '--swatch-subtext': getThemeHexColor(option.subtextColor) }"
+                          title="Subtext color"
+                        ></span>
                       </span>
                       <span class="truncate">{{ option.name }}</span>
                     </div>

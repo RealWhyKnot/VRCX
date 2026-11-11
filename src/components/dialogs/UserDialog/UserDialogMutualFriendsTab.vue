@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-xl bg-(--profile-card) p-2">
-    <div class="shrink-0" style="display: flex; align-items: center; justify-content: space-between">
-      <div style="display: flex; align-items: center">
+    <div class="shrink-0 flex items-center justify-between">
+      <div class="flex items-center">
         <Button class="rounded-full" variant="ghost" size="icon-sm" :disabled="userDialog.isMutualFriendsLoading" @click="getUserMutualFriends(userDialog.id)">
           <Spinner v-if="userDialog.isMutualFriendsLoading" />
           <RefreshCw v-else />
@@ -11,9 +11,9 @@
           {{ t("dialog.user.groups.total_count", { count: userDialog.mutualFriends.length }) }}
         </span>
       </div>
-      <div style="display: flex; align-items: center">
+      <div class="flex items-center">
         <Input v-model="searchQuery" class="h-8 w-40 mr-2" :placeholder="t('dialog.user.mutual_friends.search_placeholder')" @click.stop />
-        <span style="margin-right: 6px">{{ t("dialog.user.groups.sort_by") }}</span>
+        <span class="mr-1.5">{{ t("dialog.user.groups.sort_by") }}</span>
         <Select
           :model-value="userDialogMutualFriendSortingKey"
           :disabled="userDialog.isMutualFriendsLoading"
@@ -31,7 +31,7 @@
       </div>
     </div>
     <div class="min-h-0 flex-1 overflow-auto">
-      <ul class="flex flex-wrap items-start" style="margin-top: 8px; min-width: 130px">
+      <ul class="flex flex-wrap items-start mt-2 min-w-[130px]">
         <li
           v-for="user in filteredMutualFriends"
           :key="user.id"
@@ -48,7 +48,11 @@
             <IconFrame :icon-frame="user.iconFrame ?? ''" />
           </div>
           <div class="flex-1 overflow-hidden">
-            <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName"></span>
+            <span
+              class="block truncate font-medium leading-[18px] text-[var(--user-colour,inherit)]"
+              :style="{ '--user-colour': user.$userColour }"
+              v-text="user.displayName"
+            ></span>
           </div>
         </li>
       </ul>

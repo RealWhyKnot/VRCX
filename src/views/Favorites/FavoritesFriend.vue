@@ -52,7 +52,7 @@
                     :key="group.key"
                     :class="[
                       'group-item x-hover-card hover:shadow-sm',
-                      `group-item--${group.visibility}`,
+                      `group-item-${group.visibility}`,
                       { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
                     ]"
                     @click="handleGroupClick('remote', group.key)"

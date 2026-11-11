@@ -37,7 +37,7 @@
       <template v-for="(gallery, index) in groupDialog.ref.galleries" :key="`label-${index}`" #[`label-${index}`]>
         <span class="text-base font-bold" v-text="gallery.name" />
         <TooltipWrapper side="top" :content="groupGalleryStatusText(gallery)">
-          <i class="x-status-icon" style="margin-left: 6px" :class="groupGalleryStatus(gallery)" />
+          <i class="x-status-icon ml-[6px]" :class="groupGalleryStatus(gallery)" />
         </TooltipWrapper>
         <span class="text-muted-foreground text-xs ml-1.5">{{ groupDialog.galleries[gallery.id ?? ""]?.length ?? 0 }}</span>
       </template>
@@ -86,7 +86,7 @@
             </Button>
           </TooltipWrapper>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 8px">
+        <div class="grid gap-[16px] mt-[8px] [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
           <Card
             v-for="image in groupDialog.galleries[gallery.id ?? ''] ?? []"
             :key="image.id ?? ''"
@@ -105,7 +105,7 @@
             </TooltipWrapper>
             <div class="cursor-pointer" @click="showFullscreenImageDialog(image.imageUrl ?? '')">
               <img :src="image.imageUrl" :class="['max-w-full', 'max-h-full']" loading="lazy" @error="onImageError" />
-              <div class="hidden h-[200px] w-full items-center justify-center bg-muted" style="display: none">
+              <div class="hidden h-[200px] w-full items-center justify-center bg-muted">
                 <Image class="size-8 text-muted-foreground" />
               </div>
             </div>

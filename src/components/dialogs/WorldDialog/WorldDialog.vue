@@ -337,7 +337,7 @@
         :is-world-dialog-visible="worldDialog.visible"
       />
       <NewInstanceDialog :new-instance-dialog-location-tag="newInstanceDialogLocationTag ?? ''" :last-location="lastLocation" />
-      <input id="WorldImageUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeWorldImage" />
+      <input id="WorldImageUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeWorldImage" />
       <ImageCropDialog
         :open="cropDialogOpen"
         :title="t('dialog.change_content_image.world')"

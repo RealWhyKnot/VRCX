@@ -26,28 +26,19 @@
             </Button>
           </template>
         </InputGroupAction>
-        <Button size="sm" variant="outline" style="margin-top: 6px" @click="chatboxBlacklist.push('')">
+        <Button size="sm" variant="outline" class="mt-1.5" @click="chatboxBlacklist.push('')">
           {{ t("dialog.chatbox_blacklist.add_item") }}
         </Button>
         <br />
         <h2>{{ t("dialog.chatbox_blacklist.user_blacklist") }}</h2>
-        <Badge v-for="user in chatboxUserBlacklist" :key="user[0]" variant="outline" style="margin-right: 6px; margin-top: 6px">
+        <Badge v-for="user in chatboxUserBlacklist" :key="user[0]" variant="outline" class="mr-1.5 mt-1.5">
           <span>{{ user[1] }}</span>
           <button
             type="button"
-            style="
-              margin-left: 8px;
-              border: none;
-              background: transparent;
-              padding: 0;
-              display: inline-flex;
-              align-items: center;
-              color: inherit;
-              cursor: pointer;
-            "
+            class="ml-2 [border:none] [background:transparent] p-0 inline-flex items-center text-[inherit] cursor-pointer"
             @click="deleteChatboxUserBlacklist(user[0])"
           >
-            <X class="h-3 w-3" style="line-height: 1" />
+            <X class="h-3 w-3 leading-none" />
           </button>
         </Badge>
       </div>

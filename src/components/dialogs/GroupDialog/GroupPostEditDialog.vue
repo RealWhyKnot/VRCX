@@ -76,14 +76,14 @@
             <FieldLabel>{{ t("dialog.group_post_edit.image") }}</FieldLabel>
             <FieldContent>
               <template v-if="gallerySelectDialog.selectedFileId">
-                <div class="mr-1.5" style="display: inline-block; flex: none">
+                <div class="mr-1.5 inline-block flex-none">
                   <img
                     :src="gallerySelectDialog.selectedImageUrl"
-                    style="flex: none; width: 60px; height: 60px; border-radius: var(--radius-md); object-fit: cover"
+                    class="flex-none w-[60px] h-[60px] rounded-(--radius-md) object-cover"
                     loading="lazy"
                     @click="showFullscreenImageDialog(gallerySelectDialog.selectedImageUrl)"
                   />
-                  <Button size="sm" variant="outline" style="vertical-align: top" @click="clearImageGallerySelect">
+                  <Button size="sm" variant="outline" class="align-top" @click="clearImageGallerySelect">
                     {{ t("dialog.invite_message.clear_selected_image") }}
                   </Button>
                 </div>

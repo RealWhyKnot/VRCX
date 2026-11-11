@@ -17,7 +17,7 @@
       :on-sort-change="handleSortChange"
     >
       <template #toolbar>
-        <div style="display: flex; align-items: center; justify-content: space-between">
+        <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 px-1 py-2">
             <ToggleGroup type="single" :model-value="viewMode" variant="outline" @update:model-value="handleViewModeChange">
               <TooltipWrapper :content="t('dialog.previous_instances.table_view')" side="bottom" :delay-duration="300">
@@ -33,7 +33,7 @@
             </ToggleGroup>
             <Location :location="location.tag" class="text-sm" />
           </div>
-          <InputGroupField v-model="search" :placeholder="t('dialog.previous_instances.search_placeholder')" style="width: 150px" clearable />
+          <InputGroupField v-model="search" :placeholder="t('dialog.previous_instances.search_placeholder')" class="w-[150px]" clearable />
         </div>
       </template>
     </DataTableLayout>
@@ -57,7 +57,7 @@
         </div>
       </div>
       <div class="flex-1 overflow-auto min-h-0">
-        <div v-if="chartLoading" class="flex items-center justify-center" style="min-height: 200px">
+        <div v-if="chartLoading" class="flex items-center justify-center min-h-[200px]">
           <span class="text-muted-foreground text-sm">{{ t("view.friends_locations.loading_more") }}</span>
         </div>
         <PreviousInstancesInfoChart v-else :chart-data="chartData" />

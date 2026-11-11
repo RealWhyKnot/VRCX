@@ -35,7 +35,9 @@
                     <img class="size-full rounded-full object-cover" :src="userImage(user)" loading="lazy" />
                   </div>
                   <div class="flex-1 overflow-hidden">
-                    <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }">{{ user.displayName }}</span>
+                    <span class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]" :style="{ '--user-colour': user.$userColour }">{{
+                      user.displayName
+                    }}</span>
                   </div>
                 </template>
                 <template v-if="pickerUsers(item).length === 0">
@@ -142,7 +144,11 @@
                               <img class="size-full rounded-full object-cover" :src="userImage(user)" loading="lazy" />
                             </div>
                             <div class="flex-1 overflow-hidden">
-                              <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }">{{ user.displayName }}</span>
+                              <span
+                                class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]"
+                                :style="{ '--user-colour': user.$userColour }"
+                                >{{ user.displayName }}</span
+                              >
                             </div>
                           </template>
                           <template v-if="pickerUsers(item).length === 0">
@@ -183,7 +189,6 @@
             v-show="!(hasFetched && !isFetching && !graphReady)"
             ref="graphContainerRef"
             class="mt-3 h-[calc(100vh-260px)] min-h-[520px] w-full flex-1 rounded-lg bg-transparent"
-            :style="{ backgroundColor: canvasBackground }"
           ></div>
         </ContextMenuTrigger>
         <ContextMenuContent v-if="contextMenuNodeId" class="min-w-40">
@@ -588,8 +593,6 @@ const fetchButtonLabel = computed(() =>
   hasFetched.value ? t("view.charts.mutual_friend.actions.fetch_again") : t("view.charts.mutual_friend.actions.start_fetch")
 );
 const progressPercent = computed(() => (totalFriends.value ? Math.min(100, Math.round((fetchState.processedFriends / totalFriends.value) * 100)) : 0));
-
-const canvasBackground = computed(() => "transparent");
 
 const selectedFriendId = ref<string | null>(null);
 

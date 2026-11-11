@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
-import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state-factories";
 import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 
 vi.mock("vue-i18n", async () => {
@@ -186,7 +186,7 @@ describe("UserDialogMutualFriendsTab.vue", () => {
 
     test("applies user colour to display name", () => {
       const wrapper = mountComponent();
-      const nameSpan = wrapper.find('span[style*="color"]');
+      const nameSpan = wrapper.find('span[style*="--user-colour"]');
       expect(nameSpan.exists()).toBe(true);
     });
 

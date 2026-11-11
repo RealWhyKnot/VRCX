@@ -7,11 +7,10 @@
       <div class="changelog-dialog">
         <h2 v-text="changeLogDialog.buildName"></h2>
         <VueShowdown
-          class="changelog-markdown mt-2"
+          class="changelog-markdown mt-2 h-[62vh] overflow-y-auto"
           :markdown="changeLogDialog.changeLog"
           flavor="github"
           :options="showdownOptions"
-          style="height: 62vh; overflow-y: auto"
           @click="handleLinkClick"
         />
       </div>

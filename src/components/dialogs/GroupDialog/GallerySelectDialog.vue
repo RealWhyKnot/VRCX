@@ -9,7 +9,7 @@
         <span>{{ t("dialog.gallery_select.gallery") }}</span>
         <span class="ml-1.5 text-muted-foreground text-xs">{{ imageTable.length }}/{{ imageLimit }}</span>
         <br />
-        <input id="GalleryUploadButton" type="file" accept="image/*" style="display: none" @change="onFileChangeGallery" />
+        <input id="GalleryUploadButton" type="file" accept="image/*" class="hidden" @change="onFileChangeGallery" />
         <ButtonGroup>
           <Button variant="outline" size="sm" @click="selectImageGallerySelect('', '')">
             <X />

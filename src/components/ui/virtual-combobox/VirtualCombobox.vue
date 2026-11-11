@@ -32,7 +32,10 @@
       >
         <div class="relative h-(--combobox-total-size)" :style="{ '--combobox-total-size': `${virtualizer.getTotalSize()}px` }">
           <template v-for="virtualRow in virtualizer.getVirtualItems()" :key="String(virtualRow.key)">
-            <div class="absolute left-0 top-0 w-full translate-y-(--combobox-row-start)" :style="{ '--combobox-row-start': `${virtualRow.start}px` }">
+            <div
+              class="absolute left-0 top-0 w-full [transform:translateY(var(--combobox-row-start))]"
+              :style="{ '--combobox-row-start': `${virtualRow.start}px` }"
+            >
               <template v-for="entry in [virtualListEntries[virtualRow.index]]" :key="entry?.key">
                 <template v-if="entry?.type === 'group'">
                   <div

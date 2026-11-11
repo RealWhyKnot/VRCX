@@ -1,15 +1,15 @@
 <template>
   <div class="friend-view x-container">
-    <div v-if="settingsReady" class="friend-view__toolbar">
-      <Tabs v-model="activeSegment" class="friend-view__tabs">
+    <div v-if="settingsReady" class="friend-view-toolbar">
+      <Tabs v-model="activeSegment" class="friend-view-tabs">
         <TabsList>
           <TabsTrigger v-for="option in segmentedOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <div class="friend-view__actions">
-        <InputGroupSearch v-model="searchTerm" class="friend-view__search" :placeholder="t('view.friends_locations.search_placeholder')" />
+      <div class="friend-view-actions">
+        <InputGroupSearch v-model="searchTerm" class="friend-view-search" :placeholder="t('view.friends_locations.search_placeholder')" />
         <TooltipWrapper :content="t('view.charts.instance_activity.settings.header')" side="top">
           <div>
             <Popover>
@@ -19,38 +19,38 @@
                 </Button>
               </PopoverTrigger>
               <PopoverContent side="bottom" class="w-87.5">
-                <div class="friend-view__settings">
-                  <Field orientation="horizontal" class="friend-view__settings-row">
-                    <FieldLabel class="friend-view__settings-label">{{ t("view.friends_locations.separate_same_instance_friends") }}</FieldLabel>
+                <div class="friend-view-settings">
+                  <Field orientation="horizontal" class="friend-view-settings-row">
+                    <FieldLabel class="friend-view-settings-label">{{ t("view.friends_locations.separate_same_instance_friends") }}</FieldLabel>
                     <FieldContent class="items-end">
                       <Switch v-model="showSameInstance" />
                     </FieldContent>
                   </Field>
-                  <Field orientation="horizontal" class="friend-view__settings-row">
-                    <FieldLabel class="friend-view__settings-label">{{ t("view.settings.appearance.appearance.show_cosmetics") }}</FieldLabel>
+                  <Field orientation="horizontal" class="friend-view-settings-row">
+                    <FieldLabel class="friend-view-settings-label">{{ t("view.settings.appearance.appearance.show_cosmetics") }}</FieldLabel>
                     <FieldContent class="items-end">
                       <Switch v-model="showCosmetics" />
                     </FieldContent>
                   </Field>
-                  <Field orientation="horizontal" class="friend-view__settings-row">
-                    <FieldLabel class="friend-view__settings-label">
+                  <Field orientation="horizontal" class="friend-view-settings-row">
+                    <FieldLabel class="friend-view-settings-label">
                       {{ t("view.friends_locations.scale") }}
                     </FieldLabel>
                     <FieldContent>
-                      <div class="friend-view__scale-control">
-                        <span class="friend-view__scale-value">{{ cardScalePercentLabel }}&nbsp;</span>
-                        <Slider v-model="cardScaleValue" class="friend-view__slider" :min="0.6" :max="1.0" :step="0.01" />
+                      <div class="friend-view-scale-control">
+                        <span class="friend-view-scale-value">{{ cardScalePercentLabel }}&nbsp;</span>
+                        <Slider v-model="cardScaleValue" class="friend-view-slider" :min="0.6" :max="1.0" :step="0.01" />
                       </div>
                     </FieldContent>
                   </Field>
-                  <Field orientation="horizontal" class="friend-view__settings-row">
-                    <FieldLabel class="friend-view__settings-label">
+                  <Field orientation="horizontal" class="friend-view-settings-row">
+                    <FieldLabel class="friend-view-settings-label">
                       {{ t("view.friends_locations.spacing") }}
                     </FieldLabel>
                     <FieldContent>
-                      <div class="friend-view__scale-control">
-                        <span class="friend-view__scale-value">{{ cardSpacingPercentLabel }}&nbsp;</span>
-                        <Slider v-model="cardSpacingValue" class="friend-view__slider" :min="0.25" :max="1.0" :step="0.05" />
+                      <div class="friend-view-scale-control">
+                        <span class="friend-view-scale-value">{{ cardSpacingPercentLabel }}&nbsp;</span>
+                        <Slider v-model="cardSpacingValue" class="friend-view-slider" :min="0.25" :max="1.0" :step="0.05" />
                       </div>
                     </FieldContent>
                   </Field>
@@ -61,24 +61,24 @@
         </TooltipWrapper>
       </div>
     </div>
-    <div v-else class="friend-view__toolbar friend-view__toolbar--loading">
-      <span class="friend-view__loading-text">{{ t("view.friends_locations.loading_more") }}</span>
+    <div v-else class="friend-view-toolbar friend-view-toolbar-loading">
+      <span class="friend-view-loading-text">{{ t("view.friends_locations.loading_more") }}</span>
     </div>
-    <div v-if="settingsReady" ref="scrollbarRef" class="friend-view__scroll">
-      <div v-if="virtualRows.length" class="friend-view__virtual" :style="virtualContainerStyle">
+    <div v-if="settingsReady" ref="scrollbarRef" class="friend-view-scroll">
+      <div v-if="virtualRows.length" class="friend-view-virtual" :style="virtualContainerStyle">
         <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
           <div
             v-if="item.row"
             :ref="measureRow"
-            class="friend-view__virtual-row"
-            :class="`friend-view__virtual-row--${item.row.type}`"
+            class="friend-view-virtual-row [transform:translateY(var(--virtual-row-start))]"
+            :class="`friend-view-virtual-row-${item.row.type}`"
             :data-index="item.virtualItem.index"
-            :style="{ transform: `translateY(${item.virtualItem.start}px)` }"
+            :style="{ '--virtual-row-start': `${item.virtualItem.start}px` }"
           >
             <template v-if="item.row.type === 'header'">
-              <header class="friend-view__instance-header">
-                <Location class="text-xs" :location="getRowInstanceId(item.row)" style="display: inline" />
-                <span class="friend-view__instance-count">({{ getRowCount(item.row) }})</span>
+              <header class="friend-view-instance-header">
+                <Location class="text-xs inline" :location="getRowInstanceId(item.row)" />
+                <span class="friend-view-instance-count">({{ getRowCount(item.row) }})</span>
               </header>
             </template>
 
@@ -94,11 +94,11 @@
             </template>
 
             <template v-else-if="item.row.type === 'divider'">
-              <div class="friend-view__divider"><span class="friend-view__divider-text"></span></div>
+              <div class="friend-view-divider"><span class="friend-view-divider-text"></span></div>
             </template>
 
             <template v-else>
-              <div class="friend-view__row">
+              <div class="friend-view-row">
                 <FriendLocationCard
                   v-for="card in getRowItems(item.row)"
                   :key="card.key"
@@ -113,12 +113,12 @@
           </div>
         </template>
       </div>
-      <div v-else class="friend-view__empty">
+      <div v-else class="friend-view-empty">
         <DataTableEmpty type="nomatch" />
       </div>
     </div>
-    <div v-else class="friend-view__initial-loading">
-      <Loader2 class="friend-view__loading-icon" :size="22" />
+    <div v-else class="friend-view-initial-loading">
+      <Loader2 class="friend-view-loading-icon" :size="22" />
     </div>
   </div>
 </template>
@@ -933,33 +933,33 @@ onBeforeMount(() => {
   overflow: hidden;
 }
 
-.friend-view__toolbar {
+.friend-view-toolbar {
   display: flex;
   gap: 20px;
   align-items: center;
   padding: 8px 2px 0;
 }
 
-.friend-view__tabs {
+.friend-view-tabs {
   gap: 0;
 }
 
-.friend-view__toolbar--loading {
+.friend-view-toolbar-loading {
   justify-content: flex-end;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 
-.friend-view__settings {
+.friend-view-settings {
   display: grid;
   gap: 12px;
 }
 
-.friend-view__loading-text {
+.friend-view-loading-text {
   padding-right: 12px;
 }
 
-.friend-view__actions {
+.friend-view-actions {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -968,14 +968,14 @@ onBeforeMount(() => {
   justify-content: flex-end;
 }
 
-.friend-view__virtual {
+.friend-view-virtual {
   width: 100%;
   padding: 2px;
   box-sizing: border-box;
   position: relative;
 }
 
-.friend-view__virtual-row {
+.friend-view-virtual-row {
   width: 100%;
   box-sizing: border-box;
   position: absolute;
@@ -984,22 +984,22 @@ onBeforeMount(() => {
   padding-bottom: calc(var(--friend-card-gap, 14px) - 4px);
 }
 
-.friend-view__virtual-row--header {
+.friend-view-virtual-row-header {
   padding: 4px 8px;
   padding-bottom: calc(var(--friend-card-gap, 14px) - 4px);
 }
 
-.friend-view__virtual-row--divider {
+.friend-view-virtual-row-divider {
   padding: 16px 4px;
   padding-bottom: calc(var(--friend-card-gap, 14px) - 4px);
 }
 
-.friend-view__virtual-row--cards {
+.friend-view-virtual-row-cards {
   padding: 2px;
   padding-bottom: calc(var(--friend-card-gap, 14px) - 4px);
 }
 
-.friend-view__row {
+.friend-view-row {
   display: grid;
   grid-template-columns: repeat(var(--friend-grid-columns, 1), minmax(var(--friend-card-min-width, 200px), var(--friend-card-target-width, 1fr)));
   gap: var(--friend-card-gap, 14px);
@@ -1008,100 +1008,100 @@ onBeforeMount(() => {
   box-sizing: border-box;
 }
 
-.friend-view__settings-label {
-  font-size: 13px;
+.friend-view-settings-label {
+  font-size: 0.8125rem;
   font-weight: 500;
   margin-right: 8px;
 }
 
-.friend-view__settings-row {
+.friend-view-settings-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.friend-view__scale-control {
+.friend-view-scale-control {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 160px;
 }
 
-.friend-view__scale-value {
-  font-size: 12px;
+.friend-view-scale-value {
+  font-size: 0.75rem;
   font-weight: 600;
   min-width: 42px;
   text-align: right;
 }
 
-.friend-view__slider {
+.friend-view-slider {
   width: 160px;
   margin-right: 12px;
 }
 
-.friend-view__search {
+.friend-view-search {
   width: 240px;
   flex: 1;
 }
 
-.friend-view__scroll {
+.friend-view-scroll {
   overflow: auto;
   min-height: 0;
   height: 100%;
 }
 
-.friend-view__initial-loading {
+.friend-view-initial-loading {
   display: grid;
   place-items: center;
   min-height: 240px;
 }
 
-.friend-view__instance-header {
+.friend-view-instance-header {
   display: flex;
   align-items: center;
   padding: 4px 2px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
-.friend-view__divider {
+.friend-view-divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.friend-view__divider::before,
-.friend-view__divider::after {
+.friend-view-divider::before,
+.friend-view-divider::after {
   content: "";
   flex: 1;
   height: 1px;
 }
 
-.friend-view__divider-text {
+.friend-view-divider-text {
   flex: none;
 }
 
-.friend-view__instance-count {
-  font-size: 12px;
+.friend-view-instance-count {
+  font-size: 0.75rem;
 }
 
-.friend-view__virtual-row--group-header {
+.friend-view-virtual-row-group-header {
   padding: 2px;
   padding-bottom: calc(var(--friend-card-gap, 14px) - 8px);
 }
 
-.friend-view__empty {
+.friend-view-empty {
   display: grid;
   place-items: center;
   min-height: 240px;
-  font-size: 15px;
+  font-size: 0.9375rem;
   letter-spacing: 0.5px;
 }
 
-.friend-view__loading-icon {
+.friend-view-loading-icon {
   animation: spin 1s linear infinite;
 }
 

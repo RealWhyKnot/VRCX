@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden p-2 rounded-xl bg-(--profile-card)">
-    <div style="display: flex; align-items: center; justify-content: space-between">
-      <div style="display: flex; align-items: center">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center">
         <Button
           v-if="userDialog.ref.id === currentUser.id"
           class="rounded-full"
@@ -59,7 +59,7 @@
         </template>
       </div>
     </div>
-    <div class="flex flex-wrap items-start" style="margin-top: 8px; min-height: 60px; overflow: auto">
+    <div class="flex flex-wrap items-start mt-2 min-h-[60px] overflow-auto">
       <template v-if="filteredUserDialogAvatars.length">
         <div
           v-for="avatar in filteredUserDialogAvatars"
@@ -83,7 +83,7 @@
           </div>
         </div>
       </template>
-      <div v-else-if="!userDialog.isAvatarsLoading" style="display: flex; justify-content: center; align-items: center; min-height: 120px; width: 100%">
+      <div v-else-if="!userDialog.isAvatarsLoading" class="flex justify-center items-center min-h-[120px] w-full">
         <DataTableEmpty type="nodata" />
       </div>
     </div>

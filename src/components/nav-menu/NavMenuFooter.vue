@@ -85,9 +85,9 @@
                         :aria-pressed="currentThemeColor === theme.key"
                         :aria-label="themeColorDisplayName(theme)"
                         :title="themeColorDisplayName(theme)"
-                        class="h-3.5 w-3.5 shrink-0 rounded-sm transition-transform hover:scale-125 cursor-pointer"
+                        class="h-3.5 w-3.5 shrink-0 rounded-sm transition-transform hover:scale-125 cursor-pointer [background-color:var(--theme-swatch,transparent)]"
                         :class="currentThemeColor === theme.key ? 'ring-1 ring-ring ring-offset-1 ring-offset-background' : ''"
-                        :style="{ backgroundColor: theme.swatch }"
+                        :style="{ '--theme-swatch': theme.swatch }"
                         @click="emit('theme-color-select', theme)"
                       ></button>
                     </TooltipWrapper>

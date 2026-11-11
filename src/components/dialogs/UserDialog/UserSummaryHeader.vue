@@ -4,9 +4,9 @@
     <div class="relative aspect-17/6">
       <div
         v-if="userDialog.loading || profileImageError || userDialog.ref.bannerType === 'color' || !userDialog.ref.bannerUrl"
-        class="absolute inset-0"
+        class="absolute inset-0 bg-[var(--banner-colour)]"
         :style="{
-          backgroundColor: userDialog.ref.bannerColor ? `#${userDialog.ref.bannerColor}` : 'hsl(var(--muted))',
+          '--banner-colour': userDialog.ref.bannerColor ? `#${userDialog.ref.bannerColor}` : 'hsl(var(--muted))',
         }"
       ></div>
       <img
@@ -35,10 +35,7 @@
         </TooltipWrapper>
       </div>
       <div class="absolute bottom-0 left-3 z-20 size-24 translate-y-1/2">
-        <div
-          class="w-full h-full overflow-hidden rounded-full"
-          style="filter: drop-shadow(0 0 1px rgb(0 0 0 / 95%)) drop-shadow(0 0 4px rgb(0 0 0 / 75%)) drop-shadow(0 2px 8px rgb(0 0 0 / 55%))"
-        >
+        <div class="w-full h-full overflow-hidden rounded-full avatar-shadow">
           <Image v-if="userDialog.loading || userIconError" class="w-full! h-full! object-cover text-muted-foreground bg-accent" />
           <img
             v-else
@@ -196,10 +193,9 @@
         <Badge
           v-if="userDialog.ref.$customTag"
           variant="outline"
-          class="name h-5 px-1.5 text-[11px] leading-none"
+          class="name h-5 px-1.5 text-[11px] leading-none text-[var(--custom-tag-colour,var(--foreground))] [border-color:var(--custom-tag-colour,currentcolor)]"
           :style="{
-            color: userDialog.ref.$customTagColour,
-            'border-color': userDialog.ref.$customTagColour,
+            '--custom-tag-colour': userDialog.ref.$customTagColour,
           }"
           >{{ userDialog.ref.$customTag }}</Badge
         >
@@ -223,13 +219,12 @@
             <span>{{ badge.badgeName }}</span>
             <span v-if="badge.hidden">&nbsp;(Hidden)</span>
           </template>
-          <div style="display: inline-block">
+          <div class="inline-block">
             <Popover>
               <PopoverTrigger as-child>
                 <img
-                  class="cursor-pointer hover:grayscale-0"
+                  class="cursor-pointer hover:grayscale-0 h-[30px] w-[30px] rounded-[var(--radius-sm)] object-cover"
                   :src="badge.badgeImageUrl"
-                  style="height: 30px; width: 30px; border-radius: var(--radius-sm); object-fit: cover"
                   :class="{ grayscale: badge.hidden }"
                   loading="lazy"
                 />
@@ -242,7 +237,7 @@
                   @click="showFullscreenImageDialog(badge.badgeImageUrl)"
                 />
                 <br />
-                <div style="display: block; width: 275px; word-break: normal">
+                <div class="block w-[275px] [word-break:normal]">
                   <span>{{ badge.badgeName }}</span>
                   <br />
                   <span class="x-grey text-xs">{{ badge.badgeDescription }}</span>
@@ -253,7 +248,7 @@
                   </span>
                   <template v-if="userDialog.id === currentUser.id">
                     <br />
-                    <label class="inline-flex items-center gap-2" style="margin-top: 6px">
+                    <label class="inline-flex items-center gap-2 mt-1.5">
                       <Checkbox :model-value="badge.hidden === true" @update:model-value="setBadgeHidden(badge, $event)" />
                       <span>{{ t("dialog.user.badges.hidden") }}</span>
                     </label>
@@ -306,11 +301,14 @@
   </div>
 
   <div class="rounded-xl bg-(--profile-card) p-3 flex flex-col mt-2">
-    <div class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20" :style="{ color: userDialog.theme.subtextColor }">
+    <div
+      class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20 text-[var(--theme-subtext,inherit)]"
+      :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+    >
       {{ t("dialog.user.info.avatar_info") }}
       <span class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
         <TooltipWrapper v-if="!hasAvatarSet" side="right" :content="t('dialog.user.info.icon_hides_avatar')">
-          <Info class="inline-block h-3 w-3 align-middle" :style="{ color: userDialog.theme.iconColor }" />
+          <Info class="inline-block h-3 w-3 align-middle text-[var(--theme-icon,inherit)]" :style="{ '--theme-icon': userDialog.theme.iconColor }" />
         </TooltipWrapper>
       </span>
     </div>
@@ -321,7 +319,7 @@
           :imageurl="avatarImageUrl"
           :userid="userDialog.id"
           :avatartags="userDialog.ref.currentAvatarTags"
-          style="display: inline-block"
+          class="inline-block"
         />
         <img
           class="h-12 w-16 rounded-lg object-cover cursor-pointer flex-none"
@@ -337,7 +335,10 @@
   </div>
 
   <div class="rounded-xl bg-(--profile-card) p-3 flex flex-col mt-2">
-    <div class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20" :style="{ color: userDialog.theme.subtextColor }">
+    <div
+      class="text-[10px] font-bold uppercase tracking-wide mb-2 pb-2 border-b border-muted-foreground/20 text-[var(--theme-subtext,inherit)]"
+      :style="{ '--theme-subtext': userDialog.theme.subtextColor }"
+    >
       {{ t("dialog.user.info.represented_group") }}
     </div>
     <div
@@ -352,10 +353,10 @@
         </div>
         <div class="text-xs text-muted-foreground">({{ userDialog.representedGroup.memberCount }})</div>
       </div>
-      <div style="display: inline-block; flex: none; margin-right: 0">
+      <div class="inline-block flex-none mr-0">
         <Avatar
-          class="cursor-pointer size-10! rounded-lg!"
-          :style="{ background: userDialog.isRepresentedGroupLoading ? 'var(--muted)' : '' }"
+          class="cursor-pointer size-10! rounded-lg! [background:var(--group-icon-background)]"
+          :style="{ '--group-icon-background': userDialog.isRepresentedGroupLoading ? 'var(--muted)' : '' }"
           @click.stop="showFullscreenImageDialog(userDialog.representedGroup.iconUrl)"
         >
           <AvatarImage
@@ -507,3 +508,9 @@ function setBadgeShowcased(badge: UserDialogBadge, value: unknown) {
   });
 }
 </script>
+
+<style scoped>
+.avatar-shadow {
+  filter: drop-shadow(0 0 1px var(--color-shadow-strong)) drop-shadow(0 0 4px var(--color-shadow-medium)) drop-shadow(0 2px 8px var(--color-shadow-soft));
+}
+</style>

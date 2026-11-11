@@ -1,9 +1,9 @@
 <template>
   <span>
-    <span v-if="region" class="flags" :class="region" style="display: inline-block; margin-right: 5px; margin-top: 3px"> </span>
+    <span v-if="region" class="flags inline-block mr-[5px] mt-[3px]" :class="region"> </span>
     <span>{{ text }}</span>
     <span v-if="groupName">({{ groupName }})</span>
-    <Lock v-if="strict" class="h-4 w-4" style="display: inline-block; margin-left: 5px" />
+    <Lock v-if="strict" class="h-4 w-4 inline-block ml-[5px]" />
   </span>
 </template>
 

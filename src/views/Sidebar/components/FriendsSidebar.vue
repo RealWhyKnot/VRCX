@@ -2,19 +2,19 @@
   <div class="relative h-full">
     <div ref="scrollViewportRef" class="h-full w-full overflow-auto overflow-x-hidden">
       <div class="px-1.5 py-2.5">
-        <div v-if="virtualRows.length" class="relative w-full box-border" :style="virtualContainerStyle">
+        <div v-if="virtualRows.length" class="relative w-full box-border h-[var(--virtual-height)]" :style="virtualContainerStyle">
           <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
             <div
               v-if="item.row"
               :ref="measureRowElement"
-              class="absolute left-0 top-0 w-full box-border"
+              class="absolute left-0 top-0 w-full box-border [transform:translateY(var(--row-start))] pb-[var(--row-padding-bottom,0px)]"
               :data-index="item.virtualItem.index"
               :style="rowStyle(item)"
             >
               <template v-if="item.row.type === 'toggle-header'">
                 <div
-                  class="flex cursor-pointer items-center pt-4 pb-1.5 text-xs"
-                  :style="item.row.headerPadding ? { padding: item.row.headerPadding } : undefined"
+                  class="flex cursor-pointer items-center text-xs [padding:var(--header-padding,1rem_0_0.375rem)]"
+                  :style="item.row.headerPadding ? { '--header-padding': item.row.headerPadding } : undefined"
                   @click="item.row.onClick && item.row.onClick()"
                 >
                   <ChevronDown class="transition-transform duration-200 ease-in-out" :class="{ '-rotate-90': !item.row.isExpanded }" />
@@ -42,7 +42,11 @@
                         <IconFrame :enabled="sidebarCosmetics" :icon-frame="currentUser.iconFrame" />
                       </div>
                       <div class="flex-1 overflow-hidden h-9 flex flex-col justify-between">
-                        <span class="block truncate font-medium leading-[18px]" :style="{ color: currentUser.$userColour }">{{ currentUser.displayName }}</span>
+                        <span
+                          class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]"
+                          :style="{ '--user-colour': currentUser.$userColour }"
+                          >{{ currentUser.displayName }}</span
+                        >
                         <Location
                           v-if="isGameRunning && !gameLogDisabled"
                           class="extra block truncate text-xs"
@@ -569,15 +573,14 @@ const virtualItems = computed(() =>
 );
 
 const virtualContainerStyle = computed<CSSProperties>(() => ({
-  height: `${virtualizer.value.getTotalSize()}px`,
-  width: "100%",
+  "--virtual-height": `${virtualizer.value.getTotalSize()}px`,
 }));
 
 function rowStyle(item: VirtualRowItem): CSSProperties {
   const paddingBottom = item.row?.paddingBottom;
   return {
-    transform: `translateY(${item.virtualItem.start}px)`,
-    ...(paddingBottom ? { paddingBottom: `${paddingBottom}px` } : {}),
+    "--row-start": `${item.virtualItem.start}px`,
+    ...(paddingBottom ? { "--row-padding-bottom": `${paddingBottom}px` } : {}),
   };
 }
 

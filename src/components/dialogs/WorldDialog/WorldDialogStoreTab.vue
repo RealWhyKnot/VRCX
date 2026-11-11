@@ -19,9 +19,9 @@
         </div>
         <div class="flex-1 overflow-hidden">
           <span class="block truncate font-medium leading-[18px]" v-text="replaceBioSymbols(listing.displayName)" />
-          <span class="block truncate text-xs" style="text-decoration: underline; font-style: italic">${{ commaNumber(listing.priceTokens) }}V</span>
+          <span class="block truncate text-xs italic [text-decoration:underline]">${{ commaNumber(listing.priceTokens) }}V</span>
           <span v-if="listing.duration" class="block truncate text-xs text-muted-foreground" v-text="`${listing.duration} ${listing.durationType ?? ''}`" />
-          <span class="block text-xs" style="text-wrap: auto" v-text="replaceBioSymbols(listing.description)" />
+          <span class="block text-xs [text-wrap:auto]" v-text="replaceBioSymbols(listing.description)" />
         </div>
       </div>
     </div>

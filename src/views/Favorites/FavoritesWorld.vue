@@ -55,7 +55,7 @@
                     :key="group.key"
                     :class="[
                       'group-item x-hover-card hover:shadow-sm',
-                      `group-item--${group.visibility}`,
+                      `group-item-${group.visibility}`,
                       { 'is-active': !hasSearchInput && isGroupActive('remote', group.key) },
                     ]"
                     @click="handleGroupClick('remote', group.key)"
@@ -268,11 +268,10 @@
                 <div
                   v-else-if="activeLocalGroupName && isLocalGroupSelected"
                   ref="localFavoritesViewportRef"
-                  class="h-full pr-2 overflow-auto favorites-content__scroll--local focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+                  class="h-full pr-2 overflow-x-hidden overflow-y-scroll favorites-content-scroll-local focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
                   data-reka-scroll-area-viewport=""
                   data-slot="scroll-area-viewport"
                   tabindex="0"
-                  style="overflow: hidden scroll"
                 >
                   <template v-if="currentLocalFavorites.length">
                     <div class="favorites-card-virtual" :style="localVirtualContainerStyle">

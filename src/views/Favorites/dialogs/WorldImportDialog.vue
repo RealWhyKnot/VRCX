@@ -4,9 +4,9 @@
       <DialogHeader>
         <DialogTitle>{{ t("dialog.world_import.header") }}</DialogTitle>
       </DialogHeader>
-      <div style="display: flex; align-items: center; justify-content: space-between">
+      <div class="flex items-center justify-between">
         <div class="text-xs">{{ t("dialog.world_import.description") }}</div>
-        <div style="display: flex; align-items: center">
+        <div class="flex items-center">
           <div v-if="worldImportDialog.progress">
             {{ t("dialog.world_import.process_progress") }}
             {{ worldImportDialog.progress }} / {{ worldImportDialog.progressTotal }}
@@ -83,19 +83,12 @@
         <Button size="sm" variant="secondary" @click="worldImportDialog.errors = ''">
           {{ t("dialog.world_import.clear_errors") }}
         </Button>
-        <h2 class="my-1.5 mx-0" style="font-weight: bold">
+        <h2 class="my-1.5 mx-0 font-bold">
           {{ t("dialog.world_import.errors") }}
         </h2>
         <pre class="whitespace-pre-wrap text-xs" v-text="worldImportDialog.errors"></pre>
       </template>
-      <DataTableLayout
-        class="min-w-0 w-full"
-        :table="table"
-        :loading="worldImportDialog.loading"
-        :table-style="tableStyle"
-        :show-pagination="false"
-        style="margin-top: 8px"
-      />
+      <DataTableLayout class="min-w-0 w-full mt-2" :table="table" :loading="worldImportDialog.loading" :table-style="tableStyle" :show-pagination="false" />
     </DialogContent>
   </Dialog>
 </template>

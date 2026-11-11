@@ -5,13 +5,13 @@
         <span class="extra flex items-center">
           <span class="time">{{ formatDate(feed.created_at) }}</span>
           <span class="name" v-text="feed.displayName"></span>
-          <Loader2 v-if="feed.isTraveling" class="is-loading ml-2 h-4 w-4" />
+          <Loader2 v-if="feed.isTraveling" data-loading class="ml-2 h-4 w-4" />
           <VrLocation
+            class="ml-[2px]"
             :location="feed.location"
             :hint="feed.worldName"
             :grouphint="feed.groupName"
             :instancedisplayname="feed.instanceDisplayName"
-            style="margin-left: 2px"
           ></VrLocation>
         </span>
       </div>
@@ -33,11 +33,11 @@
           <Check class="h-5 w-5" />
           <template v-if="feed.worldName">
             <VrLocation
+              class="ml-[5px]"
               :location="feed.location"
               :hint="feed.worldName"
               :grouphint="feed.groupName"
               :instancedisplayname="feed.instanceDisplayName"
-              style="margin-left: 5px"
             ></VrLocation>
           </template>
         </span>
@@ -47,7 +47,7 @@
       <div class="detail">
         <span class="extra flex items-center">
           <span class="time">{{ formatDate(feed.created_at) }}</span>
-          <span class="name" style="margin-right: 5px" v-text="feed.displayName"></span>
+          <span class="name mr-[5px]" v-text="feed.displayName"></span>
           <template v-if="feed.statusDescription === feed.previousStatusDescription">
             <i class="x-user-status" :class="statusClass(feed.previousStatus)"></i>
             <ArrowRight class="h-4 w-4 inline-block" />
@@ -83,7 +83,7 @@
         <span class="extra flex items-center">
           <span class="time">{{ formatDate(feed.created_at) }}</span>
           <Play class="h-5 w-5" />
-          <Loader2 class="is-loading mr-5 h-4 w-4" />
+          <Loader2 data-loading class="mr-5 h-4 w-4" />
           <span class="name" v-text="feed.displayName"></span>
         </span>
       </div>
@@ -101,7 +101,7 @@
         <span class="extra flex items-center">
           <span class="time">{{ formatDate(feed.created_at) }}</span>
           <TvMinimalPlay class="mr-5 h-5 w-5" />
-          <span v-if="feed.displayName" class="name" style="margin-right: 5px" :style="{ '--vr-name-colour': feed.tagColour }" v-text="feed.displayName"></span>
+          <span v-if="feed.displayName" class="name mr-[5px]" :style="{ '--vr-name-colour': feed.tagColour }" v-text="feed.displayName"></span>
           <template v-if="feed.videoName">
             <span v-text="feed.videoName"></span>
           </template>

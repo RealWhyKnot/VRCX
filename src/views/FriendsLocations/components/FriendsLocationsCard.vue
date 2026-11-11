@@ -1,8 +1,8 @@
 <template>
   <UserContextMenu :user-id="friend.id" :state="friend.state" :location="friend.ref?.location ?? ''">
-    <Card class="friend-card x-hover-card hover:bg-muted relative" :style="cardStyle" @click="showUserDialog(friend.id)">
+    <Card class="friend-card x-hover-card hover:bg-muted relative cursor-pointer" :style="cardStyle" @click="showUserDialog(friend.id)">
       <ProfileEffect :enabled="showCosmetics" :profile-effect="friend.ref?.profileEffect ?? ''" class="object-cover rounded-lg" />
-      <div class="friend-card__header grid items-center mb-1.75">
+      <div class="friend-card-header grid items-center mb-1.75">
         <div class="relative inline-block flex-none size-9 mr-2.5">
           <Avatar class="size-full rounded-full">
             <AvatarImage :src="userImage(friend.ref, true)" class="object-cover" />
@@ -12,22 +12,26 @@
           </Avatar>
           <IconFrame :enabled="showCosmetics" :icon-frame="friend.ref?.iconFrame ?? ''" />
         </div>
-        <span class="friend-card__status-dot absolute rounded-full pointer-events-none" :class="statusDotClass"></span>
-        <div class="friend-card__name relative font-semibold overflow-hidden text-ellipsis whitespace-nowrap" :title="friend.name">
+        <span class="friend-card-status-dot absolute rounded-full pointer-events-none" :class="statusDotClass"></span>
+        <div class="friend-card-name relative font-semibold overflow-hidden text-ellipsis whitespace-nowrap" :title="friend.name">
           {{ friend.name }}
         </div>
       </div>
-      <div class="friend-card__body grid">
+      <div class="friend-card-body grid">
         <div
-          class="friend-card__signature flex items-center overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground"
+          class="friend-card-signature flex items-center overflow-hidden text-ellipsis whitespace-nowrap text-muted-foreground"
           :title="friend.ref?.statusDescription"
         >
-          <Pencil v-if="friend.ref?.statusDescription" class="h-3.5 w-3.5 mr-0.5" style="opacity: 0.7" />
+          <Pencil v-if="friend.ref?.statusDescription" class="h-3.5 w-3.5 mr-0.5 opacity-[0.7]" />
           {{ friend.ref?.statusDescription || "&nbsp;" }}
         </div>
-        <div v-if="displayInstanceInfo" class="friend-card__world flex items-center justify-start box-border max-w-full min-w-0 overflow-hidden" @click.stop>
+        <div
+          v-if="displayInstanceInfo"
+          class="friend-card-world flex items-center justify-start box-border max-w-full min-w-0 overflow-hidden dark:text-zinc-300"
+          @click.stop
+        >
           <Location
-            class="friend-card__location flex w-full overflow-hidden wrap-break-word text-center"
+            class="friend-card-location flex w-full overflow-hidden wrap-break-word text-center"
             :location="friend.ref?.location ?? ''"
             :traveling="friend.ref?.travelingToLocation ?? ''"
             enable-context-menu
@@ -79,16 +83,15 @@ const STATUS_DOT_FLAGS = ["online", "active-joinme", "active-askme", "active-bus
 const cardStyle = computed(() => ({
   "--card-scale": props.cardScale,
   "--card-spacing": props.cardSpacing,
-  cursor: "pointer",
-  padding: `${8 * props.cardScale}px`,
-  paddingBottom: `${6 * props.cardScale}px !important`,
+  "--card-padding": `${8 * props.cardScale}px`,
+  "--card-padding-bottom": `${6 * props.cardScale}px`,
 }));
 
 const statusDotClass = computed(() => {
   const status = userStatusClass(props.friend.ref, props.friend.pendingOffline);
   const activeFlag = STATUS_DOT_FLAGS.find((flag) => status?.[flag]);
 
-  return activeFlag ? `friend-card__status-dot--${activeFlag}` : "friend-card__status-dot--hidden";
+  return activeFlag ? `friend-card-status-dot-${activeFlag}` : "friend-card-status-dot-hidden";
 });
 </script>
 
@@ -96,145 +99,115 @@ const statusDotClass = computed(() => {
 .friend-card {
   --card-scale: 1;
   --card-spacing: 1;
+  --card-padding: 8px;
+  --card-padding-bottom: 6px;
 
   gap: calc(14px * var(--card-scale) * var(--card-spacing));
   max-width: var(--friend-card-target-width, 220px);
   min-width: var(--friend-card-min-width, 220px);
+  padding: var(--card-padding);
+  padding-bottom: var(--card-padding-bottom);
 }
 
-.friend-card__header {
+.friend-card-header {
   grid-template-columns: auto minmax(0, 1fr);
   gap: calc(10px * var(--card-scale) * var(--card-spacing));
   padding-top: calc(3px * var(--card-scale));
   padding-left: calc(4px * var(--card-scale));
 }
 
-.friend-card__status-dot {
+.friend-card-status-dot {
   top: calc(16px * var(--card-scale));
   right: calc(16px * var(--card-scale));
   inline-size: calc(12px * var(--card-scale));
   block-size: calc(12px * var(--card-scale));
 }
 
-.friend-card__status-dot--hidden {
+.friend-card-status-dot-hidden {
   display: none;
 }
 
-.friend-card__status-dot--online {
+.friend-card-status-dot-online {
   background: var(--status-online);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-online) 40%, transparent);
 }
 
-.friend-card__status-dot--active {
+.friend-card-status-dot-active {
   background: transparent;
   border: calc(2px * var(--card-scale)) solid var(--status-online);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-online) 40%, transparent);
 }
 
-.friend-card__status-dot--active-joinme {
+.friend-card-status-dot-active-joinme {
   background: transparent;
   border: calc(2px * var(--card-scale)) solid var(--status-joinme);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-joinme) 40%, transparent);
 }
 
-.friend-card__status-dot--active-askme {
+.friend-card-status-dot-active-askme {
   background: transparent;
   border: calc(2px * var(--card-scale)) solid var(--status-askme);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-askme) 40%, transparent);
 }
 
-.friend-card__status-dot--active-busy {
+.friend-card-status-dot-active-busy {
   background: transparent;
   border: calc(2px * var(--card-scale)) solid var(--status-busy);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-busy) 40%, transparent);
 }
 
-.friend-card__status-dot--joinme {
+.friend-card-status-dot-joinme {
   background: var(--status-joinme);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-joinme) 40%, transparent);
 }
 
-.friend-card__status-dot--busy {
+.friend-card-status-dot-busy {
   background: var(--status-busy);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-busy) 40%, transparent);
 }
 
-.friend-card__status-dot--askme {
+.friend-card-status-dot-askme {
   background: var(--status-askme);
   box-shadow: 0 0 calc(8px * var(--card-scale)) color-mix(in oklch, var(--status-askme) 40%, transparent);
 }
 
-.friend-card__status-dot--offline {
+.friend-card-status-dot-offline {
   background: var(--status-offline-card);
 }
 
-.friend-card__body {
+.friend-card-body {
   gap: calc(8px * var(--card-scale) * var(--card-spacing));
 }
 
-.friend-card__name {
-  font-size: calc(13px * var(--card-scale));
+.friend-card-name {
+  font-size: calc(0.8125rem * var(--card-scale));
 }
 
-.friend-card__signature {
-  font-size: calc(12px * var(--card-scale));
+.friend-card-signature {
+  font-size: calc(0.75rem * var(--card-scale));
   padding: calc(7px * var(--card-scale)) calc(8px * var(--card-scale));
   line-height: 1.4;
   gap: calc(4px * var(--card-scale));
 }
 
-.friend-card__signature :deep(svg) {
+.friend-card-signature :deep(svg) {
   margin-top: calc(1px * var(--card-scale));
 }
 
-.friend-card__world {
+.friend-card-world {
   min-height: calc(24px * var(--card-scale));
   padding: calc(7px * var(--card-scale)) calc(8px * var(--card-scale));
   border-radius: calc(var(--radius-lg) * var(--card-scale));
-  font-size: calc(12px * var(--card-scale));
+  font-size: calc(0.75rem * var(--card-scale));
   line-height: 1.3;
 }
 
-:global(html.dark) .friend-card__world,
-:global(:root.dark) .friend-card__world,
-:global(:root[data-theme="dark"]) .friend-card__world {
-  color: var(--color-zinc-300);
-}
-
-.friend-card__location {
+.friend-card-location {
   max-height: calc(36px * var(--card-scale));
   white-space: normal;
 }
 
-.friend-card__location :deep(.x-location__text) {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  text-overflow: ellipsis;
-}
-
-.friend-card__location :deep(.x-location__text:only-child) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(24px * var(--card-scale));
-}
-
-.friend-card__location :deep(.x-location__text:only-child span) {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.friend-card__location :deep(.x-location__meta) {
-  display: none;
-}
-
-.friend-card__location :deep(.flags) {
+.friend-card-location :deep(.flags) {
   scale: calc(1 * var(--card-scale));
   filter: brightness(1.05);
 }

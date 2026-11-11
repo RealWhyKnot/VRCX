@@ -32,7 +32,7 @@ function change(isEnabled: boolean) {
 
 <style scoped>
 .simple-switch {
-  font-size: 12px;
+  font-size: 0.75rem;
   display: flex;
   align-items: center;
 }

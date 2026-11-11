@@ -13,10 +13,10 @@
             <PopoverTrigger as-child>
               <TagsInputItem
                 :value="entry.tag"
-                class="cursor-pointer"
+                class="cursor-pointer bg-(--tag-bg) text-(--tag-text)"
                 :style="{
-                  backgroundColor: resolveColor(entry).bg,
-                  color: resolveColor(entry).text,
+                  '--tag-bg': resolveColor(entry).bg,
+                  '--tag-text': resolveColor(entry).text,
                 }"
               >
                 <TagsInputItemText />
@@ -29,9 +29,9 @@
                   v-for="color in TAG_COLORS"
                   :key="color.name"
                   type="button"
-                  class="h-4 w-4 shrink-0 rounded-sm transition-transform hover:scale-125 cursor-pointer"
+                  class="h-4 w-4 shrink-0 rounded-sm transition-transform hover:scale-125 cursor-pointer [background-color:var(--swatch-bg)]"
                   :class="isColorSelected(entry, color) ? 'ring-1 ring-ring ring-offset-1 ring-offset-background' : ''"
-                  :style="{ backgroundColor: color.bg.replace('/ 0.2)', '/ 1)') }"
+                  :style="{ '--swatch-bg': color.bg.replace('/ 0.2)', '/ 1)') }"
                   :title="color.label"
                   @click="setEntryColor(entry, color)"
                 />

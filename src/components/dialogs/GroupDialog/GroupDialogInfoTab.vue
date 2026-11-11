@@ -18,7 +18,7 @@
           :on-refresh="() => refreshInstancePlayerCount(room.tag)"
         />
       </div>
-      <div v-if="room.users.length" class="flex flex-wrap items-start" style="max-height: 150px; overflow: auto">
+      <div v-if="room.users.length" class="flex flex-wrap items-start max-h-[150px] overflow-auto">
         <div
           v-for="user in room.users"
           :key="user.id"
@@ -35,7 +35,11 @@
             <IconFrame :icon-frame="user.iconFrame ?? ''" />
           </div>
           <div class="flex-1 overflow-hidden">
-            <span class="block truncate font-medium leading-[18px]" :style="{ color: user.$userColour }" v-text="user.displayName || user.id" />
+            <span
+              class="block truncate font-medium leading-[18px] text-[color:var(--user-colour)]"
+              :style="{ '--user-colour': user.$userColour }"
+              v-text="user.displayName || user.id"
+            />
             <span v-if="user.location === 'traveling'" class="block truncate text-xs">
               <Spinner class="inline-block mr-1" />
               <Timer :epoch="user.$travelingToTime" />
@@ -54,7 +58,7 @@
       <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
         {{ t("dialog.group.info.header") }}
       </div>
-      <pre class="text-xs font-[inherit]" style="white-space: pre-wrap; max-height: 210px; overflow-y: auto">{{ groupDialog.ref.description || "—" }}</pre>
+      <pre class="text-xs font-[inherit] whitespace-pre-wrap max-h-[210px] overflow-y-auto">{{ groupDialog.ref.description || "—" }}</pre>
     </div>
 
     <div class="rounded-xl bg-(--profile-card) p-3">
@@ -84,17 +88,16 @@
           <img
             v-if="!announcementPhotoError"
             :src="groupDialog.announcement.imageUrl"
-            class="cursor-pointer rounded-md object-cover"
-            style="width: 60px; height: 60px"
+            class="cursor-pointer rounded-md object-cover w-[60px] h-[60px]"
             loading="lazy"
             @click="showFullscreenImageDialog(groupDialog.announcement.imageUrl)"
             @error="announcementPhotoError = true"
           />
-          <div v-else class="flex items-center justify-center bg-muted rounded-md" style="width: 60px; height: 60px">
+          <div v-else class="flex items-center justify-center bg-muted rounded-md w-[60px] h-[60px]">
             <Image class="size-5 text-muted-foreground" />
           </div>
         </div>
-        <pre class="text-xs font-[inherit]" style="white-space: pre-wrap">{{ groupDialog.announcement.text }}</pre>
+        <pre class="text-xs font-[inherit] whitespace-pre-wrap">{{ groupDialog.announcement.text }}</pre>
         <div class="flex flex-row justify-end gap-2 mt-2 text-xs text-muted-foreground">
           <TooltipWrapper v-if="groupDialog.announcement.roleIds?.length" side="top">
             <template #content>
@@ -174,7 +177,7 @@
       <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
         {{ t("dialog.group.info.rules") }}
       </div>
-      <pre class="text-xs font-[inherit]" style="white-space: pre-wrap; max-height: 210px; overflow-y: auto">{{ groupDialog.ref.rules || "—" }}</pre>
+      <pre class="text-xs font-[inherit] whitespace-pre-wrap max-h-[210px] overflow-y-auto">{{ groupDialog.ref.rules || "—" }}</pre>
     </div>
   </div>
 </template>

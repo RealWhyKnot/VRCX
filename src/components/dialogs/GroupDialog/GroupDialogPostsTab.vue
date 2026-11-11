@@ -1,7 +1,7 @@
 <template v-if="groupDialog.visible">
   <div class="flex h-full min-h-0 flex-col p-2 rounded-xl bg-(--profile-card)">
     <div class="sticky flex items-center gap-2 top-0 z-10 p-2">
-      <span style="margin-right: 8px; vertical-align: top">{{ t("dialog.group.posts.posts_count") }} {{ groupDialog.posts.length }}</span>
+      <span class="mr-[8px] align-top">{{ t("dialog.group.posts.posts_count") }} {{ groupDialog.posts.length }}</span>
       <InputGroupField
         v-model="groupDialog.postsSearch"
         clearable
@@ -39,15 +39,15 @@
             </div>
           </template>
           <span class="block pr-15" v-text="post.title" />
-          <div v-if="post.imageUrl" style="display: inline-block; margin-right: 6px">
-            <div class="cursor-pointer" style="flex: none; width: 60px; height: 60px" @click="showFullscreenImageDialog(post.imageUrl)">
-              <img :src="post.imageUrl" style="width: 60px; height: 60px; border-radius: var(--radius-md); object-fit: cover" loading="lazy" />
-              <div class="items-center justify-center bg-muted" style="width: 60px; height: 60px; border-radius: var(--radius-md); display: none">
+          <div v-if="post.imageUrl" class="inline-block mr-[6px]">
+            <div class="cursor-pointer flex-none w-[60px] h-[60px]" @click="showFullscreenImageDialog(post.imageUrl)">
+              <img :src="post.imageUrl" class="w-[60px] h-[60px] rounded-(--radius-md) object-cover" loading="lazy" />
+              <div class="hidden items-center justify-center bg-muted w-[60px] h-[60px] rounded-(--radius-md)">
                 <Image class="size-5 text-muted-foreground" />
               </div>
             </div>
           </div>
-          <pre class="text-xs font-[inherit]" style="display: inline-block; vertical-align: top; white-space: pre-wrap; margin: 0">{{ post.text || "-" }}</pre>
+          <pre class="text-xs font-[inherit] inline-block align-top whitespace-pre-wrap m-0">{{ post.text || "-" }}</pre>
           <div v-if="post.authorId" class="mt-1 clear-both flex w-full items-center justify-end text-xs">
             <TooltipWrapper v-if="postRoleIds(post).length" side="top">
               <template #content>
@@ -58,10 +58,10 @@
                   <template v-if="postRoleIds(post).indexOf(roleId) < postRoleIds(post).length - 1"><span>,&nbsp;</span></template>
                 </template>
               </template>
-              <Eye style="margin-right: 6px" />
+              <Eye class="mr-[6px]" />
             </TooltipWrapper>
-            <DisplayName :userid="post.authorId" style="margin-right: 6px" />
-            <span v-if="post.editorId" style="margin-right: 6px">({{ t("dialog.group.posts.edited_by") }} <DisplayName :userid="post.editorId" />)</span>
+            <DisplayName :userid="post.authorId" class="mr-[6px]" />
+            <span v-if="post.editorId" class="mr-[6px]">({{ t("dialog.group.posts.edited_by") }} <DisplayName :userid="post.editorId" />)</span>
             <TooltipWrapper side="bottom">
               <template #content>
                 <span>{{ t("dialog.group.posts.created_at") }} {{ formatDateFilter(post.createdAt, "long") }}</span>

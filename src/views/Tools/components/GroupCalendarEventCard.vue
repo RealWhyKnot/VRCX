@@ -230,8 +230,8 @@ const scheduleCloseEventPopover = () => {
   position: absolute;
   top: -8px;
   right: -9px;
-  z-index: 10;
-  font-size: 15px;
+  z-index: var(--layer-calendar-badge);
+  font-size: 0.9375rem;
 }
 
 .event-card .badges .badge {
@@ -246,7 +246,7 @@ const scheduleCloseEventPopover = () => {
 }
 
 .event-card .event-content {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .timeline-view .event-card .event-content {
@@ -275,7 +275,7 @@ const scheduleCloseEventPopover = () => {
 }
 
 .event-card .event-title-content {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: bold;
   line-height: 1.2;
   cursor: pointer;
@@ -291,12 +291,12 @@ const scheduleCloseEventPopover = () => {
   align-items: center;
 }
 
-.timeline-view .event-card .event-info > :first-child {
-  font-size: 14px;
+.timeline-view .event-info > :first-child {
+  font-size: 0.875rem;
 }
 
 .grid-view .event-card .event-info {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .event-card .event-time {

@@ -14,10 +14,14 @@
         <IconFrame :enabled="sidebarCosmetics" :icon-frame="friend.ref.iconFrame ?? ''" />
       </div>
       <div class="flex-1 overflow-hidden h-9 flex flex-col justify-between">
-        <span v-if="!hideNicknames && friend.$nickName" class="block truncate font-medium leading-[18px]" :style="{ color: friend.ref.$userColour }">
+        <span
+          v-if="!hideNicknames && friend.$nickName"
+          class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]"
+          :style="{ '--user-colour': friend.ref.$userColour }"
+        >
           {{ friend.ref.displayName }} ({{ friend.$nickName }})
         </span>
-        <span v-else class="block truncate font-medium leading-[18px]" :style="{ color: friend.ref.$userColour }"
+        <span v-else class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]" :style="{ '--user-colour': friend.ref.$userColour }"
           >{{ friend.ref.displayName }}{{ isGroupByInstance && isFavorite ? " ⭐" : "" }}</span
         >
 
@@ -29,7 +33,7 @@
           <template v-else-if="isGroupByInstance">
             <div class="flex items-center">
               <Spinner v-if="isFriendTraveling" class="mr-1" />
-              <Timer class="text-xs" :epoch="epoch" :style="isFriendTraveling ? { display: 'inline-block', overflow: 'unset' } : undefined" />
+              <Timer class="text-xs" :class="isFriendTraveling ? 'inline-block [overflow:unset]' : undefined" :epoch="epoch" />
             </div>
           </template>
           <Location v-else class="extra block truncate text-xs!" :location="locationProp" :traveling="travelingProp" :link="false" />

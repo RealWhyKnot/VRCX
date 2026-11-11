@@ -92,7 +92,7 @@ function handleSelect(item: Parameters<typeof selectResult>[0]) {
                 <img v-if="item.ref" :src="userImage(item.ref)" class="size-6 rounded-full object-cover" loading="lazy" />
                 <Users v-else class="size-4" />
                 <div class="flex flex-col min-w-0">
-                  <span class="truncate" :style="{ color: item.ref?.$userColour }">
+                  <span class="truncate [color:var(--user-colour,inherit)]" :style="{ '--user-colour': item.ref?.$userColour }">
                     {{ item.name }}
                   </span>
                   <span v-if="item.matchedField !== 'name' && item.memo" class="truncate text-xs text-muted-foreground"> Memo: {{ item.memo }} </span>

@@ -18,7 +18,7 @@
             <Button variant="ghost" @click="urlList.splice(index, 1)"><Trash2 /></Button>
           </template>
         </InputGroupAction>
-        <Button size="sm" variant="outline" style="margin-top: 6px" @click="urlList.push('')">
+        <Button size="sm" variant="outline" class="mt-[6px]" @click="urlList.push('')">
           {{ t("dialog.allowed_video_player_domains.add_domain") }}
         </Button>
       </div>

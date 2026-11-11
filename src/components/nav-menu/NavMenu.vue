@@ -19,7 +19,7 @@
 
     <ContextMenu>
       <ContextMenuTrigger as-child>
-        <SidebarContent class="pt-2" style="container-type: inline-size">
+        <SidebarContent class="pt-2 @container">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu v-if="navLayoutReady">

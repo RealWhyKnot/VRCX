@@ -7,6 +7,7 @@ import PopoverTrigger from "@/components/ui/popover/PopoverTrigger.vue";
 import Button from "@/components/ui/button/Button.vue";
 import { ColorPicker } from "vue3-colorpicker";
 import "vue3-colorpicker/style.css";
+import "./color-picker-button.user.css";
 
 const { t } = useI18n();
 
@@ -50,7 +51,7 @@ const displayLabel = computed(() => {
 });
 const hasPresets = computed(() => Array.isArray(props.presets) && props.presets.length > 0);
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${Math.max(1, props.cols)}, minmax(0, 1fr))`,
+  "--preset-columns": `repeat(${Math.max(1, props.cols)}, minmax(0, 1fr))`,
 }));
 
 function setColor(color: string) {
@@ -74,7 +75,7 @@ function clear() {
     <PopoverTrigger as-child>
       <slot name="trigger" :color="safeValue" :label="displayLabel">
         <Button variant="outline" class="flex items-center gap-2 px-2 size-sm" :disabled="disabled">
-          <span class="h-4 w-4 rounded shrink-0" :style="{ backgroundColor: safeValue }" />
+          <span class="h-4 w-4 rounded shrink-0 [background-color:var(--swatch,transparent)]" :style="{ '--swatch': safeValue }" />
           <span class="text-xs opacity-80 uppercase">{{ displayLabel }}</span>
           <span
             v-if="clearable && modelValue"
@@ -93,14 +94,14 @@ function clear() {
     </PopoverTrigger>
 
     <PopoverContent class="w-auto p-0 z-10000" align="start">
-      <div :class="[{ 'disable-alpha': disableAlpha }]">
-        <div v-if="hasPresets" class="mt-3 pl-3 pb-3 grid gap-2 border-b" :style="gridStyle">
+      <div class="color-picker-popover" :class="[{ 'disable-alpha': disableAlpha }]">
+        <div v-if="hasPresets" class="mt-3 pl-3 pb-3 grid gap-2 border-b grid-cols-(--preset-columns)" :style="gridStyle">
           <button
             v-for="color in presets"
             :key="color"
             type="button"
-            class="h-6 w-6 rounded border"
-            :style="{ backgroundColor: color }"
+            class="h-6 w-6 rounded border [background-color:var(--preset-colour,transparent)]"
+            :style="{ '--preset-colour': color }"
             :disabled="disabled"
             :aria-disabled="disabled ? 'true' : 'false'"
             :class="[
@@ -125,51 +126,3 @@ function clear() {
     </PopoverContent>
   </Popover>
 </template>
-
-<style scoped>
-:deep(.vc-colorpicker) {
-  box-shadow: none !important;
-  background-color: var(--popover) !important;
-}
-
-:deep(.vc-display .vc-color-input input) {
-  cursor: text !important;
-}
-
-:deep(.vc-input-toggle) {
-  width: 4ch !important;
-  padding-inline: 0 !important;
-  font-family: monospace;
-  text-transform: uppercase;
-  text-align: center;
-}
-
-:global(html.dark :is(.vc-color-input input, .vc-input-toggle, .vc-alpha-input, .vc-alpha-input__inner)) {
-  color: var(--muted-foreground) !important;
-}
-
-.disable-alpha {
-  :deep(.vc-compact__row:last-child .vc-compact__color-cube--wrap:first-child),
-  :deep(.vc-color-input:nth-child(4)) {
-    display: none !important;
-  }
-
-  :deep(.vc-input-toggle) {
-    width: 3ch !important;
-    overflow: hidden !important;
-  }
-
-  :deep(.vc-compact__row:last-child > .vc-compact__color-cube--wrap:nth-child(2)) {
-    width: 54px !important;
-  }
-
-  :deep(.vc-colorPicker__record .color-list) {
-    cursor: not-allowed;
-  }
-
-  :deep(.color-item.transparent:has(.color-item__display[style*="rgba"])) {
-    pointer-events: none !important;
-    opacity: 0.5 !important;
-  }
-}
-</style>

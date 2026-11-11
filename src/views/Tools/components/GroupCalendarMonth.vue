@@ -182,7 +182,7 @@ function dayLabel(dateValue: DateValue) {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-lg);
-  font-size: 18px;
+  font-size: 1.125rem;
   position: relative;
 }
 
@@ -196,22 +196,9 @@ function dayLabel(dateValue: DateValue) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  z-index: 10;
+  font-size: 0.75rem;
+  z-index: var(--layer-calendar-badge);
   padding: 0 6px;
-  line-height: 14px;
-}
-
-.calendar-event-dot {
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  border-radius: var(--rounded-full);
-  background-color: var(--group-calendar-event-dot, #ef4444);
-  z-index: 5;
-  pointer-events: none;
+  line-height: calc(14 / 12);
 }
 </style>

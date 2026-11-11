@@ -13,7 +13,7 @@
           <InputGroupField
             :model-value="searchText"
             :placeholder="searchPlaceholder"
-            style="flex: 1"
+            class="flex-1"
             clearable
             @input="updateSearchText"
             @keyup.enter="search"
@@ -26,7 +26,7 @@
         </div>
       </div>
       <TabsContent value="user" class="flex flex-col min-h-0 flex-1">
-        <div class="flex flex-col min-h-0" style="flex: 9">
+        <div class="flex flex-col min-h-0 flex-[9]">
           <div class="shrink-0 mb-3 flex justify-end">
             <label class="inline-flex items-center gap-2 ml-2">
               <Checkbox v-model="searchUserSortByLastLoggedIn" />
@@ -60,7 +60,7 @@
                     <span v-if="randomUserColours" class="shrink-0 text-xs font-normal" :class="user.$trustClass">
                       {{ user.$trustLevel }}
                     </span>
-                    <span v-else class="shrink-0 text-xs font-normal" :style="{ color: user.$userColour }">
+                    <span v-else class="shrink-0 text-xs font-normal [color:var(--user-colour,inherit)]" :style="{ '--user-colour': user.$userColour }">
                       {{ user.$trustLevel }}
                     </span>
                     <span v-for="item in user.$languages" :key="item.key" class="flags shrink-0" :class="languageClass(item.key)" :title="item.value" />
@@ -83,13 +83,13 @@
         />
       </TabsContent>
       <TabsContent value="world" class="flex flex-col min-h-0 flex-1">
-        <div class="flex flex-col min-h-0" style="flex: 9">
+        <div class="flex flex-col min-h-0 flex-[9]">
           <div class="inline-flex justify-end mb-4 w-full shrink-0 gap-2">
             <label class="inline-flex items-center gap-2">
               <Checkbox v-model="searchWorldLabs" />
               <span>{{ t("view.search.world.community_lab") }}</span>
             </label>
-            <Select :model-value="searchWorldCategoryIndex" style="margin-bottom: 16px" @update:model-value="handleSearchWorldCategorySelect">
+            <Select :model-value="searchWorldCategoryIndex" class="mb-4" @update:model-value="handleSearchWorldCategorySelect">
               <SelectTrigger size="sm">
                 <SelectValue :placeholder="t('view.search.world.category')" />
               </SelectTrigger>
@@ -107,7 +107,7 @@
               <Spinner class="text-2xl" />
             </div>
             <template v-else-if="searchWorldResults.length > 0">
-              <ItemGroup class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+              <ItemGroup class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
                 <Item v-for="world in searchWorldResults" :key="world.id" variant="outline" size="sm" class="cursor-pointer p-3" as-child>
                   <div class="overflow-hidden" @click="showWorldDialog(world.id)">
                     <ItemHeader>
@@ -138,7 +138,7 @@
         />
       </TabsContent>
       <TabsContent value="avatar" class="flex flex-col min-h-0 flex-1">
-        <div class="flex flex-col min-h-0" style="flex: 9">
+        <div class="flex flex-col min-h-0 flex-[9]">
           <div class="shrink-0 mb-3 flex items-center justify-end gap-2">
             <Select
               v-if="avatarRemoteDatabaseProviderList.length > 0"
@@ -168,7 +168,7 @@
               <Spinner class="text-2xl" />
             </div>
             <template v-else-if="searchAvatarPage.length > 0">
-              <ItemGroup class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+              <ItemGroup class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
                 <Item v-for="avatar in searchAvatarPage" :key="avatar.id" variant="outline" size="sm" class="cursor-pointer p-3" as-child>
                   <div class="overflow-hidden" @click="showAvatarDialog(avatar.id)">
                     <ItemHeader>
@@ -211,12 +211,12 @@
         />
       </TabsContent>
       <TabsContent value="marketplace" class="flex flex-col min-h-0 flex-1">
-        <div class="flex-1 overflow-y-auto min-h-0" style="flex: 9">
+        <div class="overflow-y-auto min-h-0 flex-[9]">
           <div v-if="isSearchMarketplaceLoading" class="flex items-center justify-center h-full">
             <Spinner class="text-2xl" />
           </div>
           <template v-else-if="searchMarketplaceResults.length > 0">
-            <ItemGroup class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))">
+            <ItemGroup class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
               <Item v-for="avatar in searchMarketplaceResults" :key="avatar.id" variant="outline" size="sm" class="cursor-pointer p-3" as-child>
                 <div class="overflow-hidden" @click="showAvatarDialog(avatar.id)">
                   <ItemHeader>
@@ -253,7 +253,7 @@
         />
       </TabsContent>
       <TabsContent value="group" class="flex flex-col min-h-0 flex-1">
-        <div class="flex-1 overflow-y-auto min-h-0" style="flex: 9">
+        <div class="overflow-y-auto min-h-0 flex-[9]">
           <div v-if="isSearchGroupLoading" class="flex items-center justify-center h-full">
             <Spinner class="text-2xl" />
           </div>

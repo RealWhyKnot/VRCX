@@ -69,18 +69,12 @@
                     v-for="tag in allTags"
                     :key="tag"
                     :variant="tagFilters.has(tag) ? 'default' : 'outline'"
-                    class="cursor-pointer select-none"
-                    :style="
-                      tagFilters.has(tag)
-                        ? {
-                            backgroundColor: getAvatarTagColor(tag).bg,
-                            color: getAvatarTagColor(tag).text,
-                          }
-                        : {
-                            borderColor: getAvatarTagColor(tag).bg,
-                            color: getAvatarTagColor(tag).text,
-                          }
-                    "
+                    class="cursor-pointer select-none text-(--tag-text)"
+                    :class="tagFilters.has(tag) ? 'bg-(--tag-bg)' : 'border-(--tag-bg)'"
+                    :style="{
+                      '--tag-bg': getAvatarTagColor(tag).bg,
+                      '--tag-text': getAvatarTagColor(tag).text,
+                    }"
                     @click="toggleTagFilter(tag)"
                   >
                     {{ tag }}
@@ -194,23 +188,20 @@
       <div
         v-if="gridRows.length"
         ref="gridContainerRefEl"
-        class="relative w-full box-border p-1"
-        :style="{ height: `${virtualizer?.getTotalSize?.() ?? 0}px` }"
+        class="relative w-full box-border p-1 h-[var(--grid-height)]"
+        :style="{ '--grid-height': `${virtualizer?.getTotalSize?.() ?? 0}px` }"
       >
         <div
           v-for="vItem in virtualItems"
           :key="vItem.row?.key ?? String(vItem.virtualItem.index)"
           :ref="measureRow"
-          class="absolute left-0 top-0 w-full box-border pb-2"
+          class="absolute left-0 top-0 w-full box-border pb-2 [transform:translateY(var(--row-start))]"
           :data-index="vItem.virtualItem.index"
-          :style="{ transform: `translateY(${vItem.virtualItem.start}px)` }"
+          :style="{ '--row-start': `${vItem.virtualItem.start}px` }"
         >
           <div
-            class="grid gap-(--avatar-card-gap,12px) p-0.5"
-            :style="{
-              gridTemplateColumns: `repeat(var(--avatar-grid-columns, 1), minmax(var(--avatar-card-min-width, 200px), var(--avatar-card-target-width, 1fr)))`,
-              ...gridStyle(filteredAvatars.length),
-            }"
+            class="grid gap-(--avatar-card-gap,12px) p-0.5 grid-cols-[repeat(var(--avatar-grid-columns,1),minmax(var(--avatar-card-min-width,200px),var(--avatar-card-target-width,1fr)))]"
+            :style="gridStyle(filteredAvatars.length)"
           >
             <MyAvatarCard
               v-for="avatar in vItem.row?.items ?? []"
@@ -229,7 +220,7 @@
       </div>
     </div>
 
-    <input ref="imageUploadInput" type="file" accept="image/*" style="display: none" @change="onFileChangeAvatarImage" />
+    <input ref="imageUploadInput" type="file" accept="image/*" class="hidden" @change="onFileChangeAvatarImage" />
     <ImageCropDialog
       :open="cropDialogOpen"
       :title="t('dialog.change_content_image.avatar')"

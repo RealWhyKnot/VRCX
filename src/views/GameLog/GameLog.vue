@@ -1,5 +1,5 @@
 <template>
-  <div ref="gameLogRef" class="x-container x-container--auto-height">
+  <div ref="gameLogRef" class="x-container x-container-auto-height">
     <template v-if="sessionsViewMode === 'sessions'">
       <GameLogSessions>
         <template #leading>
@@ -34,8 +34,8 @@
         :on-page-size-change="handlePageSizeChange"
       >
         <template #toolbar>
-          <div class="mt-0 mx-0 mb-2" style="display: flex; align-items: center">
-            <div class="mr-2" style="flex: none; display: flex; align-items: center">
+          <div class="mt-0 mx-0 mb-2 flex items-center">
+            <div class="mr-2 flex flex-none items-center">
               <ToggleGroup type="single" variant="outline" size="sm" :model-value="sessionsViewMode" class="mr-2" @update:model-value="handleViewModeChange">
                 <TooltipWrapper side="bottom" :content="t('view.game_log.sessions.switch_to_sessions')">
                   <ToggleGroupItem value="sessions" class="px-2" :aria-label="t('view.game_log.sessions.switch_to_sessions')">
@@ -74,7 +74,7 @@
               </TooltipWrapper>
             </div>
             <Select multiple :model-value="Array.isArray(gameLogTable.filter) ? gameLogTable.filter : []" @update:model-value="handleGameLogFilterChange">
-              <SelectTrigger class="w-full" style="flex: 1">
+              <SelectTrigger class="w-full flex-1">
                 <SelectValue :placeholder="t('view.game_log.filter_placeholder')" />
               </SelectTrigger>
               <SelectContent>
@@ -91,10 +91,9 @@
             </Select>
             <InputGroupField
               v-model="gameLogTable.search"
-              class="ml-2"
+              class="ml-2 flex-[0.4]"
               :placeholder="t('view.game_log.search_placeholder')"
               clearable
-              style="flex: 0.4"
               @keyup.enter="gameLogTableLookup"
               @change="gameLogTableLookup"
             />

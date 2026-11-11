@@ -207,7 +207,7 @@ function userStatusClass(user: StatusUser | undefined, isPendingOffline = false,
       } else if (user.status === "busy") {
         style["active-busy"] = true;
       } else {
-        style["active"] = true;
+        style["active-default"] = true;
       }
     } else {
       style["offline"] = true;
@@ -220,7 +220,7 @@ function userStatusClass(user: StatusUser | undefined, isPendingOffline = false,
     } else if (user.status === "busy") {
       style["active-busy"] = true;
     } else {
-      style["active"] = true;
+      style["active-default"] = true;
     }
   } else if (user.location === "offline") {
     style["offline"] = true;

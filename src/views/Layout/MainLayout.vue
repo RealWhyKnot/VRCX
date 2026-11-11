@@ -12,8 +12,7 @@
 
         <div
           v-show="sidebarOpen"
-          class="absolute top-0 bottom-0 z-30 w-1 cursor-ew-resize select-none"
-          :style="{ left: 'var(--sidebar-width)' }"
+          class="absolute top-0 bottom-0 z-30 w-1 cursor-ew-resize select-none left-[var(--sidebar-width)]"
           @pointerdown.prevent="startNavResize"
         />
 
@@ -42,7 +41,8 @@
                 :collapsed-size="0"
                 collapsible
                 :order="2"
-                :style="{ maxWidth: `${asideMaxPx}px` }"
+                class="max-w-[var(--aside-max-width)]"
+                :style="{ '--aside-max-width': `${asideMaxPx}px` }"
               >
                 <Sidebar></Sidebar>
               </ResizablePanel>

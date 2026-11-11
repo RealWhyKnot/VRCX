@@ -50,7 +50,7 @@
             <div v-if="filteredGroupEvents.length" class="groups-container">
               <div v-for="group in filteredGroupEvents" :key="group.groupId" class="group-row">
                 <div class="group-header" @click="toggleGroup(group.groupId)">
-                  <ChevronDown class="rotation-transition" :class="{ 'is-rotated': groupCollapsed[group.groupId] }" />
+                  <ChevronDown class="rotation-transition" :data-rotated="groupCollapsed[group.groupId] ? '' : undefined" />
                   {{ group.groupName }}
                 </div>
                 <div v-show="!groupCollapsed[group.groupId]" class="events-row">
@@ -469,120 +469,20 @@ function closeDialog() {
 </script>
 
 <style scoped>
-.x-dialog {
-  .top-content {
-    height: 640px;
-    position: relative;
-    overflow: hidden;
-
-    .timeline-view {
-      .timeline-container {
-        min-width: 200px;
-        padding-left: 4px;
-        padding-right: 16px;
-        margin-left: 8px;
-        margin-right: 8px;
-        overflow: auto;
-        height: 50vh;
-
-        .timeline-list {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-
-        .timeline-group {
-          padding: 0 20px 8px 8px;
-        }
-
-        .timeline-timestamp {
-          font-size: 13px;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-
-        .timeline-empty {
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .time-group-container {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          overflow: visible;
-        }
-      }
-
-      .calendar-container {
-        .date {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          .calendar-date-content {
-            width: 80%;
-            height: 80%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius-xl);
-            font-size: 18px;
-            position: relative;
-
-            &.has-events {
-              background-color: var(--group-calendar-event-bg,);
-            }
-
-            .calendar-event-badge {
-              position: absolute;
-              top: 2px;
-              right: 2px;
-              min-width: 16px;
-              height: 16px;
-              border-radius: var(--radius-xl);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 10px;
-              font-weight: bold;
-              z-index: 10;
-              padding: 0 4px;
-              line-height: 16px;
-            }
-          }
-        }
-      }
-    }
-  }
+.top-content {
+  height: 640px;
+  position: relative;
+  overflow: hidden;
 }
 
-.dialog-title-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-
-  .view-toggle-btn {
-    font-size: 12px;
-    padding: 8px 12px;
-  }
-}
-
-.featured-switch {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 8px;
-
-  .featured-switch-text {
-    font-size: 13px;
-    margin-right: 6px;
-  }
+.timeline-container {
+  min-width: 200px;
+  padding-left: 4px;
+  padding-right: 16px;
+  margin-left: 8px;
+  margin-right: 8px;
+  overflow: auto;
+  height: 50vh;
 }
 
 .timeline-view {
@@ -594,75 +494,125 @@ function closeDialog() {
   }
 }
 
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timeline-group {
+  padding: 0 20px 8px 8px;
+}
+
+.timeline-timestamp {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.timeline-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-group-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: visible;
+}
+
+.dialog-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.dialog-title-container .view-toggle-btn {
+  font-size: 0.75rem;
+  padding: 8px 12px;
+}
+
+.featured-switch {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 8px;
+
+  .featured-switch-text {
+    font-size: 0.8125rem;
+    margin-right: 6px;
+  }
+}
+
 .grid-view {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-
-  .search-container {
-    padding: 2px 20px 12px;
-    display: flex;
-    justify-content: flex-end;
-
-    .search-input {
-      width: 300px;
-    }
-  }
-
-  .groups-grid {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 20px;
-
-    .groups-container {
-      overflow: visible;
-
-      .group-row {
-        margin-bottom: 18px;
-        overflow: visible;
-
-        .group-header {
-          font-size: 16px;
-          font-weight: bold;
-          padding: 4px 12px 8px;
-          cursor: pointer;
-          border-radius: var(--radius-md);
-          margin: 0 -12px 8px;
-          display: flex;
-          align-items: center;
-
-          .rotation-transition {
-            font-size: 14px;
-            margin-right: 8px;
-            transition: transform 0.3s;
-          }
-        }
-
-        .events-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          overflow: visible;
-        }
-      }
-    }
-
-    .no-events {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 200px;
-      font-size: 16px;
-    }
-  }
 }
 
-.is-rotated {
-  transform: rotate(-90deg);
+.search-container {
+  padding: 2px 20px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.groups-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.groups-container {
+  overflow: visible;
+}
+
+.group-row {
+  margin-bottom: 18px;
+  overflow: visible;
+}
+
+.group-header {
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 4px 12px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  margin: 0 -12px 8px;
+  display: flex;
+  align-items: center;
 }
 
 .rotation-transition {
-  transition: transform 0.2s ease-in-out;
+  font-size: 0.875rem;
+  margin-right: 8px;
+  transition: transform 0.3s;
+}
+
+.rotation-transition[data-rotated] {
+  transform: rotate(-90deg);
+}
+
+.events-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  overflow: visible;
+}
+
+.no-events {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1rem;
 }
 </style>

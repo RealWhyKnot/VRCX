@@ -30,11 +30,11 @@
       <InputGroupSearch
         v-model="screenshotMetadataDialog.search"
         :placeholder="t('dialog.screenshot_metadata.search_placeholder')"
-        style="width: 200px"
+        class="w-[200px]"
         @input="screenshotMetadataSearch"
       />
       <Select :model-value="screenshotMetadataDialog.searchType" @update:model-value="handleSearchTypeChange">
-        <SelectTrigger size="sm" style="width: 150px">
+        <SelectTrigger size="sm" class="w-[150px]">
           <SelectValue :placeholder="t('dialog.screenshot_metadata.search_type_placeholder')" />
         </SelectTrigger>
         <SelectContent>
@@ -141,7 +141,7 @@
       </table>
     </div>
 
-    <div v-else class="grid flex-1 min-h-0 overflow-hidden gap-4" style="grid-template-columns: 1fr 380px">
+    <div v-else class="grid flex-1 min-h-0 overflow-hidden gap-4 grid-cols-[1fr_380px]">
       <div class="flex flex-col items-center min-h-0" @dragover.prevent @dragenter.prevent @drop="handleDrop">
         <div class="relative flex-1 w-full min-h-0 flex items-center justify-center">
           <template v-if="screenshotMetadataDialog.metadata.filePath">

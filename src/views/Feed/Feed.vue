@@ -1,5 +1,5 @@
 <template>
-  <div ref="feedRef" class="x-container feed x-container--auto-height">
+  <div ref="feedRef" class="x-container feed x-container-auto-height">
     <DataTableLayout
       :table="table"
       :loading="feedTable.loading"
@@ -9,8 +9,8 @@
       :on-page-size-change="handlePageSizeChange"
     >
       <template #toolbar>
-        <div class="mt-0 mx-0 mb-2" style="display: flex; align-items: center">
-          <div style="flex: none; display: flex; align-items: center" class="mr-2">
+        <div class="mt-0 mx-0 mb-2 flex items-center">
+          <div class="mr-2 flex flex-none items-center">
             <Popover v-model:open="popoverOpen">
               <PopoverTrigger as-child>
                 <Button variant="outline" size="sm" class="mx-2 h-8 gap-1.5">
@@ -58,8 +58,7 @@
             variant="outline"
             size="sm"
             :model-value="activeFilterSelection"
-            class="w-full justify-start"
-            style="flex: 1"
+            class="w-full justify-start flex-1"
             @update:model-value="handleFeedFilterChange"
           >
             <ToggleGroupItem value="All">
@@ -71,10 +70,9 @@
           </ToggleGroup>
           <InputGroupField
             v-model="feedTable.search"
-            class="ml-2"
+            class="ml-2 flex-[0.4]"
             :placeholder="t('view.feed.search_placeholder')"
             clearable
-            style="flex: 0.4"
             @keyup.enter="feedTableLookup"
             @change="feedTableLookup"
           />
@@ -224,15 +222,15 @@ function handleFeedFilterChange(value: unknown) {
 <style scoped>
 .feed :deep(.x-text-removed) {
   text-decoration: line-through;
-  color: #f00;
-  background-color: rgb(255 0 0 / 20%);
+  color: var(--color-feed-removed-text);
+  background-color: var(--color-feed-removed-bg);
   padding: 2px;
   border-radius: 4px;
 }
 
 .feed :deep(.x-text-added) {
-  color: rgb(35 188 35);
-  background-color: rgb(76 255 80 / 20%);
+  color: var(--color-feed-added-text);
+  background-color: var(--color-feed-added-bg);
   padding: 2px;
   border-radius: 4px;
 }

@@ -1,12 +1,12 @@
 <template>
-  <div style="flex: none" class="flex items-center">
+  <div class="flex flex-none items-center">
     <template v-if="(currentUser.id !== userDialog.ref.id && userDialog.isFriend) || userDialog.isFavorite">
       <TooltipWrapper v-if="userDialog.isFavorite" side="top" :content="t('dialog.user.actions.favorites_tooltip')">
         <Button
-          class="rounded-lg border-muted-foreground/30!"
+          class="rounded-lg border-muted-foreground/30! text-[var(--favorite-text,var(--primary-foreground))] bg-[var(--favorite-bg,var(--primary))] hover:bg-[var(--favorite-bg,var(--primary))]"
           :style="{
-            color: userDialog.theme.buttonColor === 'var(--primary)' ? 'var(--background)' : invertHexColor(userDialog.theme.buttonColor),
-            backgroundColor: userDialog.theme.buttonColor,
+            '--favorite-text': userDialog.theme.buttonColor === 'var(--primary)' ? 'var(--background)' : invertHexColor(userDialog.theme.buttonColor),
+            '--favorite-bg': userDialog.theme.buttonColor,
           }"
           size="icon"
           :aria-label="t('dialog.user.actions.favorites_tooltip')"
@@ -16,9 +16,9 @@
       </TooltipWrapper>
       <TooltipWrapper v-else side="top" :content="t('dialog.user.actions.favorites_tooltip')">
         <Button
-          class="rounded-lg border-muted-foreground/30!"
+          class="rounded-lg border-muted-foreground/30! text-[var(--favorite-icon,inherit)] hover:text-[var(--favorite-icon,var(--accent-foreground))]"
           :style="{
-            color: userDialog.theme.iconColor === 'var(--muted-foreground)' ? 'var(--foreground)' : userDialog.theme.iconColor,
+            '--favorite-icon': userDialog.theme.iconColor === 'var(--muted-foreground)' ? 'var(--foreground)' : userDialog.theme.iconColor,
           }"
           size="icon"
           variant="outline"
@@ -36,9 +36,14 @@
             size="icon"
             class="rounded-lg border-muted-foreground/30!"
             :style="{
-              color: userDialog.theme.iconColor === 'var(--muted-foreground)' ? 'var(--foreground)' : userDialog.theme.iconColor,
+              '--more-icon': userDialog.theme.iconColor === 'var(--muted-foreground)' ? 'var(--foreground)' : userDialog.theme.iconColor,
             }"
-            :class="{ 'dot-indicator': hasRequest }"
+            :class="[
+              hasRisk
+                ? 'text-[var(--more-icon,white)] hover:text-[var(--more-icon,white)]'
+                : 'text-[var(--more-icon,inherit)] hover:text-[var(--more-icon,var(--accent-foreground))]',
+              { 'dot-indicator': hasRequest },
+            ]"
             :aria-label="t('nav_tooltip.manage')"
           >
             <MoreHorizontal />
