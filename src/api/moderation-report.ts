@@ -1,6 +1,6 @@
 import type { GetModerationReports, ModerationReport, PaginatedModerationReportList, SubmitModerationReportRequest, SuccessFlag } from "vrchat";
 import type { Json } from "../types/vrcx";
-import { requestJson } from "./request-json";
+import { requestJson, requestAck } from "./request-json";
 
 const moderationReportRequest = {
   getModerationReports(params: GetModerationReports["query"]): Promise<{ json: Json<PaginatedModerationReportList>; params: GetModerationReports["query"] }> {
@@ -29,8 +29,8 @@ const moderationReportRequest = {
     });
   },
 
-  deleteModerationReport(params: { moderationReportId: string }): Promise<{ json: Json<SuccessFlag>; params: { moderationReportId: string } }> {
-    return requestJson<Json<SuccessFlag>>(`moderationReports/${params.moderationReportId}`, {
+  deleteModerationReport(params: { moderationReportId: string }): Promise<{ json: Json<SuccessFlag> | undefined; params: { moderationReportId: string } }> {
+    return requestAck<Json<SuccessFlag>>(`moderationReports/${params.moderationReportId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {

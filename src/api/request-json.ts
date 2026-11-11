@@ -10,3 +10,8 @@ export function requestJson<T>(endpoint: string, options: RequestOptions): Promi
     return response;
   });
 }
+
+export function requestAck<T>(endpoint: string, options: RequestOptions): Promise<T | undefined> {
+  const isResponseObject = (value: unknown): value is T => typeof value === "object" && value !== null;
+  return request(endpoint, options).then((response) => (isResponseObject(response) ? response : undefined));
+}

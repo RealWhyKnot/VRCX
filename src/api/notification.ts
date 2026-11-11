@@ -11,7 +11,7 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { request } from "../services/request";
-import { requestJson } from "./request-json";
+import { requestJson, requestAck } from "./request-json";
 import { useGalleryStore } from "../stores/gallery";
 
 type InviteParams = InviteRequest & { worldId?: string; worldName?: string; rsvp?: boolean };
@@ -180,8 +180,8 @@ const notificationRequest = {
     });
   },
 
-  acceptFriendRequestNotification(params: NotificationIdParams): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
-    return requestJson<Json<Success>>(`auth/user/notifications/${params.notificationId}/accept`, {
+  acceptFriendRequestNotification(params: NotificationIdParams): Promise<{ json: Json<Success> | undefined; params: NotificationIdParams }> {
+    return requestAck<Json<Success>>(`auth/user/notifications/${params.notificationId}/accept`, {
       method: "PUT",
     }).then((json) => {
       const args = {
@@ -192,8 +192,8 @@ const notificationRequest = {
     });
   },
 
-  hideNotification(params: NotificationIdParams): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
-    return requestJson<Json<Success>>(`auth/user/notifications/${params.notificationId}/hide`, {
+  hideNotification(params: NotificationIdParams): Promise<{ json: Json<Success> | undefined; params: NotificationIdParams }> {
+    return requestAck<Json<Success>>(`auth/user/notifications/${params.notificationId}/hide`, {
       method: "PUT",
     }).then((json) => {
       const args = {
@@ -246,8 +246,8 @@ const notificationRequest = {
     });
   },
 
-  hideNotificationV2(notificationId: string): Promise<{ json: Json<Success>; params: NotificationIdParams }> {
-    return requestJson<Json<Success>>(`notifications/${notificationId}`, {
+  hideNotificationV2(notificationId: string): Promise<{ json: Json<Success> | undefined; params: NotificationIdParams }> {
+    return requestAck<Json<Success>>(`notifications/${notificationId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {

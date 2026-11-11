@@ -54,7 +54,7 @@ const savedGroupSchema = z.object({
   roleIds: z.array(z.string()).optional(),
 });
 
-const savedGroupListSchema = z.array(savedGroupSchema);
+const savedGroupListSchema = z.array(z.unknown());
 
 const groupOrderSchema = z.array(z.string());
 
@@ -138,7 +138,10 @@ export async function loadCurrentUserGroups(userId: string, groups: string[] | n
   if (!parsedSavedGroups.success) {
     console.error("loadCurrentUserGroups: saved groups are invalid, starting from the server list", parsedSavedGroups.error);
   }
-  const savedGroups = parsedSavedGroups.success ? parsedSavedGroups.data : [];
+  const savedGroups = (parsedSavedGroups.success ? parsedSavedGroups.data : []).flatMap((entry) => {
+    const parsedEntry = savedGroupSchema.safeParse(entry);
+    return parsedEntry.success ? [parsedEntry.data] : [];
+  });
   groupStore.cachedGroups.clear();
   groupStore.currentUserGroups.clear();
   clearGroupSearchIndex();

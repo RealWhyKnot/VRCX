@@ -62,7 +62,7 @@ import { useUserStore } from "../stores/user";
 import { applyGroup } from "../coordinators/group-coordinator";
 import { queryClient } from "../queries/client";
 import { request } from "../services/request";
-import { requestJson } from "./request-json";
+import { requestJson, requestAck } from "./request-json";
 
 type GroupRoleFlags = {
   isAddedOnJoin?: boolean;
@@ -125,8 +125,8 @@ const groupRequest = {
     });
   },
 
-  deleteGroupPost(params: { groupId: string; postId: string }): Promise<{ json: Json<Success>; params: { groupId: string; postId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/posts/${params.postId}`, {
+  deleteGroupPost(params: { groupId: string; postId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; postId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/posts/${params.postId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -192,8 +192,10 @@ const groupRequest = {
     });
   },
 
-  transferGroup(params: { groupId: string } & TransferGroupRequest): Promise<{ json: Json<Success>; params: { groupId: string } & TransferGroupRequest }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/transfer`, {
+  transferGroup(
+    params: { groupId: string } & TransferGroupRequest
+  ): Promise<{ json: Json<Success> | undefined; params: { groupId: string } & TransferGroupRequest }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/transfer`, {
       method: "POST",
       params: {
         transferTargetId: params.transferTargetId,
@@ -208,8 +210,10 @@ const groupRequest = {
     });
   },
 
-  deleteGroup(params: { groupId: string } & DeleteGroup["query"]): Promise<{ json: Json<Success>; params: { groupId: string } & DeleteGroup["query"] }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}`, {
+  deleteGroup(
+    params: { groupId: string } & DeleteGroup["query"]
+  ): Promise<{ json: Json<Success> | undefined; params: { groupId: string } & DeleteGroup["query"] }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}`, {
       method: "DELETE",
       params: {
         hardDelete: params.hardDelete ?? false,
@@ -424,8 +428,8 @@ const groupRequest = {
     });
   },
 
-  blockGroup(params: { groupId: string }): Promise<{ json: Json<Success>; params: { groupId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/block`, {
+  blockGroup(params: { groupId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/block`, {
       method: "POST",
     }).then((json) => {
       const args = {
@@ -436,8 +440,8 @@ const groupRequest = {
       return args;
     });
   },
-  unblockGroup(params: { groupId: string; userId: string }): Promise<{ json: Json<Success>; params: { groupId: string; userId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
+  unblockGroup(params: { groupId: string; userId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; userId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -448,8 +452,8 @@ const groupRequest = {
       return args;
     });
   },
-  declineGroupInvite(params: { groupId: string }): Promise<{ json: Json<Success>; params: { groupId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/members/${getCurrentUserId()}`, {
+  declineGroupInvite(params: { groupId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/members/${getCurrentUserId()}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -461,8 +465,8 @@ const groupRequest = {
   },
   sendGroupInvite(
     params: { groupId: string } & CreateGroupInviteRequest
-  ): Promise<{ json: Json<Success>; params: { groupId: string } & CreateGroupInviteRequest }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/invites`, {
+  ): Promise<{ json: Json<Success> | undefined; params: { groupId: string } & CreateGroupInviteRequest }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/invites`, {
       method: "POST",
       params: {
         userId: params.userId,
@@ -475,8 +479,8 @@ const groupRequest = {
       return args;
     });
   },
-  kickGroupMember(params: { groupId: string; userId: string }): Promise<{ json: Json<Success>; params: { groupId: string; userId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
+  kickGroupMember(params: { groupId: string; userId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; userId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -516,8 +520,11 @@ const groupRequest = {
       return args;
     });
   },
-  deleteSentGroupInvite(params: { groupId: string; userId: string }): Promise<{ json: Json<Success>; params: { groupId: string; userId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/invites/${params.userId}`, {
+  deleteSentGroupInvite(params: {
+    groupId: string;
+    userId: string;
+  }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; userId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/invites/${params.userId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -527,8 +534,11 @@ const groupRequest = {
       return args;
     });
   },
-  deleteBlockedGroupRequest(params: { groupId: string; userId: string }): Promise<{ json: Json<Success>; params: { groupId: string; userId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
+  deleteBlockedGroupRequest(params: {
+    groupId: string;
+    userId: string;
+  }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; userId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/members/${params.userId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -797,8 +807,11 @@ const groupRequest = {
     });
   },
 
-  deleteGroupGallery(params: { groupId: string; galleryId: string }): Promise<{ json: Json<Success>; params: { groupId: string; galleryId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/galleries/${params.galleryId}`, {
+  deleteGroupGallery(params: {
+    groupId: string;
+    galleryId: string;
+  }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; galleryId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/galleries/${params.galleryId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -851,8 +864,8 @@ const groupRequest = {
     groupId: string;
     galleryId: string;
     imageId: string;
-  }): Promise<{ json: Json<Success>; params: { groupId: string; galleryId: string; imageId: string } }> {
-    return requestJson<Json<Success>>(`groups/${params.groupId}/galleries/${params.galleryId}/images/${params.imageId}`, {
+  }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; galleryId: string; imageId: string } }> {
+    return requestAck<Json<Success>>(`groups/${params.groupId}/galleries/${params.galleryId}/images/${params.imageId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {
@@ -932,8 +945,8 @@ const groupRequest = {
     });
   },
 
-  deleteGroupEvent(params: { groupId: string; eventId: string }): Promise<{ json: Json<Success>; params: { groupId: string; eventId: string } }> {
-    return requestJson<Json<Success>>(`calendar/${params.groupId}/${params.eventId}`, {
+  deleteGroupEvent(params: { groupId: string; eventId: string }): Promise<{ json: Json<Success> | undefined; params: { groupId: string; eventId: string } }> {
+    return requestAck<Json<Success>>(`calendar/${params.groupId}/${params.eventId}`, {
       method: "DELETE",
     }).then((json) => {
       const args = {

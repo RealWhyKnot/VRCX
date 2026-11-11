@@ -16,7 +16,7 @@ import { queryClient } from "../queries/client";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
-import { requestJson } from "./request-json";
+import { requestJson, requestAck } from "./request-json";
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;
@@ -164,8 +164,8 @@ const miscRequest = {
     });
   },
 
-  sendBoop(params: { userId: string } & BoopRequest): Promise<{ json: Json<Success>; params: { userId: string } & BoopRequest }> {
-    return requestJson<Json<Success>>(`users/${params.userId}/boop`, {
+  sendBoop(params: { userId: string } & BoopRequest): Promise<{ json: Json<Success> | undefined; params: { userId: string } & BoopRequest }> {
+    return requestAck<Json<Success>>(`users/${params.userId}/boop`, {
       method: "POST",
       params: {
         emojiId: params.emojiId,

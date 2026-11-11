@@ -16,6 +16,7 @@ import { watchState } from "../../services/watch-state";
 import { configRepository } from "../../services/config";
 import { webApiService } from "../../services/webapi";
 import { logFailure } from "../log-failure";
+import { parseLeadingInt } from "../vrcx-messages";
 import { firstNonEmpty, readChatCompletionContent, readGoogleTranslatedText, readModelIds, readYouTubeVideoLookup } from "./advanced-helpers";
 import type { YouTubeVideoLookup } from "./advanced-helpers";
 
@@ -486,8 +487,8 @@ export const useAdvancedSettingsStore = defineStore("AdvancedSettings", () => {
       if (daysSinceLastCleanup < 7) return;
     }
 
-    const days = Number(cleanupSetting);
-    if (!Number.isInteger(days) || days <= 0) return;
+    const days = parseLeadingInt(cleanupSetting);
+    if (Number.isNaN(days) || days <= 0) return;
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -880,8 +881,8 @@ export const useAdvancedSettingsStore = defineStore("AdvancedSettings", () => {
       })
       .then(async ({ ok, value }) => {
         if (!ok) return;
-        const hours = Number(value);
-        if (value && Number.isInteger(hours)) {
+        const hours = parseLeadingInt(value);
+        if (value && !Number.isNaN(hours)) {
           vrcxStore.setClearVRCXCacheFrequency(hours * 3600 * 2);
           updateLoopStore.setNextClearVRCXCacheCheck(vrcxStore.clearVRCXCacheFrequency / 2);
           await configRepository.setString("VRCX_clearVRCXCacheFrequency", vrcxStore.clearVRCXCacheFrequency.toString());
