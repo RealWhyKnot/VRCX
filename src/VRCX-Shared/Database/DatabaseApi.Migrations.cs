@@ -44,26 +44,11 @@ sealed partial class DatabaseApi
     private void ApplyMigrationStep(long index)
     {
         long version = index + 1;
-        _ = Run("BEGIN IMMEDIATE");
-        bool isCommitted = false;
-        try
-        {
-            foreach (string sql in MigrationSteps[index])
-            {
-                _ = Run(sql);
-            }
-
-            _ = Run("INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES (@version, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))", ("@version", version));
-            _ = Run(string.Create(CultureInfo.InvariantCulture, $"PRAGMA user_version = {version}"));
-            _ = Run("COMMIT");
-            isCommitted = true;
-        }
-        finally
-        {
-            if (!isCommitted)
-            {
-                _ = Run("ROLLBACK");
-            }
-        }
+        Store.ExecuteTransaction(
+        [
+            .. MigrationSteps[index],
+            string.Create(CultureInfo.InvariantCulture, $"INSERT OR REPLACE INTO schema_migrations (version, applied_at) VALUES ({version}, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"),
+            string.Create(CultureInfo.InvariantCulture, $"PRAGMA user_version = {version}"),
+        ]);
     }
 }

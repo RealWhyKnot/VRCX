@@ -26,6 +26,7 @@ export function useInstanceBrowser() {
   const hasLoadFailed = ref(false);
   const hasMore = ref(false);
   let latest = 0;
+  let nextOffset = 0;
 
   const visibleInstances = computed(() => filterDiscovered(instances.value, searchText.value));
 
@@ -49,7 +50,8 @@ export function useInstanceBrowser() {
       const known = new Set(offset > 0 ? instances.value.map((instance) => instance.location) : []);
       const fresh = page.filter((instance) => !known.has(instance.location));
       instances.value = offset > 0 ? [...instances.value, ...fresh] : fresh;
-      hasMore.value = source.value === "mine" && page.length >= DISCOVER_PAGE_SIZE && fresh.length > 0;
+      nextOffset = offset + DISCOVER_PAGE_SIZE;
+      hasMore.value = source.value === "mine" && page.length >= DISCOVER_PAGE_SIZE;
     } catch (err) {
       if (ticket === latest) {
         hasLoadFailed.value = true;
@@ -71,7 +73,7 @@ export function useInstanceBrowser() {
   }
 
   function loadMore(): Promise<void> {
-    return load(instances.value.length);
+    return load(nextOffset);
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;

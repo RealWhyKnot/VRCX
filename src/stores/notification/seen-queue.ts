@@ -1,7 +1,6 @@
 import type { Ref } from "vue";
 import type { NotificationJson } from "./types";
 import { notificationRequest } from "../../api/notification";
-import { executeWithBackoff } from "../../shared/utils/retry";
 import { isRateLimited, logError } from "./errors";
 
 export type SeenQueueDeps = {
@@ -26,29 +25,16 @@ export function createSeenQueue(deps: SeenQueueDeps) {
     while (item) {
       const { id, version } = item;
       try {
-        await executeWithBackoff(
-          async () => {
-            if (version >= 2) {
-              const args = await notificationRequest.seeNotificationV2({
-                notificationId: id,
-              });
-              handleNotificationV2Update({
-                params: { notificationId: id },
-                json: { ...args.json, seen: true },
-              });
-            } else {
-              await notificationRequest.seeNotification({
-                notificationId: id,
-              });
-              handleNotificationSee(id);
-            }
-          },
-          {
-            maxRetries: 3,
-            baseDelay: 1000,
-            shouldRetry: isRateLimited,
-          }
-        );
+        if (version >= 2) {
+          const args = await notificationRequest.seeNotificationV2({ notificationId: id });
+          handleNotificationV2Update({
+            params: { notificationId: id },
+            json: { ...args.json, seen: true },
+          });
+        } else {
+          await notificationRequest.seeNotification({ notificationId: id });
+          handleNotificationSee(id);
+        }
       } catch (err) {
         console.warn("Failed to mark notification as seen:", id);
         if (isRateLimited(err)) {

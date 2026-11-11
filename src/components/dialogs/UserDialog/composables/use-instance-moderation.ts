@@ -59,11 +59,19 @@ export function useInstanceModeration() {
       pattern: REASON_PATTERN,
       errorMessage: t("dialog.user.actions.instance_moderation_reason_invalid", { max: MODERATION_REASON_MAX_LENGTH }),
     });
-    const reason = value.trim();
+    const reason = Array.from(new Intl.Segmenter().segment(value.trim()), (part) => part.segment)
+      .slice(0, MODERATION_REASON_MAX_LENGTH)
+      .join("");
     if (!ok || !reason) {
       return;
     }
-    await playerModerationRequest.moderateInstanceUser({ userId, type, reason: reason.slice(0, MODERATION_REASON_MAX_LENGTH), worldId, instanceId });
+    await playerModerationRequest.moderateInstanceUser({
+      userId,
+      type,
+      reason,
+      worldId,
+      instanceId,
+    });
     toast.success(t(`message.user.instance_${type}_done`, { name }));
   }
 

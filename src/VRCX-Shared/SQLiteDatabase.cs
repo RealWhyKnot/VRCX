@@ -140,6 +140,26 @@ sealed class SQLiteDatabase : IDisposable
         }
     }
 
+    internal void ExecuteTransaction(IReadOnlyList<string> statements)
+    {
+        _connectionLock.EnterWriteLock();
+        try
+        {
+            using SQLiteTransaction transaction = Connection.BeginTransaction();
+            foreach (string sql in statements)
+            {
+                using SQLiteCommand command = CreateCommand(sql, args: null);
+                _ = command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        }
+        finally
+        {
+            _connectionLock.ExitWriteLock();
+        }
+    }
+
     internal long ExecuteInsert(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
         _connectionLock.EnterWriteLock();

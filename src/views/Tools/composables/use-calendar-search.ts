@@ -71,6 +71,7 @@ export function useCalendarSearch(searchQuery: Ref<string>, prepareEvent: (event
       isSearching.value = false;
       return;
     }
+    searchResults.value = [];
     timer = setTimeout(() => {
       runSearch(term, ticket).catch(logError);
     }, SEARCH_DELAY_MS);

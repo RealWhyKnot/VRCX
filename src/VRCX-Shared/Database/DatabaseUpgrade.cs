@@ -7,6 +7,7 @@ internal static class DatabaseUpgrade
     private const string UpgradedSuffix = "-v2";
     private const string BackupSuffix = "-backup";
     private const string PartialSuffix = ".importing";
+    private const int CopyAttempts = 3;
 
     public static string UpgradedPath(string legacyPath) => WithSuffix(legacyPath, UpgradedSuffix);
 
@@ -41,9 +42,16 @@ internal static class DatabaseUpgrade
         try
         {
             using var legacy = SQLiteDatabase.OpenReadOnly(legacyPath);
-            legacy.BackupTo(partialPath);
-            using var copy = SQLiteDatabase.OpenReadOnly(partialPath);
-            string? difference = FirstDifference(RowCounts(legacy), RowCounts(copy));
+            string? difference = null;
+            for (int attempt = 0; attempt < CopyAttempts; attempt++)
+            {
+                difference = CopyOnce(legacy, partialPath);
+                if (difference is null)
+                {
+                    break;
+                }
+            }
+
             if (difference is not null)
             {
                 throw new InvalidOperationException($"The database copy does not match the original: {difference}");
@@ -60,6 +68,14 @@ internal static class DatabaseUpgrade
         }
 
         File.Move(partialPath, path);
+    }
+
+    private static string? CopyOnce(SQLiteDatabase legacy, string partialPath)
+    {
+        Dictionary<string, long> expected = RowCounts(legacy);
+        legacy.BackupTo(partialPath);
+        using var copy = SQLiteDatabase.OpenReadOnly(partialPath);
+        return FirstDifference(expected, RowCounts(copy));
     }
 
     private static Dictionary<string, long> RowCounts(SQLiteDatabase database)

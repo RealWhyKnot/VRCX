@@ -89,14 +89,14 @@ describe("notification seen queue", () => {
     queue.queueMarkAsSeen("not_v2", 2);
     await vi.runAllTimersAsync();
 
-    expect(mocks.seeNotificationV2).toHaveBeenCalledTimes(4);
+    expect(mocks.seeNotificationV2).toHaveBeenCalledTimes(1);
     expect(handleNotificationV2Hide).not.toHaveBeenCalled();
 
     mocks.seeNotificationV2.mockResolvedValue({ json: {} });
     queue.queueMarkAsSeen("not_v2", 2);
     await vi.runAllTimersAsync();
 
-    expect(mocks.seeNotificationV2).toHaveBeenCalledTimes(5);
+    expect(mocks.seeNotificationV2).toHaveBeenCalledTimes(2);
   });
 
   test("hides a version 2 notification that fails for another reason", async () => {
