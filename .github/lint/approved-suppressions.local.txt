@@ -1,0 +1,2 @@
+/src/DBMerger/SqliteExtensions.cs CA2100
+/src/VRCX-Shared/SQLiteDatabase.cs CA2100
