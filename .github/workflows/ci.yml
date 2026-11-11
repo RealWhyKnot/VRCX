@@ -49,6 +49,30 @@ jobs:
       - name: Build html
         run: npm run prod
 
+  spelling:
+    name: Spelling and workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.13"
+      - name: Install Python dependencies
+        run: uv sync --frozen
+      - name: Check spelling and workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s inherit_errexit
+          uv run --frozen typos --config .github/lint/typos.toml .
+          uv run --frozen zizmor --format github .
+
   lint:
     name: Lint
     runs-on: windows-latest
