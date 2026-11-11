@@ -81,8 +81,20 @@
                   {{ transaction.reasonLabel }}
                 </Badge>
               </div>
-              <div v-if="transaction.fromUserDisplayName" class="text-muted-foreground">
-                {{ t("dialog.purchase_history.from") }}: {{ transaction.fromUserDisplayName }}
+              <div v-if="transaction.fromUserDisplayName || transaction.toUserDisplayName" class="text-muted-foreground">
+                <template v-if="transaction.fromUserDisplayName">
+                  {{ t("dialog.purchase_history.from") }}:
+                  <span :class="{ 'cursor-pointer hover:underline': transaction.fromUserId }" @click="openTransactionUser(transaction.fromUserId)">
+                    {{ transaction.fromUserDisplayName }}
+                  </span>
+                </template>
+                <template v-if="transaction.fromUserDisplayName && transaction.toUserDisplayName"> · </template>
+                <template v-if="transaction.toUserDisplayName">
+                  {{ t("dialog.purchase_history.from") }}:
+                  <span :class="{ 'cursor-pointer hover:underline': transaction.toUserId }" @click="openTransactionUser(transaction.toUserId)">
+                    {{ transaction.toUserDisplayName }}
+                  </span>
+                </template>
               </div>
               <div class="mt-1 text-xs text-muted-foreground">
                 {{ formatDateFilter(transaction.date, "long") }}
@@ -128,6 +140,7 @@ import { formatDateFilter } from "../../../coordinators/date-coordinator";
 import { useGalleryStore } from "../../../stores/gallery";
 import { useUserStore } from "../../../stores/user";
 import { marketplaceRequest } from "../../../api/marketplace";
+import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { logError } from "../../../stores/vrcx-messages";
 
 const props = withDefaults(
@@ -151,7 +164,18 @@ const { showFullscreenImageDialog } = useGalleryStore();
 const isLoading = ref(false);
 const typeFilter = ref("all");
 const activeTab = ref("purchases");
-type TransactionRow = NonNullable<Awaited<ReturnType<typeof marketplaceRequest.getEconomyTransactions>>["json"]["transactions"]>[number];
+type TransactionRow = NonNullable<Awaited<ReturnType<typeof marketplaceRequest.getEconomyTransactions>>["json"]["transactions"]>[number] & {
+  fromUserId?: string | undefined;
+  fromUserDisplayName?: string | undefined;
+  toUserId?: string | undefined;
+  toUserDisplayName?: string | undefined;
+};
+
+function openTransactionUser(userId: string | undefined) {
+  if (userId) {
+    showUserDialog(userId);
+  }
+}
 const transactions = ref<TransactionRow[]>([]);
 
 const purchases = computed(() =>

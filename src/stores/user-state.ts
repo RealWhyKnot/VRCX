@@ -248,7 +248,7 @@ export type UserDialogState = {
   isInteractOff: boolean;
   isMuteChat: boolean;
   isFavorite: boolean;
-  $location: Partial<ParsedLocation>;
+  $location: Partial<ParsedLocation> & { user?: Partial<VrcxUser> | undefined };
   $homeLocationName: string;
   users: VrcxUser[];
   instance: UserDialogInstance;

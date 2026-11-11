@@ -176,6 +176,10 @@ const userDialogTabColor = computed(() => {
   }
   return color;
 });
+const scrollbarThumbColor = computed(() => {
+  const color = userDialog.value.theme.buttonColor;
+  return color === "var(--primary)" ? "color-mix(in oklab, var(--foreground) 30%, transparent)" : `color-mix(in oklab, ${color} 50%, transparent)`;
+});
 const { cachedUsers, showSendBoopDialog, showEditProfileDialog } = useUserStore();
 const { showFavoriteDialog } = useFavoriteStore();
 const { showModerateGroupDialog } = useGroupStore();
@@ -410,6 +414,7 @@ function closeInviteDialog() {
 
 <style scoped>
 .user-dialog-scrollbars {
+  --user-dialog-scrollbar-thumb: v-bind("scrollbarThumbColor");
   --user-dialog-scrollbar-track: transparent;
 }
 

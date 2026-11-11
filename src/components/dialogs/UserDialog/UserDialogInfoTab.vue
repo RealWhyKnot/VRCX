@@ -72,7 +72,26 @@
               class="box-border flex items-center p-1.5 text-[13px] cursor-pointer w-[167px] hover:rounded-[25px_5px_5px_25px]"
               @click="showUserDialog(userDialog.$location.userId)"
             >
-              <span v-text="userDialog.$location.userId"></span>
+              <template v-if="userDialog.$location.user">
+                <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(userDialog.$location.user)">
+                  <Avatar class="size-9">
+                    <AvatarImage :src="userImage(userDialog.$location.user, true)" class="object-cover" />
+                    <AvatarFallback>
+                      <User class="size-4 text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <IconFrame :icon-frame="userDialog.$location.user.iconFrame ?? ''" />
+                </div>
+                <div class="flex-1 overflow-hidden">
+                  <span
+                    class="block truncate font-medium leading-[18px]"
+                    :style="{ color: userDialog.$location.user.$userColour }"
+                    v-text="userDialog.$location.user.displayName || userDialog.$location.userId"
+                  ></span>
+                  <span class="block truncate text-xs">{{ t("dialog.user.info.instance_creator") }}</span>
+                </div>
+              </template>
+              <span v-else v-text="userDialog.$location.userId"></span>
             </div>
             <div
               v-for="user in userDialog.users"
