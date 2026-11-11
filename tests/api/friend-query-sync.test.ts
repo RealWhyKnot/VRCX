@@ -14,7 +14,7 @@ vi.mock("../../src/stores/user", () => ({
   }),
 }));
 
-vi.mock("../../src/coordinators/user-coordinator", () => ({
+vi.mock("../../src/coordinators/user-profile-apply", () => ({
   applyUser: (json: unknown) => mockApplyUser(json),
 }));
 

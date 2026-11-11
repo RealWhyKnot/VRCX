@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
-import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state-factories";
 import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 
 vi.mock("vue-i18n", async () => {

@@ -17,7 +17,7 @@ import { worldRequest } from "../api/world";
 import { database } from "../services/database";
 import { patchWorldFromEvent } from "../queries/entity-cache";
 import { processBulk } from "../services/request";
-import { applyFavorite } from "./favorite-coordinator";
+import { applyFavorite } from "./favorite-sync";
 import { useFavoriteStore } from "../stores/favorite";
 import { useInstanceStore } from "../stores/instance";
 import { useLocationStore } from "../stores/location";

@@ -13,7 +13,7 @@ import type {
 } from "vrchat";
 import type { Json } from "../types/vrcx";
 import { useUserStore } from "../stores/user";
-import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } from "../coordinators/favorite-coordinator";
+import { handleFavoriteAdd, handleFavoriteDelete, handleFavoriteGroupClear } from "../coordinators/favorite-sync";
 import { queryClient } from "../queries/client";
 import { request } from "../services/request";
 

@@ -26,7 +26,8 @@ import { patchAndRefetchActiveQuery } from "../queries/entity-cache";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
-import { applyUser, applyCurrentUser, applyPublicProfile } from "../coordinators/user-coordinator";
+import { applyCurrentUser } from "../coordinators/current-user-apply";
+import { applyUser, applyPublicProfile } from "../coordinators/user-profile-apply";
 import { requestJson } from "./request-json";
 
 type UserResponse = Json<User> & { $lastFetch?: number };

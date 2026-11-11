@@ -34,8 +34,11 @@ vi.mock("../../src/stores/world", () => ({
   }),
 }));
 
-vi.mock("../../src/coordinators/user-coordinator", () => ({
+vi.mock("../../src/coordinators/current-user-apply", () => ({
   applyCurrentUser: (json: { id?: string }) => mockApplyCurrentUser(json),
+}));
+
+vi.mock("../../src/coordinators/user-profile-apply", () => ({
   applyUser: (json: Record<string, unknown>) => mockApplyUser(json),
 }));
 

@@ -15,7 +15,7 @@ import { patchAndRefetchActiveQuery } from "../queries/entity-cache";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { requestJson } from "./request-json";
-import { applyCurrentUser } from "../coordinators/user-coordinator";
+import { applyCurrentUser } from "../coordinators/current-user-apply";
 
 const avatarRequest = {
   getAvatar(params: { avatarId: string }): Promise<{ json: Json<Avatar>; params: { avatarId: string } }> {

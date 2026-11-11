@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestingPinia } from "@pinia/testing";
 import { flushPromises, shallowMount } from "@vue/test-utils";
-import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state-factories";
 import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 import { createDefaultUserRef } from "../../../../src/shared/utils/user-transforms";
 

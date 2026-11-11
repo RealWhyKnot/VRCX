@@ -1,15 +1,14 @@
 import { reactive } from "vue";
 import { toast } from "vue-sonner";
-
 import { useFriendStore } from "../stores/friend";
 import { useGalleryStore } from "../stores/gallery";
 import { useInstanceStore } from "../stores/instance";
 import { useNotificationStore } from "../stores/notification";
-import type { NotificationEntry } from "../stores/notification/types";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
-import { applyUser, applyCurrentUser } from "../coordinators/user-coordinator";
+import { applyCurrentUser } from "../coordinators/current-user-apply";
+import { applyUser } from "../coordinators/user-profile-apply";
 import { onGroupLeft } from "../coordinators/group-membership-coordinator";
 import { applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
 import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-relationship-coordinator";
@@ -21,19 +20,26 @@ import { request } from "./request";
 import { runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { runSetCurrentUserLocationFlow } from "../coordinators/location-coordinator";
 import { watchState } from "./watch-state";
-
 import * as workerTimers from "worker-timers";
-
-type UserUpdate = Parameters<typeof applyUser>[0];
-type CurrentUserUpdate = Parameters<typeof applyCurrentUser>[0];
-type GroupMemberUpdate = Parameters<typeof handleGroupMember>[0]["json"];
-
-type PipelineRecord = Record<string, unknown>;
-
-type PipelineMessage = { type: unknown; content: unknown; err: unknown };
+import type { PipelineMessage, PipelineRecord, UserUpdate } from "./websocket-guards";
+import {
+  field,
+  isCurrentUserUpdate,
+  isGroupMemberUpdate,
+  isNotificationEntry,
+  isRecord,
+  isUnknownArray,
+  isUserUpdate,
+  numberField,
+  parsePipelineMessage,
+  stringField,
+  userWithId,
+} from "./websocket-guards";
 
 let webSocket: WebSocket | null = null;
+
 let lastWebSocketMessage = "";
+
 let isWebSocketClosedGracefully = true;
 
 const ignoredContentRefreshTypes = new Set(["sticker", "prints", "avatar", "world", "created", "avatargallery", "invitePhoto"]);
@@ -47,53 +53,6 @@ export const wsState = reactive({
   messageCount: 0,
   bytesReceived: 0,
 });
-
-function isRecord(value: unknown): value is PipelineRecord {
-  return typeof value === "object" && value !== null;
-}
-
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
-function isPipelineMessage(value: unknown): value is PipelineMessage {
-  return isRecord(value);
-}
-
-function isUserUpdate(value: unknown): value is UserUpdate {
-  return isRecord(value);
-}
-
-function isCurrentUserUpdate(value: unknown): value is CurrentUserUpdate {
-  return isRecord(value);
-}
-
-function isGroupMemberUpdate(value: unknown): value is GroupMemberUpdate {
-  return isRecord(value);
-}
-
-function isNotificationEntry(value: PipelineRecord): value is NotificationEntry {
-  return stringField(value, "id") !== undefined && stringField(value, "type") !== undefined;
-}
-
-function field(record: PipelineRecord, key: string): unknown {
-  return record[key];
-}
-
-function stringField(record: PipelineRecord, key: string): string | undefined {
-  const value = field(record, key);
-  return typeof value === "string" ? value : undefined;
-}
-
-function numberField(record: PipelineRecord, key: string): number | undefined {
-  const value = field(record, key);
-  return typeof value === "number" ? value : undefined;
-}
-
-function userWithId(record: PipelineRecord): UserUpdate | undefined {
-  const user = field(record, "user");
-  return isUserUpdate(user) && Boolean(user.id) ? user : undefined;
-}
 
 function logError(err: unknown): void {
   console.error(err);
@@ -118,24 +77,6 @@ export function initWebsocket() {
     .catch((err: unknown) => {
       console.error("WebSocket init error:", err);
     });
-}
-
-function parsePipelineMessage(data: string): PipelineMessage {
-  const json: unknown = JSON.parse(data);
-  if (!isPipelineMessage(json)) {
-    throw new Error("WebSocket message is not an object");
-  }
-  if (typeof json.content === "string") {
-    try {
-      const content: unknown = JSON.parse(json.content);
-      json.content = content;
-    } catch (err) {
-      if (AppDebug.debugWebSocket) {
-        console.log("WebSocket content is not JSON", err);
-      }
-    }
-  }
-  return json;
 }
 
 function connectWebSocket(token: string) {

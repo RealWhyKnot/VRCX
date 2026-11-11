@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { nextTick, reactive } from "vue";
 
 import { links } from "../../src/shared/constants/link";
-import { createCurrentUserState } from "../../src/stores/user-state";
+import { createCurrentUserState } from "../../src/stores/user-state-factories";
 
 type AnyFn = (...args: unknown[]) => unknown;
 

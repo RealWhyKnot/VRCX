@@ -4,7 +4,7 @@ import { database } from "../services/database";
 import { friendRequest } from "../api/friend";
 import { userRequest } from "../api/user";
 import { getNameColour } from "../shared/utils/user";
-import { handleFavoriteDelete } from "./favorite-coordinator";
+import { handleFavoriteDelete } from "./favorite-sync";
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 import { useFriendStore } from "../stores/friend";
 import type { FriendStatusSource } from "../stores/friend-types";

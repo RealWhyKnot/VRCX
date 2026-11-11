@@ -13,7 +13,7 @@ import { useInstanceStore } from "../stores/instance";
 import { useNotificationStore } from "../stores/notification";
 import { useUpdateLoopStore } from "../stores/update-loop";
 import { useUserStore } from "../stores/user";
-import { applyCurrentUser } from "./user-coordinator";
+import { applyCurrentUser } from "./current-user-apply";
 import { watchState } from "../services/watch-state";
 
 import { configRepository } from "../services/config";

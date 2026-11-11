@@ -1,9 +1,8 @@
-import { computed, reactive, ref, watch, type Ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import type { FavoriteGroup } from "vrchat";
-
 import { compareByName } from "../shared/utils/compare";
 import { createDefaultFavoriteGroupRef } from "../shared/utils/entity-transforms";
 import { replaceReactiveObject } from "../shared/utils/base/array";
@@ -12,7 +11,7 @@ import { database } from "../services/database";
 import { processBulk } from "../services/request";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { watchState } from "../services/watch-state";
-import { onLoginStateChanged } from "../coordinators/favorite-coordinator";
+import { onLoginStateChanged } from "../coordinators/favorite-sync";
 import { logFailure } from "./log-failure";
 import type { Json } from "../types/vrcx";
 import type {
@@ -27,31 +26,7 @@ import type {
   LocalFavoriteEntry,
   LocalFavoriteGroups,
 } from "./favorite-types";
-
-function createFavoriteSlot(type: string, name: string, displayName: string, capacity: number): FavoriteGroupSlot {
-  return {
-    assign: false,
-    key: `${type}:${name}`,
-    type,
-    name,
-    displayName,
-    capacity,
-    count: 0,
-    visibility: "private",
-  };
-}
-
-function flattenFavoriteGroups<T>(groups: LocalFavoriteGroups<T>): T[] {
-  return Object.values(groups).flatMap((group) => group ?? []);
-}
-
-function syncFavoriteSelection(list: { id: string }[], selectionRef: Ref<string[]>) {
-  const availableIds = new Set(list.map((item) => item.id));
-  const filtered = selectionRef.value.filter((id) => availableIds.has(id));
-  if (filtered.length !== selectionRef.value.length) {
-    selectionRef.value = filtered;
-  }
-}
+import { createFavoriteSlot, flattenFavoriteGroups, syncFavoriteSelection } from "./favorite-slots-and-selection";
 
 export const useFavoriteStore = defineStore("Favorite", () => {
   const appearanceSettingsStore = useAppearanceSettingsStore();

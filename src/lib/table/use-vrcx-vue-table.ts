@@ -39,6 +39,17 @@ import type {
 } from "@tanstack/vue-table";
 import { computed, ref, toValue, watch } from "vue";
 import type { MaybeRefOrGetter, Ref } from "vue";
+import type { PersistedState } from "./table-persisted-state";
+import { isBooleanRecord, isNumberRecord, isSortingEntry, isStringArray, readPersistedState } from "./table-persisted-state";
+import {
+  filterOrderByColumns,
+  filterSizingByColumns,
+  filterSortingByColumns,
+  filterVisibilityByColumns,
+  findStretchColumnId,
+  getColumnId,
+  hasMetaFlag,
+} from "./table-column-filters";
 
 const baseFeatures = {
   rowSortingFeature,
@@ -66,7 +77,7 @@ type VrcxFeatures = typeof baseFeatures & RowModelSlots;
 
 export type VrcxColumn<TData extends RowData> = ColumnDef<VrcxFeatures, TData>;
 
-type ColumnIdentity = {
+export type ColumnIdentity = {
   id?: string | undefined;
   accessorKey?: unknown;
   meta?: unknown;
@@ -80,16 +91,6 @@ type SpacerColumn = {
   size: number;
   minSize: number;
   meta: { thClass: string; tdClass: string };
-};
-
-type PersistedState = {
-  sorting?: unknown;
-  columnSizing?: unknown;
-  columnOrder?: unknown;
-  columnVisibility?: unknown;
-  pageSize?: unknown;
-  columnOrderLocked?: unknown;
-  updatedAt?: unknown;
 };
 
 type TableUpdateHandlers = {
@@ -135,54 +136,6 @@ type VrcxTableOptions<TData extends RowData> = {
   tableOptions?: Partial<TableOptions<VrcxFeatures, TData>>;
 };
 
-function isPersistedState(value: unknown): value is PersistedState {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isSortingEntry(value: unknown): value is SortingState[number] {
-  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string" && "desc" in value && typeof value.desc === "boolean";
-}
-
-function isNumberRecord(value: unknown): value is ColumnSizingState {
-  return isPersistedState(value) && Object.values(value).every((item) => typeof item === "number");
-}
-
-function isBooleanRecord(value: unknown): value is ColumnVisibilityState {
-  return isPersistedState(value) && Object.values(value).every((item) => typeof item === "boolean");
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every(isString);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasMetaFlag(column: ColumnIdentity, flag: string): boolean {
-  return isRecord(column.meta) && Boolean(column.meta[flag]);
-}
-
-export function safeJsonParse(str: string | null | undefined): unknown {
-  if (!str) {
-    return null;
-  }
-  try {
-    return JSON.parse(str);
-  } catch {
-    return null;
-  }
-}
-
-function readPersistedState(str: string | null): PersistedState | null {
-  const parsed = safeJsonParse(str);
-  return isPersistedState(parsed) ? parsed : null;
-}
-
 function debounce<TArgs extends unknown[]>(fn: (...args: TArgs) => void, wait: number): (...args: TArgs) => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   return (...args: TArgs) => {
@@ -191,82 +144,6 @@ function debounce<TArgs extends unknown[]>(fn: (...args: TArgs) => void, wait: n
     }
     timer = setTimeout(() => fn(...args), wait);
   };
-}
-
-function columnIdSet(columns: ColumnIdentity[] | null | undefined): Set<string | number> {
-  const ids = new Set<string | number>();
-  for (const column of columns ?? []) {
-    const id = getColumnId(column);
-    if (id !== null) {
-      ids.add(id);
-    }
-  }
-  return ids;
-}
-
-export function filterSizingByColumns(sizing: unknown, columns: ColumnIdentity[] | null | undefined): ColumnSizingState {
-  if (!isPersistedState(sizing)) {
-    return {};
-  }
-  const ids = columnIdSet(columns);
-  const out: ColumnSizingState = {};
-  for (const [key, value] of Object.entries(sizing)) {
-    if (ids.has(key) && typeof value === "number") {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-export function filterSortingByColumns(sorting: unknown, columns: ColumnIdentity[] | null | undefined): SortingState {
-  if (!Array.isArray(sorting)) {
-    return [];
-  }
-  const ids = columnIdSet(columns);
-  return sorting.filter(isSortingEntry).filter((entry) => ids.has(entry.id));
-}
-
-export function filterOrderByColumns(order: unknown, columns: ColumnIdentity[] | null | undefined): ColumnOrderState {
-  if (!Array.isArray(order)) {
-    return [];
-  }
-  const ids = columnIdSet(columns);
-  return order.filter(isString).filter((id) => ids.has(id));
-}
-
-export function filterVisibilityByColumns(visibility: unknown, columns: ColumnIdentity[] | null | undefined): ColumnVisibilityState {
-  if (!isPersistedState(visibility)) {
-    return {};
-  }
-  const ids = columnIdSet(columns);
-  const out: ColumnVisibilityState = {};
-  for (const [key, value] of Object.entries(visibility)) {
-    if (ids.has(key) && typeof value === "boolean") {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-export function getColumnId(col: ColumnIdentity | null | undefined): string | number | null {
-  const id = col?.id ?? col?.accessorKey;
-  return typeof id === "string" || typeof id === "number" ? id : null;
-}
-
-function isColumnIdentityArray(value: unknown): value is ColumnIdentity[] {
-  return Array.isArray(value);
-}
-
-export function findStretchColumnId(columns: unknown): string | number | null {
-  if (!isColumnIdentityArray(columns)) {
-    return null;
-  }
-  for (const col of columns) {
-    if (hasMetaFlag(col, "stretch")) {
-      return getColumnId(col);
-    }
-  }
-  return null;
 }
 
 function setRef<T>(updaterOrValue: Updater<T>, targetRef: Ref<T>) {

@@ -7,7 +7,7 @@ import { getUserMemo } from "../coordinators/memo-coordinator";
 import { runInitFriendsListFlow } from "../coordinators/friend-sync-coordinator";
 import { runPendingOfflineTickFlow, runUpdateFriendFlow } from "../coordinators/friend-presence-coordinator";
 import { updateFriendship, runUpdateFriendshipsFlow } from "../coordinators/friend-relationship-coordinator";
-import { applyUser } from "../coordinators/user-coordinator";
+import { applyUser } from "../coordinators/user-profile-apply";
 import { database } from "../services/database";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useGeneralSettingsStore } from "./settings/general";

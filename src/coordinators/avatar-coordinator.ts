@@ -17,7 +17,7 @@ import { logWebRequest } from "../services/app-config";
 import { database } from "../services/database";
 import { patchAvatarFromEvent } from "../queries/entity-cache";
 import { processBulk } from "../services/request";
-import { applyFavorite } from "./favorite-coordinator";
+import { applyFavorite } from "./favorite-sync";
 import { refreshUserDialogAvatars, showUserDialog } from "./user-coordinator";
 import { useAdvancedSettingsStore } from "../stores/settings/advanced";
 import { useAvatarProviderStore } from "../stores/avatar-provider";

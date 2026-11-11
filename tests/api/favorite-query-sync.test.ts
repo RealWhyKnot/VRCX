@@ -16,7 +16,7 @@ vi.mock("../../src/stores/user", () => ({
   }),
 }));
 
-vi.mock("../../src/coordinators/favorite-coordinator", () => ({
+vi.mock("../../src/coordinators/favorite-sync", () => ({
   handleFavoriteAdd: (...args: unknown[]) => mockHandleFavoriteAdd(...args),
   handleFavoriteDelete: (...args: unknown[]) => mockHandleFavoriteDelete(...args),
   handleFavoriteGroupClear: (...args: unknown[]) => mockHandleFavoriteGroupClear(...args),

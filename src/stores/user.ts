@@ -1,7 +1,6 @@
 import { computed, reactive, ref, shallowReactive, watch } from "vue";
 import { defineStore } from "pinia";
 import { useI18n } from "vue-i18n";
-
 import { compareByCreatedAt, compareByName, compareByUpdatedAt } from "../shared/utils/compare";
 import { getAllUserMemos } from "../coordinators/memo-coordinator";
 import { userRequest } from "../api/user";
@@ -9,7 +8,6 @@ import { cosmeticsRequest } from "../api/cosmetics";
 import { marketplaceRequest } from "../api/marketplace";
 import { AppDebug } from "../services/app-config";
 import { processBulk } from "../services/request";
-import { runUpdateCurrentUserLocationFlow } from "../coordinators/location-coordinator";
 import { useAppearanceSettingsStore } from "./settings/appearance";
 import { useFriendStore } from "./friend";
 import { useInstanceStore } from "./instance";
@@ -17,21 +15,15 @@ import { useLocationStore } from "./location";
 import { useModalStore } from "./modal";
 import { useUiStore } from "./ui";
 import { watchState } from "../services/watch-state";
-import { isRealInstance } from "../shared/utils/instance";
 import type { Json, VrcxUser } from "../types/vrcx";
 import type { ContentFilter, OrderOptionShort, PublicProfile, SortOptionProductPurchase } from "vrchat";
-
 import { applyUserDialogLocation } from "./user-dialog-location";
 import { checkNote as checkNoteWithDeps, initUserNotes as initUserNotesWithDeps } from "./user-notes";
 import type { UserNotesDeps } from "./user-notes";
 import {
-  createCurrentUserState,
-  createEditProfileDialogState,
-  createUserDialogState,
   type CachedCosmetic,
   type CachedProductPurchase,
   type ClientConfigState,
-  type CurrentUserPresence,
   type LanguageEntry,
   type CurrentUserState,
   type CustomUserTag,
@@ -39,6 +31,9 @@ import {
   type UserDialogState,
   type UserStoreNotesState,
 } from "./user-state";
+import { createCurrentUserState, createEditProfileDialogState, createUserDialogState } from "./user-state-factories";
+import { applyPresenceLocation } from "./user-presence-location";
+import { logUserStoreError } from "./user-store-error-log";
 
 function isConfirmResult(value: unknown): value is { ok: boolean } {
   return typeof value === "object" && value !== null && "ok" in value && typeof value.ok === "boolean";
@@ -46,12 +41,6 @@ function isConfirmResult(value: unknown): value is { ok: boolean } {
 
 function valueOrFallback(value: string | undefined, fallback: string) {
   return value === undefined || value === "" ? fallback : value;
-}
-
-function logUserStoreError(message: string) {
-  return (error: unknown) => {
-    console.error(message, error);
-  };
 }
 
 export const useUserStore = defineStore("User", () => {
@@ -255,24 +244,6 @@ export const useUserStore = defineStore("User", () => {
         }
       }
     }
-  }
-
-  function applyPresenceLocation(user: { presence?: CurrentUserPresence | undefined; $locationTag?: string; $travelingToLocation?: string }) {
-    const presence = user.presence;
-    if (!presence) {
-      return;
-    }
-    if (isRealInstance(presence.world)) {
-      user.$locationTag = `${presence.world}:${presence.instance ?? ""}`;
-    } else {
-      user.$locationTag = presence.world ?? "";
-    }
-    if (isRealInstance(presence.travelingToWorld)) {
-      user.$travelingToLocation = `${presence.travelingToWorld}:${presence.travelingToInstance ?? ""}`;
-    } else {
-      user.$travelingToLocation = presence.travelingToWorld ?? "";
-    }
-    runUpdateCurrentUserLocationFlow();
   }
 
   function applyUserDialogLocationForStore(shouldUpdateInstanceOccupants = false) {

@@ -238,3 +238,11 @@ export type PhotonModerationAgainst = {
   displayName: string;
   type: string;
 };
+
+export type PhotonState = {
+  photonEventTableTypeFilterList: string[];
+  photonEventCount: number;
+  photonLobbyTimeoutThreshold: number;
+  photonOverlayMessageTimeout: number;
+  photonLobbyWatcherLoop: boolean;
+};

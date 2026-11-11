@@ -143,6 +143,8 @@ vi.mock("../../src/api/group", () => ({ groupRequest: makeApiMock().groupRequest
 vi.mock("../../src/coordinators/user-coordinator", () => ({
   showUserDialog: (...args: unknown[]) => mockShowUserDialog(...args),
   lookupUser: vi.fn(),
+}));
+vi.mock("../../src/coordinators/user-profile-apply", () => ({
   applyUser: vi.fn(),
 }));
 vi.mock("../../src/coordinators/avatar-coordinator", () => ({

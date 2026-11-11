@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { isSpacerColumn, withSpacerColumn } from "../../../src/lib/table/use-vrcx-vue-table";
 import {
   filterOrderByColumns,
   filterSizingByColumns,
@@ -7,10 +8,8 @@ import {
   filterVisibilityByColumns,
   findStretchColumnId,
   getColumnId,
-  isSpacerColumn,
-  safeJsonParse,
-  withSpacerColumn,
-} from "../../../src/lib/table/use-vrcx-vue-table";
+} from "../../../src/lib/table/table-column-filters";
+import { safeJsonParse } from "../../../src/lib/table/table-persisted-state";
 
 const cols = (...ids: string[]) => ids.map((id) => ({ id }));
 

@@ -1,7 +1,7 @@
 import type { ApiConfig, CurrentUser, Permission, Success, TwoFactorAuthCode, TwoFactorEmailCode, Verify2FaEmailCodeResult, Verify2FaResult } from "vrchat";
 import type { Json, RequestOptions } from "../types/vrcx";
 import { request } from "../services/request";
-import { handleConfig } from "../coordinators/user-coordinator";
+import { handleConfig } from "../coordinators/current-user-apply";
 
 function requestObject<T extends object>(endpoint: string, options: RequestOptions): Promise<T> {
   const isResponseObject = (value: unknown): value is T => typeof value === "object" && value !== null;

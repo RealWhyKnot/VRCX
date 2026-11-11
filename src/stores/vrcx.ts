@@ -4,8 +4,6 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
 import { DEFAULT_MAX_TABLE_SIZE, DEFAULT_SEARCH_LIMIT, SEARCH_LIMIT_MAX, SEARCH_LIMIT_MIN } from "../shared/constants/settings";
-import { avatarRequest } from "../api/avatar";
-import { queryRequest } from "../api/query-request";
 import { debounce } from "../shared/utils/common";
 import { parseLocation } from "../shared/utils/location-parser";
 import { parseFileSaveResult } from "../shared/utils/file-save-result";
@@ -15,14 +13,10 @@ import { database } from "../services/database";
 import { refreshCustomScript } from "../shared/utils/base/ui";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useAvatarProviderStore } from "./avatar-provider";
-import { addLocalWorldFavorite, addLocalAvatarFavorite } from "../coordinators/favorite-coordinator";
 import { useFavoriteStore } from "./favorite";
 import { useGameLogStore } from "./gameLog";
 import { useGameStore } from "./game";
-import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
-import { showWorldDialog } from "../coordinators/world-coordinator";
-import { showAvatarDialog, selectAvatarWithConfirmation, selectAvatarWithoutConfirmation } from "../coordinators/avatar-coordinator";
-import { showUserDialog, addCustomTag } from "../coordinators/user-coordinator";
+import { addCustomTag } from "../coordinators/user-tags-status";
 import { useLocationStore } from "./location";
 import { useModalStore } from "./modal";
 import { useNotificationStore } from "./notification";
@@ -33,9 +27,10 @@ import { useUserStore } from "./user";
 import { clearVRCXCache } from "../coordinators/vrcx-coordinator";
 import { resetSearchIndexOnLogin } from "../coordinators/search-index-coordinator";
 import { watchState } from "../services/watch-state";
-
 import { configRepository } from "../services/config";
-import { isAutoBackup, isIpcMessage, logError, param254, parseLeadingInt, parseRegistryBackups, type IpcVrcxMessage } from "./vrcx-messages";
+import { isIpcMessage, logError, param254, parseLeadingInt, type IpcVrcxMessage } from "./vrcx-messages";
+import { createVrcxLaunchCommands } from "./vrcx-launch-commands";
+import { createVrcxRegistryBackup } from "./vrcx-registry-backup";
 
 export const useVrcxStore = defineStore("Vrcx", () => {
   const gameStore = useGameStore();
@@ -470,221 +465,6 @@ export const useVrcxStore = defineStore("Vrcx", () => {
     { flush: "sync" }
   );
 
-  async function startupLaunchCommand() {
-    const command = await AppApi.GetLaunchCommand();
-    if (!command) {
-      return;
-    }
-    if (command.startsWith("crash/")) {
-      const crashMessage = command.replace("crash/", "");
-      console.error("VRCX recovered from crash:", crashMessage);
-
-      if (advancedSettingsStore.sentryErrorReporting) {
-        try {
-          import("@sentry/vue")
-            .then((sentry) => {
-              sentry.withScope((scope) => {
-                scope.setLevel("fatal");
-                scope.setTag("reason", "crash-recovery");
-                scope.setContext("session", {
-                  sessionTime: performance.now() / 1000 / 60,
-                });
-                sentry.captureMessage(`crash message: ${crashMessage}`);
-              });
-            })
-            .catch(logError);
-        } catch (error) {
-          console.error("Error setting up Sentry feedback:", error);
-        }
-      }
-
-      toast.success(t("message.crash.vrcx_reload"));
-      return;
-    }
-    eventLaunchCommand(command);
-  }
-
-  function eventLaunchCommand(input: string) {
-    if (!watchState.isLoggedIn) {
-      return;
-    }
-    console.log("LaunchCommand:", input);
-    const args = input.split("/");
-    const command = args[0] ?? "";
-    const commandArg = args[1]?.trim() ?? "";
-    let shouldFocusWindow = true;
-    switch (command) {
-      case "world":
-        if (!searchStore.directAccessWorld(input.replace("world/", ""))) {
-          showWorldDialog(commandArg);
-        }
-        break;
-      case "avatar":
-        showAvatarDialog(commandArg);
-        break;
-      case "user":
-        showUserDialog(commandArg);
-        break;
-      case "group":
-        showGroupDialog(commandArg);
-        break;
-      case "local-favorite-world": {
-        console.log("local-favorite-world", commandArg);
-        const [id, group] = commandArg.split(":");
-        if (!id || !group) {
-          toast.error("Invalid local favorite world command");
-          break;
-        }
-        queryRequest
-          .fetch("world.location", { worldId: id })
-          .then(() => {
-            searchStore.directAccessWorld(id);
-            addLocalWorldFavorite(id, group);
-          })
-          .catch(logError);
-        break;
-      }
-      case "local-favorite-avatar": {
-        console.log("local-favorite-avatar", commandArg);
-        const [avatarIdFav, avatarGroup] = commandArg.split(":");
-        if (!avatarIdFav || !avatarGroup) {
-          toast.error("Invalid local favorite avatar command");
-          break;
-        }
-        avatarRequest
-          .getAvatar({ avatarId: avatarIdFav })
-          .then(() => {
-            showAvatarDialog(avatarIdFav);
-            addLocalAvatarFavorite(avatarIdFav, avatarGroup);
-          })
-          .catch(logError);
-        break;
-      }
-      case "addavatardb":
-        avatarProviderStore.addAvatarProvider(input.replace("addavatardb/", ""));
-        break;
-      case "switchavatar": {
-        const avatarId = commandArg;
-        const regexAvatarId = /avtr_[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}/g;
-        if (!avatarId.match(regexAvatarId) || avatarId.length !== 41) {
-          toast.error("Invalid Avatar ID");
-          break;
-        }
-        if (advancedSettingsStore.showConfirmationOnSwitchAvatar) {
-          selectAvatarWithConfirmation(avatarId);
-
-          shouldFocusWindow = true;
-        } else {
-          selectAvatarWithoutConfirmation(avatarId)
-            .then(() => {
-              toast.success("Avatar changed via launch command");
-            })
-            .catch(logError);
-          shouldFocusWindow = false;
-        }
-        break;
-      }
-      case "import": {
-        const type = args[1];
-        if (!type) break;
-        const data = input.replace(`import/${type}/`, "");
-        if (type === "avatar") {
-          favoriteStore.setAvatarImportDialogInput(data);
-          favoriteStore.showAvatarImportDialog();
-        } else if (type === "world") {
-          favoriteStore.setWorldImportDialogInput(data);
-          favoriteStore.showWorldImportDialog();
-        } else if (type === "friend") {
-          favoriteStore.setFriendImportDialogInput(data);
-          favoriteStore.showFriendImportDialog();
-        }
-        break;
-      }
-    }
-    if (shouldFocusWindow) {
-      AppApi.FocusWindow().catch(logError);
-    }
-  }
-
-  async function backupVrcRegistry(name: string) {
-    let regJson: unknown;
-    try {
-      regJson = JSON.parse(await AppApi.GetVRChatRegistryJson());
-    } catch (e) {
-      console.error("Failed to get VRChat registry for backup:", e);
-      return;
-    }
-    const newBackup = {
-      name,
-      date: new Date().toJSON(),
-      data: regJson,
-    };
-    const storedBackups = await configRepository.getString("VRCX_VRChatRegistryBackups");
-    const backupsJson = storedBackups === null || storedBackups === "" ? JSON.stringify([]) : storedBackups;
-    const backups = parseRegistryBackups(backupsJson);
-    backups.push(newBackup);
-    await configRepository.setString("VRCX_VRChatRegistryBackups", JSON.stringify(backups));
-  }
-
-  async function checkAutoBackupRestoreVrcRegistry() {
-    if (!advancedSettingsStore.vrcRegistryAutoBackup || !advancedSettingsStore.vrcRegistryAskRestore) {
-      return;
-    }
-
-    const hasVRChatRegistryFolder = await AppApi.HasVRChatRegistryFolder();
-    if (!hasVRChatRegistryFolder) {
-      const lastBackupDate = await configRepository.getString("VRCX_VRChatRegistryLastBackupDate");
-      const lastRestoreCheck = await configRepository.getString("VRCX_VRChatRegistryLastRestoreCheck");
-      if (!lastBackupDate || (lastRestoreCheck && lastBackupDate && lastRestoreCheck === lastBackupDate)) {
-        return;
-      }
-
-      modalStore
-        .alert({
-          description: t("dialog.registry_backup.restore_prompt"),
-          title: t("dialog.registry_backup.header"),
-        })
-        .catch(logError);
-      showRegistryBackupDialog();
-      await AppApi.FocusWindow();
-      await configRepository.setString("VRCX_VRChatRegistryLastRestoreCheck", lastBackupDate);
-    } else {
-      await tryAutoBackupVrcRegistry();
-    }
-  }
-
-  function showRegistryBackupDialog() {
-    isRegistryBackupDialogVisible.value = true;
-  }
-
-  async function tryAutoBackupVrcRegistry() {
-    if (!advancedSettingsStore.vrcRegistryAutoBackup) {
-      return;
-    }
-    const date = new Date();
-    const lastBackupDate = await configRepository.getString("VRCX_VRChatRegistryLastBackupDate");
-    if (lastBackupDate) {
-      const lastBackup = new Date(lastBackupDate);
-      const diff = date.getTime() - lastBackup.getTime();
-      const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-      if (diffDays < 3) {
-        return;
-      }
-    }
-    const storedBackups = await configRepository.getString("VRCX_VRChatRegistryBackups");
-    const backupsJson = storedBackups === null || storedBackups === "" ? JSON.stringify([]) : storedBackups;
-    const backups = parseRegistryBackups(backupsJson);
-    for (let i = backups.length - 1; i >= 0; i--) {
-      const backup = backups[i];
-      if (isAutoBackup(backup) && new Date(backup.date).getTime() < date.getTime() - 1209600000) {
-        backups.splice(i, 1);
-      }
-    }
-    await configRepository.setString("VRCX_VRChatRegistryBackups", JSON.stringify(backups));
-    backupVrcRegistry("Auto Backup").catch(logError);
-    await configRepository.setString("VRCX_VRChatRegistryLastBackupDate", date.toJSON());
-  }
-
   function onBrowserFocus() {
     isBrowserFocused.value = true;
   }
@@ -692,6 +472,20 @@ export const useVrcxStore = defineStore("Vrcx", () => {
   function onBrowserBlur() {
     isBrowserFocused.value = false;
   }
+
+  const { startupLaunchCommand, eventLaunchCommand } = createVrcxLaunchCommands({
+    favoriteStore,
+    advancedSettingsStore,
+    searchStore,
+    avatarProviderStore,
+    t,
+  });
+  const { backupVrcRegistry, checkAutoBackupRestoreVrcRegistry, showRegistryBackupDialog, tryAutoBackupVrcRegistry } = createVrcxRegistryBackup({
+    advancedSettingsStore,
+    modalStore,
+    isRegistryBackupDialogVisible,
+    t,
+  });
 
   return {
     state,

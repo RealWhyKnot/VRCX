@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ref } from "vue";
 import type { Ref } from "vue";
 import { useUserDialogCommands } from "../../../../src/components/dialogs/UserDialog/use-user-dialog-commands";
-import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state";
+import { createCurrentUserState, createUserDialogState } from "../../../../src/stores/user-state-factories";
 import type { CurrentUserState, UserDialogState } from "../../../../src/stores/user-state";
 import { createDefaultUserRef } from "../../../../src/shared/utils/user-transforms";
 
