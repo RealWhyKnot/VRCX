@@ -1,12 +1,12 @@
 using CefSharp;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
-internal sealed class CustomMenuHandler : IContextMenuHandler
+internal sealed class CefCustomMenuHandler : IContextMenuHandler
 {
     public void OnBeforeContextMenu(IWebBrowser browserControl, IBrowser browser, IFrame frame, IContextMenuParams parameters, IMenuModel model)
     {
-        if (!browser.IsSame(MainForm.Instance.Browser?.GetBrowser()))
+        if (!browser.IsSame(MainForm.Instance?.Browser.GetBrowser()))
         {
 
             return;

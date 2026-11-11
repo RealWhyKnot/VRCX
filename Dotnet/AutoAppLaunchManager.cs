@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
@@ -9,16 +10,13 @@ using Timer = System.Timers.Timer;
 
 namespace VRCX;
 
-
-
-
-internal sealed partial class AutoAppLaunchManager
+internal sealed partial class AutoAppLaunchManager : IDisposable
 {
     public static AutoAppLaunchManager Instance { get; private set; }
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     public const string VRChatProcessName = "VRChat";
 
-    public bool Enabled = false;
+    public bool Enabled;
 
     public bool KillChildrenOnExit = true;
     public bool RunProcessOnce = true;
@@ -26,85 +24,57 @@ internal sealed partial class AutoAppLaunchManager
     public readonly string AppShortcutDesktop;
     public readonly string AppShortcutVR;
 
-    private readonly DateTime startTime = DateTime.Now;
-    private readonly Dictionary<string, HashSet<int>> startedProcesses = [];
-    private readonly Timer childUpdateTimer;
-    private int timerTicks = 0;
-    private static readonly byte[] shortcutSignatureBytes = [0x4C, 0x00, 0x00, 0x00];
-    private static readonly byte[] urlShortcutHeader = "[{000214A0-0000-0000-C000-000000000046}]"u8.ToArray();
+    private readonly DateTime _startTime = DateTime.Now;
+    private readonly Dictionary<string, HashSet<int>> _startedProcesses = [];
+    private readonly Timer _childUpdateTimer;
+    private int _timerTicks;
+    private static readonly byte[] ShortcutSignatureBytes = [0x4C, 0x00, 0x00, 0x00];
+    private static readonly byte[] UrlShortcutHeader = "[{000214A0-0000-0000-C000-000000000046}]"u8.ToArray();
 
     private const uint TH32CS_SNAPPROCESS = 2;
 
+    [LibraryImport("kernel32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
 
-    [DllImport("kernel32.dll")]
-    public static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
-    [DllImport("kernel32.dll")]
-    public static extern bool Process32First(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
-
-    [DllImport("kernel32.dll")]
-    public static extern bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial bool Process32Next(IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct PROCESSENTRY32 : IEquatable<PROCESSENTRY32>
+    internal struct PROCESSENTRY32
     {
-        public uint dwSize;
-        public uint cntUsage;
-        public uint th32ProcessID;
-        public IntPtr th32DefaultHeapID;
-        public uint th32ModuleID;
-        public uint cntThreads;
-        public uint th32ParentProcessID;
-        public int pcPriClassBase;
-        public uint dwFlags;
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        public string szExeFile;
-
-        public override readonly bool Equals(object? obj) => obj is PROCESSENTRY32 other && Equals(other);
-
-        public override readonly int GetHashCode()
-        {
-            var hash = new HashCode();
-            hash.Add(dwSize);
-            hash.Add(cntUsage);
-            hash.Add(th32ProcessID);
-            hash.Add(th32DefaultHeapID);
-            hash.Add(th32ModuleID);
-            hash.Add(cntThreads);
-            hash.Add(th32ParentProcessID);
-            hash.Add(pcPriClassBase);
-            hash.Add(dwFlags);
-            hash.Add(szExeFile, StringComparer.Ordinal);
-            return hash.ToHashCode();
-        }
-
-        public static bool operator ==(PROCESSENTRY32 left, PROCESSENTRY32 right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(PROCESSENTRY32 left, PROCESSENTRY32 right)
-        {
-            return !(left == right);
-        }
-
-        public readonly bool Equals(PROCESSENTRY32 other) =>
-            dwSize == other.dwSize &&
-            cntUsage == other.cntUsage &&
-            th32ProcessID == other.th32ProcessID &&
-            th32DefaultHeapID == other.th32DefaultHeapID &&
-            th32ModuleID == other.th32ModuleID &&
-            cntThreads == other.cntThreads &&
-            th32ParentProcessID == other.th32ParentProcessID &&
-            pcPriClassBase == other.pcPriClassBase &&
-            dwFlags == other.dwFlags &&
-            string.Equals(szExeFile, other.szExeFile, StringComparison.Ordinal);
+        public uint DwSize;
+        public uint CntUsage;
+        public uint Th32ProcessID;
+        public IntPtr Th32DefaultHeapID;
+        public uint Th32ModuleID;
+        public uint CntThreads;
+        public uint Th32ParentProcessID;
+        public int PcPriClassBase;
+        public uint DwFlags;
+        public ExeFileNameBuffer SzExeFile;
     }
+
+    [InlineArray(260)]
+    internal struct ExeFileNameBuffer
+    {
+        private byte _element0;
+    }
+
+    [SupportedOSPlatform("windows")]
     static AutoAppLaunchManager()
     {
         Instance = new AutoAppLaunchManager();
     }
 
+    [SupportedOSPlatform("windows")]
     public AutoAppLaunchManager()
     {
         AppShortcutDirectory = Path.Join(Program.AppDataDirectory, "startup");
@@ -118,25 +88,26 @@ internal sealed partial class AutoAppLaunchManager
         ProcessMonitor.Instance.ProcessStarted += OnProcessStarted;
         ProcessMonitor.Instance.ProcessExited += OnProcessExited;
 
-        childUpdateTimer = new Timer
+        _childUpdateTimer = new Timer
         {
             Interval = 60000,
         };
-        childUpdateTimer.Elapsed += ChildUpdateTimer_Elapsed;
+        _childUpdateTimer.Elapsed += ChildUpdateTimer_Elapsed;
     }
 
-    private void OnProcessExited(MonitoredProcess monitoredProcess)
+    private void OnProcessExited(object? sender, MonitoredProcessEventArgs e)
     {
+        MonitoredProcess monitoredProcess = e.MonitoredProcess;
         if (!monitoredProcess.HasName(VRChatProcessName))
         {
             return;
         }
 
-        lock (startedProcesses)
+        lock (_startedProcesses)
         {
             if (KillChildrenOnExit)
             {
-                childUpdateTimer.Stop();
+                _childUpdateTimer.Stop();
 
                 KillChildProcesses();
             }
@@ -148,15 +119,15 @@ internal sealed partial class AutoAppLaunchManager
     }
 
     [SupportedOSPlatform("windows")]
-    private void OnProcessStarted(MonitoredProcess monitoredProcess)
+    private void OnProcessStarted(object? sender, MonitoredProcessEventArgs e)
     {
-        if (!Enabled || !monitoredProcess.HasName(VRChatProcessName) || monitoredProcess.Process.StartTime < startTime)
+        MonitoredProcess monitoredProcess = e.MonitoredProcess;
+        if (!Enabled || !monitoredProcess.HasName(VRChatProcessName) || monitoredProcess.Process is not { } process || process.StartTime < _startTime)
         {
             return;
         }
 
-
-        lock (startedProcesses)
+        lock (_startedProcesses)
         {
             if (KillChildrenOnExit)
             {
@@ -167,11 +138,11 @@ internal sealed partial class AutoAppLaunchManager
                 UpdateChildProcesses();
             }
 
-            (List<string>? shortcutFiles, List<string>? steamIds) = FindShortcutFiles(AppShortcutDirectory);
-            (List<string>? platformShortcutFiles, List<string>? platformSteamIds) = FindShortcutFiles(Program.AppApiInstance.IsSteamVRRunning() ? AppShortcutVR : AppShortcutDesktop);
+            (List<string> shortcutFiles, List<string> steamIds) = FindShortcutFiles(AppShortcutDirectory);
+            (List<string> platformShortcutFiles, List<string> platformSteamIds) = FindShortcutFiles(Program.AppApiInstance?.IsSteamVRRunning() == true ? AppShortcutVR : AppShortcutDesktop);
             shortcutFiles.AddRange(platformShortcutFiles);
             steamIds.AddRange(platformSteamIds);
-            foreach (string? file in shortcutFiles)
+            foreach (string file in shortcutFiles)
             {
                 if (RunProcessOnce && IsProcessRunning(file))
                 {
@@ -185,9 +156,9 @@ internal sealed partial class AutoAppLaunchManager
 
                 StartChildProcess(file);
             }
-            foreach (string? steamId in steamIds)
+            foreach (string steamId in steamIds)
             {
-                StartSteamGameAsync(steamId);
+                _ = StartSteamGameAsync(steamId, CancellationToken.None);
             }
 
             if (shortcutFiles.Count == 0 && steamIds.Count == 0)
@@ -195,21 +166,17 @@ internal sealed partial class AutoAppLaunchManager
                 return;
             }
 
-            timerTicks = 0;
-            childUpdateTimer.Interval = 1000;
-            childUpdateTimer.Start();
+            _timerTicks = 0;
+            _childUpdateTimer.Interval = 1000;
+            _childUpdateTimer.Start();
         }
     }
-
-
-
 
     private void KillChildProcesses()
     {
         UpdateChildProcesses();
 
-
-        Parallel.ForEach(startedProcesses.ToArray(), pair =>
+        Parallel.ForEach(_startedProcesses.ToArray(), pair =>
         {
             HashSet<int> processes = pair.Value;
             int[] pids = [.. processes];
@@ -222,19 +189,8 @@ internal sealed partial class AutoAppLaunchManager
             }
         });
 
-        startedProcesses.Clear();
+        _startedProcesses.Clear();
     }
-
-
-
-
-
-
-
-
-
-
-
 
     public static List<int> FindChildProcesses(int pid, bool recursive = true)
     {
@@ -248,20 +204,20 @@ internal sealed partial class AutoAppLaunchManager
 
         var procEntry = new PROCESSENTRY32
         {
-            dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32)),
+            DwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>(),
         };
 
         if (Process32First(snapshot, ref procEntry))
         {
             do
             {
-                if (procEntry.th32ParentProcessID == pid)
+                if (procEntry.Th32ParentProcessID == pid)
                 {
-                    pids.Add((int)procEntry.th32ProcessID);
+                    pids.Add((int)procEntry.Th32ProcessID);
 
                     if (recursive)
                     {
-                        pids.AddRange(FindChildProcesses((int)procEntry.th32ProcessID));
+                        pids.AddRange(FindChildProcesses((int)procEntry.Th32ProcessID));
                     }
                 }
             }
@@ -270,10 +226,6 @@ internal sealed partial class AutoAppLaunchManager
 
         return pids;
     }
-
-
-
-
 
     public static void KillProcessTree(int pid)
     {
@@ -290,30 +242,20 @@ internal sealed partial class AutoAppLaunchManager
                     continue;
                 }
 
-
-
-
-
-
-
-
                 proc.Kill();
             }
-            catch
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
             {
+                Logger.Debug(ex, "Could not stop process {0}", p);
             }
         }
     }
-
-
-
-
 
     private void StartChildProcess(string path)
     {
         try
         {
-            var process = new Process
+            using var process = new Process
             {
                 StartInfo = new ProcessStartInfo(path)
                 {
@@ -323,22 +265,18 @@ internal sealed partial class AutoAppLaunchManager
             process.Start();
             if (process.Id != 0)
             {
-                startedProcesses.Add(path, [process.Id]);
+                _startedProcesses.Add(path, [process.Id]);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, ex);
         }
     }
 
-
-
-
-
     private void UpdateChildProcesses()
     {
-        foreach (KeyValuePair<string, HashSet<int>> pair in startedProcesses.ToArray())
+        foreach (KeyValuePair<string, HashSet<int>> pair in _startedProcesses.ToArray())
         {
             HashSet<int> processes = pair.Value;
             foreach (int pid in processes.ToArray())
@@ -359,21 +297,14 @@ internal sealed partial class AutoAppLaunchManager
 
             if (processes.Count == 0)
             {
-                startedProcesses.Remove(pair.Key);
+                _startedProcesses.Remove(pair.Key);
             }
         }
     }
 
+    private bool IsChildProcessRunning(string path) => _startedProcesses.ContainsKey(path);
 
-
-
-
-
-
-
-    private bool IsChildProcessRunning(string path) => startedProcesses.ContainsKey(path);
-
-    private bool IsProcessRunning(string filePath)
+    private static bool IsProcessRunning(string filePath)
     {
         try
         {
@@ -387,51 +318,41 @@ internal sealed partial class AutoAppLaunchManager
 
             return isProcessRunning;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
         {
             Logger.Error(ex, "Error checking if process is running: {0}", filePath);
             return false;
         }
     }
 
-    public void Init()
+    public static void Init()
     {
-
     }
 
     public void Exit()
     {
-        childUpdateTimer.Stop();
+        _childUpdateTimer.Stop();
 
         Enabled = false;
-
-
-
-
     }
 
-    private void ChildUpdateTimer_Elapsed(object sender, ElapsedEventArgs e)
+    private void ChildUpdateTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
-        lock (startedProcesses)
+        lock (_startedProcesses)
         {
             UpdateChildProcesses();
         }
 
-        if (timerTicks < 5)
+        if (_timerTicks < 5)
         {
-            timerTicks++;
+            _timerTicks++;
 
-            if (timerTicks == 5)
+            if (_timerTicks == 5)
             {
-                childUpdateTimer.Interval = 60000;
+                _childUpdateTimer.Interval = 60000;
             }
         }
     }
-
-
-
-
-
 
     private static Tuple<List<string>, List<string>> FindShortcutFiles(string folderPath)
     {
@@ -451,18 +372,18 @@ internal sealed partial class AutoAppLaunchManager
             {
                 try
                 {
-                    const string urlPrefix = "URL=steam://rungameid/";
+                    const string UrlPrefix = "URL=steam://rungameid/";
                     string[] lines = File.ReadAllLines(file.FullName);
-                    string? urlLine = lines.FirstOrDefault(l => l.StartsWith(urlPrefix, StringComparison.Ordinal));
+                    string? urlLine = lines.FirstOrDefault(l => l.StartsWith(UrlPrefix, StringComparison.Ordinal));
                     if (urlLine == null)
                     {
                         continue;
                     }
 
-                    string appId = urlLine[urlPrefix.Length..].Trim();
+                    string appId = urlLine[UrlPrefix.Length..].Trim();
                     steamIds.Add(appId);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
                 {
                     Logger.Error(ex, "Error reading shortcut file: {0}", file.FullName);
                 }
@@ -471,13 +392,6 @@ internal sealed partial class AutoAppLaunchManager
 
         return new Tuple<List<string>, List<string>>(shortcuts, steamIds);
     }
-
-
-
-
-
-
-
 
     private static bool IsShortcutFile(string filePath)
     {
@@ -490,12 +404,12 @@ internal sealed partial class AutoAppLaunchManager
 
         fileStream.ReadExactly(headerBytes, 0, 4);
 
-        return headerBytes.SequenceEqual(shortcutSignatureBytes);
+        return headerBytes.SequenceEqual(ShortcutSignatureBytes);
     }
 
     private static bool IsUrlShortcutFile(string filePath)
     {
-        byte[] headerBytes = new byte[urlShortcutHeader.Length];
+        byte[] headerBytes = new byte[UrlShortcutHeader.Length];
         using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         if (fileStream.Length < headerBytes.Length)
         {
@@ -504,17 +418,15 @@ internal sealed partial class AutoAppLaunchManager
 
         fileStream.ReadExactly(headerBytes, 0, headerBytes.Length);
 
-        return headerBytes.SequenceEqual(urlShortcutHeader);
+        return headerBytes.SequenceEqual(UrlShortcutHeader);
     }
 
-
-
     [SupportedOSPlatform("windows")]
-    public async Task StartSteamGameAsync(string appId)
+    public async Task StartSteamGameAsync(string appId, CancellationToken cancellationToken)
     {
         try
         {
-            var process = new Process
+            using var process = new Process
             {
                 StartInfo = new ProcessStartInfo($"steam://launch/{appId}")
                 {
@@ -523,7 +435,7 @@ internal sealed partial class AutoAppLaunchManager
             };
             process.Start();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
         {
             Logger.Error(ex, "Error starting steam game with appid {0}", appId);
         }
@@ -534,36 +446,22 @@ internal sealed partial class AutoAppLaunchManager
             return;
         }
 
-
-        const int retryLimit = 10;
-        for (int i = 0; i < retryLimit; i++)
+        const int RetryLimit = 10;
+        for (int i = 0; i < RetryLimit; i++)
         {
-
             Process[] processes = Process.GetProcesses();
-            Process? foundProcess = processes.FirstOrDefault(p =>
-            {
-                try
-                {
-                    return !p.HasExited &&
-                           p.MainModule?.FileName != null &&
-                           p.MainModule.FileName.StartsWith(appDirPath, StringComparison.OrdinalIgnoreCase);
-                }
-                catch
-                {
-                    return false;
-                }
-            });
+            Process? foundProcess = processes.FirstOrDefault(p => IsProcessInDirectory(p, appDirPath));
             if (foundProcess?.MainModule?.FileName == null)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
                 continue;
             }
 
             string processPath = foundProcess.MainModule.FileName;
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Found process for appid {0}: {1} (PID: {2})", appId, processPath, foundProcess.Id);
-            lock (startedProcesses)
+            lock (_startedProcesses)
             {
-                startedProcesses.Add(processPath, [foundProcess.Id]);
+                _startedProcesses.Add(processPath, [foundProcess.Id]);
             }
 
             return;
@@ -572,7 +470,57 @@ internal sealed partial class AutoAppLaunchManager
     }
 
     [SupportedOSPlatform("windows")]
+    private static bool IsProcessInDirectory(Process process, string appDirPath)
+    {
+        try
+        {
+            return !process.HasExited &&
+                   process.MainModule?.FileName != null &&
+                   process.MainModule.FileName.StartsWith(appDirPath, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
+        {
+            Logger.Debug(ex, "Could not read the module of process {0}", process.Id);
+            return false;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
     private static string? GetPathWithAppId(string appId)
+    {
+        string? steamPath = GetSteamInstallPath();
+        if (steamPath == null)
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam install path");
+            return null;
+        }
+
+        string libraryFoldersVdfPath = Path.Join(steamPath, @"config\libraryfolders.vdf");
+        if (!File.Exists(libraryFoldersVdfPath))
+        {
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam libraryfolders.vdf");
+            return null;
+        }
+
+        foreach (string libraryPath in ReadSteamLibraryFolders(libraryFoldersVdfPath))
+        {
+            string[] appManifestFiles = Directory.GetFiles(libraryPath, "appmanifest_*.acf");
+            foreach (string file in appManifestFiles)
+            {
+                string? installPath = GetInstallPathFromManifest(file, libraryPath, appId);
+                if (installPath != null)
+                {
+                    return installPath;
+                }
+            }
+        }
+
+        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Could not find install dir for appid {0}", appId);
+        return null;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static string? GetSteamInstallPath()
     {
         string? steamPath = null;
         try
@@ -583,43 +531,38 @@ internal sealed partial class AutoAppLaunchManager
                 steamPath = path;
             }
         }
-        catch
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException or ArgumentException)
         {
-
+            Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Could not read the Steam install path from the local machine registry: {0}", ex);
         }
 
-        if (steamPath == null)
+        if (steamPath != null)
         {
-            try
-            {
-                using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
-                if (key?.GetValue("SteamPath") is string path)
-                {
-                    steamPath = path.Replace("/", "\\");
-                }
-            }
-            catch
-            {
+            return steamPath;
+        }
 
+        try
+        {
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam");
+            if (key?.GetValue("SteamPath") is string path)
+            {
+                steamPath = path.Replace("/", "\\", StringComparison.Ordinal);
             }
         }
-
-        if (steamPath == null)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException or ArgumentException)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam install path");
-            return null;
-        }
-        string libraryFoldersVdfPath = Path.Join(steamPath, @"config\libraryfolders.vdf");
-        if (!File.Exists(libraryFoldersVdfPath))
-        {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Cant find Steam libraryfolders.vdf");
-            return null;
+            Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Could not read the Steam install path from the current user registry: {0}", ex);
         }
 
+        return steamPath;
+    }
+
+    private static List<string> ReadSteamLibraryFolders(string libraryFoldersVdfPath)
+    {
         var libraryFolders = new List<string>();
         foreach (string line in File.ReadLines(libraryFoldersVdfPath))
         {
-            if (!line.Contains("\"path\""))
+            if (!line.Contains("\"path\"", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -630,7 +573,7 @@ internal sealed partial class AutoAppLaunchManager
                 continue;
             }
 
-            string basePath = parts[4].Replace("\"", "").Replace(@"\\", @"\");
+            string basePath = parts[4].Replace("\"", "", StringComparison.Ordinal).Replace(@"\\", @"\", StringComparison.Ordinal);
             string path = Path.Join(basePath, @"steamapps");
             if (Directory.Exists(path))
             {
@@ -638,46 +581,42 @@ internal sealed partial class AutoAppLaunchManager
             }
         }
 
-        foreach (string libraryPath in libraryFolders)
-        {
-            string[] appManifestFiles = Directory.GetFiles(libraryPath, "appmanifest_*.acf");
-            foreach (string file in appManifestFiles)
-            {
-                try
-                {
-                    string acf = File.ReadAllText(file);
-                    Match idMatch = MyRegex().Match(acf);
-                    Match dirMatch = MyRegex1().Match(acf);
-                    if (!idMatch.Success || !dirMatch.Success)
-                    {
-                        continue;
-                    }
-
-                    string foundAppId = idMatch.Groups[1].Value;
-                    if (!string.Equals(foundAppId, appId, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    string fullPath = Path.Join(libraryPath, "common", dirMatch.Groups[1].Value);
-                    if (Directory.Exists(fullPath))
-                    {
-                        return fullPath;
-                    }
-                }
-                catch
-                {
-
-                }
-            }
-        }
-
-        Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Could not find install dir for appid {0}", appId);
-        return null;
+        return libraryFolders;
     }
 
-    [GeneratedRegex(@"""appid""\s+""(\d+)""")]
-    private static partial Regex MyRegex();
-    [GeneratedRegex(@"""installdir""\s+""([^""]+)""")]
-    private static partial Regex MyRegex1();
+    private static string? GetInstallPathFromManifest(string manifestFile, string libraryPath, string appId)
+    {
+        try
+        {
+            string acf = File.ReadAllText(manifestFile);
+            Match idMatch = AppIdRegex().Match(acf);
+            Match dirMatch = InstallDirRegex().Match(acf);
+            if (!idMatch.Success || !dirMatch.Success)
+            {
+                return null;
+            }
+
+            string foundAppId = idMatch.Groups["id"].Value;
+            if (!string.Equals(foundAppId, appId, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            string fullPath = Path.Join(libraryPath, "common", dirMatch.Groups["dir"].Value);
+            return Directory.Exists(fullPath) ? fullPath : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            Logger.Debug(ex, "Could not read Steam app manifest {0}", manifestFile);
+            return null;
+        }
+    }
+
+    [GeneratedRegex(@"""appid""\s+""(?<id>\d+)""", RegexOptions.NonBacktracking)]
+    private static partial Regex AppIdRegex();
+
+    [GeneratedRegex(@"""installdir""\s+""(?<dir>[^""]+)""", RegexOptions.NonBacktracking)]
+    private static partial Regex InstallDirRegex();
+
+    void IDisposable.Dispose() => _childUpdateTimer.Dispose();
 }

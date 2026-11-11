@@ -4770,26 +4770,37 @@ namespace Valve.VR
 
     public class OpenVRInterop
     {
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_InitInternal", CallingConvention = CallingConvention.Cdecl)]
         internal static extern uint InitInternal(ref EVRInitError peError, EVRApplicationType eApplicationType);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_InitInternal2", CallingConvention = CallingConvention.Cdecl)]
         internal static extern uint InitInternal2(ref EVRInitError peError, EVRApplicationType eApplicationType, [In, MarshalAs(UnmanagedType.LPStr)] string pStartupInfo);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_ShutdownInternal", CallingConvention = CallingConvention.Cdecl)]
         internal static extern void ShutdownInternal();
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_IsHmdPresent", CallingConvention = CallingConvention.Cdecl)]
         internal static extern bool IsHmdPresent();
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_IsRuntimeInstalled", CallingConvention = CallingConvention.Cdecl)]
         internal static extern bool IsRuntimeInstalled();
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_RuntimePath", CallingConvention = CallingConvention.Cdecl)]
         internal static extern string RuntimePath();
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_GetRuntimePath", CallingConvention = CallingConvention.Cdecl)]
         internal static extern bool GetRuntimePath(System.Text.StringBuilder pchPathBuffer, uint unBufferSize, ref uint punRequiredBufferSize);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_GetStringForHmdError", CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr GetStringForHmdError(EVRInitError error);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_GetGenericInterface", CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr GetGenericInterface([In, MarshalAs(UnmanagedType.LPStr)] string pchInterfaceVersion, ref EVRInitError peError);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_IsInterfaceVersionValid", CallingConvention = CallingConvention.Cdecl)]
         internal static extern bool IsInterfaceVersionValid([In, MarshalAs(UnmanagedType.LPStr)] string pchInterfaceVersion);
+        [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
         [DllImportAttribute("openvr_api", EntryPoint = "VR_GetInitToken", CallingConvention = CallingConvention.Cdecl)]
         internal static extern uint GetInitToken();
     }

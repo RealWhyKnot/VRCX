@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace VRCX
+namespace VRCX.Cef
 {
     partial class MainForm
     {
@@ -11,9 +11,13 @@ namespace VRCX
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                components?.Dispose();
+                Browser.Dispose();
+                _saveTimer.Dispose();
+                _appIcon?.Dispose();
+                _appIconNoty?.Dispose();
             }
 
             base.Dispose(disposing);

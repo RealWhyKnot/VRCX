@@ -1,13 +1,9 @@
 using CefSharp;
 using CefSharp.Enums;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
-
-
-
-
-internal sealed class CustomDragHandler : IDragHandler
+internal sealed class CefCustomDragHandler : IDragHandler
 {
     public bool OnDragEnter(IWebBrowser chromiumWebBrowser, IBrowser browser, IDragData dragData, DragOperationsMask mask)
     {

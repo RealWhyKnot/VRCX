@@ -1,8 +1,9 @@
 using System.Runtime.InteropServices;
 
+namespace VRCX.Overlay.Electron;
+
 public static partial class GLContextWayland
 {
-
     [LibraryImport("libwayland-client.so.0", StringMarshalling = StringMarshalling.Utf8)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static partial IntPtr wl_display_connect(string? name);
@@ -14,7 +15,6 @@ public static partial class GLContextWayland
     [LibraryImport("libwayland-client.so.0", StringMarshalling = StringMarshalling.Utf8)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static partial int wl_display_roundtrip(IntPtr display);
-
 
     [LibraryImport("libEGL.so.1", StringMarshalling = StringMarshalling.Utf8)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
@@ -70,7 +70,6 @@ public static partial class GLContextWayland
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     private static partial IntPtr glGetString(int name);
 
-
     private const int EGL_SURFACE_TYPE = 0x3033;
     private const int EGL_PBUFFER_BIT = 0x0001;
     private const int EGL_RENDERABLE_TYPE = 0x3040;
@@ -92,7 +91,6 @@ public static partial class GLContextWayland
     {
         try
         {
-
             WaylandDisplay = wl_display_connect(name: null);
             if (WaylandDisplay == IntPtr.Zero)
             {
@@ -100,9 +98,7 @@ public static partial class GLContextWayland
                 return false;
             }
 
-
-            wl_display_roundtrip(WaylandDisplay);
-
+            _ = wl_display_roundtrip(WaylandDisplay);
 
             EglDisplay = eglGetDisplay(WaylandDisplay);
             if (EglDisplay == IntPtr.Zero)
@@ -111,7 +107,6 @@ public static partial class GLContextWayland
                 return false;
             }
 
-
             if (!eglInitialize(EglDisplay, out int major, out int minor))
             {
                 Console.WriteLine($"Failed to initialize EGL. Error: 0x{eglGetError():X}");
@@ -119,64 +114,7 @@ public static partial class GLContextWayland
             }
 
             Console.WriteLine($"EGL version: {major}.{minor}");
-
-
-            int[] configAttribs = [
-                EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-                EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-                EGL_RED_SIZE, 8,
-                EGL_GREEN_SIZE, 8,
-                EGL_BLUE_SIZE, 8,
-                EGL_ALPHA_SIZE, 8,
-                EGL_DEPTH_SIZE, 24,
-                EGL_NONE,
-            ];
-
-            IntPtr[] configs = new IntPtr[10];
-            if (!eglChooseConfig(EglDisplay, configAttribs, configs, 10, out int numConfigs) || numConfigs == 0)
-            {
-                Console.WriteLine($"Failed to choose EGL config. Error: 0x{eglGetError():X}");
-                return false;
-            }
-
-            Console.WriteLine($"Found {numConfigs} EGL configs");
-            IntPtr config = configs[0];
-
-
-            int[] pbufferAttribs = [
-                EGL_WIDTH, 1,
-                EGL_HEIGHT, 1,
-                EGL_NONE,
-            ];
-
-            EglSurface = eglCreatePbufferSurface(EglDisplay, config, pbufferAttribs);
-            if (EglSurface == IntPtr.Zero)
-            {
-                Console.WriteLine($"Failed to create EGL pbuffer surface. Error: 0x{eglGetError():X}");
-                return false;
-            }
-
-
-            int[] contextAttribs = [
-                EGL_NONE,
-            ];
-
-            EglContext = eglCreateContext(EglDisplay, config, IntPtr.Zero, contextAttribs);
-            if (EglContext == IntPtr.Zero)
-            {
-                Console.WriteLine($"Failed to create EGL context. Error: 0x{eglGetError():X}");
-                return false;
-            }
-
-
-            if (!eglMakeCurrent(EglDisplay, EglSurface, EglSurface, EglContext))
-            {
-                Console.WriteLine($"Failed to make EGL context current. Error: 0x{eglGetError():X}");
-                return false;
-            }
-
-            Console.WriteLine("OpenGL context created successfully (Wayland/EGL offscreen)");
-            return true;
+            return CreateEglContext();
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
@@ -185,21 +123,78 @@ public static partial class GLContextWayland
         }
     }
 
+    private static bool CreateEglContext()
+    {
+        int[] configAttribs =
+        [
+            EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+            EGL_RED_SIZE, 8,
+            EGL_GREEN_SIZE, 8,
+            EGL_BLUE_SIZE, 8,
+            EGL_ALPHA_SIZE, 8,
+            EGL_DEPTH_SIZE, 24,
+            EGL_NONE,
+        ];
+
+        IntPtr[] configs = new IntPtr[10];
+        if (!eglChooseConfig(EglDisplay, configAttribs, configs, 10, out int numConfigs) || numConfigs == 0)
+        {
+            Console.WriteLine($"Failed to choose EGL config. Error: 0x{eglGetError():X}");
+            return false;
+        }
+
+        Console.WriteLine($"Found {numConfigs} EGL configs");
+        IntPtr config = configs[0];
+
+        int[] pbufferAttribs =
+        [
+            EGL_WIDTH, 1,
+            EGL_HEIGHT, 1,
+            EGL_NONE,
+        ];
+
+        EglSurface = eglCreatePbufferSurface(EglDisplay, config, pbufferAttribs);
+        if (EglSurface == IntPtr.Zero)
+        {
+            Console.WriteLine($"Failed to create EGL pbuffer surface. Error: 0x{eglGetError():X}");
+            return false;
+        }
+
+        int[] contextAttribs = [EGL_NONE];
+        EglContext = eglCreateContext(EglDisplay, config, IntPtr.Zero, contextAttribs);
+        if (EglContext == IntPtr.Zero)
+        {
+            Console.WriteLine($"Failed to create EGL context. Error: 0x{eglGetError():X}");
+            return false;
+        }
+
+        if (!eglMakeCurrent(EglDisplay, EglSurface, EglSurface, EglContext))
+        {
+            Console.WriteLine($"Failed to make EGL context current. Error: 0x{eglGetError():X}");
+            return false;
+        }
+
+        Console.WriteLine("OpenGL context created successfully (Wayland/EGL offscreen)");
+        return true;
+    }
+
     public static void Cleanup()
     {
         if (EglDisplay != IntPtr.Zero)
         {
             if (EglContext != IntPtr.Zero)
             {
-                eglMakeCurrent(EglDisplay, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-                eglDestroyContext(EglDisplay, EglContext);
-            }
-            if (EglSurface != IntPtr.Zero)
-            {
-                eglDestroySurface(EglDisplay, EglSurface);
+                _ = eglMakeCurrent(EglDisplay, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                _ = eglDestroyContext(EglDisplay, EglContext);
             }
 
-            eglTerminate(EglDisplay);
+            if (EglSurface != IntPtr.Zero)
+            {
+                _ = eglDestroySurface(EglDisplay, EglSurface);
+            }
+
+            _ = eglTerminate(EglDisplay);
         }
 
         if (WaylandDisplay != IntPtr.Zero)

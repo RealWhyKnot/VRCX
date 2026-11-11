@@ -1,9 +1,10 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Microsoft.Win32;
 
 namespace VRCX;
 
-internal static class WinApi
+internal static partial class WinApi
 {
     private static readonly List<(List<string>, string, string)> CpuErrorMessages =
     [
@@ -11,48 +12,40 @@ internal static class WinApi
         (["Intel", "Core", "-14"], "VRCX has detected that you're using a 13th or 14th generation Intel CPU.\nThese CPUs are known to have issues which can lead to crashes.\nThis crash was unlikely caused by VRCX itself, therefore limited support can be offered.\nWould you like to open a link with more information?", "https://alderongames.com/intel-crashes"),
     ];
 
-    [DllImport("kernel32.dll", SetLastError = false)]
-    public static extern void RtlCopyMemory(IntPtr destination, IntPtr source, uint length);
+    private const int ProcessQueryLimitedInformation = 0x1000;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+    [LibraryImport("kernel32.dll", SetLastError = false)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial void RtlCopyMemory(IntPtr destination, IntPtr source, uint length);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
-    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    public static extern int SHParseDisplayName([MarshalAs(UnmanagedType.LPWStr)] string pszName, IntPtr pbc, out IntPtr ppidl, uint sfgaoIn, out uint psfgaoOut);
-    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-    public static extern IntPtr SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[] apidl, uint dwFlags);
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial int SHParseDisplayName(string pszName, IntPtr pbc, out IntPtr ppidl, uint sfgaoIn, out uint psfgaoOut);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CloseHandle(IntPtr hObject);
+    [LibraryImport("shell32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial IntPtr SHOpenFolderAndSelectItems(IntPtr pidlFolder, uint cidl, IntPtr[] apidl, uint dwFlags);
 
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    public static partial IntPtr OpenProcess(int dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, int dwProcessId);
 
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
 
-
-
-    private const int PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
-
-
-
-
-
-
-
-
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool CloseHandle(IntPtr hObject);
 
     internal static bool HasProcessExited(int processId)
     {
-        IntPtr hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, bInheritHandle: false, processId);
+        IntPtr hProcess = OpenProcess(ProcessQueryLimitedInformation, bInheritHandle: false, processId);
         if (hProcess == IntPtr.Zero)
         {
-
             return true;
-
         }
 
         bool exited;
@@ -64,24 +57,23 @@ internal static class WinApi
                 throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
             }
 
-
             exited = exitCode != 259;
         }
         finally
         {
-
             CloseHandle(hProcess);
         }
-
 
         return exited;
     }
 
-    internal static string GetCpuName() => Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0\")?.GetValue("ProcessorNameString").ToString() ?? null;
+    [SupportedOSPlatform("windows")]
+    internal static string? GetCpuName() => Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\CentralProcessor\0\")?.GetValue("ProcessorNameString")?.ToString();
 
+    [SupportedOSPlatform("windows")]
     internal static (string, string)? GetCpuErrorMessage()
     {
-        string cpuName = GetCpuName();
+        string? cpuName = GetCpuName();
         if (cpuName == null)
         {
             return null;

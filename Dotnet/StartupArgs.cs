@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using System.Management;
 using System.Text;
 using CefSharp.Internals;
+using VRCX.IPC;
 #endif
 
 namespace VRCX;
@@ -173,7 +174,7 @@ internal sealed class StartupArgs
 
             if (arg.StartsWith(VrcxLaunchArguments.ProxyUrlPrefix, StringComparison.Ordinal) && arg.Length > VrcxLaunchArguments.ProxyUrlPrefix.Length)
             {
-                arguments.ProxyUrl = arg[(VrcxLaunchArguments.ProxyUrlPrefix.Length + 1)..].Replace("'", string.Empty).Replace("\"", string.Empty);
+                arguments.ProxyUrl = arg[(VrcxLaunchArguments.ProxyUrlPrefix.Length + 1)..].Replace("'", string.Empty, StringComparison.Ordinal).Replace("\"", string.Empty, StringComparison.Ordinal);
             }
         }
         return arguments;
@@ -182,25 +183,25 @@ internal sealed class StartupArgs
     internal sealed class VrcxLaunchArguments
     {
         public const string IsStartupPrefix = "--startup";
-        public bool IsStartup { get; set; } = false;
+        public bool IsStartup { get; set; }
 
         public const string IsUpgradePrefix = "/Upgrade";
-        public bool IsUpgrade { get; set; } = false;
+        public bool IsUpgrade { get; set; }
 
         public const string IsDebugPrefix = "--debug";
-        public bool IsDebug { get; set; } = false;
+        public bool IsDebug { get; set; }
 
         public const string Overlay = "--overlay";
-        public bool IsOverlay { get; set; } = false;
+        public bool IsOverlay { get; set; }
 
         public const string LaunchCommandPrefix = "/uri=vrcx://";
         public const string LinuxLaunchCommandPrefix = "vrcx://";
-        public string? LaunchCommand { get; set; } = null;
+        public string? LaunchCommand { get; set; }
 
         public const string ConfigDirectoryPrefix = "--config";
-        public string? ConfigDirectory { get; set; } = null;
+        public string? ConfigDirectory { get; set; }
 
         public const string ProxyUrlPrefix = "--proxy-server";
-        public string? ProxyUrl { get; set; } = null;
+        public string? ProxyUrl { get; set; }
     }
 }

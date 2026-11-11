@@ -1,6 +1,8 @@
+using VRCX.ScreenshotMetadata;
+
 namespace VRCX;
 
-public partial class AppApiCef
+internal partial class AppApiCef
 {
 
 

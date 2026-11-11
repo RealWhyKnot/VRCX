@@ -102,16 +102,15 @@ function createOverlayWindowShm() {
   fs.writeFileSync(OVERLAY_SHM_PATH, Buffer.alloc(OVERLAY_FRAME_SIZE + 1));
 }
 
-interopApi.getDotNetObject("ProgramElectron").PreInit(version, args);
+interopApi.getDotNetClass("ProgramElectron").PreInit(version, args);
 interopApi.getDotNetObject("VRCXStorage").Load();
-interopApi.getDotNetObject("ProgramElectron").Init();
-interopApi.getDotNetObject("SQLite").Init();
+interopApi.getDotNetClass("ProgramElectron").Init();
+interopApi.getDotNetObject("SQLiteDatabase").Init();
 interopApi.getDotNetObject("AppApiElectron").Init();
 interopApi.getDotNetObject("Discord").Init();
 interopApi.getDotNetObject("WebApi").Init();
 interopApi.getDotNetObject("LogWatcher").Init();
 
-interopApi.getDotNetObject("SystemMonitorElectron").Init();
 interopApi.getDotNetObject("AppApiVrElectron").Init();
 
 ipcMain.handle("callDotNetMethod", (_event, className, methodName, args) => {
@@ -505,7 +504,7 @@ async function installVRCX() {
     return;
   }
   if (noInstall) {
-    interopApi.getDotNetObject("Update").Init(appImagePath);
+    interopApi.getDotNetClass("Update").Init(appImagePath);
     console.log("Skipping installation.");
     return;
   }
@@ -567,7 +566,7 @@ async function installVRCX() {
     }
   }
 
-  interopApi.getDotNetObject("Update").Init(appImagePath);
+  interopApi.getDotNetClass("Update").Init(appImagePath);
 }
 
 function updateDesktopFile() {

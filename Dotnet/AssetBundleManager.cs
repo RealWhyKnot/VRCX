@@ -4,46 +4,31 @@ using NLog;
 
 namespace VRCX;
 
-internal sealed class AssetBundleManager
+#if LINUX
+public
+#else
+internal
+#endif
+sealed class AssetBundleManager : IAssetBundleManager
 {
-    public static readonly AssetBundleManager Instance;
+    public static readonly AssetBundleManager Instance = new();
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    static AssetBundleManager()
+    public static string GetAssetId(string id, string variant = "")
     {
-        Instance = new AssetBundleManager();
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(id + variant));
+        return Convert.ToHexString(hash)[..16];
     }
 
-    public string GetAssetId(string id, string variant = "")
+    public static string GetAssetVersion(int version, int variantVersion = 0)
     {
-        using var sha256 = SHA256.Create();
-        byte[] hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(id + variant));
-        var idHex = new StringBuilder(hash.Length * 2);
-        foreach (byte b in hash)
-        {
-            idHex.Append($"{b:x2}");
-        }
-        return idHex.ToString().ToUpperInvariant()[..16];
+        string versionHex = Convert.ToHexStringLower(BitConverter.GetBytes(variantVersion)) +
+                            Convert.ToHexStringLower(BitConverter.GetBytes(version));
+
+        return versionHex.PadLeft(32, '0');
     }
 
-    public string GetAssetVersion(int version, int variantVersion = 0)
-    {
-        string versionHex = string.Empty;
-        byte[] variantVersionBytes = BitConverter.GetBytes(variantVersion);
-        foreach (byte b in variantVersionBytes)
-        {
-            versionHex += b.ToString("X2");
-        }
-        byte[] versionBytes = BitConverter.GetBytes(version);
-        foreach (byte b in versionBytes)
-        {
-            versionHex += b.ToString("X2");
-        }
-
-        return versionHex.PadLeft(32, '0').ToLowerInvariant();
-    }
-
-    public (int, int) ReverseHexToDecimal(string hexString)
+    public static (int, int) ReverseHexToDecimal(string hexString)
     {
         if (hexString.Length != 32)
         {
@@ -67,22 +52,14 @@ internal sealed class AssetBundleManager
             int variantVersion = BitConverter.ToInt32(variantVersionBytes, 0);
             return (version, variantVersion);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to convert hex to decimal: {hexString} {ex}");
             return (0, 0);
         }
     }
 
-    public string GetVRChatCacheLocation() => Program.AppApiInstance.GetVRChatCacheLocation();
-
-
-
-
-
-
-
-
+    public static string GetVRChatCacheLocation() => Program.AppApiInstance?.GetVRChatCacheLocation() ?? throw new InvalidOperationException("The application API is not initialized.");
 
     public string GetVRChatCacheFullLocation(string id, int version, string variant = "", int variantVersion = 0)
     {
@@ -101,14 +78,6 @@ internal sealed class AssetBundleManager
             ? dirs.OrderByDescending(dir => ReverseHexToDecimal(Path.GetFileName(dir)).Item2).First()
             : Path.Join(topDir, versionLocation);
     }
-
-
-
-
-
-
-
-
 
     public Tuple<long, bool, string> CheckVRChatCache(string id, int version, string variant, int variantVersion)
     {
@@ -135,13 +104,6 @@ internal sealed class AssetBundleManager
         return new Tuple<long, bool, string>(fileSize, isLocked, cachePath);
     }
 
-
-
-
-
-
-
-
     public void DeleteCache(string id, int version, string variant, int variantVersion)
     {
         string path = GetVRChatCacheFullLocation(id, version);
@@ -157,9 +119,6 @@ internal sealed class AssetBundleManager
         }
     }
 
-
-
-
     public void DeleteAllCache()
     {
         string cachePath = GetVRChatCacheLocation();
@@ -169,9 +128,6 @@ internal sealed class AssetBundleManager
             Directory.CreateDirectory(cachePath);
         }
     }
-
-
-
 
     public List<string> SweepCache()
     {
@@ -186,7 +142,6 @@ internal sealed class AssetBundleManager
         DirectoryInfo[] cacheDirectories = directories.GetDirectories();
         foreach (DirectoryInfo cacheDirectory in cacheDirectories)
         {
-
             DirectoryInfo[] versionDirectories =
                 [.. cacheDirectory.GetDirectories().OrderBy(d => d.LastWriteTime)];
             for (int index = 0; index < versionDirectories.Length; index++)
@@ -221,10 +176,6 @@ internal sealed class AssetBundleManager
         return output;
     }
 
-
-
-
-
     public long GetCacheSize()
     {
         string cachePath = GetVRChatCacheLocation();
@@ -232,13 +183,7 @@ internal sealed class AssetBundleManager
         return !Directory.Exists(cachePath) ? 0 : DirSize(new DirectoryInfo(cachePath));
     }
 
-
-
-
-
-
-
-    public long DirSize(DirectoryInfo d)
+    public static long DirSize(DirectoryInfo d)
     {
         long size = 0;
         FileInfo[] files = d.GetFiles("*.*", SearchOption.AllDirectories);

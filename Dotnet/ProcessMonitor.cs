@@ -5,70 +5,55 @@ using Timer = System.Timers.Timer;
 
 namespace VRCX;
 
-
-
-
-
-
-
-
-
-
-internal sealed class ProcessMonitor
+internal sealed class ProcessMonitor : IDisposable
 {
-    private readonly Dictionary<string, MonitoredProcess> monitoredProcesses;
-    private readonly Timer monitorProcessTimer;
+    private readonly Dictionary<string, MonitoredProcess> _monitoredProcesses = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Timer _monitorProcessTimer;
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     static ProcessMonitor()
     {
         Instance = new ProcessMonitor();
-        Instance.ProcessStarted += Program.AppApiInstance.OnProcessStateChanged;
-        Instance.ProcessExited += Program.AppApiInstance.OnProcessStateChanged;
+        if (Program.AppApiInstance is { } appApi)
+        {
+            Instance.ProcessStarted += (_, e) => appApi.OnProcessStateChanged(e.MonitoredProcess);
+            Instance.ProcessExited += (_, e) => appApi.OnProcessStateChanged(e.MonitoredProcess);
+        }
     }
 
     public ProcessMonitor()
     {
-        monitoredProcesses = [];
-
-        monitorProcessTimer = new Timer
+        _monitorProcessTimer = new Timer
         {
             Interval = 1000,
         };
-        monitorProcessTimer.Elapsed += MonitorProcessTimer_Elapsed;
+        _monitorProcessTimer.Elapsed += MonitorProcessTimer_Elapsed;
     }
 
     public static ProcessMonitor Instance { get; private set; }
 
+    public event EventHandler<MonitoredProcessEventArgs>? ProcessStarted;
 
-
-
-    public event Action<MonitoredProcess> ProcessStarted;
-
-
-
-
-    public event Action<MonitoredProcess> ProcessExited;
+    public event EventHandler<MonitoredProcessEventArgs>? ProcessExited;
 
     public void Init()
     {
         AddProcess("vrchat");
         AddProcess("vrserver");
-        monitorProcessTimer.Start();
+        _monitorProcessTimer.Start();
     }
 
     public void Exit()
     {
-        monitorProcessTimer.Stop();
-        monitoredProcesses.Values.ToList().ForEach(x => x.ProcessExited());
+        _monitorProcessTimer.Stop();
+        _monitoredProcesses.Values.ToList().ForEach(x => x.ProcessExited());
     }
 
-    private void MonitorProcessTimer_Elapsed(object sender, ElapsedEventArgs e)
+    private void MonitorProcessTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         var processesNeedingUpdate = new List<MonitoredProcess>();
 
-
-        foreach (KeyValuePair<string, MonitoredProcess> keyValuePair in monitoredProcesses)
+        foreach (KeyValuePair<string, MonitoredProcess> keyValuePair in _monitoredProcesses)
         {
             MonitoredProcess monitoredProcess = keyValuePair.Value;
 
@@ -77,7 +62,7 @@ internal sealed class ProcessMonitor
                 if (monitoredProcess.Process == null || WinApi.HasProcessExited(monitoredProcess.Process.Id))
                 {
                     monitoredProcess.ProcessExited();
-                    ProcessExited?.Invoke(monitoredProcess);
+                    ProcessExited?.Invoke(this, new MonitoredProcessEventArgs(monitoredProcess));
                     Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {monitoredProcess.Process?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"}) exited.");
                 }
             }
@@ -86,7 +71,6 @@ internal sealed class ProcessMonitor
                 processesNeedingUpdate.Add(monitoredProcess);
             }
         }
-
 
         if (processesNeedingUpdate.Count == 0)
         {
@@ -98,28 +82,20 @@ internal sealed class ProcessMonitor
         {
             Process? process = processes.FirstOrDefault(p => string.Equals(p.ProcessName, monitoredProcess.ProcessName, StringComparison.OrdinalIgnoreCase));
 
-
             if (process == null || WinApi.HasProcessExited(process.Id))
             {
                 continue;
             }
 
             monitoredProcess.ProcessStarted(process);
-            ProcessStarted?.Invoke(monitoredProcess);
+            ProcessStarted?.Invoke(this, new MonitoredProcessEventArgs(monitoredProcess));
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {process.Id}) started.");
         }
     }
 
-
-
-
-
-
-
     public bool IsProcessRunning(string processName, bool ensureCheck = false)
     {
-        processName = processName.ToLowerInvariant();
-        if (!monitoredProcesses.TryGetValue(processName, out MonitoredProcess? process))
+        if (!_monitoredProcesses.TryGetValue(processName, out MonitoredProcess? process))
         {
             return false;
         }
@@ -137,89 +113,36 @@ internal sealed class ProcessMonitor
         }
 
         return process.IsRunning;
-
     }
-
-
-
-
 
     public void AddProcess(Process process)
     {
-        string processName = process.ProcessName.ToLowerInvariant();
-        if (monitoredProcesses.ContainsKey(processName))
+        string processName = process.ProcessName;
+        if (_monitoredProcesses.ContainsKey(processName))
         {
             return;
         }
 
-        monitoredProcesses.Add(processName, new MonitoredProcess(process));
+        _monitoredProcesses.Add(processName, new MonitoredProcess(process));
         Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, $"Added process {processName} to process monitor.");
     }
-
-
-
-
 
     public void AddProcess(string processName)
     {
-        processName = processName.ToLowerInvariant();
-        if (monitoredProcesses.ContainsKey(processName))
+        if (_monitoredProcesses.ContainsKey(processName))
         {
             return;
         }
 
-        monitoredProcesses.Add(processName, new MonitoredProcess(processName));
+        _monitoredProcesses.Add(processName, new MonitoredProcess(processName));
         Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, $"Added process {processName} to process monitor.");
     }
 
-
-
-
-
     public void RemoveProcess(string processName)
     {
-        processName = processName.ToLowerInvariant();
-        monitoredProcesses.Remove(processName);
+        _monitoredProcesses.Remove(processName);
         Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, $"Removed process {processName} from process monitor.");
     }
-}
 
-public sealed class MonitoredProcess
-{
-    public MonitoredProcess(Process process)
-    {
-        Process = process;
-        ProcessName = process.ProcessName.ToLowerInvariant();
-
-        if (!WinApi.HasProcessExited(process.Id))
-        {
-            IsRunning = true;
-        }
-    }
-
-    public MonitoredProcess(string processName)
-    {
-        ProcessName = processName;
-        IsRunning = false;
-    }
-
-    public Process? Process { get; private set; }
-    public string ProcessName { get; private set; }
-    public bool IsRunning { get; private set; }
-
-    public bool HasName(string processName) => ProcessName.Equals(processName, StringComparison.OrdinalIgnoreCase);
-
-    public void ProcessExited()
-    {
-        IsRunning = false;
-        Process?.Dispose();
-        Process = null;
-    }
-
-    public void ProcessStarted(Process process)
-    {
-        Process = process;
-        ProcessName = process.ProcessName.ToLowerInvariant();
-        IsRunning = true;
-    }
+    void IDisposable.Dispose() => _monitorProcessTimer.Dispose();
 }

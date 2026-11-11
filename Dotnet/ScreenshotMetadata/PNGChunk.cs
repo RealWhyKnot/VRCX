@@ -1,61 +1,35 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
 internal sealed class PNGChunk
 {
+    private static readonly uint[] CrcTable = CreateCrcTable();
+
     public int Index;
     public int Length;
-    public string? ChunkType;
+    public string ChunkType = string.Empty;
     public PNGChunkTypeFilter ChunkTypeEnum;
-    public byte[]? Data;
+    public byte[] Data = [];
 
-    private static uint[]? crcTable;
+    public bool IsZero() => Data.Length == 0;
 
-
-
-
-
-    public bool IsZero() => Data == null || Data.Length == 0;
-
-
-
-
-
-
-    public Tuple<string, string> ReadITXtChunk()
+    public Tuple<string, string>? ReadITXtChunk()
     {
         if (IsZero())
         {
-            throw new Exception("Tried to read from invalid PNG chunk");
+            throw new InvalidOperationException("Tried to read from invalid PNG chunk");
         }
 
         if (ChunkTypeEnum != PNGChunkTypeFilter.iTXt)
         {
-            throw new Exception("Cannot read text from chunk type " + ChunkType);
+            throw new InvalidOperationException("Cannot read text from chunk type " + ChunkType);
         }
 
         int chunkLength = Length;
         byte[] chunkData = Data;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        Encoding keywordEncoding = Encoding.UTF8;
         int keywordLength = 0;
         for (int i = 0; i < chunkLength; i++)
         {
@@ -71,8 +45,7 @@ internal sealed class PNGChunk
             return null;
         }
 
-        string keyword = keywordEncoding.GetString(chunkData, 0, keywordLength);
-
+        string keyword = Encoding.UTF8.GetString(chunkData, 0, keywordLength);
 
         int textOffset = keywordLength + 5;
         int textLength = chunkLength - textOffset;
@@ -80,33 +53,17 @@ internal sealed class PNGChunk
         return new Tuple<string, string>(keyword, Encoding.UTF8.GetString(chunkData, textOffset, textLength));
     }
 
-
-
-
-
-
     public Tuple<int, int> ReadIHDRChunkResolution()
     {
         if (IsZero())
         {
-            throw new Exception("Tried to read from invalid PNG chunk");
+            throw new InvalidOperationException("Tried to read from invalid PNG chunk");
         }
 
         if (ChunkTypeEnum != PNGChunkTypeFilter.IHDR)
         {
-            throw new Exception("Cannot read text from chunk type " + ChunkType);
+            throw new InvalidOperationException("Cannot read text from chunk type " + ChunkType);
         }
-
-
-
-
-
-
-
-
-
-
-
 
         byte[] chunkData = Data;
 
@@ -121,11 +78,6 @@ internal sealed class PNGChunk
 
         return new Tuple<int, int>(width, height);
     }
-
-
-
-
-
 
     public bool ExistsInFile(FileStream fileStream)
     {
@@ -159,34 +111,18 @@ internal sealed class PNGChunk
         return crc == calculatedCRC;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     public byte[] GetBytes()
     {
         byte[] chunkTypeBytes = Encoding.ASCII.GetBytes(ChunkType);
         int totalLength = Data.Length + 12;
         byte[] result = new byte[totalLength];
 
-
         int chunkLength = BinaryPrimitives.ReverseEndianness(Data.Length);
         Buffer.BlockCopy(BitConverter.GetBytes(chunkLength), 0, result, 0, 4);
 
-
         Buffer.BlockCopy(chunkTypeBytes, 0, result, 4, chunkTypeBytes.Length);
 
-
         Buffer.BlockCopy(Data, 0, result, 8, Data.Length);
-
 
         uint crc = CalculateCRC();
         uint reversedCrc = BinaryPrimitives.ReverseEndianness(crc);
@@ -202,33 +138,32 @@ internal sealed class PNGChunk
         return Crc32(Data, 0, Data.Length, Crc32(chunkTypeBytes, 0, chunkTypeBytes.Length, 0));
     }
 
-
-
     private static uint Crc32(byte[] stream, int offset, int length, uint crc)
     {
-        uint c;
-        if (crcTable == null)
-        {
-            crcTable = new uint[256];
-            for (uint n = 0; n <= 255; n++)
-            {
-                c = n;
-                for (int k = 0; k <= 7; k++)
-                {
-                    c = (c & 1) == 1 ? 0xEDB88320 ^ ((c >> 1) & 0x7FFFFFFF) : (c >> 1) & 0x7FFFFFFF;
-                }
-
-                crcTable[n] = c;
-            }
-        }
-
-        c = crc ^ 0xffffffff;
+        uint c = crc ^ 0xffffffff;
         int endOffset = offset + length;
         for (int i = offset; i < endOffset; i++)
         {
-            c = crcTable[(c ^ stream[i]) & 255] ^ ((c >> 8) & 0xFFFFFF);
+            c = CrcTable[(c ^ stream[i]) & 255] ^ ((c >> 8) & 0xFFFFFF);
         }
 
         return c ^ 0xffffffff;
+    }
+
+    private static uint[] CreateCrcTable()
+    {
+        uint[] table = new uint[256];
+        for (uint n = 0; n <= 255; n++)
+        {
+            uint c = n;
+            for (int k = 0; k <= 7; k++)
+            {
+                c = (c & 1) == 1 ? 0xEDB88320 ^ ((c >> 1) & 0x7FFFFFFF) : (c >> 1) & 0x7FFFFFFF;
+            }
+
+            table[n] = c;
+        }
+
+        return table;
     }
 }

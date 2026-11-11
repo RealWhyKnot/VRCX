@@ -1,16 +1,13 @@
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace VRCX;
 
 public partial class AppApiElectron
 {
-    public override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
+    internal override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
     {
-
     }
-
-
-
 
     public override void CheckGameRunning()
     {
@@ -85,14 +82,14 @@ public partial class AppApiElectron
             })?.Dispose();
             return true;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is Win32Exception or InvalidOperationException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to start VRChat: {e.Message}, attempting to start via Steam path.");
         }
 
         try
         {
-            string steamPath = _steamPath;
+            string steamPath = SteamPath;
             if (string.IsNullOrEmpty(steamPath))
             {
                 Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Steam path could not be determined.");
@@ -115,7 +112,7 @@ public partial class AppApiElectron
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to start VRChat: {ex.Message}");
             return false;
@@ -136,20 +133,16 @@ public partial class AppApiElectron
                 return Task.FromResult(false);
             }
 
-            string launchExe = Path.Join(_vrcInstallPath, "launch.exe");
+            string launchExe = Path.Join(VrcInstallPath, "launch.exe");
             if (!File.Exists(launchExe))
             {
                 Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"TryOpenInstanceInVrc: launch.exe not found at {launchExe}");
                 return Task.FromResult(false);
             }
 
+            string url = launchUrl.Contains("attach=1", StringComparison.Ordinal) ? launchUrl : launchUrl + "&attach=1";
 
-            string url = launchUrl.Contains("attach=1") ? launchUrl : launchUrl + "&attach=1";
-
-
-
-
-            const string inner =
+            const string Inner =
                 "while IFS= read -r -d '' kv; do export \"$kv\"; done < \"/proc/$1/environ\"; exec wine \"$2\" \"$3\"";
 
             var psi = new ProcessStartInfo
@@ -161,21 +154,17 @@ public partial class AppApiElectron
             foreach (string? arg in new[]
                      {
                          "-t", pid.ToString(System.Globalization.CultureInfo.InvariantCulture), "-U", "-m", "--preserve-credentials", "--",
-                         "/bin/bash", "-c", inner, "_", pid.ToString(System.Globalization.CultureInfo.InvariantCulture), launchExe, url,
+                         "/bin/bash", "-c", Inner, "_", pid.ToString(System.Globalization.CultureInfo.InvariantCulture), launchExe, url,
                      })
             {
                 psi.ArgumentList.Add(arg);
             }
 
-
-
-
-
-
             using var process = Process.Start(psi);
-            return Task.FromResult(process != null);
+            bool started = process != null;
+            return Task.FromResult(started);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is Win32Exception or InvalidOperationException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"TryOpenInstanceInVrc failed: {e.Message}");
             return Task.FromResult(false);
@@ -187,20 +176,11 @@ public partial class AppApiElectron
         Process[] processes = Process.GetProcessesByName("VRChat.exe");
         try
         {
-
             foreach (Process process in processes)
             {
-                try
+                if (ProcessEnvironmentContainsVrcPrefix(process.Id))
                 {
-                    string environ = File.ReadAllText($"/proc/{process.Id}/environ");
-                    if (environ.Contains("compatdata/438100"))
-                    {
-                        return process.Id;
-                    }
-                }
-                catch
-                {
-
+                    return process.Id;
                 }
             }
 
@@ -212,6 +192,19 @@ public partial class AppApiElectron
             {
                 process.Dispose();
             }
+        }
+    }
+
+    private static bool ProcessEnvironmentContainsVrcPrefix(int processId)
+    {
+        try
+        {
+            string environ = File.ReadAllText($"/proc/{processId}/environ");
+            return environ.Contains("compatdata/438100", StringComparison.Ordinal);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 }

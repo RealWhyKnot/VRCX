@@ -2,9 +2,6 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using NLog;
 
-#if !LINUX
-#endif
-
 namespace VRCX;
 
 #if LINUX
@@ -12,19 +9,29 @@ public
 #else
 internal
 #endif
-sealed class Update
+static class Update
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private static readonly string VrcxSetupExecutable = Path.Join(Program.AppDataDirectory, "VRCX_Setup.exe");
     private static readonly string UpdateExecutable = Path.Join(Program.AppDataDirectory, "update.exe");
     private static readonly string TempDownload = Path.Join(Program.AppDataDirectory, "tempDownload");
-    private static readonly HttpClient Client;
-    private static CancellationToken DownloadToken;
-    public static int UpdateProgress;
+    private static readonly HttpClientHandler ClientHandler = CreateHttpClientHandler();
+    private static readonly HttpClient Client = CreateClient();
+    private static readonly Lock DownloadLock = new();
+    private static CancellationTokenSource? DownloadCancellation;
     private static string AppImagePath = string.Empty;
     private static string AppImagePathOld = string.Empty;
 
-    static Update()
+    public static int UpdateProgress { get; private set; }
+
+    private static HttpClient CreateClient()
+    {
+        var client = new HttpClient(ClientHandler);
+        client.DefaultRequestHeaders.Add("User-Agent", Program.Version);
+        return client;
+    }
+
+    private static HttpClientHandler CreateHttpClientHandler()
     {
         var httpClientHandler = new HttpClientHandler { CheckCertificateRevocationList = true };
         if (WebApi.ProxySet)
@@ -32,11 +39,10 @@ sealed class Update
             httpClientHandler.Proxy = WebApi.Proxy;
         }
 
-        Client = new HttpClient(httpClientHandler);
-        Client.DefaultRequestHeaders.Add("User-Agent", Program.Version);
+        return httpClientHandler;
     }
 
-    public void Init(string appImagePath = "")
+    public static void Init(string appImagePath = "")
     {
         if (string.IsNullOrEmpty(appImagePath))
         {
@@ -83,7 +89,7 @@ sealed class Update
             }
 
             File.Move(UpdateExecutable, VrcxSetupExecutable);
-            var vrcxProcess = new Process
+            using var vrcxProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -96,7 +102,7 @@ sealed class Update
             vrcxProcess.Start();
             Environment.Exit(0);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException or ArgumentException)
         {
             string message = $"Failed to install the update: {e.Message}";
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, message);
@@ -106,12 +112,12 @@ sealed class Update
         }
     }
 
-    public static async Task DownloadInstallRedistAsync()
+    public static async Task DownloadInstallRedistAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            string filePath = await DownloadFileAsync("https://aka.ms/vs/17/release/vc_redist.x64.exe", DownloadToken);
-            var installRedist = new Process
+            string filePath = await DownloadFileAsync("https://aka.ms/vs/17/release/vc_redist.x64.exe", cancellationToken).ConfigureAwait(false);
+            using var installRedist = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -120,9 +126,9 @@ sealed class Update
                 },
             };
             installRedist.Start();
-            await installRedist.WaitForExitAsync(DownloadToken);
+            await installRedist.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is HttpRequestException or InvalidDataException or IOException or UnauthorizedAccessException or OperationCanceledException or System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException or ArgumentException)
         {
             string message = $"Failed to download and install the Visual C++ Redistributable: {e.Message}";
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, message);
@@ -134,24 +140,24 @@ sealed class Update
 
     private static async Task<string> DownloadFileAsync(string fileUrl, CancellationToken cancellationToken = default)
     {
-        HttpResponseMessage response = await Client.GetAsync(fileUrl, cancellationToken);
+        using HttpResponseMessage response = await Client.GetAsync(new Uri(fileUrl), cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception($"Failed to download the file. Status code: {response.StatusCode}");
+            throw new HttpRequestException($"Failed to download the file. Status code: {response.StatusCode}");
         }
 
         string fileName = GetFileNameFromContentDisposition(response);
         string tempPath = Path.Join(Path.GetTempPath(), "VRCX");
         Directory.CreateDirectory(tempPath);
         string filePath = Path.Join(tempPath, fileName);
-        await using FileStream fileStream = File.Create(filePath);
-        await response.Content.CopyToAsync(fileStream, cancellationToken);
+        using FileStream fileStream = File.Create(filePath);
+        await response.Content.CopyToAsync(fileStream, cancellationToken).ConfigureAwait(false);
         return filePath;
     }
 
     private static string GetFileNameFromContentDisposition(HttpResponseMessage response)
     {
-        string contentDisposition = response.Content.Headers.ContentDisposition?.ToString();
+        string? contentDisposition = response.Content.Headers.ContentDisposition?.ToString();
         if (contentDisposition != null)
         {
             int startIndex = contentDisposition.IndexOf("filename=", StringComparison.OrdinalIgnoreCase);
@@ -169,24 +175,58 @@ sealed class Update
             }
         }
 
-        throw new Exception("Unable to extract file name from content-disposition header.");
+        throw new InvalidDataException("Unable to extract file name from content-disposition header.");
     }
 
-    public static async Task DownloadUpdateAsync(string fileUrl, string hashString, int downloadSize)
+    public static async Task DownloadUpdateAsync(string fileUrl, string hashString, int downloadSize, CancellationToken cancellationToken = default)
     {
-        DownloadToken = CancellationToken.None;
-        const int chunkSize = 8192;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        lock (DownloadLock)
+        {
+            DownloadCancellation = cancellation;
+        }
+
+        try
+        {
+            await DownloadToTempFileAsync(fileUrl, cancellation.Token).ConfigureAwait(false);
+            await VerifyDownloadAsync(hashString, downloadSize, cancellation.Token).ConfigureAwait(false);
+            await ReplaceInstalledFileAsync(cancellation.Token).ConfigureAwait(false);
+            UpdateProgress = 0;
+        }
+        finally
+        {
+            lock (DownloadLock)
+            {
+                if (DownloadCancellation == cancellation)
+                {
+                    DownloadCancellation = null;
+                }
+            }
+        }
+    }
+
+    private static void RequestDownloadCancel()
+    {
+        lock (DownloadLock)
+        {
+            DownloadCancellation?.Cancel();
+        }
+    }
+
+    private static async Task DownloadToTempFileAsync(string fileUrl, CancellationToken cancellationToken)
+    {
+        const int ChunkSize = 8192;
 
         if (File.Exists(TempDownload))
         {
             File.Delete(TempDownload);
         }
 
-        await using FileStream destination = File.OpenWrite(TempDownload);
-        using HttpResponseMessage response = await Client.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead, DownloadToken);
-        await using Stream download = await response.Content.ReadAsStreamAsync(DownloadToken);
+        using FileStream destination = File.OpenWrite(TempDownload);
+        using HttpResponseMessage response = await Client.GetAsync(new Uri(fileUrl), HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using Stream download = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         long? contentLength = response.Content.Headers.ContentLength;
-        byte[] buffer = new byte[chunkSize];
+        byte[] buffer = new byte[ChunkSize];
         long totalBytesRead = 0;
 
         while (true)
@@ -196,95 +236,88 @@ sealed class Update
                 double percentage = Math.Round((double)totalBytesRead / contentLength.Value * 100, 2);
                 UpdateProgress = (int)percentage;
             }
-            int bytesRead = await download.ReadAsync(buffer.AsMemory(0, chunkSize), DownloadToken);
+            int bytesRead = await download.ReadAsync(buffer.AsMemory(0, ChunkSize), cancellationToken).ConfigureAwait(false);
             if (bytesRead == 0)
             {
                 break;
             }
 
-            if (DownloadToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 throw new OperationCanceledException("Download was cancelled.");
             }
 
-            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), DownloadToken);
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
             totalBytesRead += bytesRead;
         }
+    }
 
-        destination.Close();
-
+    private static async Task VerifyDownloadAsync(string hashString, int downloadSize, CancellationToken cancellationToken)
+    {
         var data = new FileInfo(TempDownload);
         if (data.Length != downloadSize)
         {
             File.Delete(TempDownload);
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Downloaded file size does not match expected size");
-            throw new Exception("Downloaded file size does not match expected size");
+            throw new InvalidDataException("Downloaded file size does not match expected size");
         }
 
         if (string.IsNullOrEmpty(hashString))
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Hash string is empty, skipping hash check");
+            return;
         }
-        else
+
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Checking hash");
+        using FileStream stream = File.OpenRead(TempDownload);
+        byte[] fileHashBytes = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        string fileHashString = Convert.ToHexString(fileHashBytes);
+        if (!hashString.Equals(fileHashString, StringComparison.OrdinalIgnoreCase))
         {
-            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Checking hash");
-            using (var sha256 = SHA256.Create())
-            await using (FileStream stream = File.OpenRead(TempDownload))
-            {
-                byte[] fileHashBytes = await sha256.ComputeHashAsync(stream, DownloadToken);
-                string fileHashString = Convert.ToHexString(fileHashBytes);
-                if (!hashString.Equals(fileHashString, StringComparison.OrdinalIgnoreCase))
-                {
-                    Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Hash check failed file:{fileHashString} web:{hashString}");
-                    throw new Exception("Hash check failed");
-
-                }
-            }
-
-            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Hash check passed");
+            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Hash check failed file:{fileHashString} web:{hashString}");
+            throw new InvalidDataException("Hash check failed");
         }
 
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Hash check passed");
+    }
+
+    private static async Task ReplaceInstalledFileAsync(CancellationToken cancellationToken)
+    {
         if (string.IsNullOrEmpty(AppImagePath))
         {
-
             if (File.Exists(UpdateExecutable))
             {
                 File.Delete(UpdateExecutable);
             }
 
             File.Move(TempDownload, UpdateExecutable);
+            return;
         }
-        else
+
+        if (File.Exists(AppImagePathOld))
         {
-
-            if (File.Exists(AppImagePathOld))
-            {
-                File.Delete(AppImagePathOld);
-            }
-
-            File.Move(AppImagePath, AppImagePathOld);
-            File.Move(TempDownload, AppImagePath);
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "chmod",
-                    Arguments = $"+x {AppImagePath}",
-                },
-            };
-            process.Start();
-            await process.WaitForExitAsync(DownloadToken);
+            File.Delete(AppImagePathOld);
         }
 
-        UpdateProgress = 0;
-        DownloadToken = CancellationToken.None;
+        File.Move(AppImagePath, AppImagePathOld);
+        File.Move(TempDownload, AppImagePath);
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "chmod",
+                Arguments = $"+x {AppImagePath}",
+            },
+        };
+        process.Start();
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task CancelUpdateAsync()
+    public static async Task CancelUpdateAsync(CancellationToken cancellationToken = default)
     {
-        DownloadToken = new CancellationToken(canceled: true);
+        RequestDownloadCancel();
         UpdateProgress = 0;
-        await Task.Delay(100, DownloadToken);
+        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
         try
         {
             if (File.Exists(TempDownload))
@@ -292,11 +325,11 @@ sealed class Update
                 File.Delete(TempDownload);
             }
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-
+            Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Could not delete the cancelled download: {0}", ex);
         }
     }
 
-    public static Task DownloadUpdateAsync(Uri fileUrl, string hashString, int downloadSize) => DownloadUpdateAsync(fileUrl.AbsoluteUri, hashString, downloadSize);
+    public static Task DownloadUpdateAsync(Uri fileUrl, string hashString, int downloadSize, CancellationToken cancellationToken = default) => DownloadUpdateAsync(fileUrl.AbsoluteUri, hashString, downloadSize, cancellationToken);
 }

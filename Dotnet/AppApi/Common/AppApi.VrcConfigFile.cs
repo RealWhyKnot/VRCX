@@ -2,7 +2,12 @@ using Newtonsoft.Json;
 
 namespace VRCX;
 
-public partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+partial class AppApi
 {
     public string ReadConfigFile()
     {
@@ -35,9 +40,9 @@ public partial class AppApi
 
             return JsonConvert.SerializeObject(jObject, Formatting.Indented);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            Logger.Warn(ex, "Failed to parse VRC config.json file");
+            Logger.Warn(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to parse VRC config.json file");
             return string.Empty;
         }
     }

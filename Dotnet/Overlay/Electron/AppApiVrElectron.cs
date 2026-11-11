@@ -1,14 +1,8 @@
 using System.Globalization;
-
-namespace VRCX;
+namespace VRCX.Overlay.Electron;
 
 public sealed class AppApiVrElectron : AppApiVr
 {
-    static AppApiVrElectron()
-    {
-        Instance = new AppApiVrElectron();
-    }
-
     public override void Init()
     {
     }
@@ -17,7 +11,7 @@ public sealed class AppApiVrElectron : AppApiVr
     {
     }
 
-    public override List<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue()
+    public override IList<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue()
     {
         var list = new List<KeyValuePair<string, string>>();
         while (Program.VRCXVRInstance.GetExecuteVrOverlayFunctionQueue().TryDequeue(out KeyValuePair<string, string> item))
@@ -29,34 +23,13 @@ public sealed class AppApiVrElectron : AppApiVr
 
     public override void ToggleSystemMonitor(bool enabled) => SystemMonitorElectron.Instance.Start(enabled);
 
-
-
-
-
     public override float CpuUsage() => SystemMonitorElectron.Instance.CpuUsage;
-
-
-
-
-
 
     public override string[][] GetVRDevices() => Program.VRCXVRInstance.GetDevices();
 
-
-
-
-
     public override double GetUptime() => SystemMonitorElectron.Instance.UpTime;
 
-
-
-
-
     public override string CurrentCulture() => CultureInfo.CurrentCulture.ToString();
-
-
-
-
 
     public override string CustomVrScript()
     {

@@ -3,15 +3,21 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using VRCX.ScreenshotMetadata;
 
 namespace VRCX;
 
-public partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+partial class AppApi
 {
-    [GeneratedRegex(@"\\Prints\\|\\Stickers\\|\\Emoji\\", RegexOptions.IgnoreCase, "en-US")]
+    [GeneratedRegex(@"\\Prints\\|\\Stickers\\|\\Emoji\\", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, 2000)]
     private static partial Regex ScreenshotRegex();
 
-    public string GetExtraScreenshotData(string path, bool carouselCache)
+    public virtual string? GetExtraScreenshotData(string path, bool carouselCache)
     {
         string fileName = Path.GetFileNameWithoutExtension(path);
         var metadata = new JObject();
@@ -21,8 +27,8 @@ public partial class AppApi
             return null;
         }
 
-        string[] files = Directory.GetFiles(Path.GetDirectoryName(path), "*.png");
-
+        string directory = Path.GetDirectoryName(path) ?? throw new ArgumentException("Screenshot path has no directory.", nameof(path));
+        string[] files = Directory.GetFiles(directory, "*.png");
 
         if (carouselCache)
         {
@@ -52,14 +58,14 @@ public partial class AppApi
         return metadata.ToString(Formatting.Indented);
     }
 
-    public string GetScreenshotMetadata(string path)
+    public virtual string? GetScreenshotMetadata(string path)
     {
         if (string.IsNullOrEmpty(path))
         {
             return null;
         }
 
-        ScreenshotMetadata? metadata = ScreenshotHelper.GetScreenshotMetadata(path);
+        ScreenshotInfo? metadata = ScreenshotHelper.GetScreenshotMetadata(path);
 
         if (metadata == null)
         {
@@ -98,11 +104,11 @@ public partial class AppApi
         stopwatch.Start();
 
         string searchPath = GetVRChatPhotosLocation();
-        List<ScreenshotMetadata> screenshots = ScreenshotHelper.FindScreenshots(searchQuery, searchPath, (ScreenshotHelper.ScreenshotSearchType)searchType);
+        List<ScreenshotInfo> screenshots = ScreenshotHelper.FindScreenshots(searchQuery, searchPath, (ScreenshotHelper.ScreenshotSearchType)searchType);
 
         JArray json = [];
 
-        foreach (ScreenshotMetadata screenshot in screenshots)
+        foreach (ScreenshotInfo screenshot in screenshots)
         {
             json.Add(screenshot.SourceFile);
         }
@@ -114,15 +120,13 @@ public partial class AppApi
         return json.ToString();
     }
 
-    public string GetLastScreenshot()
+    public string? GetLastScreenshot()
     {
-
         string path = GetVRChatPhotosLocation();
         if (!Directory.Exists(path))
         {
             return null;
         }
-
 
         IEnumerable<string> imageFiles = Directory.GetFiles(path, "*.png", SearchOption.AllDirectories)
             .Where(x => !ScreenshotRegex().IsMatch(x));
@@ -131,7 +135,7 @@ public partial class AppApi
         return lastScreenshot;
     }
 
-    public bool DeleteScreenshotMetadata(string path)
+    public virtual bool DeleteScreenshotMetadata(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal))
         {
@@ -143,9 +147,9 @@ public partial class AppApi
             ScreenshotHelper.DeleteTextMetadata(path, deleteVRChatMetadata: true);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException)
         {
-            Logger.Error(ex, "Failed to delete screenshot metadata for {0}", path);
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to delete screenshot metadata for {0}", path);
             return false;
         }
     }
@@ -165,9 +169,9 @@ public partial class AppApi
             {
                 ScreenshotHelper.DeleteTextMetadata(file, deleteVRChatMetadata: true);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException)
             {
-                Logger.Error(ex, "Failed to delete screenshot metadata for {0}", file);
+                Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to delete screenshot metadata for {0}", file);
             }
         }
     }

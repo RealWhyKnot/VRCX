@@ -1,6 +1,6 @@
 using CefSharp;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
 internal sealed class PlatformRenderProcessMessageHandler : IRenderProcessMessageHandler
 {

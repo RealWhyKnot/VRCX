@@ -1,23 +1,16 @@
 using System.Globalization;
-using VRCX.Overlay;
+using VRCX.OverlayWebSocket;
 
-namespace VRCX;
+namespace VRCX.Overlay.Cef;
 
 internal sealed class AppApiVrCef : AppApiVr
 {
-    static AppApiVrCef()
-    {
-        Instance = new AppApiVrCef();
-    }
-
     public override void Init()
     {
-
     }
 
     public override void VrInit()
     {
-
         var message = new OverlayMessage
         {
             Type = OverlayMessageType.OverlayConnected,
@@ -27,28 +20,11 @@ internal sealed class AppApiVrCef : AppApiVr
 
     public override void ToggleSystemMonitor(bool enabled) => SystemMonitorCef.Instance.Start(enabled);
 
-
-
-
-
     public override float CpuUsage() => SystemMonitorCef.Instance.CpuUsage;
 
-
-
-
-
-
-    public override string[][] GetVRDevices() => OverlayProgram.VRCXVRInstance.GetDevices();
-
-
-
-
+    public override string[][] GetVRDevices() => OverlayProgram.RequireVrInstance().GetDevices();
 
     public override double GetUptime() => SystemMonitorCef.Instance.UpTime;
-
-
-
-
 
     public override string CurrentCulture() => CultureInfo.CurrentCulture.ToString();
 
@@ -58,5 +34,5 @@ internal sealed class AppApiVrCef : AppApiVr
         return File.Exists(filePath) ? File.ReadAllText(filePath) : string.Empty;
     }
 
-    public override List<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue() => throw new NotImplementedException("GetExecuteVrOverlayFunctionQueue is not implemented in AppApiVrCef.");
+    public override IList<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue() => throw new NotSupportedException("GetExecuteVrOverlayFunctionQueue is not implemented in AppApiVrCef.");
 }

@@ -135,74 +135,81 @@ sealed partial class LogWatcher
 
     private bool ParseLogOnPlayerJoinedOrLeft(FileInfo fileInfo, string line)
     {
-
         if (line.Contains("[Behaviour] OnPlayerJoined", StringComparison.Ordinal) && !line.Contains("] OnPlayerJoined:", StringComparison.Ordinal))
         {
-            int lineOffset = line.LastIndexOf("] OnPlayerJoined", StringComparison.Ordinal);
-            if (lineOffset < 0)
-            {
-                return true;
-            }
-
-            lineOffset += 17;
-            if (lineOffset > line.Length)
-            {
-                return true;
-            }
-
-            (string? DisplayName, string? UserId) = ParseUserInfo(line[lineOffset..]);
-            if (string.IsNullOrEmpty(DisplayName) && string.IsNullOrEmpty(UserId))
-            {
-                Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse user info from log line: {0}", line);
-                return true;
-            }
-
-            AppendLog(
-            [
-                fileInfo.Name,
-                ConvertLogTimeToISO8601(line),
-                "player-joined",
-                DisplayName,
-                UserId,
-            ]);
-
+            ParseLogPlayerJoined(fileInfo, line);
             return true;
         }
 
         if (line.Contains("[Behaviour] OnPlayerLeft", StringComparison.Ordinal) && !line.Contains("] OnPlayerLeftRoom", StringComparison.Ordinal) && !line.Contains("] OnPlayerLeft:", StringComparison.Ordinal))
         {
-            int lineOffset = line.LastIndexOf("] OnPlayerLeft", StringComparison.Ordinal);
-            if (lineOffset < 0)
-            {
-                return true;
-            }
-
-            lineOffset += 15;
-            if (lineOffset > line.Length)
-            {
-                return true;
-            }
-
-            (string? DisplayName, string? UserId) = ParseUserInfo(line[lineOffset..]);
-            if (string.IsNullOrEmpty(DisplayName) && string.IsNullOrEmpty(UserId))
-            {
-                Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse user info from log line: {0}", line);
-                return true;
-            }
-
-            AppendLog(
-            [
-                fileInfo.Name,
-                ConvertLogTimeToISO8601(line),
-                "player-left",
-                DisplayName ?? string.Empty,
-                UserId ?? string.Empty,
-            ]);
-
+            ParseLogPlayerLeft(fileInfo, line);
             return true;
         }
 
         return false;
+    }
+
+    private void ParseLogPlayerJoined(FileInfo fileInfo, string line)
+    {
+        int lineOffset = line.LastIndexOf("] OnPlayerJoined", StringComparison.Ordinal);
+        if (lineOffset < 0)
+        {
+            return;
+        }
+
+        lineOffset += 17;
+        if (lineOffset > line.Length)
+        {
+            return;
+        }
+
+        (string? displayName, string? userId) = ParseUserInfo(line[lineOffset..]);
+        if (string.IsNullOrEmpty(displayName) && string.IsNullOrEmpty(userId))
+        {
+            Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse user info from log line: {0}", line);
+            return;
+        }
+
+        AppendLog(
+        [
+            fileInfo.Name,
+            ConvertLogTimeToISO8601(line),
+            "player-joined",
+            displayName,
+            userId,
+        ]);
+    }
+
+    private void ParseLogPlayerLeft(FileInfo fileInfo, string line)
+    {
+        int lineOffset = line.LastIndexOf("] OnPlayerLeft", StringComparison.Ordinal);
+        if (lineOffset < 0)
+        {
+            return;
+        }
+
+        lineOffset += 15;
+        if (lineOffset > line.Length)
+        {
+            return;
+        }
+
+        (string? displayName, string? userId) = ParseUserInfo(line[lineOffset..]);
+        if (string.IsNullOrEmpty(displayName) && string.IsNullOrEmpty(userId))
+        {
+            Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse user info from log line: {0}", line);
+            return;
+        }
+
+        AppendLog(
+        [
+            fileInfo.Name,
+            ConvertLogTimeToISO8601(line),
+            "player-left",
+            displayName ?? string.Empty,
+            userId ?? string.Empty,
+        ]);
     }
 
     private bool ParseLogPortalSpawn(FileInfo fileInfo, string line)

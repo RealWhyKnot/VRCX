@@ -5,19 +5,20 @@ using CefSharp.OffScreen;
 using CefSharp.Structs;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
+using VRCX.Cef;
 using Range = CefSharp.Structs.Range;
 
-namespace VRCX;
+namespace VRCX.Overlay.Cef;
 
 internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
 {
-
     private ComPtr<ID3D11Device1> _device1;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
     private ComPtr<ID3D11Query> _query;
     private ComPtr<ID3D11Texture2D> _renderTarget;
 
-
+    private readonly WindowInfo _windowInfo = new();
+    private readonly BrowserSettings _browserSettings;
     private readonly bool _isLegacy;
     private readonly ReaderWriterLockSlim _paintBufferLock = new();
     private GCHandle _paintBuffer;
@@ -28,21 +29,20 @@ internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         : base(address, automaticallyCreateBrowser: false)
     {
         _isLegacy = isLegacy;
-        var windowInfo = new WindowInfo();
-        windowInfo.SetAsWindowless(IntPtr.Zero);
-        windowInfo.WindowlessRenderingEnabled = true;
-        windowInfo.SharedTextureEnabled = !_isLegacy;
-        windowInfo.Width = width;
-        windowInfo.Height = height;
+        _windowInfo.SetAsWindowless(IntPtr.Zero);
+        _windowInfo.WindowlessRenderingEnabled = true;
+        _windowInfo.SharedTextureEnabled = !_isLegacy;
+        _windowInfo.Width = width;
+        _windowInfo.Height = height;
 
-        var browserSettings = new BrowserSettings()
+        _browserSettings = new BrowserSettings()
         {
             DefaultEncoding = "UTF-8",
             WindowlessFrameRate = !_isLegacy ? 60 : 24,
         };
 
         RenderProcessMessageHandler = PlatformRenderProcessMessageHandler.Instance;
-        CreateBrowser(windowInfo, browserSettings);
+        CreateBrowser(_windowInfo, _browserSettings);
 
         Size = new System.Drawing.Size(width, height);
         RenderHandler = this;
@@ -135,7 +135,8 @@ internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
     {
         RenderHandler = null;
         base.Dispose();
-
+        _windowInfo.Dispose();
+        _browserSettings.Dispose();
 
         _paintBufferLock.EnterWriteLock();
         try

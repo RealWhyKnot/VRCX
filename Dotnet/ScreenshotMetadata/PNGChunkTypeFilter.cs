@@ -1,4 +1,4 @@
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
 internal enum PNGChunkTypeFilter
 {

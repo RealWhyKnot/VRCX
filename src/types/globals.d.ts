@@ -208,7 +208,6 @@ declare global {
     GetVRChatRegistryKey(key: string): Promise<any>;
     GetVRChatRegistryKeyString(key: string): Promise<string>;
     SetVRChatRegistryKey(key: string, value: any, typeInt: number): Promise<boolean>;
-    GetVRChatRegistry(): Promise<Record<string, Record<string, any>>>;
     SetVRChatRegistry(json: string): Promise<void>;
     HasVRChatRegistryFolder(): Promise<boolean>;
     DeleteVRChatRegistryFolder(): Promise<void>;

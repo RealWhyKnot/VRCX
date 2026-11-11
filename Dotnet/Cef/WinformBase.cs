@@ -1,4 +1,4 @@
-namespace VRCX;
+namespace VRCX.Cef;
 
 internal class WinformBase : Form
 {

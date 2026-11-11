@@ -5,11 +5,16 @@ class InteropApi {
     this.createdObjects = {};
   }
 
+  getDotNetClass(className) {
+    return dotnet.VRCX[className] ?? dotnet.VRCX.Overlay.Electron[className];
+  }
+
   getDotNetObject(className) {
     if (!this.createdObjects[className]) {
       console.log(`Creating new instance of ${className}`);
 
-      this.createdObjects[className] = new dotnet.VRCX[className]();
+      const DotNetClass = this.getDotNetClass(className);
+      this.createdObjects[className] = new DotNetClass();
     }
     return this.createdObjects[className];
   }

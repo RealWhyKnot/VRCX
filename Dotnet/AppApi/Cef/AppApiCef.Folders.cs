@@ -3,10 +3,11 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using VRCX.Cef;
 
 namespace VRCX;
 
-public partial class AppApiCef
+internal partial class AppApiCef
 {
     public override string GetVRChatAppDataLocation() => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"Low\VRChat\VRChat";
 
@@ -22,12 +23,12 @@ public partial class AppApiCef
             }
 
             JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-            if (obj["cache_directory"] == null)
+            if (obj?["cache_directory"] == null)
             {
                 return defaultPath;
             }
 
-            string? cacheDir = (string)obj["cache_directory"];
+            string? cacheDir = (string?)obj["cache_directory"];
             if (string.IsNullOrEmpty(cacheDir))
             {
                 return defaultPath;
@@ -36,7 +37,7 @@ public partial class AppApiCef
             string cachePath = Path.Join(cacheDir, "Cache-WindowsPlayer");
             return !Directory.Exists(cacheDir) ? defaultPath : cachePath;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidCastException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for cache location: {e}");
         }
@@ -55,15 +56,15 @@ public partial class AppApiCef
             }
 
             JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-            if (obj["picture_output_folder"] == null)
+            if (obj?["picture_output_folder"] == null)
             {
                 return defaultPath;
             }
 
-            string? photosDir = (string)obj["picture_output_folder"];
+            string? photosDir = (string?)obj["picture_output_folder"];
             return string.IsNullOrEmpty(photosDir) || !Directory.Exists(photosDir) ? defaultPath : photosDir;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidCastException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for photos location: {e}");
         }
@@ -85,30 +86,30 @@ public partial class AppApiCef
             }
             return path;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
             return GetVRChatPhotosLocation();
         }
     }
 
-    private string GetSteamUserdataPathFromRegistry()
+    private static string GetSteamUserdataPathFromRegistry()
     {
         string steamUserdataPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Steam\userdata");
 
         try
         {
-            using RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Valve\Steam");
+            using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Valve\Steam");
             if (key != null)
             {
-                object o = key.GetValue("InstallPath");
+                object? o = key.GetValue("InstallPath");
                 if (o != null)
                 {
                     steamUserdataPath = Path.Join(o.ToString(), @"userdata");
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to get Steam userdata path from registry: {e}");
         }
@@ -118,7 +119,6 @@ public partial class AppApiCef
 
     public override string GetVRChatScreenshotsLocation()
     {
-
         string steamUserdataPath = GetSteamUserdataPathFromRegistry();
         string screenshotPath = string.Empty;
         DateTime latestWriteTime = DateTime.MinValue;
@@ -151,7 +151,7 @@ public partial class AppApiCef
 
     public override bool OpenVrcxAppDataFolder()
     {
-        string path = Program.AppDataDirectory;
+        string path = Program.AppDataDirectory ?? string.Empty;
         if (!Directory.Exists(path))
         {
             return false;
@@ -243,9 +243,7 @@ public partial class AppApiCef
 
         string? folderPath = isFolder ? path : Path.GetDirectoryName(path);
 
-
-
-        int result = WinApi.SHParseDisplayName(folderPath, IntPtr.Zero, out nint pidlFolder, 0, out _);
+        int result = WinApi.SHParseDisplayName(folderPath ?? string.Empty, IntPtr.Zero, out nint pidlFolder, 0, out _);
         if (result != 0)
         {
             OpenFolderAndSelectItemFallback(path);
@@ -255,7 +253,6 @@ public partial class AppApiCef
         result = WinApi.SHParseDisplayName(path, IntPtr.Zero, out nint pidlFile, 0, out _);
         if (result != 0)
         {
-
             Marshal.FreeCoTaskMem(pidlFolder);
             OpenFolderAndSelectItemFallback(path);
             return;
@@ -265,23 +262,20 @@ public partial class AppApiCef
 
         try
         {
-
-
             WinApi.SHOpenFolderAndSelectItems(pidlFolder, (uint)files.Length, files, 0);
         }
-        catch
+        catch (ExternalException)
         {
             OpenFolderAndSelectItemFallback(path);
         }
         finally
         {
-
             Marshal.FreeCoTaskMem(pidlFolder);
             Marshal.FreeCoTaskMem(pidlFile);
         }
     }
 
-    private void OpenFolderAndSelectItemFallback(string path)
+    private static void OpenFolderAndSelectItemFallback(string path)
     {
         if (!File.Exists(path) && !Directory.Exists(path))
         {
@@ -294,7 +288,6 @@ public partial class AppApiCef
         }
         else
         {
-
             Process.Start("explorer.exe", $"/select,\"{path}\"");
         }
     }
@@ -309,7 +302,7 @@ public partial class AppApiCef
                 using var openFolderDialog = new FolderBrowserDialog();
                 openFolderDialog.InitialDirectory = Directory.Exists(defaultPath) ? defaultPath : GetVRChatPhotosLocation();
 
-                DialogResult dialogResult = openFolderDialog.ShowDialog(MainForm.nativeWindow);
+                DialogResult dialogResult = openFolderDialog.ShowDialog(MainForm.MainNativeWindow);
                 if (dialogResult == DialogResult.OK)
                 {
                     tcs.SetResult(openFolderDialog.SelectedPath);
@@ -319,7 +312,7 @@ public partial class AppApiCef
                     tcs.SetResult(defaultPath);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is InvalidOperationException or ExternalException or IOException or ArgumentException)
             {
                 tcs.SetException(ex);
             }
@@ -347,7 +340,7 @@ public partial class AppApiCef
                 openFileDialog.DefaultExt = defaultExt;
                 openFileDialog.Filter = defaultFilter;
 
-                DialogResult dialogResult = openFileDialog.ShowDialog(MainForm.nativeWindow);
+                DialogResult dialogResult = openFileDialog.ShowDialog(MainForm.MainNativeWindow);
                 if (dialogResult == DialogResult.OK && !string.IsNullOrEmpty(openFileDialog.FileName))
                 {
                     tcs.SetResult(openFileDialog.FileName);
@@ -357,7 +350,7 @@ public partial class AppApiCef
                     tcs.SetResult("");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is InvalidOperationException or ExternalException or IOException or ArgumentException)
             {
                 tcs.SetException(ex);
             }

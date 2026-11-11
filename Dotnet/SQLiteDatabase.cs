@@ -8,45 +8,42 @@ public
 #else
 internal
 #endif
-sealed class SQLite
+sealed class SQLiteDatabase : IDisposable
 {
-    public static SQLite Instance;
-    private readonly ReaderWriterLockSlim m_ConnectionLock;
-    private SQLiteConnection m_Connection;
+    public static SQLiteDatabase Instance { get; private set; } = new SQLiteDatabase();
 
-    static SQLite()
+    private readonly ReaderWriterLockSlim _connectionLock;
+    private SQLiteConnection? _connection;
+
+    public SQLiteDatabase()
     {
-        Instance = new SQLite();
+        _connectionLock = new ReaderWriterLockSlim();
     }
 
-    public SQLite()
-    {
-        m_ConnectionLock = new ReaderWriterLockSlim();
-    }
+    private SQLiteConnection Connection => _connection ?? throw new InvalidOperationException("The database connection is not open.");
 
     public void Init()
     {
 #if LINUX
         Instance = this;
 #endif
-        string dataSource = Program.ConfigLocation;
+        string dataSource = Program.ConfigLocation ?? string.Empty;
         string jsonDataSource = VRCXStorage.Instance.Get("VRCX_DatabaseLocation");
         if (!string.IsNullOrEmpty(jsonDataSource))
         {
             dataSource = jsonDataSource;
         }
 
-        m_Connection = new SQLiteConnection($"Data Source=\"{dataSource}\";Version=3;PRAGMA locking_mode=NORMAL;PRAGMA busy_timeout=5000;PRAGMA journal_mode=WAL;PRAGMA optimize=0x10002;", parseViaFramework: true);
+        _connection = new SQLiteConnection($"Data Source=\"{dataSource}\";Version=3;PRAGMA locking_mode=NORMAL;PRAGMA busy_timeout=5000;PRAGMA journal_mode=WAL;PRAGMA optimize=0x10002;", parseViaFramework: true);
 
-        m_Connection.Open();
+        _connection.Open();
     }
 
     public void Exit()
     {
-        m_Connection.Close();
-        m_Connection.Dispose();
+        Connection.Close();
+        Connection.Dispose();
     }
-
 
     public string ExecuteJson(string sql, IDictionary<string, object>? args = null)
     {
@@ -56,10 +53,10 @@ sealed class SQLite
 
     public object[][] Execute(string sql, IDictionary<string, object>? args = null)
     {
-        m_ConnectionLock.EnterReadLock();
+        _connectionLock.EnterReadLock();
         try
         {
-            using var command = new SQLiteCommand(sql, m_Connection);
+            using var command = new SQLiteCommand(sql, Connection);
             if (args != null)
             {
                 foreach (KeyValuePair<string, object> arg in args)
@@ -83,17 +80,17 @@ sealed class SQLite
         }
         finally
         {
-            m_ConnectionLock.ExitReadLock();
+            _connectionLock.ExitReadLock();
         }
     }
 
     public int ExecuteNonQuery(string sql, IDictionary<string, object>? args = null)
     {
         int result = -1;
-        m_ConnectionLock.EnterWriteLock();
+        _connectionLock.EnterWriteLock();
         try
         {
-            using var command = new SQLiteCommand(sql, m_Connection);
+            using var command = new SQLiteCommand(sql, Connection);
             if (args != null)
             {
                 foreach (KeyValuePair<string, object> arg in args)
@@ -105,7 +102,7 @@ sealed class SQLite
         }
         finally
         {
-            m_ConnectionLock.ExitWriteLock();
+            _connectionLock.ExitWriteLock();
         }
 
         return result;
@@ -113,10 +110,10 @@ sealed class SQLite
 
     public long ExecuteInsert(string sql, IDictionary<string, object>? args = null)
     {
-        m_ConnectionLock.EnterWriteLock();
+        _connectionLock.EnterWriteLock();
         try
         {
-            using var command = new SQLiteCommand(sql, m_Connection);
+            using var command = new SQLiteCommand(sql, Connection);
             if (args != null)
             {
                 foreach (KeyValuePair<string, object> arg in args)
@@ -125,11 +122,21 @@ sealed class SQLite
                 }
             }
 
-            return command.ExecuteNonQuery() > 0 ? m_Connection.LastInsertRowId : 0;
+            return command.ExecuteNonQuery() > 0 ? Connection.LastInsertRowId : 0;
         }
         finally
         {
-            m_ConnectionLock.ExitWriteLock();
+            _connectionLock.ExitWriteLock();
         }
+    }
+
+#if LINUX
+    public void Dispose()
+#else
+    void IDisposable.Dispose()
+#endif
+    {
+        _connection?.Dispose();
+        _connectionLock.Dispose();
     }
 }

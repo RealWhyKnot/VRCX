@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using NLog;
 
@@ -19,7 +20,7 @@ public sealed partial class AppApiElectron : AppApi
 
     public override Task<double> GetZoomAsync() => Task.FromResult<double>(1);
 
-    public override void DesktopNotification(string BoldText, string Text = "", string Image = "")
+    public override void DesktopNotification(string boldText, string text = "", string image = "")
     {
     }
 
@@ -29,7 +30,7 @@ public sealed partial class AppApiElectron : AppApi
 
     public override bool CheckForUpdateExe() => false;
 
-    public override void ExecuteVrOverlayFunction(string function, string json) => Program.VRCXVRInstance.ExecuteVrOverlayFunction(function, json);
+    public override void ExecuteVrOverlayFunction(string functionName, string json) => Program.VRCXVRInstance.ExecuteVrOverlayFunction(functionName, json);
 
     public override void FocusWindow()
     {
@@ -45,7 +46,7 @@ public sealed partial class AppApiElectron : AppApi
 
     public override string GetClipboard()
     {
-        var process = new Process
+        using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
@@ -63,7 +64,7 @@ public sealed partial class AppApiElectron : AppApi
             process.WaitForExit();
             return output;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to get clipboard: {ex.Message}");
             return string.Empty;
@@ -87,7 +88,7 @@ public sealed partial class AppApiElectron : AppApi
             return;
         }
 
-        var process = new Process
+        using var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
@@ -102,7 +103,7 @@ public sealed partial class AppApiElectron : AppApi
             process.Start();
             process.WaitForExit();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to copy image to clipboard: {ex.Message}");
         }
@@ -123,5 +124,4 @@ public sealed partial class AppApiElectron : AppApi
     public override void OpenCalendarFile(string icsContent)
     {
     }
-
 }

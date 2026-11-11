@@ -2,12 +2,15 @@ using System.Text;
 
 namespace VRCX;
 
-public partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+partial class AppApi
 {
-    public Dictionary<string, short> GetVRChatModerations(string currentUserId)
+    public IDictionary<string, short>? GetVRChatModerations(string currentUserId)
     {
-
-
         string filePath = Path.Join(GetVRChatAppDataLocation(), @$"LocalPlayerModerations\{currentUserId}-show-hide-user.vrcset");
         if (!File.Exists(filePath))
         {
@@ -16,10 +19,10 @@ public partial class AppApi
 
         var output = new Dictionary<string, short>(StringComparer.Ordinal);
         using var reader = new StreamReader(filePath);
-        string line;
+        string? line;
         while ((line = reader.ReadLine()) != null)
         {
-            int index = line.IndexOf(' ');
+            int index = line.IndexOf(' ', StringComparison.Ordinal);
             if (index <= 0)
             {
                 continue;
@@ -42,10 +45,10 @@ public partial class AppApi
         }
 
         using var reader = new StreamReader(filePath);
-        string line;
+        string? line;
         while ((line = reader.ReadLine()) != null)
         {
-            int index = line.IndexOf(' ');
+            int index = line.IndexOf(' ', StringComparison.Ordinal);
             if (index <= 0)
             {
                 continue;
@@ -91,7 +94,7 @@ public partial class AppApi
         {
             File.WriteAllLines(filePath, lines);
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             return false;
         }

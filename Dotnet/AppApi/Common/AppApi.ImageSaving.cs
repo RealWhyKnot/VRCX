@@ -3,22 +3,28 @@ using System.Text.Json;
 using librsync.net;
 using SkiaSharp;
 using VRCX.Imaging;
+using VRCX.ScreenshotMetadata;
 
 namespace VRCX;
 
-public partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+partial class AppApi
 {
-    public void PopulateImageHosts(string json)
+    public virtual void PopulateImageHosts(string json)
     {
         List<string>? hosts = JsonSerializer.Deserialize<List<string>>(json);
         ImageCache.PopulateImageHosts(hosts ?? []);
     }
 
-    public async Task<string> GetImageAsync(string url, string fileId, string version, CancellationToken cancellationToken = default) => await ImageCache.GetImageAsync(url, fileId, version, cancellationToken).ConfigureAwait(false);
+    public virtual async Task<string> GetImageAsync(string url, string fileId, string version, CancellationToken cancellationToken = default) => await ImageCache.GetImageAsync(url, fileId, version, cancellationToken).ConfigureAwait(false);
 
     public string ResizeImageToFitLimits(string base64data) => Convert.ToBase64String(ResizeImageToFitLimits(Convert.FromBase64String(base64data), matchingDimensions: false));
 
-    public byte[] ResizeImageToFitLimits(byte[] imageData, bool matchingDimensions, int maxWidth = 2000,
+    public virtual byte[] ResizeImageToFitLimits(byte[] imageData, bool matchingDimensions, int maxWidth = 2000,
         int maxHeight = 2000, long maxSize = 10_000_000)
     {
         using var image = ImageRaster.Load(imageData);
@@ -68,14 +74,14 @@ public partial class AppApi
             image.Resize(newWidth, newHeight);
         }
 
-        return imageData.Length > maxSize ? throw new Exception("Failed to get image into target filesize.") : imageData;
+        return imageData.Length > maxSize ? throw new InvalidOperationException("Failed to get image into target filesize.") : imageData;
         void SaveToFileToUpload() => imageData = image.EncodePng();
     }
 
-    public byte[] ResizePrintImage(byte[] imageData)
+    public virtual byte[] ResizePrintImage(byte[] imageData)
     {
-        const int desiredWidth = 1920;
-        const int desiredHeight = 1080;
+        const int DesiredWidth = 1920;
+        const int DesiredHeight = 1080;
 
         using var image = ImageRaster.Load(imageData);
 
@@ -84,15 +90,14 @@ public partial class AppApi
             image.Rotate270();
         }
 
-        if (image.Width < desiredWidth || image.Height < desiredHeight)
+        if (image.Width < DesiredWidth || image.Height < DesiredHeight)
         {
-            const double expectedAspectRatio = 1920.0 / 1080.0;
+            const double ExpectedAspectRatio = 1920.0 / 1080.0;
             double aspectRatio = (double)image.Width / image.Height;
             int width, height, xOffset, yOffset;
 
-            if (aspectRatio > expectedAspectRatio)
+            if (aspectRatio > ExpectedAspectRatio)
             {
-
                 width = 1920;
                 height = (int)(width / aspectRatio);
                 xOffset = 0;
@@ -100,7 +105,6 @@ public partial class AppApi
             }
             else
             {
-
                 height = 1080;
                 width = (int)(height * aspectRatio);
                 xOffset = (1920 - width) / 2;
@@ -110,22 +114,22 @@ public partial class AppApi
             image.PlaceOnCanvas(1920, 1080, SKColors.White, xOffset, yOffset);
         }
 
-        if (image.Width > desiredWidth)
+        if (image.Width > DesiredWidth)
         {
-            double sizingFactor = image.Width / (double)desiredWidth;
+            double sizingFactor = image.Width / (double)DesiredWidth;
             int newHeight = (int)Math.Round(image.Height / sizingFactor);
-            image.Resize(desiredWidth, newHeight);
+            image.Resize(DesiredWidth, newHeight);
         }
-        if (image.Height > desiredHeight)
+        if (image.Height > DesiredHeight)
         {
-            double sizingFactor = image.Height / (double)desiredHeight;
+            double sizingFactor = image.Height / (double)DesiredHeight;
             int newWidth = (int)Math.Round(image.Width / sizingFactor);
-            image.Resize(newWidth, desiredHeight);
+            image.Resize(newWidth, DesiredHeight);
         }
 
-        const int yBorderOffset = 69;
+        const int YBorderOffset = 69;
         int newX = (2048 - image.Width) / 2;
-        image.PlaceOnCanvas(2048, 1440, SKColors.White, newX, yBorderOffset);
+        image.PlaceOnCanvas(2048, 1440, SKColors.White, newX, YBorderOffset);
         return image.EncodePng();
     }
 
@@ -144,7 +148,7 @@ public partial class AppApi
         }
     }
 
-    public async Task<bool> CropPrintImageAsync(string path, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> CropPrintImageAsync(string path, CancellationToken cancellationToken = default)
     {
         string tempPath = path + ".temp";
         byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
@@ -160,14 +164,12 @@ public partial class AppApi
         using (var oldPngFile = new PNGFile(path, writeAccess: false))
         using (var newPngFile = new PNGFile(tempPath, writeAccess: true))
         {
-
             List<PNGChunk> textChunks = oldPngFile.GetChunksOfType(PNGChunkTypeFilter.iTXt);
 
             for (int i = 0; i < textChunks.Count; i++)
             {
                 newPngFile.WriteChunk(textChunks[i]);
             }
-
         }
 
         for (int i = 0; i < 10; i++)
@@ -190,14 +192,14 @@ public partial class AppApi
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Logger.Error(ex, "Failed to replace cropped print image");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to replace cropped print image");
             return false;
         }
 
         return true;
     }
 
-    internal bool CropPrint(ImageRaster image)
+    internal static bool CropPrint(ImageRaster image)
     {
         if (image.Width != 2048 || image.Height != 1440)
         {
@@ -224,7 +226,7 @@ public partial class AppApi
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            Logger.Error(ex, "Failed to save print to file");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
             return null;
         }
 
@@ -247,7 +249,7 @@ public partial class AppApi
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            Logger.Error(ex, "Failed to save print to file");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
             return null;
         }
 
@@ -270,22 +272,21 @@ public partial class AppApi
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or ArgumentException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            Logger.Error(ex, "Failed to save print to file");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to save print to file");
             return null;
         }
 
         return filePath;
     }
 
-    public string MD5File(string blob)
+    public virtual string MD5File(string blob)
     {
         byte[] fileData = Convert.FromBase64CharArray(blob.ToCharArray(), 0, blob.Length);
-        using var md5 = MD5.Create();
-        byte[] md5Hash = md5.ComputeHash(fileData);
+        byte[] md5Hash = CryptographicOperations.HashData(HashAlgorithmName.MD5, fileData);
         return Convert.ToBase64String(md5Hash);
     }
 
-    public string SignFile(string blob)
+    public virtual string SignFile(string blob)
     {
         byte[] fileData = Convert.FromBase64String(blob);
         using var input = new MemoryStream(fileData);
@@ -296,17 +297,17 @@ public partial class AppApi
         return Convert.ToBase64String(sigBytes);
     }
 
-    public string FileLength(string blob)
+    public virtual string FileLength(string blob)
     {
         byte[] fileData = Convert.FromBase64String(blob);
         return fileData.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    public Task<string> GetImageAsync(Uri url, string fileId, string version, CancellationToken cancellationToken = default) => GetImageAsync(url.AbsoluteUri, fileId, version, cancellationToken);
+    internal Task<string> GetImageAsync(Uri url, string fileId, string version, CancellationToken cancellationToken = default) => GetImageAsync(url.AbsoluteUri, fileId, version, cancellationToken);
 
-    public Task<string?> SavePrintToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SavePrintToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
+    internal Task<string?> SavePrintToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SavePrintToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
 
-    public Task<string?> SaveStickerToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveStickerToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
+    internal Task<string?> SaveStickerToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveStickerToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
 
-    public Task<string?> SaveEmojiToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveEmojiToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
+    internal Task<string?> SaveEmojiToFileAsync(Uri url, string ugcFolderPath, string monthFolder, string fileName, CancellationToken cancellationToken = default) => SaveEmojiToFileAsync(url.AbsoluteUri, ugcFolderPath, monthFolder, fileName, cancellationToken);
 }

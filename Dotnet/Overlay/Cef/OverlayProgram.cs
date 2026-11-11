@@ -1,6 +1,7 @@
 using NLog;
+using VRCX.Cef;
 
-namespace VRCX.Overlay;
+namespace VRCX.Overlay.Cef;
 
 internal static class OverlayProgram
 {
@@ -8,21 +9,24 @@ internal static class OverlayProgram
 
     public static VRCXVRInterface? VRCXVRInstance;
 
+    public static VRCXVRInterface RequireVrInstance() =>
+        VRCXVRInstance ?? throw new InvalidOperationException("VRCX VR overlay instance has not been created yet.");
+
     public static void OverlayMain()
     {
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay starting...");
-        CefService.Instance.Init();
+        CefService.Init();
         AppApiVr.Instance = new AppApiVrCef();
         bool isLegacy = string.Equals(VRCXStorage.Instance.Get("VRCX_DisableVrOverlayGpuAcceleration"), "true", StringComparison.Ordinal);
         VRCXVRInstance = new VRCXVRCef(isLegacy);
         VRCXVRInstance.Init();
 
-        OverlayClient.InitAsync();
+        OverlayClient.Init();
 
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay started...");
-        QuitProcessAsync();
+        _ = QuitProcessAsync(CancellationToken.None);
         ApplicationConfiguration.Initialize();
-        var context = new ApplicationContext();
+        using var context = new ApplicationContext();
         Application.Run(context);
         Exit();
     }
@@ -31,19 +35,19 @@ internal static class OverlayProgram
     {
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay exiting...");
 
-        OverlayClient.ExitAsync();
-        VRCXVRInstance.Exit();
+        OverlayClient.Exit();
+        RequireVrInstance().Shutdown();
         Environment.Exit(0);
     }
 
-    private static async Task QuitProcessAsync()
+    private static async Task QuitProcessAsync(CancellationToken cancellationToken)
     {
-        await Task.Delay(5000);
+        await Task.Delay(5000, cancellationToken);
         while (Program.LaunchDebug ?
                    OverlayClient.Connected :
                    OverlayClient.ConnectedAndActive)
         {
-            await Task.Delay(500);
+            await Task.Delay(500, cancellationToken);
         }
         Exit();
     }

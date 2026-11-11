@@ -1,18 +1,23 @@
 namespace VRCX;
 
-public abstract partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+abstract partial class AppApi
 {
 
     public abstract void ShowDevTools();
     public abstract void SetVR(bool active, bool hmdOverlay, bool wristOverlay, bool menuButton, int overlayHand);
     public abstract void SetZoom(double zoomLevel);
     public abstract Task<double> GetZoomAsync();
-    public abstract void DesktopNotification(string BoldText, string Text = "", string Image = "");
+    public abstract void DesktopNotification(string boldText, string text = "", string image = "");
     public abstract void SetTrayIconNotification(bool notify);
 
     public abstract void RestartApplication(bool isUpgrade);
     public abstract bool CheckForUpdateExe();
-    public abstract void ExecuteVrOverlayFunction(string function, string json);
+    public abstract void ExecuteVrOverlayFunction(string functionName, string json);
     public abstract void FocusWindow();
     public abstract void ChangeTheme(int value);
     public abstract void DoFunny();
@@ -43,7 +48,7 @@ public abstract partial class AppApi
         string defaultFilter = "All files (*.*)|*.*");
 
 
-    public abstract void OnProcessStateChanged(MonitoredProcess monitoredProcess);
+    internal abstract void OnProcessStateChanged(MonitoredProcess monitoredProcess);
     public abstract void CheckGameRunning();
     public abstract bool IsGameRunning();
     public abstract bool IsSteamVRRunning();
@@ -52,11 +57,11 @@ public abstract partial class AppApi
     public abstract bool StartGameFromPath(string path, string arguments);
 
 
-    public abstract object GetVRChatRegistryKey(string key);
-    public abstract string GetVRChatRegistryKeyString(string key);
+    public abstract object? GetVRChatRegistryKey(string key);
+    public abstract string? GetVRChatRegistryKeyString(string key);
     public abstract bool SetVRChatRegistryKey(string key, object value, int typeInt);
     public abstract void SetVRChatRegistryKey(string key, byte[] value);
-    public abstract Dictionary<string, Dictionary<string, object>> GetVRChatRegistry();
+    public abstract string GetVRChatRegistryJson();
     public abstract void SetVRChatRegistry(string json);
     public abstract bool HasVRChatRegistryFolder();
     public abstract void DeleteVRChatRegistryFolder();

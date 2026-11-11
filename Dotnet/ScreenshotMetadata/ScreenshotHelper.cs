@@ -1,16 +1,17 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Numerics;
 using System.Xml;
 using Newtonsoft.Json;
 using NLog;
 
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
 internal static class ScreenshotHelper
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private static readonly ScreenshotMetadataDatabase CacheDatabase = new(Path.Join(Program.AppDataDirectory, "metadataCache.db"));
-    private static readonly ConcurrentDictionary<string, ScreenshotMetadata?> MetadataCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, ScreenshotInfo?> MetadataCache = new(StringComparer.Ordinal);
 
     internal enum ScreenshotSearchType
     {
@@ -20,7 +21,7 @@ internal static class ScreenshotHelper
         WorldID,
     }
 
-    public static bool TryGetCachedMetadata(string filePath, out ScreenshotMetadata? metadata)
+    public static bool TryGetCachedMetadata(string filePath, out ScreenshotInfo? metadata)
     {
         if (MetadataCache.TryGetValue(filePath, out metadata))
         {
@@ -34,22 +35,22 @@ internal static class ScreenshotHelper
         }
 
         string? metadataStr = CacheDatabase.GetMetadataById(id);
-        ScreenshotMetadata? metadataObj = metadataStr == null ? null : JsonConvert.DeserializeObject<ScreenshotMetadata>(metadataStr);
+        ScreenshotInfo? metadataObj = metadataStr == null ? null : JsonConvert.DeserializeObject<ScreenshotInfo>(metadataStr);
         MetadataCache.TryAdd(filePath, metadataObj);
 
         metadata = metadataObj;
         return true;
     }
 
-    public static List<ScreenshotMetadata> FindScreenshots(string query, string directory, ScreenshotSearchType searchType)
+    public static List<ScreenshotInfo> FindScreenshots(string query, string directory, ScreenshotSearchType searchType)
     {
-        var result = new List<ScreenshotMetadata>();
+        var result = new List<ScreenshotInfo>();
         string[] files = Directory.GetFiles(directory, "*.png", SearchOption.AllDirectories);
         var addToCache = new List<MetadataCache>();
         int amtFromCache = 0;
         foreach (string file in files)
         {
-            if (TryGetCachedMetadata(file, out ScreenshotMetadata? metadata))
+            if (TryGetCachedMetadata(file, out ScreenshotInfo? metadata))
             {
                 amtFromCache++;
             }
@@ -75,48 +76,9 @@ internal static class ScreenshotHelper
                 MetadataCache.TryAdd(file, metadata);
             }
 
-            if (metadata == null)
+            if (metadata != null && MatchesSearch(metadata, query, searchType))
             {
-                continue;
-            }
-
-            switch (searchType)
-            {
-                case ScreenshotSearchType.Username:
-                    if (metadata.ContainsPlayerName(query, partial: true, ignoreCase: true))
-                    {
-                        result.Add(metadata);
-                    }
-
-                    break;
-                case ScreenshotSearchType.UserID:
-                    if (metadata.ContainsPlayerID(query))
-                    {
-                        result.Add(metadata);
-                    }
-
-                    break;
-                case ScreenshotSearchType.WorldName:
-                    if (metadata.World.Name == null)
-                    {
-                        continue;
-                    }
-
-                    if (metadata.World.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    {
-                        result.Add(metadata);
-                    }
-
-                    break;
-                case ScreenshotSearchType.WorldID:
-                    if (string.Equals(metadata.World.Id, query, StringComparison.Ordinal))
-                    {
-                        result.Add(metadata);
-                    }
-
-                    break;
-                default:
-                    break;
+                result.Add(metadata);
             }
         }
 
@@ -130,84 +92,89 @@ internal static class ScreenshotHelper
         return result;
     }
 
-    public static ScreenshotMetadata? GetScreenshotMetadata(string path, bool includeJSON = false)
+    private static bool MatchesSearch(ScreenshotInfo metadata, string query, ScreenshotSearchType searchType) => searchType switch
     {
+        ScreenshotSearchType.Username => metadata.ContainsPlayerName(query, partial: true, ignoreCase: true),
+        ScreenshotSearchType.UserID => metadata.ContainsPlayerID(query),
+        ScreenshotSearchType.WorldName => metadata.World.Name != null && metadata.World.Name.Contains(query, StringComparison.OrdinalIgnoreCase),
+        ScreenshotSearchType.WorldID => string.Equals(metadata.World.Id, query, StringComparison.Ordinal),
+        _ => false,
+    };
 
+    public static ScreenshotInfo? GetScreenshotMetadata(string path, bool includeJSON = false)
+    {
         if (!File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal))
         {
             return null;
         }
 
         List<string> metadata = ReadTextMetadata(path);
-        var result = new ScreenshotMetadata();
+        var result = new ScreenshotInfo();
 
         for (int i = 0; i < metadata.Count; i++)
         {
-            bool gotVrchatMetadata = false;
             try
             {
-                string metadataString = metadata[i];
-
-                if (metadataString.StartsWith("<x:xmpmeta", StringComparison.Ordinal))
-                {
-                    result = ParseVRCImage(metadataString);
-                    result.SourceFile = path;
-
-                    gotVrchatMetadata = true;
-                }
-
-                if (metadataString.StartsWith('{') && metadataString.EndsWith('}'))
-                {
-                    ScreenshotMetadata? vrcxMetadataResult = JsonConvert.DeserializeObject<ScreenshotMetadata>(metadataString);
-                    if (vrcxMetadataResult != null)
-                    {
-                        vrcxMetadataResult.SourceFile = path;
-                        if (gotVrchatMetadata)
-                        {
-                            result.Players = vrcxMetadataResult.Players;
-                            result.World.InstanceId = vrcxMetadataResult.World.InstanceId;
-                        }
-                        else
-                        {
-                            result = vrcxMetadataResult;
-                        }
-
-                        if (includeJSON)
-                        {
-                            result.JSON = metadataString;
-                        }
-
-                    }
-                }
-
-                if (metadataString.StartsWith("lfs", StringComparison.Ordinal) || metadataString.StartsWith("screenshotmanager", StringComparison.Ordinal))
-                {
-                    result = ParseLfsPicture(metadataString);
-                    result.SourceFile = path;
-                }
+                result = ParseMetadataLine(metadata[i], path, result, includeJSON);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (IsParseFailure(ex))
             {
                 Logger.Error(ex, "Failed to parse metadata for file '{0}\n---'{1}\n---", path, string.Join("\n", metadata));
-                return ScreenshotMetadata.JustError(path, "Failed to parse metadata. Check log file for details.");
+                return ScreenshotInfo.JustError(path, "Failed to parse metadata. Check log file for details.");
             }
         }
 
         return result.Application == null || metadata.Count == 0
-            ? ScreenshotMetadata.JustError(path, "Image has no valid metadata.")
+            ? ScreenshotInfo.JustError(path, "Image has no valid metadata.")
             : result;
     }
 
+    private static bool IsParseFailure(Exception exception) =>
+        exception is JsonException or XmlException or FormatException or ArgumentException or IndexOutOfRangeException or InvalidOperationException or OverflowException;
 
+    private static ScreenshotInfo ParseMetadataLine(string metadataString, string path, ScreenshotInfo result, bool includeJSON)
+    {
+        bool gotVrchatMetadata = false;
 
+        if (metadataString.StartsWith("<x:xmpmeta", StringComparison.Ordinal))
+        {
+            result = ParseVRCImage(metadataString);
+            result.SourceFile = path;
 
+            gotVrchatMetadata = true;
+        }
 
+        if (metadataString.StartsWith('{') && metadataString.EndsWith('}'))
+        {
+            ScreenshotInfo? vrcxMetadataResult = JsonConvert.DeserializeObject<ScreenshotInfo>(metadataString);
+            if (vrcxMetadataResult != null)
+            {
+                vrcxMetadataResult.SourceFile = path;
+                if (gotVrchatMetadata)
+                {
+                    result.Players = vrcxMetadataResult.Players;
+                    result.World.InstanceId = vrcxMetadataResult.World.InstanceId;
+                }
+                else
+                {
+                    result = vrcxMetadataResult;
+                }
 
+                if (includeJSON)
+                {
+                    result.JSON = metadataString;
+                }
+            }
+        }
 
+        if (metadataString.StartsWith("lfs", StringComparison.Ordinal) || metadataString.StartsWith("screenshotmanager", StringComparison.Ordinal))
+        {
+            result = ParseLfsPicture(metadataString);
+            result.SourceFile = path;
+        }
 
-
-
-
+        return result;
+    }
 
     public static List<string> ReadTextMetadata(string path)
     {
@@ -225,8 +192,6 @@ internal static class ScreenshotHelper
         {
             result.Add(metadata);
         }
-
-
 
         if (result.Count == 0 && pngFile.GetChunk(PNGChunkTypeFilter.sRGB) != null)
         {
@@ -262,13 +227,13 @@ internal static class ScreenshotHelper
         return status;
     }
 
-    public static ScreenshotMetadata ParseVRCImage(string xmlString)
+    public static ScreenshotInfo ParseVRCImage(string xmlString)
     {
         int index = xmlString.IndexOf("<x:xmpmeta", StringComparison.Ordinal);
         xmlString = xmlString[index..];
         var doc = new XmlDocument();
         doc.LoadXml(xmlString);
-        XmlElement? root = doc.DocumentElement;
+        XmlElement root = doc.DocumentElement ?? throw new InvalidOperationException("XMP document has no root element");
         var nsManager = new XmlNamespaceManager(doc.NameTable);
         nsManager.AddNamespace("x", "adobe:ns:meta/");
         nsManager.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -291,40 +256,33 @@ internal static class ScreenshotHelper
 
         if (string.IsNullOrEmpty(authorId))
         {
-
             authorId = authorName;
             authorName = null;
         }
 
-        return new ScreenshotMetadata
+        return new ScreenshotInfo
         {
             Application = creatorTool,
             Version = 1,
-            Author = new ScreenshotMetadata.AuthorDetail
+            Author = new ScreenshotInfo.AuthorDetail
             {
                 Id = authorId,
                 DisplayName = authorName,
             },
-            World = new ScreenshotMetadata.WorldDetail
+            World = new ScreenshotInfo.WorldDetail
             {
                 Id = worldId,
                 InstanceId = worldId,
                 Name = worldDisplayName,
             },
-            Timestamp = DateTime.TryParse(dateTime, System.Globalization.CultureInfo.InvariantCulture, out DateTime dt) ? dt : null,
+            Timestamp = DateTime.TryParse(dateTime, CultureInfo.InvariantCulture, out DateTime dt) ? dt : null,
             Note = note,
         };
     }
 
-
-
-
-
-
     public static bool IsPNGFile(string path)
     {
         byte[] pngSignatureBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-
 
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         if (fs.Length < 33)
@@ -337,26 +295,9 @@ internal static class ScreenshotHelper
         return signature.SequenceEqual(pngSignatureBytes);
     }
 
-
-
-
-
-
-    public static ScreenshotMetadata ParseLfsPicture(string metadataString)
+    public static ScreenshotInfo ParseLfsPicture(string metadataString)
     {
-        var metadata = new ScreenshotMetadata();
-
-
-
-
-
-
-
-
-
-
-
-
+        var metadata = new ScreenshotInfo();
 
         string[] lfsParts = metadataString.Split('|');
         if (string.Equals(lfsParts[1], "cvr", StringComparison.Ordinal))
@@ -364,7 +305,7 @@ internal static class ScreenshotHelper
             lfsParts = [.. lfsParts.Skip(1)];
         }
 
-        int version = int.Parse(lfsParts[1], System.Globalization.CultureInfo.InvariantCulture);
+        int version = int.Parse(lfsParts[1], CultureInfo.InvariantCulture);
         string application = lfsParts[0];
         metadata.Application = application;
         metadata.Version = version;
@@ -373,18 +314,7 @@ internal static class ScreenshotHelper
 
         if (string.Equals(application, "screenshotmanager", StringComparison.Ordinal))
         {
-
-
-            string[] author = lfsParts[2].Split(',');
-
-            metadata.Author.Id = author[0];
-            metadata.Author.DisplayName = author[1];
-
-            string[] world = lfsParts[3].Split(',');
-
-            metadata.World.Id = world[0];
-            metadata.World.Name = world[2];
-            metadata.World.InstanceId = string.Join(":", world[0], world[1]);
+            ParseScreenshotManagerFields(metadata, lfsParts);
             return metadata;
         }
 
@@ -399,61 +329,80 @@ internal static class ScreenshotHelper
                 continue;
             }
 
-            string[] parts = value.Split(',');
-            switch (key)
-            {
-                case "author":
-                    metadata.Author.Id = isCVR ? string.Empty : parts[0];
-                    metadata.Author.DisplayName = isCVR ? $"{parts[1]} ({parts[0]})" : parts[1];
-                    break;
-
-                case "world":
-                    metadata.World.Id = isCVR || version == 1 ? string.Empty : parts[0];
-                    metadata.World.InstanceId = isCVR || version == 1 ? string.Empty : string.Join(":", parts[0], parts[1]);
-                    metadata.World.Name = isCVR ? $"{parts[2]} ({parts[0]})" : (version == 1 ? value : parts[2]);
-                    break;
-
-                case "pos":
-                    float.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, out float x);
-                    float.TryParse(parts[1], System.Globalization.CultureInfo.InvariantCulture, out float y);
-                    float.TryParse(parts[2], System.Globalization.CultureInfo.InvariantCulture, out float z);
-
-                    metadata.Pos = new Vector3(x, y, z);
-                    break;
-
-
-
-
-
-
-
-                case "players":
-                    List<ScreenshotMetadata.PlayerDetail> playersArray = metadata.Players;
-                    string[] players = value.Split(';');
-
-                    foreach (string player in players)
-                    {
-                        string[] playerParts = player.Split(',');
-
-                        float.TryParse(playerParts[1], System.Globalization.CultureInfo.InvariantCulture, out float x2);
-                        float.TryParse(playerParts[2], System.Globalization.CultureInfo.InvariantCulture, out float y2);
-                        float.TryParse(playerParts[3], System.Globalization.CultureInfo.InvariantCulture, out float z2);
-
-                        var playerDetail = new ScreenshotMetadata.PlayerDetail
-                        {
-                            Id = isCVR ? string.Empty : playerParts[0],
-                            DisplayName = isCVR ? $"{playerParts[4]} ({playerParts[0]})" : playerParts[4],
-                            Pos = new Vector3(x2, y2, z2),
-                        };
-
-                        playersArray.Add(playerDetail);
-                    }
-                    break;
-                default:
-                    break;
-            }
+            ParseLfsField(metadata, key, value, isCVR, version);
         }
 
         return metadata;
+    }
+
+    private static void ParseScreenshotManagerFields(ScreenshotInfo metadata, string[] lfsParts)
+    {
+        string[] author = lfsParts[2].Split(',');
+
+        metadata.Author.Id = author[0];
+        metadata.Author.DisplayName = author[1];
+
+        string[] world = lfsParts[3].Split(',');
+
+        metadata.World.Id = world[0];
+        metadata.World.Name = world[2];
+        metadata.World.InstanceId = string.Join(":", world[0], world[1]);
+    }
+
+    private static void ParseLfsField(ScreenshotInfo metadata, string key, string value, bool isCVR, int version)
+    {
+        string[] parts = value.Split(',');
+        switch (key)
+        {
+            case "author":
+                metadata.Author.Id = isCVR ? string.Empty : parts[0];
+                metadata.Author.DisplayName = isCVR ? $"{parts[1]} ({parts[0]})" : parts[1];
+                break;
+
+            case "world":
+                metadata.World.Id = isCVR || version == 1 ? string.Empty : parts[0];
+                metadata.World.InstanceId = isCVR || version == 1 ? string.Empty : string.Join(":", parts[0], parts[1]);
+                metadata.World.Name = isCVR ? $"{parts[2]} ({parts[0]})" : (version == 1 ? value : parts[2]);
+                break;
+
+            case "pos":
+                metadata.Pos = ParseVector(parts[0], parts[1], parts[2]);
+                break;
+
+            case "players":
+                AddPlayers(metadata, value, isCVR);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private static void AddPlayers(ScreenshotInfo metadata, string value, bool isCVR)
+    {
+        string[] players = value.Split(';');
+
+        foreach (string player in players)
+        {
+            string[] playerParts = player.Split(',');
+
+            var playerDetail = new ScreenshotInfo.PlayerDetail
+            {
+                Id = isCVR ? string.Empty : playerParts[0],
+                DisplayName = isCVR ? $"{playerParts[4]} ({playerParts[0]})" : playerParts[4],
+                Pos = ParseVector(playerParts[1], playerParts[2], playerParts[3]),
+            };
+
+            metadata.Players.Add(playerDetail);
+        }
+    }
+
+    private static Vector3 ParseVector(string x, string y, string z)
+    {
+        _ = float.TryParse(x, CultureInfo.InvariantCulture, out float parsedX);
+        _ = float.TryParse(y, CultureInfo.InvariantCulture, out float parsedY);
+        _ = float.TryParse(z, CultureInfo.InvariantCulture, out float parsedZ);
+
+        return new Vector3(parsedX, parsedY, parsedZ);
     }
 }

@@ -1,3 +1,5 @@
+using VRCX.ScreenshotMetadata;
+
 namespace VRCX;
 
 public partial class AppApiElectron
@@ -7,13 +9,12 @@ public partial class AppApiElectron
         if (path.Length >= 3 && path[1] == ':' &&
             (path[2] == '\\' || path[2] == '/'))
         {
-            string driveLetter = path[0].ToString().ToLowerInvariant();
-            string winePrefix = Path.Join(_vrcPrefixPath, $"dosdevices/{driveLetter}:");
+            string winePrefix = Path.Join(VrcPrefixPath, $"dosdevices/{char.ToLowerInvariant(path[0])}:");
             string winePath = path[3..];
             path = Path.Join(winePrefix, winePath);
         }
 
-        path = path.Replace("\\", "/");
+        path = path.Replace('\\', '/');
 
         string fileName = Path.GetFileNameWithoutExtension(path);
         if (!File.Exists(path) || !path.EndsWith(".png", StringComparison.Ordinal) || !fileName.StartsWith("VRChat_", StringComparison.Ordinal))

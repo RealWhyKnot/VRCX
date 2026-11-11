@@ -5,46 +5,41 @@ using System.Text;
 using System.Text.Json;
 using CefSharp;
 using NLog;
+using VRCX.Cef;
 
-namespace VRCX;
+namespace VRCX.OverlayWebSocket;
 
-internal sealed class OverlayServer
+internal static class OverlayServer
 {
-    public static OverlayServer Instance { get; private set; }
-
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     private static readonly Lock SendLock = new();
     private static readonly ConcurrentDictionary<WebSocket, byte> ConnectedWebSockets = new();
-    private static CancellationTokenSource _cancellationToken;
+    private static CancellationTokenSource? ServerCancellationSource;
 
-    private static OverlayVars _overlayVars;
+    private static OverlayVars? LatestOverlayVars;
 
-    static OverlayServer()
+    public static async Task InitAsync(CancellationToken cancellationToken)
     {
-        Instance = new OverlayServer();
-    }
-
-    public async Task InitAsync()
-    {
-        if (_cancellationToken != null && _cancellationToken.IsCancellationRequested)
+        if (ServerCancellationSource != null && ServerCancellationSource.IsCancellationRequested)
         {
             return;
         }
 
-        _cancellationToken = new CancellationTokenSource();
+        var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        ServerCancellationSource = cancellationSource;
         try
         {
-            var listener = new HttpListener();
+            using var listener = new HttpListener();
             listener.Prefixes.Add("http://127.0.0.1:34582/");
             listener.Start();
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Overlay IPC server started");
-            while (_cancellationToken != null && !_cancellationToken.IsCancellationRequested)
+            while (!cancellationSource.IsCancellationRequested)
             {
                 HttpListenerContext listenerContext = await listener.GetContextAsync();
                 if (listenerContext.Request.IsWebSocketRequest)
                 {
-                    ProcessRequestAsync(listenerContext);
+                    _ = ProcessRequestAsync(listenerContext, CancellationToken.None);
                 }
                 else
                 {
@@ -53,15 +48,15 @@ internal sealed class OverlayServer
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is HttpListenerException or ObjectDisposedException or InvalidOperationException or ArgumentException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
         }
     }
 
-    public async Task ExitAsync()
+    public static async Task ExitAsync(CancellationToken cancellationToken)
     {
-        if (_cancellationToken == null || _cancellationToken.IsCancellationRequested)
+        if (ServerCancellationSource == null || ServerCancellationSource.IsCancellationRequested)
         {
             return;
         }
@@ -75,26 +70,26 @@ internal sealed class OverlayServer
 
             try
             {
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server shutting down", CancellationToken.None);
+                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server shutting down", cancellationToken);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is WebSocketException or ObjectDisposedException or InvalidOperationException)
             {
                 Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
             }
         }
-        await _cancellationToken.CancelAsync();
+        await ServerCancellationSource.CancelAsync();
         ConnectedWebSockets.Clear();
-        _cancellationToken = null;
+        ServerCancellationSource = null;
     }
 
-    private async Task ProcessRequestAsync(HttpListenerContext listenerContext)
+    private static async Task ProcessRequestAsync(HttpListenerContext listenerContext, CancellationToken cancellationToken)
     {
         WebSocketContext webSocketContext;
         try
         {
             webSocketContext = await listenerContext.AcceptWebSocketAsync(subProtocol: null);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is WebSocketException or HttpListenerException or ObjectDisposedException or InvalidOperationException or ArgumentException)
         {
             listenerContext.Response.StatusCode = 500;
             listenerContext.Response.Close();
@@ -110,13 +105,13 @@ internal sealed class OverlayServer
             byte[] receiveBuffer = new byte[1024 * 5];
             while (webSocket.State == WebSocketState.Open)
             {
-                WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(receiveBuffer), CancellationToken.None);
+                WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(receiveBuffer), cancellationToken);
                 switch (receiveResult.MessageType)
                 {
                     case WebSocketMessageType.Text:
                         string text = Encoding.UTF8.GetString(receiveBuffer, 0, receiveResult.Count);
-                        OverlayMessage? message = JsonSerializer.Deserialize<OverlayMessage>(text);
-                        HandleMessageAsync(message);
+                        OverlayMessage message = JsonSerializer.Deserialize<OverlayMessage>(text) ?? throw new InvalidOperationException("Overlay message is empty");
+                        HandleMessage(message);
                         continue;
 
                     case WebSocketMessageType.Close:
@@ -130,7 +125,7 @@ internal sealed class OverlayServer
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is WebSocketException or ObjectDisposedException or InvalidOperationException or JsonException or ArgumentException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
         }
@@ -142,7 +137,7 @@ internal sealed class OverlayServer
         }
     }
 
-    private Task HandleMessageAsync(OverlayMessage message)
+    private static void HandleMessage(OverlayMessage message)
     {
         Logger.Trace(System.Globalization.CultureInfo.InvariantCulture, $"Overlay IPC message received: {message.Type}");
         switch (message.Type)
@@ -151,7 +146,7 @@ internal sealed class OverlayServer
                 var helloMessage = new OverlayMessage
                 {
                     Type = OverlayMessageType.UpdateVars,
-                    OverlayVars = _overlayVars,
+                    OverlayVars = LatestOverlayVars,
                 };
                 SendMessage(helloMessage);
                 if (MainForm.Instance?.Browser != null && !MainForm.Instance.Browser.IsLoading &&
@@ -174,13 +169,11 @@ internal sealed class OverlayServer
             case OverlayMessageType.JsFunctionCall:
             case OverlayMessageType.UpdateVars:
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(nameof(message), message.Type, "Unsupported overlay message type");
         }
-
-        return Task.CompletedTask;
     }
 
-    public void SendMessage(OverlayMessage message)
+    public static void SendMessage(OverlayMessage message)
     {
         lock (SendLock)
         {
@@ -194,14 +187,14 @@ internal sealed class OverlayServer
                     continue;
                 }
 
-                webSocket.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
+                _ = webSocket.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
             }
         }
     }
 
-    public void UpdateVars(OverlayVars overlayVars)
+    public static void UpdateVars(OverlayVars overlayVars)
     {
-        _overlayVars = overlayVars;
+        LatestOverlayVars = overlayVars;
         if (!IsConnected() && (overlayVars.Active || Program.LaunchDebug))
         {
             OverlayManager.StartOverlay();

@@ -1,27 +1,22 @@
+using System.Globalization;
 using NLog;
 
-namespace VRCX;
+namespace VRCX.Overlay.Electron;
 
-public sealed class SystemMonitorElectron
+internal sealed class SystemMonitorElectron
 {
-    public static readonly SystemMonitorElectron Instance;
-    public float CpuUsage;
-    public double UpTime;
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+    public static readonly SystemMonitorElectron Instance = new();
     private bool _enabled;
     private long _lastTotalTime;
     private long _lastIdleTime;
     private bool _firstReading = true;
     private Thread? _thread;
-    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    static SystemMonitorElectron()
-    {
-        Instance = new SystemMonitorElectron();
-    }
+    public float CpuUsage { get; private set; }
 
-    public void Init()
-    {
-    }
+    public double UpTime { get; private set; }
 
     public void Start(bool enabled)
     {
@@ -57,6 +52,7 @@ public sealed class SystemMonitorElectron
         }
         catch (ThreadInterruptedException)
         {
+            Logger.Debug(CultureInfo.InvariantCulture, "SystemMonitor thread interrupted during exit");
         }
     }
 
@@ -68,9 +64,9 @@ public sealed class SystemMonitorElectron
         {
             ReadCpuInfo();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Failed to initialize CPU monitoring: {ex}");
+            Logger.Error(CultureInfo.InvariantCulture, $"Failed to initialize CPU monitoring: {ex}");
             return;
         }
 
@@ -91,13 +87,16 @@ public sealed class SystemMonitorElectron
                 Thread.Sleep(1000);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"SystemMonitor thread exception: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"SystemMonitor thread exception: {ex}");
         }
 
         Exit();
     }
+
+    private static bool IsReadFailure(Exception exception) =>
+        exception is IOException or UnauthorizedAccessException or NotSupportedException or FormatException or OverflowException or InvalidOperationException or ArgumentException;
 
     private void UpdateMetrics()
     {
@@ -106,9 +105,9 @@ public sealed class SystemMonitorElectron
             CpuUsage = GetCpuUsage();
             UpTime = GetUptime();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error updating metrics: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"Error updating metrics: {ex}");
         }
     }
 
@@ -124,7 +123,6 @@ public sealed class SystemMonitorElectron
 
             long totalTime = cpuInfo.Value.TotalTime;
             long idleTime = cpuInfo.Value.IdleTime;
-
 
             if (_firstReading)
             {
@@ -143,38 +141,38 @@ public sealed class SystemMonitorElectron
                 _lastTotalTime = totalTime;
                 _lastIdleTime = idleTime;
 
-
                 return Math.Max(0, Math.Min(100, cpuUsage));
             }
 
             return 0;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading CPU usage: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"Error reading CPU usage: {ex}");
             return 0;
         }
     }
 
-    private double GetUptime()
+    private static double GetUptime()
     {
         try
         {
             string uptimeContent = File.ReadAllText("/proc/uptime");
             string[] parts = uptimeContent.Split(' ');
-            if (parts.Length > 0 && double.TryParse(parts[0], System.Globalization.CultureInfo.InvariantCulture, out double uptimeSeconds))
+            if (parts.Length > 0 && double.TryParse(parts[0], CultureInfo.InvariantCulture, out double uptimeSeconds))
             {
                 return TimeSpan.FromSeconds(uptimeSeconds).TotalMilliseconds;
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading uptime: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"Error reading uptime: {ex}");
         }
+
         return 0;
     }
 
-    private (long TotalTime, long IdleTime)? ReadCpuInfo()
+    private static (long TotalTime, long IdleTime)? ReadCpuInfo()
     {
         try
         {
@@ -188,15 +186,14 @@ public sealed class SystemMonitorElectron
                     string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length >= 5)
                     {
-
-                        long user = long.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
-                        long nice = long.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
-                        long system = long.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-                        long idle = long.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
-                        long iowait = parts.Length > 5 ? long.Parse(parts[5], System.Globalization.CultureInfo.InvariantCulture) : 0;
-                        long irq = parts.Length > 6 ? long.Parse(parts[6], System.Globalization.CultureInfo.InvariantCulture) : 0;
-                        long softirq = parts.Length > 7 ? long.Parse(parts[7], System.Globalization.CultureInfo.InvariantCulture) : 0;
-                        long steal = parts.Length > 8 ? long.Parse(parts[8], System.Globalization.CultureInfo.InvariantCulture) : 0;
+                        long user = long.Parse(parts[1], CultureInfo.InvariantCulture);
+                        long nice = long.Parse(parts[2], CultureInfo.InvariantCulture);
+                        long system = long.Parse(parts[3], CultureInfo.InvariantCulture);
+                        long idle = long.Parse(parts[4], CultureInfo.InvariantCulture);
+                        long iowait = parts.Length > 5 ? long.Parse(parts[5], CultureInfo.InvariantCulture) : 0;
+                        long irq = parts.Length > 6 ? long.Parse(parts[6], CultureInfo.InvariantCulture) : 0;
+                        long softirq = parts.Length > 7 ? long.Parse(parts[7], CultureInfo.InvariantCulture) : 0;
+                        long steal = parts.Length > 8 ? long.Parse(parts[8], CultureInfo.InvariantCulture) : 0;
 
                         long totalTime = user + nice + system + idle + iowait + irq + softirq + steal;
                         return (totalTime, idle);
@@ -204,10 +201,11 @@ public sealed class SystemMonitorElectron
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsReadFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Error reading /proc/stat: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"Error reading /proc/stat: {ex}");
         }
+
         return null;
     }
 }

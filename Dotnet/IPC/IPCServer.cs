@@ -1,19 +1,13 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 
-namespace VRCX;
+namespace VRCX.IPC;
 
 internal sealed class IPCServer
 {
-    public static readonly IPCServer Instance;
     public static readonly ConcurrentDictionary<IPCClient, byte> Clients = new();
 
-    static IPCServer()
-    {
-        Instance = new IPCServer();
-    }
-
-    public void Init() => new IPCServer().CreateIPCServer();
+    public static void Init() => new IPCServer().CreateIPCServer();
 
     public static void Send(IPCPacket ipcPacket)
     {
@@ -35,24 +29,26 @@ internal sealed class IPCServer
 
     public void CreateIPCServer()
     {
-        var ipcServer = new NamedPipeServerStream(GetIpcName(), PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        ipcServer.BeginWaitForConnection(DoAccept, ipcServer);
+        var ipcClient = new IPCClient(new(GetIpcName(), PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte, PipeOptions.Asynchronous));
+        ipcClient.BeginAccept(DoAccept);
     }
 
     private void DoAccept(IAsyncResult asyncResult)
     {
-        var ipcServer = (NamedPipeServerStream)asyncResult.AsyncState;
+        if (asyncResult.AsyncState is not IPCClient ipcClient)
+        {
+            return;
+        }
 
         try
         {
-            ipcServer.EndWaitForConnection(asyncResult);
+            ipcClient.EndAccept(asyncResult);
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException or ArgumentException)
         {
             Console.WriteLine(e);
         }
 
-        var ipcClient = new IPCClient(ipcServer);
         Clients.TryAdd(ipcClient, 0);
         ipcClient.BeginRead();
         CreateIPCServer();

@@ -1,20 +1,18 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace VRCX;
 
-public partial class AppApi
+#if LINUX
+public
+#else
+internal
+#endif
+partial class AppApi
 {
-
-
-
-
-
-
-
-
-    public void XSNotification(string title, string content, int timeout, double opacity, string image = "")
+    public virtual void XSNotification(string title, string content, int timeout, double opacity, string image = "")
     {
         var broadcastSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         var endPoint = new IPEndPoint(IPAddress.Loopback, 42069);
@@ -42,16 +40,16 @@ public partial class AppApi
 
         var msg = new XSOMessage
         {
-            messageType = 1,
-            title = title,
-            content = content,
-            height = height,
-            sourceApp = "VRCX",
-            timeout = timeout,
-            audioPath = string.Empty,
-            useBase64Icon = useBase64Icon,
-            icon = icon,
-            opacity = (float)opacity,
+            MessageType = 1,
+            Title = title,
+            Content = content,
+            Height = height,
+            SourceApp = "VRCX",
+            Timeout = timeout,
+            AudioPath = string.Empty,
+            UseBase64Icon = useBase64Icon,
+            Icon = icon,
+            Opacity = (float)opacity,
         };
 
         byte[] byteBuffer = JsonSerializer.SerializeToUtf8Bytes(msg);
@@ -61,17 +59,29 @@ public partial class AppApi
 
     private struct XSOMessage
     {
-        public int messageType { get; set; }
-        public int index { get; set; }
-        public float volume { get; set; }
-        public string audioPath { get; set; }
-        public float timeout { get; set; }
-        public string title { get; set; }
-        public string content { get; set; }
-        public string icon { get; set; }
-        public float height { get; set; }
-        public float opacity { get; set; }
-        public bool useBase64Icon { get; set; }
-        public string sourceApp { get; set; }
+        [JsonPropertyName("messageType")]
+        public int MessageType { get; set; }
+        [JsonPropertyName("index")]
+        public int Index { get; set; }
+        [JsonPropertyName("volume")]
+        public float Volume { get; set; }
+        [JsonPropertyName("audioPath")]
+        public string AudioPath { get; set; }
+        [JsonPropertyName("timeout")]
+        public float Timeout { get; set; }
+        [JsonPropertyName("title")]
+        public string Title { get; set; }
+        [JsonPropertyName("content")]
+        public string Content { get; set; }
+        [JsonPropertyName("icon")]
+        public string Icon { get; set; }
+        [JsonPropertyName("height")]
+        public float Height { get; set; }
+        [JsonPropertyName("opacity")]
+        public float Opacity { get; set; }
+        [JsonPropertyName("useBase64Icon")]
+        public bool UseBase64Icon { get; set; }
+        [JsonPropertyName("sourceApp")]
+        public string SourceApp { get; set; }
     }
 }

@@ -2,12 +2,13 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using CefSharp;
 using Microsoft.Win32;
+using VRCX.Cef;
 
 namespace VRCX;
 
-public partial class AppApiCef
+internal partial class AppApiCef
 {
-    public override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
+    internal override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
     {
         if (!monitoredProcess.HasName("VRChat") && !monitoredProcess.HasName("vrserver"))
         {
@@ -32,20 +33,15 @@ public partial class AppApiCef
             isSteamVRRunning = true;
         }
 
-
         if (MainForm.Instance?.Browser != null && !MainForm.Instance.Browser.IsLoading && MainForm.Instance.Browser.CanExecuteJavascriptInMainFrame)
         {
             MainForm.Instance.Browser.ExecuteScriptAsync("window?.$bridge?.updateIsGameRunning", isGameRunning, isSteamVRRunning);
         }
     }
 
-    public override bool IsGameRunning() =>
+    public override bool IsGameRunning() => ProcessMonitor.Instance.IsProcessRunning("VRChat");
 
-        ProcessMonitor.Instance.IsProcessRunning("VRChat");
-
-    public override bool IsSteamVRRunning() =>
-
-        ProcessMonitor.Instance.IsProcessRunning("vrserver");
+    public override bool IsSteamVRRunning() => ProcessMonitor.Instance.IsProcessRunning("vrserver");
 
     public override int QuitGame()
     {
@@ -65,15 +61,14 @@ public partial class AppApiCef
 
     public override bool StartGame(string arguments)
     {
-
         try
         {
             using RegistryKey? key = Registry.ClassesRoot.OpenSubKey(@"steam\shell\open\command");
 
-            Match match = MyRegex().Match(key.GetValue(string.Empty) as string);
+            Match match = MyRegex().Match(key?.GetValue(string.Empty) as string ?? string.Empty);
             if (match.Success)
             {
-                string path = match.Groups[1].Value;
+                string path = match.Groups["path"].Value;
 
                 Process.Start(new ProcessStartInfo
                 {
@@ -85,26 +80,25 @@ public partial class AppApiCef
                 return true;
             }
         }
-        catch
+        catch (Exception ex) when (ex is System.Security.SecurityException or ArgumentException or IOException or UnauthorizedAccessException or ObjectDisposedException or RegexMatchTimeoutException)
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Failed to start VRChat from Steam");
+            Logger.Warn(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to start VRChat from Steam");
         }
-
 
         try
         {
             using RegistryKey? key = Registry.ClassesRoot.OpenSubKey(@"VRChat\shell\open\command");
 
-            Match match = MyRegex1().Match(key.GetValue(string.Empty) as string);
+            Match match = MyRegex1().Match(key?.GetValue(string.Empty) as string ?? string.Empty);
             if (match.Success)
             {
-                string path = match.Groups[1].Value;
+                string path = match.Groups["path"].Value;
                 return StartGameFromPath(path, arguments);
             }
         }
-        catch
+        catch (Exception ex) when (ex is System.Security.SecurityException or ArgumentException or IOException or UnauthorizedAccessException or ObjectDisposedException or RegexMatchTimeoutException)
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Failed to start VRChat from registry");
+            Logger.Warn(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to start VRChat from registry");
         }
 
         return false;
@@ -132,8 +126,9 @@ public partial class AppApiCef
         return true;
     }
 
-    [GeneratedRegex("^\"(.+?)\\\\steam.exe\"")]
+    [GeneratedRegex("^\"(?<path>.+?)\\\\steam.exe\"", RegexOptions.ExplicitCapture, 2000)]
     private static partial Regex MyRegex();
-    [GeneratedRegex("(?!\")(.+?\\\\VRChat.*)(!?\\\\launch.exe\")")]
+
+    [GeneratedRegex("(?!\")(?<path>.+?\\\\VRChat.*)(?:!?\\\\launch.exe\")", RegexOptions.ExplicitCapture, 2000)]
     private static partial Regex MyRegex1();
 }

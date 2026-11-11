@@ -1,31 +1,31 @@
+using System.Globalization;
 using CefSharp;
 using CefSharp.WinForms;
 using NLog;
 using Timer = System.Windows.Forms.Timer;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
 internal sealed partial class MainForm : WinformBase
 {
     public static MainForm? Instance;
-    public static NativeWindow? nativeWindow;
+    public static NativeWindow? MainNativeWindow;
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-    public ChromiumWebBrowser Browser;
-    private readonly Icon _appIcon;
-    private readonly Icon _appIconNoty;
+    public readonly ChromiumWebBrowser Browser;
+    private readonly Icon? _appIcon;
+    private readonly Icon? _appIconNoty;
     private readonly Timer _saveTimer;
-    private int LastLocationX;
-    private int LastLocationY;
-    private int LastSizeWidth;
-    private int LastSizeHeight;
-    private FormWindowState LastWindowStateToRestore = FormWindowState.Normal;
+    private int _lastLocationX;
+    private int _lastLocationY;
+    private int _lastSizeWidth;
+    private int _lastSizeHeight;
+    private FormWindowState _lastWindowStateToRestore = FormWindowState.Normal;
 
     public MainForm()
     {
         Instance = this;
         InitializeComponent();
-        nativeWindow = NativeWindow.FromHandle(Handle);
-
+        MainNativeWindow = NativeWindow.FromHandle(Handle);
 
         _saveTimer = new Timer
         {
@@ -40,17 +40,26 @@ internal sealed partial class MainForm : WinformBase
             Icon = _appIcon;
             TrayIcon.Icon = _appIcon;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or IOException)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, ex);
+            Logger.Error(CultureInfo.InvariantCulture, ex);
         }
 
-        Browser = new ChromiumWebBrowser(Program.LaunchDebug ? "http://localhost:9000/index.html" : "file://vrcx/index.html")
+        Browser = CreateBrowser();
+        SubscribeBrowserEvents();
+
+        JavascriptBindings.ApplyAppJavascriptBindings(Browser.JavascriptObjectRepository);
+        Controls.Add(Browser);
+    }
+
+    private static ChromiumWebBrowser CreateBrowser()
+    {
+        return new ChromiumWebBrowser(Program.LaunchDebug ? "http://localhost:9000/index.html" : "file://vrcx/index.html")
         {
-            DragHandler = new CustomDragHandler(),
-            MenuHandler = new CustomMenuHandler(),
-            DownloadHandler = new CustomDownloadHandler(),
-            RequestHandler = new CustomRequestHandler(),
+            DragHandler = new CefCustomDragHandler(),
+            MenuHandler = new CefCustomMenuHandler(),
+            DownloadHandler = new CefCustomDownloadHandler(),
+            RequestHandler = new CefCustomRequestHandler(),
             BrowserSettings =
             {
                 DefaultEncoding = "UTF-8",
@@ -58,6 +67,10 @@ internal sealed partial class MainForm : WinformBase
             RenderProcessMessageHandler = PlatformRenderProcessMessageHandler.Instance,
             Dock = DockStyle.Fill,
         };
+    }
+
+    private void SubscribeBrowserEvents()
+    {
         Browser.IsBrowserInitializedChanged += (_, _) =>
         {
             if (Program.LaunchDebug)
@@ -67,22 +80,22 @@ internal sealed partial class MainForm : WinformBase
         };
         Browser.AddressChanged += (_, addressChangedEventArgs) =>
         {
-            Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Address changed: " + addressChangedEventArgs.Address);
+            Logger.Debug(CultureInfo.InvariantCulture, "Address changed: " + addressChangedEventArgs.Address);
         };
         Browser.LoadingStateChanged += (_, loadingFailedEventArgs) =>
         {
             if (loadingFailedEventArgs.IsLoading)
             {
-                Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Loading page");
+                Logger.Debug(CultureInfo.InvariantCulture, "Loading page");
             }
             else
             {
-                Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Loaded page: " + loadingFailedEventArgs.Browser.MainFrame.Url);
+                Logger.Debug(CultureInfo.InvariantCulture, "Loaded page: " + loadingFailedEventArgs.Browser.MainFrame.Url);
             }
         };
         Browser.ConsoleMessage += (_, consoleMessageEventArgs) =>
         {
-            Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, consoleMessageEventArgs.Message + " (" + consoleMessageEventArgs.Source + ":" + consoleMessageEventArgs.Line + ")");
+            Logger.Debug(CultureInfo.InvariantCulture, consoleMessageEventArgs.Message + " (" + consoleMessageEventArgs.Source + ":" + consoleMessageEventArgs.Line + ")");
         };
         Browser.GotFocus += (_, _) =>
         {
@@ -98,35 +111,25 @@ internal sealed partial class MainForm : WinformBase
                 Browser.ExecuteScriptAsync("window?.$pinia?.vrcx?.onBrowserBlur();");
             }
         };
-
-        JavascriptBindings.ApplyAppJavascriptBindings(Browser.JavascriptObjectRepository);
-        Controls.Add(Browser);
     }
 
     private void MainForm_Load(object sender, EventArgs e)
     {
-        try
+        _lastLocationX = ReadStoredInt("VRCX_LocationX");
+        _lastLocationY = ReadStoredInt("VRCX_LocationY");
+        _lastSizeWidth = ReadStoredInt("VRCX_SizeWidth");
+        _lastSizeHeight = ReadStoredInt("VRCX_SizeHeight");
+        var location = new Point(_lastLocationX, _lastLocationY);
+        var size = new Size(_lastSizeWidth, _lastSizeHeight);
+        var screen = Screen.FromPoint(location);
+        if (screen.Bounds.Contains(location.X, location.Y))
         {
-            int.TryParse(VRCXStorage.Instance.Get("VRCX_LocationX"), System.Globalization.CultureInfo.InvariantCulture, out LastLocationX);
-            int.TryParse(VRCXStorage.Instance.Get("VRCX_LocationY"), System.Globalization.CultureInfo.InvariantCulture, out LastLocationY);
-            int.TryParse(VRCXStorage.Instance.Get("VRCX_SizeWidth"), System.Globalization.CultureInfo.InvariantCulture, out LastSizeWidth);
-            int.TryParse(VRCXStorage.Instance.Get("VRCX_SizeHeight"), System.Globalization.CultureInfo.InvariantCulture, out LastSizeHeight);
-            var location = new Point(LastLocationX, LastLocationY);
-            var size = new Size(LastSizeWidth, LastSizeHeight);
-            var screen = Screen.FromPoint(location);
-            if (screen.Bounds.Contains(location.X, location.Y))
-            {
-                Location = location;
-            }
-            Size = new Size(1920, 1080);
-            if (size.Width > 0 && size.Height > 0)
-            {
-                Size = size;
-            }
+            Location = location;
         }
-        catch (Exception ex)
+        Size = new Size(1920, 1080);
+        if (size.Width > 0 && size.Height > 0)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, ex);
+            Size = size;
         }
 
         try
@@ -134,7 +137,7 @@ internal sealed partial class MainForm : WinformBase
             FormWindowState state = WindowState;
             bool startAsMinimized = string.Equals(VRCXStorage.Instance.Get("VRCX_StartAsMinimizedState"), "true", StringComparison.Ordinal);
             bool closeToTray = string.Equals(VRCXStorage.Instance.Get("VRCX_CloseToTray"), "true", StringComparison.Ordinal);
-            if (int.TryParse(VRCXStorage.Instance.Get("VRCX_WindowState"), System.Globalization.CultureInfo.InvariantCulture, out int value))
+            if (int.TryParse(VRCXStorage.Instance.Get("VRCX_WindowState"), CultureInfo.InvariantCulture, out int value))
             {
                 state = (FormWindowState)value;
             }
@@ -144,7 +147,7 @@ internal sealed partial class MainForm : WinformBase
             }
 
             WindowState = state;
-            LastWindowStateToRestore = state;
+            _lastWindowStateToRestore = state;
 
             if (StartupArgs.LaunchArguments.IsStartup && startAsMinimized)
             {
@@ -157,19 +160,22 @@ internal sealed partial class MainForm : WinformBase
                 WindowState = state;
             }
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, ex);
+            Logger.Error(CultureInfo.InvariantCulture, ex);
         }
 
         Browser.Invalidate();
     }
 
+    private static int ReadStoredInt(string key) =>
+        int.TryParse(VRCXStorage.Instance.Get(key), CultureInfo.InvariantCulture, out int value) ? value : 0;
+
     private void MainForm_Resize(object sender, EventArgs e)
     {
         if (WindowState != FormWindowState.Minimized)
         {
-            LastWindowStateToRestore = WindowState;
+            _lastWindowStateToRestore = WindowState;
         }
 
         if (WindowState != FormWindowState.Normal)
@@ -177,13 +183,13 @@ internal sealed partial class MainForm : WinformBase
             return;
         }
 
-        LastSizeWidth = Size.Width;
-        LastSizeHeight = Size.Height;
+        _lastSizeWidth = Size.Width;
+        _lastSizeHeight = Size.Height;
 
         _saveTimer?.Start();
     }
 
-    private void SaveTimer_Tick(object sender, EventArgs e)
+    private void SaveTimer_Tick(object? sender, EventArgs e)
     {
         SaveWindowState();
         _saveTimer?.Stop();
@@ -195,8 +201,8 @@ internal sealed partial class MainForm : WinformBase
         {
             return;
         }
-        LastLocationX = Location.X;
-        LastLocationY = Location.Y;
+        _lastLocationX = Location.X;
+        _lastLocationY = Location.Y;
 
         _saveTimer?.Start();
     }
@@ -204,7 +210,7 @@ internal sealed partial class MainForm : WinformBase
     private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
     {
         if (e.CloseReason == CloseReason.UserClosing &&
-            "true".Equals(VRCXStorage.Instance.Get("VRCX_CloseToTray")))
+            string.Equals("true", VRCXStorage.Instance.Get("VRCX_CloseToTray"), StringComparison.Ordinal))
         {
             e.Cancel = true;
             Hide();
@@ -213,11 +219,11 @@ internal sealed partial class MainForm : WinformBase
 
     private void SaveWindowState()
     {
-        VRCXStorage.Instance.Set("VRCX_LocationX", LastLocationX.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        VRCXStorage.Instance.Set("VRCX_LocationY", LastLocationY.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        VRCXStorage.Instance.Set("VRCX_SizeWidth", LastSizeWidth.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        VRCXStorage.Instance.Set("VRCX_SizeHeight", LastSizeHeight.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        VRCXStorage.Instance.Set("VRCX_WindowState", ((int)LastWindowStateToRestore).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        VRCXStorage.Instance.Set("VRCX_LocationX", _lastLocationX.ToString(CultureInfo.InvariantCulture));
+        VRCXStorage.Instance.Set("VRCX_LocationY", _lastLocationY.ToString(CultureInfo.InvariantCulture));
+        VRCXStorage.Instance.Set("VRCX_SizeWidth", _lastSizeWidth.ToString(CultureInfo.InvariantCulture));
+        VRCXStorage.Instance.Set("VRCX_SizeHeight", _lastSizeHeight.ToString(CultureInfo.InvariantCulture));
+        VRCXStorage.Instance.Set("VRCX_WindowState", ((int)_lastWindowStateToRestore).ToString(CultureInfo.InvariantCulture));
         VRCXStorage.Instance.Save();
     }
 
@@ -238,15 +244,15 @@ internal sealed partial class MainForm : WinformBase
         Show();
         if (WindowState == FormWindowState.Minimized)
         {
-            WindowState = LastWindowStateToRestore;
+            WindowState = _lastWindowStateToRestore;
         }
 
         Activate();
     }
 
-    private void TrayMenu_DevTools_Click(object sender, EventArgs e) => Instance.Browser.ShowDevTools();
+    private void TrayMenu_DevTools_Click(object sender, EventArgs e) => Browser.ShowDevTools();
 
-    private void TrayMenu_ForceCrash_Click(object sender, EventArgs e) => Instance.Browser.LoadUrl("chrome://crash");
+    private void TrayMenu_ForceCrash_Click(object sender, EventArgs e) => Browser.LoadUrl("chrome://crash");
 
     private void TrayMenu_Quit_Click(object sender, EventArgs e)
     {

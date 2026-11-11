@@ -11,20 +11,15 @@ internal
 #endif
 sealed class VRCXStorage
 {
-    public static readonly VRCXStorage Instance;
+    public static readonly VRCXStorage Instance = new();
 
-    private static ConcurrentDictionary<string, string> _storage = new(StringComparer.Ordinal);
     private static readonly string JsonPath = Path.Join(Program.AppDataDirectory, "VRCX.json");
 
     private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(500);
-    private static readonly Timer SaveTimer;
+    private static readonly Timer SaveTimer = new(_ => Instance.Save(), state: null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     private static readonly Lock SaveLock = new();
 
-    static VRCXStorage()
-    {
-        Instance = new VRCXStorage();
-        SaveTimer = new Timer(_ => Instance.Save(), state: null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-    }
+    private ConcurrentDictionary<string, string> _storage = new(StringComparer.Ordinal);
 
     public void Load()
     {

@@ -7,6 +7,7 @@ using NLog;
 
 #if !LINUX
 using CefSharp;
+using VRCX.Cef;
 #endif
 
 namespace VRCX;
@@ -23,7 +24,7 @@ sealed partial class LogWatcher
     private Dictionary<string, LogContext> _logContextMap = [];
     private DirectoryInfo? _logDirectoryInfo;
     private List<string?[]> _logList = [];
-    private ReaderWriterLockSlim _logListLock = new();
+    private readonly Lock _logListLock = new();
     private bool _firstRun = true;
     private bool _resetLog;
     private bool _threadActive;
@@ -40,8 +41,6 @@ sealed partial class LogWatcher
         string logPath = appApi.GetVRChatAppDataLocation();
         _logDirectoryInfo = new DirectoryInfo(logPath);
         _logContextMap = [];
-        _logListLock.Dispose();
-        _logListLock = new ReaderWriterLockSlim();
         _logList = [];
         _thread = new Thread(ThreadLoop)
         {
@@ -103,18 +102,7 @@ sealed partial class LogWatcher
         }
         if (_resetLog)
         {
-            _firstRun = true;
-            _resetLog = false;
-            _logContextMap.Clear();
-            _logListLock.EnterWriteLock();
-            try
-            {
-                _logList.Clear();
-            }
-            finally
-            {
-                _logListLock.ExitWriteLock();
-            }
+            ResetLogState();
         }
 
         var deletedNameSet = new HashSet<string>(_logContextMap.Keys, StringComparer.Ordinal);
@@ -128,34 +116,7 @@ sealed partial class LogWatcher
 
             foreach (FileInfo fileInfo in fileInfos)
             {
-                fileInfo.Refresh();
-                if (!fileInfo.Exists)
-                {
-                    continue;
-                }
-
-                if (DateTime.Compare(fileInfo.LastWriteTimeUtc, _tillDate) < 0)
-                {
-                    continue;
-                }
-
-                if (_logContextMap.TryGetValue(fileInfo.Name, out LogContext? logContext))
-                {
-                    deletedNameSet.Remove(fileInfo.Name);
-                }
-                else
-                {
-                    logContext = new LogContext();
-                    _logContextMap.Add(fileInfo.Name, logContext);
-                }
-
-                if (logContext.Length == fileInfo.Length)
-                {
-                    continue;
-                }
-
-                logContext.Length = fileInfo.Length;
-                ParseLog(fileInfo, logContext);
+                UpdateLogFile(fileInfo, deletedNameSet);
             }
         }
 
@@ -165,6 +126,49 @@ sealed partial class LogWatcher
         }
 
         _firstRun = false;
+    }
+
+    private void ResetLogState()
+    {
+        _firstRun = true;
+        _resetLog = false;
+        _logContextMap.Clear();
+        lock (_logListLock)
+        {
+            _logList.Clear();
+        }
+    }
+
+    private void UpdateLogFile(FileInfo fileInfo, HashSet<string> deletedNameSet)
+    {
+        fileInfo.Refresh();
+        if (!fileInfo.Exists)
+        {
+            return;
+        }
+
+        if (DateTime.Compare(fileInfo.LastWriteTimeUtc, _tillDate) < 0)
+        {
+            return;
+        }
+
+        if (_logContextMap.TryGetValue(fileInfo.Name, out LogContext? logContext))
+        {
+            deletedNameSet.Remove(fileInfo.Name);
+        }
+        else
+        {
+            logContext = new LogContext();
+            _logContextMap.Add(fileInfo.Name, logContext);
+        }
+
+        if (logContext.Length == fileInfo.Length)
+        {
+            return;
+        }
+
+        logContext.Length = fileInfo.Length;
+        ParseLog(fileInfo, logContext);
     }
 
     private void ParseLog(FileInfo fileInfo, LogContext logContext)
@@ -184,107 +188,112 @@ sealed partial class LogWatcher
                     break;
                 }
 
-                if (line.Length == 0)
-                {
-                    continue;
-                }
-
-                if (ParseLogUdonException(fileInfo, line))
-                {
-                    continue;
-                }
-
-                if (line.Length <= 36 ||
-                    line[31] != '-')
-                {
-                    continue;
-                }
-
-                if (DateTime.TryParseExact(
-                        line[..19],
-                        "yyyy.MM.dd HH:mm:ss",
-                        CultureInfo.InvariantCulture,
-                        DateTimeStyles.None,
-                        out DateTime lineDate
-                    ))
-                {
-                    lineDate = lineDate.ToUniversalTime();
-
-                    if (DateTime.Compare(lineDate, _tillDate) <= 0)
-                    {
-
-                        continue;
-                    }
-
-                    if (DateTime.UtcNow.AddMinutes(61) < lineDate)
-                    {
-                        Logger.Warn(CultureInfo.InvariantCulture, "Invalid log time, too new: {0}", line);
-                        continue;
-                    }
-                }
-                else
-                {
-                    Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse log date: {0}", line);
-                    continue;
-                }
-
-                int offset = 34;
-                if (line[offset] == '[')
-                {
-                    if (ParseLogOnPlayerJoinedOrLeft(fileInfo, line) ||
-                        ParseLogLocation(fileInfo, logContext, line) ||
-                        ParseLogLocationDestination(fileInfo, logContext, line) ||
-                        ParseLogPortalSpawn(fileInfo, line) ||
-                        ParseLogNotification(fileInfo, line, offset) ||
-                        ParseLogAPIRequest(fileInfo, line, offset) ||
-                        ParseLogAvatarChange(fileInfo, line, offset) ||
-                        ParseLogJoinBlocked(fileInfo, line) ||
-                        ParseLogAvatarPedestalChange(fileInfo, line, offset) ||
-                        ParseLogVideoError(fileInfo, logContext, line, offset) ||
-                        ParseLogVideoChange(fileInfo, line, offset) ||
-                        ParseLogAVProVideoChange(fileInfo, line, offset) ||
-                        ParseLogUsharpVideoPlay(fileInfo, line, offset) ||
-                        ParseLogUsharpVideoSync(fileInfo, line, offset) ||
-                        ParseLogWorldVRCX(fileInfo, line, offset) ||
-                        ParseLogWorldDataVRCX(line, offset) ||
-                        ParseLogOnAudioConfigurationChanged(fileInfo, logContext, line) ||
-                        ParseLogScreenshot(fileInfo, line) ||
-                        ParseLogStringDownload(fileInfo, line) ||
-                        ParseLogImageDownload(fileInfo, line) ||
-                        ParseVoteKick(fileInfo, line, offset) ||
-                        ParseFailedToJoin(fileInfo, line, offset) ||
-                        ParseInstanceResetWarning(fileInfo, line) ||
-                        ParseVoteKickInitiation(fileInfo, line) ||
-                        ParseVoteKickSuccess(fileInfo, line) ||
-                        ParseStickerSpawn(fileInfo, line))
-                    {
-                    }
-                }
-                else
-                {
-                    if (ParseLogNowPlaying(fileInfo, line, offset) ||
-                        ParseLogShaderKeywordsLimit(fileInfo, logContext, line) ||
-                        ParseLogSDK2VideoPlay(fileInfo, line, offset) ||
-                        ParseApplicationQuit(fileInfo, line, offset) ||
-                        ParseOpenVRInit(fileInfo, line, offset) ||
-                        ParseDesktopMode(fileInfo, line, offset) ||
-                        ParseOscFailedToStart(fileInfo, line, offset) ||
-                        ParseUntrustedUrl(fileInfo, logContext, line, offset))
-                    {
-                    }
-                }
+                ParseLogLine(fileInfo, logContext, line);
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or ArgumentException or InvalidOperationException or JsonException or IndexOutOfRangeException or RegexMatchTimeoutException)
         {
             Logger.Warn(ex, "Failed to parse log file: {0} {1} {2}", fileInfo.FullName, line, ex.Message);
         }
     }
 
+    private void ParseLogLine(FileInfo fileInfo, LogContext logContext, string line)
+    {
+        if (line.Length == 0 ||
+            ParseLogUdonException(fileInfo, line) ||
+            line.Length <= 36 ||
+            line[31] != '-' ||
+            !IsLogLineInRange(line))
+        {
+            return;
+        }
+
+        const int Offset = 34;
+        if (line[Offset] == '[')
+        {
+            ParseBracketedLogLine(fileInfo, logContext, line, Offset);
+        }
+        else
+        {
+            ParseUnbracketedLogLine(fileInfo, logContext, line, Offset);
+        }
+    }
+
+    private bool IsLogLineInRange(string line)
+    {
+        if (!DateTime.TryParseExact(
+                line[..19],
+                "yyyy.MM.dd HH:mm:ss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out DateTime lineDate
+            ))
+        {
+            Logger.Warn(CultureInfo.InvariantCulture, "Failed to parse log date: {0}", line);
+            return false;
+        }
+
+        lineDate = lineDate.ToUniversalTime();
+
+        if (DateTime.Compare(lineDate, _tillDate) <= 0)
+        {
+            return false;
+        }
+
+        if (DateTime.UtcNow.AddMinutes(61) < lineDate)
+        {
+            Logger.Warn(CultureInfo.InvariantCulture, "Invalid log time, too new: {0}", line);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void ParseBracketedLogLine(FileInfo fileInfo, LogContext logContext, string line, int offset)
+    {
+        _ = ParseLogOnPlayerJoinedOrLeft(fileInfo, line) ||
+            ParseLogLocation(fileInfo, logContext, line) ||
+            ParseLogLocationDestination(fileInfo, logContext, line) ||
+            ParseLogPortalSpawn(fileInfo, line) ||
+            ParseLogNotification(fileInfo, line, offset) ||
+            ParseLogAPIRequest(fileInfo, line, offset) ||
+            ParseLogAvatarChange(fileInfo, line, offset) ||
+            ParseLogJoinBlocked(fileInfo, line) ||
+            ParseLogAvatarPedestalChange(fileInfo, line, offset) ||
+            ParseLogVideoError(fileInfo, logContext, line, offset) ||
+            ParseLogVideoChange(fileInfo, line, offset) ||
+            ParseLogAVProVideoChange(fileInfo, line, offset) ||
+            ParseLogUsharpVideoPlay(fileInfo, line, offset) ||
+            ParseLogUsharpVideoSync(fileInfo, line, offset) ||
+            ParseLogWorldVRCX(fileInfo, line, offset) ||
+            ParseLogWorldDataVRCX(line, offset) ||
+            ParseLogOnAudioConfigurationChanged(fileInfo, logContext, line) ||
+            ParseLogScreenshot(fileInfo, line) ||
+            ParseLogStringDownload(fileInfo, line) ||
+            ParseLogImageDownload(fileInfo, line) ||
+            ParseVoteKick(fileInfo, line, offset) ||
+            ParseFailedToJoin(fileInfo, line, offset) ||
+            ParseInstanceResetWarning(fileInfo, line) ||
+            ParseVoteKickInitiation(fileInfo, line) ||
+            ParseVoteKickSuccess(fileInfo, line) ||
+            ParseStickerSpawn(fileInfo, line);
+    }
+
+    private void ParseUnbracketedLogLine(FileInfo fileInfo, LogContext logContext, string line, int offset)
+    {
+        _ = ParseLogNowPlaying(fileInfo, line, offset) ||
+            ParseLogShaderKeywordsLimit(fileInfo, logContext, line) ||
+            ParseLogSDK2VideoPlay(fileInfo, line, offset) ||
+            ParseApplicationQuit(fileInfo, line, offset) ||
+            ParseOpenVRInit(fileInfo, line, offset) ||
+            ParseDesktopMode(fileInfo, line, offset) ||
+            ParseOscFailedToStart(fileInfo, line, offset) ||
+            ParseUntrustedUrl(fileInfo, logContext, line, offset);
+    }
+
     private void AppendLog(string?[] item)
     {
-        _logListLock.EnterWriteLock();
-        try
+        lock (_logListLock)
         {
             if (!_firstRun)
             {
@@ -301,15 +310,10 @@ sealed partial class LogWatcher
 
             _logList.Add(item);
         }
-        finally
-        {
-            _logListLock.ExitWriteLock();
-        }
     }
 
-    public List<string> GetLogLines()
+    public IReadOnlyList<string> GetLogLines()
     {
-
         var logLines = new List<string>();
         while (_logQueue.TryDequeue(out string? logLine))
         {
@@ -319,7 +323,7 @@ sealed partial class LogWatcher
         return logLines;
     }
 
-    private string ConvertLogTimeToISO8601(string line)
+    private static string ConvertLogTimeToISO8601(string line)
     {
 
         if (DateTime.TryParseExact(
@@ -423,8 +427,7 @@ sealed partial class LogWatcher
         if (!_resetLog &&
             _logList.Count > 0)
         {
-            _logListLock.EnterWriteLock();
-            try
+            lock (_logListLock)
             {
                 string?[][] items;
 
@@ -441,10 +444,6 @@ sealed partial class LogWatcher
                 }
 
                 return items;
-            }
-            finally
-            {
-                _logListLock.ExitWriteLock();
             }
         }
 

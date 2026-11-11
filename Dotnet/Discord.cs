@@ -11,22 +11,18 @@ public
 #else
 internal
 #endif
-sealed class Discord
+sealed class Discord : IDisposable
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    public static readonly Discord Instance;
+    public static readonly Discord Instance = new();
     private readonly ReaderWriterLockSlim _lock;
+    private readonly Lock _syncRoot = new();
     private readonly RichPresence _presence;
     private DiscordRpcClient? _client;
     private readonly Timer _timer;
     private bool _active;
-    private string _discordAppId;
+    private string? _discordAppId;
     private const string VrcxUrl = "https://vrcx.app";
-
-    static Discord()
-    {
-        Instance = new Discord();
-    }
 
     public Discord()
     {
@@ -39,22 +35,22 @@ sealed class Discord
 
     public void Exit()
     {
-        lock (this)
+        lock (_syncRoot)
         {
             _timer.Change(-1, -1);
             _client?.Dispose();
         }
     }
 
-    private void TimerCallback(object state)
+    private void TimerCallback(object? state)
     {
-        lock (this)
+        lock (_syncRoot)
         {
             try
             {
                 Update();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or DiscordRPC.Exceptions.BadPresenceException or DiscordRPC.Exceptions.StringOutOfRangeException or DiscordRPC.Exceptions.UninitializedException)
             {
                 _logger.Error(ex, "Error updating Discord Rich Presence {Error}", ex.Message);
             }
@@ -63,7 +59,7 @@ sealed class Discord
 
     private void Update()
     {
-        if (_client == null && _active)
+        if (_client == null && _active && !string.IsNullOrEmpty(_discordAppId))
         {
             _client = new DiscordRpcClient(_discordAppId);
             _client.OnReady += (sender, e) =>
@@ -116,7 +112,6 @@ sealed class Discord
         return _active;
     }
 
-
     private static string LimitByteLength(string str, int maxBytesLength)
     {
         if (str == null)
@@ -138,7 +133,7 @@ sealed class Discord
     public void SetAssets(
         string details,
         string state,
-        string detailsUrl,
+        string detailsLink,
 
         string largeKey,
         string largeText,
@@ -153,7 +148,7 @@ sealed class Discord
         int partySize,
         int partyMax,
         string buttonText,
-        string buttonUrl,
+        string buttonLink,
         string appId,
         int activityType,
         int statusDisplayType)
@@ -171,61 +166,17 @@ sealed class Discord
             }
 
             _presence.Details = LimitByteLength(details, 127);
-            _presence.DetailsUrl = !string.IsNullOrEmpty(detailsUrl) ? detailsUrl : null;
-
+            _presence.DetailsUrl = !string.IsNullOrEmpty(detailsLink) ? detailsLink : null;
             _presence.State = LimitByteLength(state, 127);
-            _presence.Assets ??= new Assets();
 
-            _presence.Assets.LargeImageKey = largeKey;
-            _presence.Assets.LargeImageText = largeText;
-            _presence.Assets.LargeImageUrl = VrcxUrl;
-
-            _presence.Assets.SmallImageKey = smallKey;
-            _presence.Assets.SmallImageText = smallText;
-
-
-            if (startUnixMilliseconds == 0)
-            {
-                _presence.Timestamps = null;
-            }
-            else
-            {
-                _presence.Timestamps ??= new Timestamps();
-                _presence.Timestamps.StartUnixMilliseconds = (ulong)startUnixMilliseconds;
-                if (endUnixMilliseconds == 0)
-                {
-                    _presence.Timestamps.End = null;
-                }
-                else
-                {
-                    _presence.Timestamps.EndUnixMilliseconds = (ulong)endUnixMilliseconds;
-                }
-            }
-
-            if (partyMax == 0)
-            {
-                _presence.Party = null;
-            }
-            else
-            {
-                _presence.Party ??= new Party();
-                _presence.Party.ID = partyId;
-                _presence.Party.Size = partySize;
-                _presence.Party.Max = partyMax;
-            }
+            SetImageAssets(largeKey, largeText, smallKey, smallText);
+            SetTimestamps(startUnixMilliseconds, endUnixMilliseconds);
+            SetParty(partyId, partySize, partyMax);
 
             _presence.Type = (ActivityType)activityType;
             _presence.StatusDisplay = (StatusDisplayType)statusDisplayType;
 
-            Button[] buttons = [];
-            if (!string.IsNullOrEmpty(buttonUrl))
-            {
-                buttons =
-                [
-                    new Button { Label = buttonText, Url = buttonUrl },
-                ];
-            }
-            _presence.Buttons = buttons;
+            SetButtons(buttonText, buttonLink);
 
             if (!string.Equals(_discordAppId, appId, StringComparison.Ordinal))
             {
@@ -235,7 +186,7 @@ sealed class Discord
                 Update();
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or DiscordRPC.Exceptions.BadPresenceException or DiscordRPC.Exceptions.StringOutOfRangeException or DiscordRPC.Exceptions.UninitializedException)
         {
             _logger.Error(ex, "Error setting Discord Rich Presence assets: {Error}", ex.Message);
         }
@@ -245,5 +196,78 @@ sealed class Discord
         }
     }
 
-    public void SetAssets(string details, string state, Uri detailsUrl, string largeKey, string largeText, string smallKey, string smallText, double startUnixMilliseconds, double endUnixMilliseconds, string partyId, int partySize, int partyMax, string buttonText, string buttonUrl, string appId, int activityType, int statusDisplayType) => SetAssets(details, state, detailsUrl.AbsoluteUri, largeKey, largeText, smallKey, smallText, startUnixMilliseconds, endUnixMilliseconds, partyId, partySize, partyMax, buttonText, buttonUrl, appId, activityType, statusDisplayType);
+    private void SetImageAssets(string largeKey, string largeText, string smallKey, string smallText)
+    {
+        _presence.Assets ??= new Assets();
+
+        _presence.Assets.LargeImageKey = largeKey;
+        _presence.Assets.LargeImageText = largeText;
+        _presence.Assets.LargeImageUrl = VrcxUrl;
+
+        _presence.Assets.SmallImageKey = smallKey;
+        _presence.Assets.SmallImageText = smallText;
+    }
+
+    private void SetTimestamps(double startUnixMilliseconds, double endUnixMilliseconds)
+    {
+        if (startUnixMilliseconds == 0)
+        {
+            _presence.Timestamps = null;
+            return;
+        }
+
+        _presence.Timestamps ??= new Timestamps();
+        _presence.Timestamps.StartUnixMilliseconds = (ulong)startUnixMilliseconds;
+        if (endUnixMilliseconds == 0)
+        {
+            _presence.Timestamps.End = null;
+        }
+        else
+        {
+            _presence.Timestamps.EndUnixMilliseconds = (ulong)endUnixMilliseconds;
+        }
+    }
+
+    private void SetParty(string partyId, int partySize, int partyMax)
+    {
+        if (partyMax == 0)
+        {
+            _presence.Party = null;
+            return;
+        }
+
+        _presence.Party ??= new Party();
+        _presence.Party.ID = partyId;
+        _presence.Party.Size = partySize;
+        _presence.Party.Max = partyMax;
+    }
+
+    private void SetButtons(string buttonText, string buttonLink)
+    {
+        Button[] buttons = [];
+        if (!string.IsNullOrEmpty(buttonLink))
+        {
+            buttons =
+            [
+                new Button { Label = buttonText, Url = buttonLink },
+            ];
+        }
+        _presence.Buttons = buttons;
+    }
+
+
+#if LINUX
+    public void Dispose()
+#else
+    void IDisposable.Dispose()
+#endif
+    {
+        lock (_syncRoot)
+        {
+            _timer.Dispose();
+            _client?.Dispose();
+            _client = null;
+        }
+        _lock.Dispose();
+    }
 }

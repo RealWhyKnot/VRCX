@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 
+namespace VRCX.Overlay.Electron;
+
 public static partial class GLContextX11
 {
     [LibraryImport("libX11.so.6", StringMarshalling = StringMarshalling.Utf8)]
@@ -111,8 +113,6 @@ public static partial class GLContextX11
             }
 
             int screen = XDefaultScreen(Display);
-
-
             int[] attribs = [4, 1, 5, 1, 12, 1, 0];
             IntPtr visual = glXChooseVisual(Display, screen, attribs);
             if (visual == IntPtr.Zero)
@@ -121,54 +121,56 @@ public static partial class GLContextX11
                 return false;
             }
 
-            IntPtr root = XRootWindow(Display, screen);
-
-
-            Window = XCreateSimpleWindow(Display, root, -10000, -10000, 1, 1, 0, 0, 0);
-            if (Window == IntPtr.Zero)
-            {
-                Console.WriteLine("Failed to create X11 window");
-                return false;
-            }
-
-
-            var attrs = new XSetWindowAttributes
-            {
-                OverrideRedirect = 1,
-                BackgroundPixel = 0,
-                BorderPixel = 0,
-            };
-
-            XChangeWindowAttributes(Display, Window, CWOverrideRedirect | CWBackPixel | CWBorderPixel, ref attrs);
-
-
-            XStoreName(Display, Window, "Hidden OpenGL Context");
-
-            Context = glXCreateContext(Display, visual, IntPtr.Zero, direct: true);
-            if (Context == IntPtr.Zero)
-            {
-                Console.WriteLine("Failed to create GLX context");
-                return false;
-            }
-
-            if (!glXMakeCurrent(Display, Window, Context))
-            {
-                Console.WriteLine("Failed to make GLX context current");
-                return false;
-            }
-
-
-
-            XFlush(Display);
-
-            Console.WriteLine("OpenGL context created successfully (X11/GLX)");
-            return true;
+            return CreateHiddenWindow(screen) && CreateGlContext(visual);
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             Console.WriteLine($"Failed to initialize OpenGL context: {ex.Message}");
             return false;
         }
+    }
+
+    private static bool CreateHiddenWindow(int screen)
+    {
+        IntPtr root = XRootWindow(Display, screen);
+        Window = XCreateSimpleWindow(Display, root, -10000, -10000, 1, 1, 0, 0, 0);
+        if (Window == IntPtr.Zero)
+        {
+            Console.WriteLine("Failed to create X11 window");
+            return false;
+        }
+
+        var attrs = new XSetWindowAttributes
+        {
+            OverrideRedirect = 1,
+            BackgroundPixel = 0,
+            BorderPixel = 0,
+        };
+
+        _ = XChangeWindowAttributes(Display, Window, CWOverrideRedirect | CWBackPixel | CWBorderPixel, ref attrs);
+        _ = XStoreName(Display, Window, "Hidden OpenGL Context");
+        return true;
+    }
+
+    private static bool CreateGlContext(IntPtr visual)
+    {
+        Context = glXCreateContext(Display, visual, IntPtr.Zero, direct: true);
+        if (Context == IntPtr.Zero)
+        {
+            Console.WriteLine("Failed to create GLX context");
+            return false;
+        }
+
+        if (!glXMakeCurrent(Display, Window, Context))
+        {
+            Console.WriteLine("Failed to make GLX context current");
+            return false;
+        }
+
+        _ = XFlush(Display);
+
+        Console.WriteLine("OpenGL context created successfully (X11/GLX)");
+        return true;
     }
 
     public static void Cleanup()
@@ -182,10 +184,10 @@ public static partial class GLContextX11
 
             if (Window != IntPtr.Zero)
             {
-                XDestroyWindow(Display, Window);
+                _ = XDestroyWindow(Display, Window);
             }
 
-            XCloseDisplay(Display);
+            _ = XCloseDisplay(Display);
             Display = IntPtr.Zero;
             Window = IntPtr.Zero;
             Context = IntPtr.Zero;

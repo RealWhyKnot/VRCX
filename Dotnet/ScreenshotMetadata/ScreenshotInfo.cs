@@ -1,14 +1,14 @@
 using System.Numerics;
 using Newtonsoft.Json;
 
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
-internal sealed class ScreenshotMetadata
+internal sealed class ScreenshotInfo
 {
 
 
 
-    public string Application { get; set; }
+    public string? Application { get; set; }
 
 
 
@@ -34,7 +34,7 @@ internal sealed class ScreenshotMetadata
 
 
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-    internal string SourceFile;
+    internal string? SourceFile { get; set; }
 
 
 
@@ -53,12 +53,12 @@ internal sealed class ScreenshotMetadata
 
 
     [JsonIgnore]
-    internal string? Error;
+    internal string? Error { get; set; }
 
     [JsonIgnore]
-    internal string JSON;
+    internal string? JSON { get; set; }
 
-    public ScreenshotMetadata()
+    public ScreenshotInfo()
     {
         Application = "VRCX";
         Version = 1;
@@ -67,9 +67,9 @@ internal sealed class ScreenshotMetadata
         Players = [];
     }
 
-    public static ScreenshotMetadata JustError(string sourceFile, string error)
+    public static ScreenshotInfo JustError(string sourceFile, string error)
     {
-        return new ScreenshotMetadata
+        return new ScreenshotInfo
         {
             Error = error,
             SourceFile = sourceFile,
@@ -83,8 +83,8 @@ internal sealed class ScreenshotMetadata
         StringComparison comparisonType = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
         return partial
-            ? Players.Any(p => p.DisplayName.IndexOf(playerName, comparisonType) != -1)
-            : Players.Any(p => p.DisplayName.Equals(playerName, comparisonType));
+            ? Players.Any(p => p.DisplayName?.Contains(playerName, comparisonType) == true)
+            : Players.Any(p => string.Equals(p.DisplayName, playerName, comparisonType));
     }
 
     internal sealed class AuthorDetail

@@ -1,8 +1,13 @@
-namespace VRCX;
+namespace VRCX.Overlay;
 
-public abstract partial class AppApiVr
+#if LINUX
+public
+#else
+internal
+#endif
+abstract partial class AppApiVr
 {
-    public static AppApiVr? Instance;
+    public static AppApiVr? Instance { get; set; }
     public abstract void Init();
     public abstract void VrInit();
     public abstract void ToggleSystemMonitor(bool enabled);
@@ -11,5 +16,5 @@ public abstract partial class AppApiVr
     public abstract double GetUptime();
     public abstract string CurrentCulture();
     public abstract string CustomVrScript();
-    public abstract List<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue();
+    public abstract IList<KeyValuePair<string, string>> GetExecuteVrOverlayFunctionQueue();
 }

@@ -18,7 +18,7 @@ internal sealed class ImageRaster : IDisposable
     public static ImageRaster Load(byte[] data)
     {
         using var stream = new SKMemoryStream(data);
-        using SKCodec codec = SKCodec.Create(stream) ?? throw new InvalidDataException("Unsupported image format.");
+        using var codec = SKCodec.Create(stream);
         if (codec.EncodedFormat is not (SKEncodedImageFormat.Bmp or SKEncodedImageFormat.Gif or SKEncodedImageFormat.Jpeg or SKEncodedImageFormat.Png or SKEncodedImageFormat.Webp))
         {
             throw new InvalidDataException("Unsupported image format.");
@@ -112,10 +112,7 @@ internal sealed class ImageRaster : IDisposable
         return data.ToArray();
     }
 
-    public void Dispose()
-    {
-        _bitmap.Dispose();
-    }
+    public void Dispose() => _bitmap.Dispose();
 
     private void Replace(SKBitmap bitmap)
     {

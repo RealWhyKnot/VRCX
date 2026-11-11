@@ -1,37 +1,39 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Win32;
 
 namespace VRCX;
 
-public partial class AppApiCef
+internal partial class AppApiCef
 {
-    [DllImport("advapi32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-    private static extern uint RegSetValueEx(
+    [LibraryImport("advapi32.dll", EntryPoint = "RegSetValueExA", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(AnsiStringMarshaller), SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial uint RegSetValueEx(
         UIntPtr hKey,
-        [MarshalAs(UnmanagedType.LPStr)] string lpValueName,
-        int Reserved,
+        string lpValueName,
+        int reserved,
         RegistryValueKind dwType,
         byte[] lpData,
         int cbData);
 
-    [DllImport("advapi32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-    private static extern int RegOpenKeyEx(
+    [LibraryImport("advapi32.dll", EntryPoint = "RegOpenKeyExA", StringMarshalling = StringMarshalling.Custom, StringMarshallingCustomType = typeof(AnsiStringMarshaller), SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial int RegOpenKeyEx(
         UIntPtr hKey,
         string subKey,
         int ulOptions,
         int samDesired,
         out UIntPtr hkResult);
 
-    [DllImport("advapi32.dll")]
-    private static extern int RegCloseKey(UIntPtr hKey);
+    [LibraryImport("advapi32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial int RegCloseKey(UIntPtr hKey);
 
-    private string AddHashToKeyName(string key)
+    private static string AddHashToKeyName(string key)
     {
-
-
         uint hash = 5381;
         foreach (char c in key)
         {
@@ -41,17 +43,12 @@ public partial class AppApiCef
         return key + "_h" + hash;
     }
 
-
-
-
-
-
-    public override object GetVRChatRegistryKey(string key)
+    public override object? GetVRChatRegistryKey(string key)
     {
         string keyName = AddHashToKeyName(key);
         using RegistryKey? regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\VRChat\VRChat");
         object? data = regKey?.GetValue(keyName);
-        if (data == null)
+        if (regKey == null || data == null)
         {
             return null;
         }
@@ -68,7 +65,7 @@ public partial class AppApiCef
                     return data;
                 }
 
-                long.TryParse(data.ToString(), System.Globalization.CultureInfo.InvariantCulture, out long longValue);
+                _ = long.TryParse(data.ToString(), System.Globalization.CultureInfo.InvariantCulture, out long longValue);
                 byte[] bytes = BitConverter.GetBytes(longValue);
                 double doubleValue = BitConverter.ToDouble(bytes, 0);
                 return doubleValue;
@@ -91,13 +88,8 @@ public partial class AppApiCef
         return null;
     }
 
-    public override string GetVRChatRegistryKeyString(string key) =>
-
+    public override string? GetVRChatRegistryKeyString(string key) =>
         GetVRChatRegistryKey(key)?.ToString();
-
-
-
-
 
 
 
@@ -116,7 +108,7 @@ public partial class AppApiCef
         switch (type)
         {
             case RegistryValueKind.Binary:
-                setValue = Encoding.ASCII.GetBytes(value.ToString());
+                setValue = Encoding.ASCII.GetBytes(value.ToString() ?? string.Empty);
                 break;
 
             case RegistryValueKind.DWord:
@@ -150,131 +142,123 @@ public partial class AppApiCef
 
 
 
-
-
-
     public override void SetVRChatRegistryKey(string key, byte[] value)
     {
         string keyName = AddHashToKeyName(key);
         nuint hKey = 0x80000001;
-        const int keyWrite = 0x20006;
-        const string keyFolder = @"SOFTWARE\VRChat\VRChat";
-        int openKeyResult = RegOpenKeyEx(hKey, keyFolder, 0, keyWrite, out nuint folderPointer);
+        const int KeyWrite = 0x20006;
+        const string KeyFolder = @"SOFTWARE\VRChat\VRChat";
+        int openKeyResult = RegOpenKeyEx(hKey, KeyFolder, 0, KeyWrite, out nuint folderPointer);
         if (openKeyResult != 0)
         {
-            throw new Exception("Error opening registry key. Error code: " + openKeyResult);
+            throw new InvalidOperationException("Error opening registry key. Error code: " + openKeyResult);
         }
 
         uint setKeyResult = RegSetValueEx(folderPointer, keyName, 0, RegistryValueKind.DWord, value, value.Length);
         if (setKeyResult != 0)
         {
-            throw new Exception("Error setting registry value. Error code: " + setKeyResult);
+            throw new InvalidOperationException("Error setting registry value. Error code: " + setKeyResult);
         }
 
-        RegCloseKey(hKey);
+        _ = RegCloseKey(folderPointer);
     }
 
-    public override Dictionary<string, Dictionary<string, object>> GetVRChatRegistry()
+    public override string GetVRChatRegistryJson() => Newtonsoft.Json.JsonConvert.SerializeObject(ReadVRChatRegistry());
+
+    private static Dictionary<string, Dictionary<string, object>> ReadVRChatRegistry()
     {
         var output = new Dictionary<string, Dictionary<string, object>>(StringComparer.Ordinal);
-        using RegistryKey regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\VRChat\VRChat") ?? throw new Exception("Failed to get VRC registry data");
-        string[] keys = regKey.GetValueNames();
-
-        Span<long> spanLong = stackalloc long[1];
-        Span<double> doubleSpan = MemoryMarshal.Cast<long, double>(spanLong);
-
-        foreach (string key in keys)
+        using RegistryKey regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\VRChat\VRChat") ?? throw new InvalidOperationException("Failed to get VRC registry data");
+        foreach (string key in regKey.GetValueNames())
         {
             object? data = regKey.GetValue(key);
             int index = key.LastIndexOf("_h", StringComparison.Ordinal);
-            if (index <= 0)
+            if (index <= 0 || data == null)
             {
                 continue;
             }
 
-            string keyName = key[..index];
-            if (data == null)
-            {
-                continue;
-            }
-
-            RegistryValueKind type = regKey.GetValueKind(key);
-            switch (type)
-            {
-                case RegistryValueKind.Binary:
-                    var binDict = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        { "data", Encoding.ASCII.GetString((byte[])data) },
-                        { "type", type },
-                    };
-                    output.Add(keyName, binDict);
-                    break;
-
-                case RegistryValueKind.DWord:
-                    if (data.GetType() != typeof(long))
-                    {
-                        var dwordDict = new Dictionary<string, object>(StringComparer.Ordinal)
-                        {
-                            { "data", data },
-                            { "type", type },
-                        };
-                        output.Add(keyName, dwordDict);
-                        break;
-                    }
-
-                    spanLong[0] = (long)data;
-                    double doubleValue = doubleSpan[0];
-                    var floatDict = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        { "data", doubleValue },
-                        { "type", 100 },
-                    };
-                    output.Add(keyName, floatDict);
-                    break;
-                case RegistryValueKind.None:
-                    break;
-                case RegistryValueKind.Unknown:
-                    break;
-                case RegistryValueKind.String:
-                    break;
-                case RegistryValueKind.ExpandString:
-                    break;
-                case RegistryValueKind.MultiString:
-                    break;
-                case RegistryValueKind.QWord:
-                    break;
-                default:
-                    Debug.WriteLine($"Unknown registry value kind: {type}");
-                    break;
-            }
+            AddRegistryEntry(output, key[..index], regKey.GetValueKind(key), data);
         }
 
         return output;
+    }
+
+    private static void AddRegistryEntry(Dictionary<string, Dictionary<string, object>> output, string keyName, RegistryValueKind type, object data)
+    {
+        switch (type)
+        {
+            case RegistryValueKind.Binary:
+                var binDict = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    { "data", Encoding.ASCII.GetString((byte[])data) },
+                    { "type", type },
+                };
+                output.Add(keyName, binDict);
+                break;
+
+            case RegistryValueKind.DWord:
+                if (data.GetType() != typeof(long))
+                {
+                    var dwordDict = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        { "data", data },
+                        { "type", type },
+                    };
+                    output.Add(keyName, dwordDict);
+                    break;
+                }
+
+                double doubleValue = BitConverter.Int64BitsToDouble((long)data);
+                var floatDict = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    { "data", doubleValue },
+                    { "type", 100 },
+                };
+                output.Add(keyName, floatDict);
+                break;
+            case RegistryValueKind.None:
+                break;
+            case RegistryValueKind.Unknown:
+                break;
+            case RegistryValueKind.String:
+                break;
+            case RegistryValueKind.ExpandString:
+                break;
+            case RegistryValueKind.MultiString:
+                break;
+            case RegistryValueKind.QWord:
+                break;
+            default:
+                Debug.WriteLine($"Unknown registry value kind: {type}");
+                break;
+        }
     }
 
     public override void SetVRChatRegistry(string json)
     {
         CreateVRChatRegistryFolder();
         Span<double> spanDouble = stackalloc double[1];
-        Dictionary<string, Dictionary<string, object>>? dict = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json);
+        Dictionary<string, Dictionary<string, object>> dict = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, object>>>(json)
+            ?? throw new InvalidDataException("VRChat registry JSON must be an object of registry entries.");
+
         foreach (KeyValuePair<string, Dictionary<string, object>> item in dict)
         {
             var data = (JsonElement)item.Value["data"];
             if (!int.TryParse(item.Value["type"].ToString(), System.Globalization.CultureInfo.InvariantCulture, out int type))
             {
-                throw new Exception("Unknown type: " + item.Value["type"]);
+                throw new InvalidDataException("Unknown type: " + item.Value["type"]);
             }
 
             if (data.ValueKind == JsonValueKind.Number)
             {
                 if (type == 100)
                 {
-
                     spanDouble[0] = data.Deserialize<double>();
                     long valueLong = MemoryMarshal.Cast<double, long>(spanDouble)[0];
-                    const int dataLength = sizeof(long);
-                    byte[] dataBytes = new byte[dataLength];
-                    Buffer.BlockCopy(BitConverter.GetBytes(valueLong), 0, dataBytes, 0, dataLength);
+                    const int DataLength = sizeof(long);
+                    byte[] dataBytes = new byte[DataLength];
+                    Buffer.BlockCopy(BitConverter.GetBytes(valueLong), 0, dataBytes, 0, DataLength);
                     SetVRChatRegistryKey(item.Key, dataBytes);
                     continue;
                 }
@@ -285,7 +269,7 @@ public partial class AppApiCef
                     continue;
                 }
 
-                throw new Exception("Unknown number type: " + item.Key);
+                throw new InvalidDataException("Unknown number type: " + item.Key);
             }
 
             SetVRChatRegistryKey(item.Key, data, type);
@@ -305,7 +289,7 @@ public partial class AppApiCef
             return;
         }
 
-        using RegistryKey key = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\VRChat\VRChat") ?? throw new Exception("Error creating registry key.");
+        using RegistryKey key = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\VRChat\VRChat") ?? throw new InvalidOperationException("Error creating registry key.");
     }
 
     public override void DeleteVRChatRegistryFolder()

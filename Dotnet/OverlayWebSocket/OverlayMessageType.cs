@@ -1,4 +1,4 @@
-namespace VRCX;
+namespace VRCX.OverlayWebSocket;
 
 internal enum OverlayMessageType
 {

@@ -102,14 +102,14 @@ sealed partial class LogWatcher
     private bool ParseLogNowPlaying(FileInfo fileInfo, string line, int offset)
     {
 
-        const string marker = "nowplaying {";
-        int markerPos = line.IndexOf(marker, offset, StringComparison.Ordinal);
+        const string Marker = "nowplaying {";
+        int markerPos = line.IndexOf(Marker, offset, StringComparison.Ordinal);
         if (markerPos < 0)
         {
             return false;
         }
 
-        int jsonStart = markerPos + marker.Length - 1;
+        int jsonStart = markerPos + Marker.Length - 1;
         int jsonEnd = line.LastIndexOf('}');
         if (jsonEnd < jsonStart)
         {
@@ -127,7 +127,7 @@ sealed partial class LogWatcher
         return true;
     }
 
-    private bool ParseLogWorldDataVRCX(string line, int offset)
+    private static bool ParseLogWorldDataVRCX(string line, int offset)
     {
 
         if (string.Compare(line, offset, "[VRCX-World] ", 0, 13, StringComparison.Ordinal) != 0)

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
 internal static class PNGHelper
 {
@@ -35,8 +35,8 @@ internal static class PNGHelper
             PNGChunk? legacyTextChunk = pngFile.GetChunkReverse(PNGChunkTypeFilter.iTXt);
             if (legacyTextChunk != null)
             {
-                Tuple<string, string> data = legacyTextChunk.ReadITXtChunk();
-                if (string.Equals(data.Item1, keyword, StringComparison.Ordinal))
+                Tuple<string, string>? data = legacyTextChunk.ReadITXtChunk();
+                if (data != null && string.Equals(data.Item1, keyword, StringComparison.Ordinal))
                 {
                     return data.Item2;
                 }
@@ -53,8 +53,8 @@ internal static class PNGHelper
 
         for (int i = 0; i < iTXtChunk.Count; i++)
         {
-            Tuple<string, string> data = iTXtChunk[i].ReadITXtChunk();
-            if (string.Equals(data.Item1, keyword, StringComparison.Ordinal))
+            Tuple<string, string>? data = iTXtChunk[i].ReadITXtChunk();
+            if (data != null && string.Equals(data.Item1, keyword, StringComparison.Ordinal))
             {
                 return data.Item2;
             }
@@ -73,8 +73,8 @@ internal static class PNGHelper
 
         for (int i = 0; i < iTXtChunk.Count; i++)
         {
-            Tuple<string, string> data = iTXtChunk[i].ReadITXtChunk();
-            if (string.Equals(data.Item1, keyword, StringComparison.Ordinal))
+            Tuple<string, string>? data = iTXtChunk[i].ReadITXtChunk();
+            if (data != null && string.Equals(data.Item1, keyword, StringComparison.Ordinal))
             {
                 return pngFile.DeleteChunk(iTXtChunk[i]);
             }

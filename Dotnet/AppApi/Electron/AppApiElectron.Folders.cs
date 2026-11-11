@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -6,52 +7,55 @@ namespace VRCX;
 
 public partial class AppApiElectron
 {
-    public static string _homeDirectory;
-    public static string _steamPath;
-    public static string _steamUserdataPath;
-    public static string _vrcPrefixPath;
-    public static string _vrcAppDataPath;
-    public static string _vrcCrashesPath;
-    public static string _vrcInstallPath;
+    private const string VrchatAppId = "438100";
 
-    static AppApiElectron()
+    private static readonly string HomeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    private static readonly string SteamUserdataPath = Path.Join(HomeDirectory, ".steam/steam/userdata");
+    private static readonly string SteamPath = ResolveSteamPath();
+    private static readonly string VrcLibraryPath = ResolveVrcLibraryPath(SteamPath);
+    private static readonly string VrcPrefixPath = Path.Join(VrcLibraryPath, $"steamapps/compatdata/{VrchatAppId}/pfx");
+    private static readonly string VrcInstallPath = Path.Join(VrcLibraryPath, "steamapps/common/VRChat");
+    private static readonly string VrcAppDataPath = Path.Join(VrcPrefixPath, "drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat");
+    private static readonly string VrcCrashesPath = Path.Join(VrcPrefixPath, "drive_c/users/steamuser/AppData/Local/Temp/VRChat/VRChat/Crashes");
+
+    private static string ResolveSteamPath()
     {
-        const string vrchatAppid = "438100";
-        _homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        _steamUserdataPath = Path.Join(_homeDirectory, ".steam/steam/userdata");
-        _steamPath = Path.Join(_homeDirectory, ".local/share/Steam");
+        string steamPath = Path.Join(HomeDirectory, ".local/share/Steam");
 
-        string flatpakSteamPath = Path.Join(_homeDirectory, ".var/app/com.valvesoftware.Steam/.local/share/Steam");
-        if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(flatpakSteamPath))
+        string flatpakSteamPath = Path.Join(HomeDirectory, ".var/app/com.valvesoftware.Steam/.local/share/Steam");
+        if (!IsValidSteamPath(steamPath) && IsValidSteamPath(flatpakSteamPath))
         {
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Flatpak Steam detected.");
-            _steamPath = flatpakSteamPath;
+            steamPath = flatpakSteamPath;
         }
 
-        string legacySteamPath = Path.Join(_homeDirectory, ".steam/steam");
-        if (!IsValidSteamPath(_steamPath) && IsValidSteamPath(legacySteamPath))
+        string legacySteamPath = Path.Join(HomeDirectory, ".steam/steam");
+        if (!IsValidSteamPath(steamPath) && IsValidSteamPath(legacySteamPath))
         {
             Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Legacy Steam path detected.");
-            _steamPath = legacySteamPath;
+            steamPath = legacySteamPath;
         }
 
-        if (!IsValidSteamPath(_steamPath))
+        if (!IsValidSteamPath(steamPath))
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "No valid Steam library found.");
         }
 
-        string libraryFoldersVdfPath = Path.Join(_steamPath, "config/libraryfolders.vdf");
-        string? vrcLibraryPath = GetLibraryWithAppId(libraryFoldersVdfPath, vrchatAppid);
+        return steamPath;
+    }
+
+    private static string ResolveVrcLibraryPath(string steamPath)
+    {
+        string libraryFoldersVdfPath = Path.Join(steamPath, "config/libraryfolders.vdf");
+        string? vrcLibraryPath = GetLibraryWithAppId(libraryFoldersVdfPath, VrchatAppId);
         if (string.IsNullOrEmpty(vrcLibraryPath))
         {
             Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Falling back to default VRChat path as libraryfolders.vdf was not found OR libraryfolders.vdf does not contain VRChat's appid (438100)");
-            vrcLibraryPath = _steamPath;
+            vrcLibraryPath = steamPath;
         }
+
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Using steam library path {vrcLibraryPath}");
-        _vrcPrefixPath = Path.Join(vrcLibraryPath, $"steamapps/compatdata/{vrchatAppid}/pfx");
-        _vrcInstallPath = Path.Join(vrcLibraryPath, "steamapps/common/VRChat");
-        _vrcAppDataPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat");
-        _vrcCrashesPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/AppData/Local/Temp/VRChat/VRChat/Crashes");
+        return vrcLibraryPath;
     }
 
     private static bool IsValidSteamPath(string path) => File.Exists(Path.Join(path, "config/libraryfolders.vdf"));
@@ -66,8 +70,7 @@ public partial class AppApiElectron
         string? libraryPath = null;
         foreach (string line in File.ReadLines(libraryFoldersVdfPath))
         {
-
-            if (line.Contains("\"path\""))
+            if (line.Contains("\"path\"", StringComparison.Ordinal))
             {
                 string[] parts = line.Split("\t");
                 if (parts.Length < 4)
@@ -75,10 +78,10 @@ public partial class AppApiElectron
                     continue;
                 }
 
-                libraryPath = parts[4].Replace("\"", "");
+                libraryPath = parts[4].Replace("\"", "", StringComparison.Ordinal);
             }
 
-            if (line.Contains($"\"{appId}\"") && Directory.Exists(libraryPath))
+            if (line.Contains($"\"{appId}\"", StringComparison.Ordinal) && Directory.Exists(libraryPath))
             {
                 return libraryPath;
             }
@@ -87,7 +90,7 @@ public partial class AppApiElectron
         return null;
     }
 
-    public override string GetVRChatAppDataLocation() => _vrcAppDataPath;
+    public override string GetVRChatAppDataLocation() => VrcAppDataPath;
 
     public override string GetVRChatCacheLocation()
     {
@@ -101,12 +104,12 @@ public partial class AppApiElectron
             }
 
             JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-            if (obj["cache_directory"] == null)
+            if (obj?["cache_directory"] == null)
             {
                 return defaultPath;
             }
 
-            string? cacheDir = (string)obj["cache_directory"];
+            string? cacheDir = (string?)obj["cache_directory"];
             if (string.IsNullOrEmpty(cacheDir))
             {
                 return defaultPath;
@@ -115,7 +118,7 @@ public partial class AppApiElectron
             string cachePath = Path.Join(cacheDir, "Cache-WindowsPlayer");
             return !Directory.Exists(cacheDir) ? defaultPath : cachePath;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidCastException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for cache location: {e}");
         }
@@ -124,7 +127,7 @@ public partial class AppApiElectron
 
     public override string GetVRChatPhotosLocation()
     {
-        string defaultPath = Path.Join(_vrcPrefixPath, "drive_c/users/steamuser/Pictures/VRChat");
+        string defaultPath = Path.Join(VrcPrefixPath, "drive_c/users/steamuser/Pictures/VRChat");
         try
         {
             string json = ReadConfigFile();
@@ -134,15 +137,15 @@ public partial class AppApiElectron
             }
 
             JObject? obj = JsonConvert.DeserializeObject<JObject>(json, JsonSerializerSettings);
-            if (obj["picture_output_folder"] == null)
+            if (obj?["picture_output_folder"] == null)
             {
                 return defaultPath;
             }
 
-            string? photosDir = (string)obj["picture_output_folder"];
+            string? photosDir = (string?)obj["picture_output_folder"];
             return string.IsNullOrEmpty(photosDir) || !Directory.Exists(photosDir) ? defaultPath : photosDir;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or InvalidCastException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, $"Error reading VRChat config file for photos location: {e}");
         }
@@ -164,19 +167,18 @@ public partial class AppApiElectron
             }
             return path;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, e);
             return GetVRChatPhotosLocation();
         }
     }
 
-    private string GetSteamUserdataPathFromRegistry()
+    private static string GetSteamUserdataPathFromRegistry()
     {
-
-        if (Directory.Exists(_steamUserdataPath))
+        if (Directory.Exists(SteamUserdataPath))
         {
-            string[] steamUserDirs = Directory.GetDirectories(_steamUserdataPath);
+            string[] steamUserDirs = Directory.GetDirectories(SteamUserdataPath);
             if (steamUserDirs.Length > 0)
             {
                 return steamUserDirs[0];
@@ -187,7 +189,7 @@ public partial class AppApiElectron
 
     public override string GetVRChatScreenshotsLocation() =>
 
-        Path.Join(_steamUserdataPath, "760/remote/438100/screenshots");
+        Path.Join(SteamUserdataPath, "760/remote/438100/screenshots");
 
     public override bool OpenVrcxAppDataFolder()
     {
@@ -203,7 +205,7 @@ public partial class AppApiElectron
 
     public override bool OpenVrcAppDataFolder()
     {
-        string path = _vrcAppDataPath;
+        string path = VrcAppDataPath;
         if (!Directory.Exists(path))
         {
             return false;
@@ -251,7 +253,7 @@ public partial class AppApiElectron
 
     public override bool OpenCrashVrcCrashDumps()
     {
-        string path = _vrcCrashesPath;
+        string path = VrcCrashesPath;
         if (!Directory.Exists(path))
         {
             return false;
@@ -279,7 +281,7 @@ public partial class AppApiElectron
             return;
         }
 
-        string directoryPath = isFolder ? path : Path.GetDirectoryName(path);
+        string? directoryPath = isFolder ? path : Path.GetDirectoryName(path);
         var commandAttempt = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             { "nautilus", $"\"{path}\"" },
@@ -300,35 +302,43 @@ public partial class AppApiElectron
                 continue;
             }
 
-            try
+            if (TryStartFileManager(command.Key, command.Value))
             {
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = command.Key,
-                        Arguments = command.Value,
-                        UseShellExecute = false,
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true,
-                    },
-                };
-                process.Start();
                 return;
-            }
-            catch
-            {
-
             }
         }
     }
 
-    private bool IsCommandAvailable(string command)
+    private static bool TryStartFileManager(string fileName, string arguments)
     {
         try
         {
-            var which = new Process
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                },
+            };
+            process.Start();
+            return true;
+        }
+        catch (Exception e) when (e is Win32Exception or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsCommandAvailable(string command)
+    {
+        try
+        {
+            using var which = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -344,7 +354,7 @@ public partial class AppApiElectron
             which.WaitForExit();
             return which.ExitCode == 0 && !string.IsNullOrWhiteSpace(result);
         }
-        catch
+        catch (Exception e) when (e is Win32Exception or InvalidOperationException or IOException)
         {
             return false;
         }

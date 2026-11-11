@@ -1,20 +1,22 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using CefSharp;
 using CefSharp.DevTools;
 using Microsoft.Toolkit.Uwp.Notifications;
 using Microsoft.Win32;
 using NLog;
+using VRCX.Cef;
+using VRCX.OverlayWebSocket;
 
 namespace VRCX;
 
-public sealed partial class AppApiCef : AppApi
+internal sealed partial class AppApiCef : AppApi
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+    private static MainForm MainWindow => MainForm.Instance ?? throw new InvalidOperationException("The main window is not initialized.");
 
-
-
-    public override void ShowDevTools() => MainForm.Instance.Browser.ShowDevTools();
+    public override void ShowDevTools() => MainWindow.Browser.ShowDevTools();
 
     public override void SetVR(bool active, bool hmdOverlay, bool wristOverlay, bool menuButton, int overlayHand)
     {
@@ -26,43 +28,43 @@ public sealed partial class AppApiCef : AppApi
             MenuButton = menuButton,
             OverlayHand = overlayHand,
         };
-        OverlayServer.Instance.UpdateVars(updateVars);
+        OverlayServer.UpdateVars(updateVars);
     }
 
-    public override void SetZoom(double zoomLevel) => MainForm.Instance.Browser.SetZoomLevel(zoomLevel);
+    public override void SetZoom(double zoomLevel) => MainWindow.Browser.SetZoomLevel(zoomLevel);
 
-    public override async Task<double> GetZoomAsync() => await MainForm.Instance.Browser.GetZoomLevelAsync();
+    public override async Task<double> GetZoomAsync() => await MainWindow.Browser.GetZoomLevelAsync();
 
-    public override void DesktopNotification(string BoldText, string Text = "", string Image = "")
+    public override void DesktopNotification(string boldText, string text = "", string image = "")
     {
         try
         {
             var builder = new ToastContentBuilder();
 
-            if (Uri.TryCreate(Image, UriKind.Absolute, out Uri uri))
+            if (Uri.TryCreate(image, UriKind.Absolute, out Uri? uri))
             {
                 builder.AddAppLogoOverride(uri);
             }
 
-            if (!string.IsNullOrEmpty(BoldText))
+            if (!string.IsNullOrEmpty(boldText))
             {
-                builder.AddText(BoldText);
+                builder.AddText(boldText);
             }
 
-            if (!string.IsNullOrEmpty(Text))
+            if (!string.IsNullOrEmpty(text))
             {
-                builder.AddText(Text);
+                builder.AddText(text);
             }
 
             builder.Show();
         }
         catch (AccessViolationException ex)
         {
-            Logger.Warn(ex, "Unable to send desktop notification");
+            Logger.Warn(ex, System.Globalization.CultureInfo.InvariantCulture, "Unable to send desktop notification");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException or ArgumentException or System.Runtime.InteropServices.COMException)
         {
-            Logger.Error(ex, "Unknown error when sending desktop notification");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Unknown error when sending desktop notification");
         }
     }
 
@@ -90,7 +92,7 @@ public sealed partial class AppApiCef : AppApi
             args.Add($"{StartupArgs.VrcxLaunchArguments.ProxyUrlPrefix}={StartupArgs.LaunchArguments.ProxyUrl}");
         }
 
-        var vrcxProcess = new Process
+        using var vrcxProcess = new Process
         {
             StartInfo = new ProcessStartInfo
             {
@@ -106,18 +108,18 @@ public sealed partial class AppApiCef : AppApi
 
     public override bool CheckForUpdateExe() => File.Exists(Path.Join(Program.AppDataDirectory, "update.exe"));
 
-    public override void ExecuteVrOverlayFunction(string function, string json)
+    public override void ExecuteVrOverlayFunction(string functionName, string json)
     {
         var message = new OverlayMessage
         {
             Type = OverlayMessageType.JsFunctionCall,
-            FunctionName = function,
+            FunctionName = functionName,
             Data = json,
         };
-        OverlayServer.Instance.SendMessage(message);
+        OverlayServer.SendMessage(message);
     }
 
-    public override void FocusWindow() => MainForm.Instance.Invoke(new Action(MainForm.Instance.Focus_Window));
+    public override void FocusWindow() => MainWindow.Invoke(new Action(MainWindow.Focus_Window));
 
     public override void ChangeTheme(int value) => WinformThemer.SetGlobalTheme(value);
 
@@ -154,9 +156,9 @@ public sealed partial class AppApiCef : AppApi
                 key.DeleteValue("VRCX", throwOnMissingValue: false);
             }
         }
-        catch (Exception e)
+        catch (Exception e) when (e is UnauthorizedAccessException or IOException or System.Security.SecurityException or ArgumentException)
         {
-            Logger.Warn(e, "Failed to set startup");
+            Logger.Warn(e, System.Globalization.CultureInfo.InvariantCulture, "Failed to set startup");
         }
     }
 
@@ -173,9 +175,9 @@ public sealed partial class AppApiCef : AppApi
             return;
         }
 
-        MainForm.Instance.BeginInvoke(new MethodInvoker(() =>
+        MainWindow.BeginInvoke(new MethodInvoker(() =>
         {
-            var image = Image.FromFile(path);
+            using var image = Image.FromFile(path);
 
             var data = new DataObject();
             data.SetData(DataFormats.Bitmap, image);
@@ -184,28 +186,29 @@ public sealed partial class AppApiCef : AppApi
         }));
     }
 
-    public override void FlashWindow() => MainForm.Instance.BeginInvoke(new MethodInvoker(() => { WinformThemer.Flash(MainForm.Instance); }));
+    public override void FlashWindow() => MainWindow.BeginInvoke(new MethodInvoker(() => { WinformThemer.Flash(MainWindow); }));
 
-    public override void SetUserAgent()
+    public override void SetUserAgent() => _ = SetUserAgentAsync(CancellationToken.None);
+
+    private static async Task SetUserAgentAsync(CancellationToken cancellationToken)
     {
-        using DevToolsClient client = MainForm.Instance.Browser.GetDevToolsClient();
-        _ = client.Network.SetUserAgentOverrideAsync(Program.Version);
+        using DevToolsClient client = MainWindow.Browser.GetDevToolsClient();
+        _ = await client.Network.SetUserAgentOverrideAsync(Program.Version ?? string.Empty).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public override void SetTrayIconNotification(bool notify) => MainForm.Instance.BeginInvoke(new MethodInvoker(() => { MainForm.Instance.SetTrayIconNotification(notify); }));
+    public override void SetTrayIconNotification(bool notify) => MainWindow.BeginInvoke(new MethodInvoker(() => { MainWindow.SetTrayIconNotification(notify); }));
 
     public override void OpenCalendarFile(string icsContent)
     {
-
         if (!icsContent.StartsWith("BEGIN:VCALENDAR", StringComparison.Ordinal) ||
             !icsContent.EndsWith("END:VCALENDAR", StringComparison.Ordinal))
         {
-            throw new Exception("Invalid calendar file");
+            throw new InvalidDataException("Invalid calendar file");
         }
 
         try
         {
-            string tempPath = Path.Combine(Program.AppDataDirectory, "event.ics");
+            string tempPath = Path.Join(Program.AppDataDirectory, "event.ics");
             File.WriteAllText(tempPath, icsContent);
             Process.Start(new ProcessStartInfo
             {
@@ -213,9 +216,9 @@ public sealed partial class AppApiCef : AppApi
                 UseShellExecute = true,
             })?.Dispose();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            Logger.Error(ex, "Failed to open calendar file");
+            Logger.Error(ex, System.Globalization.CultureInfo.InvariantCulture, "Failed to open calendar file");
         }
     }
 }

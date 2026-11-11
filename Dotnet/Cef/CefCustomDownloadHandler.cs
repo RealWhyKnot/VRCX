@@ -1,8 +1,8 @@
 using CefSharp;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
-internal sealed class CustomDownloadHandler : IDownloadHandler
+internal sealed class CefCustomDownloadHandler : IDownloadHandler
 {
     public bool CanDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, string url, string requestMethod) => true;
 

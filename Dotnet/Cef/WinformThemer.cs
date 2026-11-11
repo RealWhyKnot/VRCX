@@ -1,43 +1,21 @@
 using System.Runtime.InteropServices;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
-
-
-
-internal static class WinformThemer
+internal static partial class WinformThemer
 {
-
-
-
-
     public const uint FLASHW_ALL = 3;
-
-
-
-
     public const uint FLASHW_TIMERNOFG = 12;
-
-
-
-
-    private static int currentTheme = -1;
-
-
-
-
-
-
+    private static int CurrentTheme = -1;
 
     public static void SetGlobalTheme(int theme)
     {
-        if (currentTheme == theme)
+        if (CurrentTheme == theme)
         {
             return;
         }
 
-        currentTheme = theme;
-
+        CurrentTheme = theme;
 
         var forms = new List<Form>();
         foreach (Form form in Application.OpenForms)
@@ -48,33 +26,17 @@ internal static class WinformThemer
         SetThemeToGlobal(forms);
     }
 
-
-
-
-
-
-    public static int GetGlobalTheme() => currentTheme;
-
-
-
-
+    public static int GetGlobalTheme() => CurrentTheme;
 
     public static void SetThemeToGlobal(Form form) => SetThemeToGlobal([form]);
 
-
-
-
-
     public static void SetThemeToGlobal(List<Form> forms)
     {
-        MainForm.Instance.Invoke(new Action(() =>
+        MainForm.Instance?.Invoke(new Action(() =>
         {
-
             foreach (Form form in forms)
             {
-
                 SetThemeToGlobal(form.Handle);
-
 
                 form.Opacity = 0.99999;
                 form.Opacity = 1;
@@ -88,104 +50,73 @@ internal static class WinformThemer
 
     private static void SetThemeToGlobal(IntPtr handle)
     {
-        int whiteColor = 0xFFFFFF;
-        int blackColor = 0x000000;
-        int greyColor = 0x2B2B2B;
-
-        int isDark = currentTheme > 0 ? 1 : 0;
+        int isDark = CurrentTheme > 0 ? 1 : 0;
         if (PInvoke.DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref isDark, sizeof(int)) != 0)
         {
-            PInvoke.DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref isDark, sizeof(int));
+            _ = PInvoke.DwmSetWindowAttribute(handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref isDark, sizeof(int));
         }
 
-        if (currentTheme == 2)
+        int captionColor = CurrentTheme switch
         {
-            PInvoke.DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, ref blackColor, sizeof(int));
-        }
-        else if (currentTheme == 1)
-        {
-            PInvoke.DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, ref greyColor, sizeof(int));
-        }
-        else
-        {
-            PInvoke.DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, ref whiteColor, sizeof(int));
-        }
+            2 => 0x000000,
+            1 => 0x2B2B2B,
+            _ => 0xFFFFFF,
+        };
+        _ = PInvoke.DwmSetWindowAttribute(handle, DWMWA_CAPTION_COLOR, ref captionColor, sizeof(int));
     }
 
     public static void DoFunny()
     {
         foreach (Form form in Application.OpenForms)
         {
-            PInvoke.SetWindowLong(form.Handle, -20, 0x00C00000);
-
+            _ = PInvoke.SetWindowLong(form.Handle, -20, 0x00C00000);
         }
     }
 
-    private static FLASHWINFO Create_FLASHWINFO(IntPtr handle, uint flags, uint count, uint timeout)
+    private static FLASHWINFO CreateFlashWindowInfo(IntPtr handle, uint flags, uint count, uint timeout)
     {
         var fi = new FLASHWINFO();
-        fi.cbSize = Convert.ToUInt32(Marshal.SizeOf(fi));
-        fi.hwnd = handle;
-        fi.dwFlags = flags;
-        fi.uCount = count;
-        fi.dwTimeout = timeout;
+        fi.CbSize = Convert.ToUInt32(Marshal.SizeOf(fi));
+        fi.Hwnd = handle;
+        fi.DwFlags = flags;
+        fi.UCount = count;
+        fi.DwTimeout = timeout;
         return fi;
     }
 
-
-
-
-
-
     public static bool Flash(Form form)
     {
-        FLASHWINFO fi = Create_FLASHWINFO(form.Handle, FLASHW_ALL | FLASHW_TIMERNOFG, uint.MaxValue, 0);
+        FLASHWINFO fi = CreateFlashWindowInfo(form.Handle, FLASHW_ALL | FLASHW_TIMERNOFG, uint.MaxValue, 0);
         return PInvoke.FlashWindowEx(ref fi);
     }
 
-    internal static class PInvoke
+    internal static partial class PInvoke
     {
-        [DllImport("DwmApi")]
-        internal static extern int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+        [LibraryImport("DwmApi")]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        internal static partial int DwmSetWindowAttribute(IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
-        [DllImport("DwmApi")]
-        internal static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, IntPtr pvAttribute, int cbAttribute);
+        [LibraryImport("DwmApi")]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        internal static partial int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, IntPtr pvAttribute, int cbAttribute);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        internal static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+        [LibraryImport("user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+        internal static partial int SetWindowLong(IntPtr hwnd, int index, int newStyle);
 
-        [DllImport("user32.dll")]
+        [LibraryImport("user32.dll", SetLastError = false)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+        internal static partial bool FlashWindowEx(ref FLASHWINFO pwfi);
     }
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct FLASHWINFO
     {
-
-
-
-        public uint cbSize;
-
-
-
-
-        public IntPtr hwnd;
-
-
-
-
-        public uint dwFlags;
-
-
-
-
-        public uint uCount;
-
-
-
-
-
-        public uint dwTimeout;
+        public uint CbSize;
+        public IntPtr Hwnd;
+        public uint DwFlags;
+        public uint UCount;
+        public uint DwTimeout;
     }
 }

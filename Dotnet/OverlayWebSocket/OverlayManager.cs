@@ -1,18 +1,18 @@
 using System.Diagnostics;
 using NLog;
 
-namespace VRCX;
+namespace VRCX.OverlayWebSocket;
 
-internal sealed class OverlayManager
+internal static class OverlayManager
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    private static Process? _process;
+    private static Process? OverlayProcess;
 
     public static void StartOverlay()
     {
         if (OverlayServer.IsConnected() ||
-            (_process != null && !_process.HasExited))
+            (OverlayProcess != null && !OverlayProcess.HasExited))
         {
             Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Overlay server already started");
             return;
@@ -51,7 +51,7 @@ internal sealed class OverlayManager
             CreateNoWindow = true,
             WorkingDirectory = Program.BaseDirectory,
         };
-        _process = Process.Start(startInfo);
+        OverlayProcess = Process.Start(startInfo);
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Overlay process started");
     }
 }

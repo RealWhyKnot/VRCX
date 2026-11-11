@@ -1,18 +1,8 @@
 using System.Data.SQLite;
 
-namespace VRCX;
+namespace VRCX.ScreenshotMetadata;
 
-internal sealed class MetadataCache
-{
-    public int Id { get; set; }
-    public string? FilePath { get; set; }
-    public string? Metadata { get; set; }
-    public DateTimeOffset CachedAt { get; set; }
-}
-
-
-
-internal sealed class ScreenshotMetadataDatabase
+internal sealed class ScreenshotMetadataDatabase : IDisposable
 {
     private readonly SQLiteConnection _sqlite;
 
@@ -32,7 +22,6 @@ internal sealed class ScreenshotMetadataDatabase
 
     public void AddMetadataCache(string filePath, string metadata)
     {
-
         int isFileCached = IsFileCached(filePath);
         if (isFileCached != -1)
         {
@@ -45,8 +34,8 @@ internal sealed class ScreenshotMetadataDatabase
             Metadata = metadata,
             CachedAt = DateTimeOffset.Now,
         };
-        const string sql = "INSERT OR REPLACE INTO cache (file_path, metadata, cached_at) VALUES (@FilePath, @Metadata, @CachedAt);";
-        using var command = new SQLiteCommand(sql, _sqlite);
+        const string Sql = "INSERT OR REPLACE INTO cache (file_path, metadata, cached_at) VALUES (@FilePath, @Metadata, @CachedAt);";
+        using var command = new SQLiteCommand(Sql, _sqlite);
         command.Parameters.AddWithValue("@FilePath", cache.FilePath);
         command.Parameters.AddWithValue("@Metadata", cache.Metadata);
         command.Parameters.AddWithValue("@CachedAt", cache.CachedAt.Ticks);
@@ -57,15 +46,14 @@ internal sealed class ScreenshotMetadataDatabase
     {
         using SQLiteTransaction transaction = _sqlite.BeginTransaction();
         using var command = new SQLiteCommand(_sqlite);
-        const string sql = "INSERT OR REPLACE INTO cache (file_path, metadata, cached_at) VALUES (@FilePath, @Metadata, @CachedAt);";
-        command.CommandText = sql;
+        const string Sql = "INSERT OR REPLACE INTO cache (file_path, metadata, cached_at) VALUES (@FilePath, @Metadata, @CachedAt);";
+        command.CommandText = Sql;
         SQLiteParameter filePathParam = command.Parameters.Add("@FilePath", System.Data.DbType.String);
         SQLiteParameter metadataParam = command.Parameters.Add("@Metadata", System.Data.DbType.String);
         SQLiteParameter cachedAtParam = command.Parameters.Add("@CachedAt", System.Data.DbType.Int64);
         foreach (MetadataCache item in cache)
         {
-            int isFileCached = IsFileCached(item.FilePath);
-            if (isFileCached != -1)
+            if (item.FilePath is null || IsFileCached(item.FilePath) != -1)
             {
                 continue;
             }
@@ -80,8 +68,8 @@ internal sealed class ScreenshotMetadataDatabase
 
     public int IsFileCached(string filePath)
     {
-        const string sql = "SELECT id FROM cache WHERE file_path = @FilePath;";
-        using var command = new SQLiteCommand(sql, _sqlite);
+        const string Sql = "SELECT id FROM cache WHERE file_path = @FilePath;";
+        using var command = new SQLiteCommand(Sql, _sqlite);
         command.Parameters.AddWithValue("@FilePath", filePath);
         using SQLiteDataReader reader = command.ExecuteReader();
         var result = new List<int>();
@@ -94,43 +82,39 @@ internal sealed class ScreenshotMetadataDatabase
 
     public string? GetMetadata(string filePath)
     {
-        const string sql = "SELECT id, file_path, metadata, cached_at FROM cache WHERE file_path = @FilePath;";
-        using var command = new SQLiteCommand(sql, _sqlite);
+        const string Sql = "SELECT id, file_path, metadata, cached_at FROM cache WHERE file_path = @FilePath;";
+        using var command = new SQLiteCommand(Sql, _sqlite);
         command.Parameters.AddWithValue("@FilePath", filePath);
         using SQLiteDataReader reader = command.ExecuteReader();
         var result = new List<MetadataCache>();
         while (reader.Read())
         {
-            result.Add(new MetadataCache()
-            {
-                Id = reader.GetInt32(0),
-                FilePath = reader.GetString(1),
-                Metadata = reader.IsDBNull(2) ? null : reader.GetString(2),
-                CachedAt = new DateTime(reader.GetInt64(3)),
-            });
+            result.Add(ReadMetadataCache(reader));
         }
         return result.Count > 0 ? result[0].Metadata : null;
     }
 
     public string? GetMetadataById(int id)
     {
-        const string sql = "SELECT id, file_path, metadata, cached_at FROM cache WHERE id = @Id;";
-        using var command = new SQLiteCommand(sql, _sqlite);
+        const string Sql = "SELECT id, file_path, metadata, cached_at FROM cache WHERE id = @Id;";
+        using var command = new SQLiteCommand(Sql, _sqlite);
         command.Parameters.AddWithValue("@Id", id);
         using SQLiteDataReader reader = command.ExecuteReader();
         var result = new List<MetadataCache>();
         while (reader.Read())
         {
-            result.Add(new MetadataCache()
-            {
-                Id = reader.GetInt32(0),
-                FilePath = reader.GetString(1),
-                Metadata = reader.IsDBNull(2) ? null : reader.GetString(2),
-                CachedAt = new DateTime(reader.GetInt64(3)),
-            });
+            result.Add(ReadMetadataCache(reader));
         }
         return result.Count > 0 ? result[0].Metadata : null;
     }
 
-    public void Close() => _sqlite.Close();
+    private static MetadataCache ReadMetadataCache(SQLiteDataReader reader) => new()
+    {
+        Id = reader.GetInt32(0),
+        FilePath = reader.GetString(1),
+        Metadata = reader.IsDBNull(2) ? null : reader.GetString(2),
+        CachedAt = new DateTimeOffset(new DateTime(reader.GetInt64(3))),
+    };
+
+    public void Dispose() => _sqlite.Dispose();
 }

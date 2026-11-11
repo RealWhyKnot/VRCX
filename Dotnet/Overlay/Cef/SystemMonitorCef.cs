@@ -1,23 +1,21 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using NLog;
 
-namespace VRCX;
+namespace VRCX.Overlay.Cef;
 
-internal sealed class SystemMonitorCef
+internal sealed class SystemMonitorCef : IDisposable
 {
-    public static readonly SystemMonitorCef Instance;
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+    public static readonly SystemMonitorCef Instance = new();
     public float CpuUsage;
     public double UpTime;
     private bool _enabled;
     private PerformanceCounter? _performanceCounterCpuUsage;
     private PerformanceCounter? _performanceCounterUpTime;
     private Thread? _thread;
-    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
-    static SystemMonitorCef()
-    {
-        Instance = new SystemMonitorCef();
-    }
 
     public void Start(bool enabled)
     {
@@ -37,6 +35,8 @@ internal sealed class SystemMonitorCef
         }
     }
 
+    public void Dispose() => Exit();
+
     internal void Exit()
     {
         CpuUsage = 0;
@@ -52,6 +52,7 @@ internal sealed class SystemMonitorCef
         }
         catch (ThreadInterruptedException)
         {
+            Logger.Debug(CultureInfo.InvariantCulture, "SystemMonitor thread interrupted during exit");
         }
 
         _performanceCounterCpuUsage?.Dispose();
@@ -64,57 +65,18 @@ internal sealed class SystemMonitorCef
     {
         Exit();
 
-        try
-        {
-            _performanceCounterCpuUsage = new PerformanceCounter(
-                "Processor Information",
-                "% Processor Utility",
-                "_Total",
-readOnly: true
-            );
-            _performanceCounterCpuUsage?.NextValue();
-        }
-        catch (Exception ex)
-        {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Failed to create \"Processor Utility\" PerformanceCounter ${ex}");
-        }
-
-
-        if (_performanceCounterCpuUsage == null)
-        {
-            try
-            {
-                _performanceCounterCpuUsage = new PerformanceCounter(
-                    "Processor",
-                    "% Processor Time",
-                    "_Total",
-readOnly: true
-                );
-                _performanceCounterCpuUsage?.NextValue();
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"Failed to create \"Processor Time\" PerformanceCounter ${ex}");
-            }
-        }
-
-        try
-        {
-            _performanceCounterUpTime = new PerformanceCounter("System", "System Up Time");
-            _performanceCounterUpTime?.NextValue();
-        }
-        catch
-        {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Failed to create \"System Up Time\" PerformanceCounter");
-        }
+        _performanceCounterCpuUsage = TryCreateCounter("Processor Information", "% Processor Utility", "_Total", "Processor Utility")
+            ?? TryCreateCounter("Processor", "% Processor Time", "_Total", "Processor Time");
+        _performanceCounterUpTime = TryCreateCounter("System", "System Up Time", instanceName: null, "System Up Time");
 
         if (_performanceCounterCpuUsage == null &&
             _performanceCounterUpTime == null)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Failed to create any PerformanceCounter");
+            Logger.Error(CultureInfo.InvariantCulture, "Failed to create any PerformanceCounter");
             return;
         }
-        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "SystemMonitor started");
+
+        Logger.Info(CultureInfo.InvariantCulture, "SystemMonitor started");
 
         _thread = new Thread(ThreadProc)
         {
@@ -122,6 +84,26 @@ readOnly: true
         };
         _thread.Start();
     }
+
+    private static PerformanceCounter? TryCreateCounter(string category, string counterName, string? instanceName, string label)
+    {
+        try
+        {
+            PerformanceCounter counter = instanceName == null
+                ? new PerformanceCounter(category, counterName)
+                : new PerformanceCounter(category, counterName, instanceName, readOnly: true);
+            counter.NextValue();
+            return counter;
+        }
+        catch (Exception ex) when (IsPerformanceCounterFailure(ex))
+        {
+            Logger.Warn(CultureInfo.InvariantCulture, $"Failed to create \"{label}\" PerformanceCounter {ex}");
+            return null;
+        }
+    }
+
+    private static bool IsPerformanceCounterFailure(Exception exception) =>
+        exception is InvalidOperationException or UnauthorizedAccessException or Win32Exception or PlatformNotSupportedException or ArgumentException;
 
     private void ThreadProc()
     {
@@ -144,10 +126,11 @@ readOnly: true
         }
         catch (ThreadInterruptedException)
         {
+            Logger.Debug(CultureInfo.InvariantCulture, "SystemMonitor thread interrupted");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsPerformanceCounterFailure(ex))
         {
-            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, $"SystemMonitor thread exception: {ex}");
+            Logger.Warn(CultureInfo.InvariantCulture, $"SystemMonitor thread exception: {ex}");
         }
 
         Exit();

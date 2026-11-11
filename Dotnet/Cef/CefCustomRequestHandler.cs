@@ -2,9 +2,9 @@ using System.Security.Cryptography.X509Certificates;
 using CefSharp;
 using NLog;
 
-namespace VRCX;
+namespace VRCX.Cef;
 
-internal sealed class CustomRequestHandler : IRequestHandler
+internal sealed class CefCustomRequestHandler : IRequestHandler
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -34,7 +34,7 @@ internal sealed class CustomRequestHandler : IRequestHandler
         return true;
     }
 
-    public IResourceRequestHandler GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
+    public IResourceRequestHandler? GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
         IRequest request, bool isNavigation, bool isDownload, string requestInitiator, ref bool disableDefaultHandling) => null;
 
     public bool GetAuthCredentials(IWebBrowser chromiumWebBrowser, IBrowser browser, string originUrl, bool isProxy, string host,

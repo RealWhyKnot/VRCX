@@ -1,55 +1,34 @@
 using System.Text;
 
-namespace VRCX;
-
-
+namespace VRCX.ScreenshotMetadata;
 
 internal sealed class PNGFile : IDisposable
 {
-    private readonly FileStream fileStream;
-    private readonly List<PNGChunk> metadataChunkCache = [];
-
-    private static readonly byte[] pngSignatureBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    private static readonly byte[] PngSignatureBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     private const int MAX_CHUNKS_TO_READ = 16;
     private const int CHUNK_FIELD_SIZE = 4;
     private const int CHUNK_NONDATA_SIZE = 12;
 
-
-
-
-
-
+    private readonly FileStream _fileStream;
+    private readonly List<PNGChunk> _metadataChunkCache = [];
 
     public PNGFile(string filePath, bool writeAccess)
     {
-        fileStream = new FileStream(filePath, FileMode.Open, writeAccess ? FileAccess.ReadWrite : FileAccess.Read, FileShare.ReadWrite, 4096);
+        _fileStream = new FileStream(filePath, FileMode.Open, writeAccess ? FileAccess.ReadWrite : FileAccess.Read, FileShare.ReadWrite, 4096);
     }
 
     public PNGFile(string filePath, int bufferSize)
     {
-        fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite, bufferSize);
+        _fileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite, bufferSize);
     }
-
-
-
-
-
 
     public PNGChunk? GetChunk(PNGChunkTypeFilter chunkTypeFilter)
     {
         ReadAndCacheMetadata();
 
-        PNGChunk? chunk = metadataChunkCache.FirstOrDefault((chunk) => chunkTypeFilter.HasFlag(chunk.ChunkTypeEnum));
+        PNGChunk? chunk = _metadataChunkCache.FirstOrDefault(candidate => chunkTypeFilter.HasFlag(candidate.ChunkTypeEnum));
         return chunk == null || chunk.IsZero() ? null : chunk;
     }
-
-
-
-
-
-
-
-
 
     public PNGChunk? GetChunkReverse(PNGChunkTypeFilter chunkTypeFilter)
     {
@@ -57,64 +36,46 @@ internal sealed class PNGFile : IDisposable
         return chunk == null || chunk.IsZero() ? null : chunk;
     }
 
-
-
-
-
-
-
-
     public List<PNGChunk> GetChunks()
     {
         ReadAndCacheMetadata();
 
-        return [.. metadataChunkCache];
+        return [.. _metadataChunkCache];
     }
-
-
-
-
-
 
     public bool WriteChunk(PNGChunk chunk)
     {
         ReadAndCacheMetadata();
 
-        if (metadataChunkCache.Count == 0)
+        if (_metadataChunkCache.Count == 0)
         {
             return false;
         }
 
-        PNGChunk? lastChunk = metadataChunkCache.LastOrDefault();
+        PNGChunk lastChunk = _metadataChunkCache[^1];
         if (lastChunk.IsZero())
         {
             return false;
         }
 
         int newChunkPosition = lastChunk.Index + CHUNK_NONDATA_SIZE + lastChunk.Length;
-        fileStream.Seek(newChunkPosition, SeekOrigin.Begin);
+        _fileStream.Seek(newChunkPosition, SeekOrigin.Begin);
 
-        byte[] fileBytes = new byte[fileStream.Length - newChunkPosition];
-        fileStream.ReadExactly(fileBytes, 0, (int)(fileStream.Length - newChunkPosition));
-        fileStream.Seek(newChunkPosition, SeekOrigin.Begin);
-
+        byte[] fileBytes = new byte[_fileStream.Length - newChunkPosition];
+        _fileStream.ReadExactly(fileBytes, 0, (int)(_fileStream.Length - newChunkPosition));
+        _fileStream.Seek(newChunkPosition, SeekOrigin.Begin);
 
         byte[] chunkBytes = chunk.GetBytes();
-        fileStream.SetLength(fileStream.Length + CHUNK_NONDATA_SIZE + chunk.Length);
-        fileStream.Write(chunkBytes, 0, chunkBytes.Length);
-        fileStream.Write(fileBytes, 0, fileBytes.Length);
+        _fileStream.SetLength(_fileStream.Length + CHUNK_NONDATA_SIZE + chunk.Length);
+        _fileStream.Write(chunkBytes, 0, chunkBytes.Length);
+        _fileStream.Write(fileBytes, 0, fileBytes.Length);
 
         return true;
     }
 
-
-
-
-
-
     public bool DeleteChunk(PNGChunk chunk)
     {
-        if (!chunk.ExistsInFile(fileStream))
+        if (!chunk.ExistsInFile(_fileStream))
         {
             return false;
         }
@@ -127,32 +88,30 @@ internal sealed class PNGFile : IDisposable
         long destPos = deleteStart;
         byte[] buffer = new byte[bufferSize];
 
-
-        while (sourcePos < fileStream.Length)
+        while (sourcePos < _fileStream.Length)
         {
-            fileStream.Seek(sourcePos, SeekOrigin.Begin);
-            int bytesRead = fileStream.Read(buffer, 0, Math.Min(buffer.Length, (int)(fileStream.Length - sourcePos)));
+            _fileStream.Seek(sourcePos, SeekOrigin.Begin);
+            int bytesRead = _fileStream.Read(buffer, 0, Math.Min(buffer.Length, (int)(_fileStream.Length - sourcePos)));
 
             if (bytesRead == 0)
             {
                 break;
             }
 
-            fileStream.Seek(destPos, SeekOrigin.Begin);
-            fileStream.Write(buffer, 0, bytesRead);
+            _fileStream.Seek(destPos, SeekOrigin.Begin);
+            _fileStream.Write(buffer, 0, bytesRead);
 
             sourcePos += bytesRead;
             destPos += bytesRead;
         }
 
-        fileStream.SetLength(fileStream.Length - deleteLength);
+        _fileStream.SetLength(_fileStream.Length - deleteLength);
 
-        metadataChunkCache.Remove(chunk);
+        _metadataChunkCache.Remove(chunk);
 
-
-        for (int i = 0; i < metadataChunkCache.Count; i++)
+        for (int i = 0; i < _metadataChunkCache.Count; i++)
         {
-            PNGChunk cachedChunk = metadataChunkCache[i];
+            PNGChunk cachedChunk = _metadataChunkCache[i];
             if (cachedChunk.Index > deleteStart)
             {
                 cachedChunk.Index -= deleteLength;
@@ -162,125 +121,84 @@ internal sealed class PNGFile : IDisposable
         return true;
     }
 
-
-
-
-
-
-
-
-
-
     public List<PNGChunk> GetChunksOfType(PNGChunkTypeFilter chunkTypeFilter)
     {
         ReadAndCacheMetadata();
 
-        return metadataChunkCache.FindAll((chunk) => chunk.ChunkTypeEnum.HasFlag(chunkTypeFilter));
+        return _metadataChunkCache.FindAll(chunk => chunk.ChunkTypeEnum.HasFlag(chunkTypeFilter));
     }
-
-
-
-
-
-
-
-
-
 
     private IEnumerable<PNGChunk> ReadChunks()
     {
-        int currentIndex = pngSignatureBytes.Length;
+        int currentIndex = PngSignatureBytes.Length;
         int chunksRead = 0;
-        byte[] buffer = new byte[4];
 
-        while (currentIndex < fileStream.Length)
+        while (currentIndex < _fileStream.Length && chunksRead < MAX_CHUNKS_TO_READ)
         {
-            if (chunksRead >= MAX_CHUNKS_TO_READ)
-            {
-                yield break;
-            }
-
             chunksRead++;
-            fileStream.Seek(currentIndex, SeekOrigin.Begin);
-
-
-            fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
-
-
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(buffer, 0, 4);
-            }
-
-            int chunkLength = BitConverter.ToInt32(buffer, 0);
-            if (chunkLength < 0 || chunkLength > fileStream.Length - currentIndex - CHUNK_NONDATA_SIZE)
+            PNGChunk? chunk = ReadChunkAt(currentIndex);
+            if (chunk == null)
             {
                 yield break;
             }
-
-
-            fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
-
-            string chunkType = Encoding.ASCII.GetString(buffer, 0, CHUNK_FIELD_SIZE);
-
-
-            if (string.Equals(chunkType, "IDAT", StringComparison.Ordinal))
-            {
-                yield break;
-            }
-
-
-            if (string.Equals(chunkType, "IEND", StringComparison.Ordinal))
-            {
-                yield break;
-            }
-
-
-            byte[] chunkData = new byte[chunkLength];
-            fileStream.ReadExactly(chunkData, 0, chunkLength);
-
-
-
-
-            var chunk = new PNGChunk
-            {
-                Length = chunkLength,
-                ChunkType = chunkType,
-                ChunkTypeEnum = ChunkNameToEnum(chunkType),
-                Data = chunkData,
-                Index = currentIndex,
-            };
 
             yield return chunk;
 
-
-            currentIndex += CHUNK_NONDATA_SIZE + chunkLength;
+            currentIndex += CHUNK_NONDATA_SIZE + chunk.Length;
         }
     }
 
+    private PNGChunk? ReadChunkAt(int currentIndex)
+    {
+        byte[] buffer = new byte[4];
+        _fileStream.Seek(currentIndex, SeekOrigin.Begin);
+        _fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
 
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(buffer, 0, 4);
+        }
 
+        int chunkLength = BitConverter.ToInt32(buffer, 0);
+        if (chunkLength < 0 || chunkLength > _fileStream.Length - currentIndex - CHUNK_NONDATA_SIZE)
+        {
+            return null;
+        }
 
+        _fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
 
+        string chunkType = Encoding.ASCII.GetString(buffer, 0, CHUNK_FIELD_SIZE);
+        if (chunkType is "IDAT" or "IEND")
+        {
+            return null;
+        }
 
+        byte[] chunkData = new byte[chunkLength];
+        _fileStream.ReadExactly(chunkData, 0, chunkLength);
 
-
-
+        return new PNGChunk
+        {
+            Length = chunkLength,
+            ChunkType = chunkType,
+            ChunkTypeEnum = ChunkNameToEnum(chunkType),
+            Data = chunkData,
+            Index = currentIndex,
+        };
+    }
 
     private PNGChunk? ReadChunkReverse(PNGChunkTypeFilter chunkTypeFilter)
     {
-        if (fileStream.Length < 8300)
+        if (_fileStream.Length < 8300)
         {
             return null;
         }
 
         byte[] searchChunkBytes = Encoding.ASCII.GetBytes(ChunkTypeEnumToChunkName(chunkTypeFilter));
 
-
-        fileStream.Seek(fileStream.Length - 8192 - CHUNK_NONDATA_SIZE, SeekOrigin.Begin);
+        _fileStream.Seek(_fileStream.Length - 8192 - CHUNK_NONDATA_SIZE, SeekOrigin.Begin);
 
         byte[] trailingBytesBuffer = new byte[8192];
-        fileStream.ReadExactly(trailingBytesBuffer, 0, 8192);
+        _fileStream.ReadExactly(trailingBytesBuffer, 0, 8192);
 
         for (int i = 0; i < trailingBytesBuffer.Length - searchChunkBytes.Length; i++)
         {
@@ -289,62 +207,52 @@ internal sealed class PNGFile : IDisposable
                 trailingBytesBuffer[i + 2] == searchChunkBytes[2] &&
                 trailingBytesBuffer[i + 3] == searchChunkBytes[3])
             {
-                fileStream.Seek(fileStream.Length - trailingBytesBuffer.Length - CHUNK_NONDATA_SIZE + i - CHUNK_FIELD_SIZE, SeekOrigin.Begin);
-
-                byte[] buffer = new byte[4];
-
-
-                fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
-
-
-                if (BitConverter.IsLittleEndian)
-                {
-                    Array.Reverse(buffer, 0, 4);
-                }
-
-                int chunkLength = BitConverter.ToInt32(buffer, 0);
-                if (chunkLength < 0 || chunkLength > fileStream.Length - i - CHUNK_NONDATA_SIZE)
-                {
-                    return null;
-                }
-
-
-                fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
-
-                string chunkType = Encoding.ASCII.GetString(buffer, 0, CHUNK_FIELD_SIZE);
-
-
-                byte[] chunkData = new byte[chunkLength];
-                fileStream.ReadExactly(chunkData, 0, chunkLength);
-
-
-                fileStream.Seek(CHUNK_FIELD_SIZE, SeekOrigin.Current);
-
-                var chunk = new PNGChunk
-                {
-                    Length = chunkLength,
-                    ChunkType = chunkType,
-                    ChunkTypeEnum = ChunkNameToEnum(chunkType),
-                    Data = chunkData,
-                };
-
-                return chunk;
+                return ReadChunkFromTrailer(trailingBytesBuffer.Length, i);
             }
         }
 
         return null;
     }
 
+    private PNGChunk? ReadChunkFromTrailer(int trailingLength, int matchIndex)
+    {
+        _fileStream.Seek(_fileStream.Length - trailingLength - CHUNK_NONDATA_SIZE + matchIndex - CHUNK_FIELD_SIZE, SeekOrigin.Begin);
 
+        byte[] buffer = new byte[4];
+        _fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
 
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(buffer, 0, 4);
+        }
 
+        int chunkLength = BitConverter.ToInt32(buffer, 0);
+        if (chunkLength < 0 || chunkLength > _fileStream.Length - matchIndex - CHUNK_NONDATA_SIZE)
+        {
+            return null;
+        }
 
+        _fileStream.ReadExactly(buffer, 0, CHUNK_FIELD_SIZE);
 
+        string chunkType = Encoding.ASCII.GetString(buffer, 0, CHUNK_FIELD_SIZE);
 
+        byte[] chunkData = new byte[chunkLength];
+        _fileStream.ReadExactly(chunkData, 0, chunkLength);
+
+        _fileStream.Seek(CHUNK_FIELD_SIZE, SeekOrigin.Current);
+
+        return new PNGChunk
+        {
+            Length = chunkLength,
+            ChunkType = chunkType,
+            ChunkTypeEnum = ChunkNameToEnum(chunkType),
+            Data = chunkData,
+        };
+    }
 
     private void ReadAndCacheMetadata()
     {
-        if (metadataChunkCache.Count > 0)
+        if (_metadataChunkCache.Count > 0)
         {
             return;
         }
@@ -354,71 +262,39 @@ internal sealed class PNGFile : IDisposable
             return;
         }
 
-
-        metadataChunkCache.AddRange(ReadChunks());
+        _metadataChunkCache.AddRange(ReadChunks());
     }
 
-    private PNGChunkTypeFilter ChunkNameToEnum(string chunkType)
+    private static PNGChunkTypeFilter ChunkNameToEnum(string chunkType) => chunkType switch
     {
-        switch (chunkType)
-        {
-            case "IHDR":
-                return PNGChunkTypeFilter.IHDR;
-            case "sRGB":
-                return PNGChunkTypeFilter.sRGB;
-            case "iTXt":
-                return PNGChunkTypeFilter.iTXt;
-            case "IDAT":
-                return PNGChunkTypeFilter.IDAT;
-            case "IEND":
-                return PNGChunkTypeFilter.IEND;
-            default:
-                break;
-        }
+        "IHDR" => PNGChunkTypeFilter.IHDR,
+        "sRGB" => PNGChunkTypeFilter.sRGB,
+        "iTXt" => PNGChunkTypeFilter.iTXt,
+        "IDAT" => PNGChunkTypeFilter.IDAT,
+        "IEND" => PNGChunkTypeFilter.IEND,
+        _ => PNGChunkTypeFilter.UNKNOWN,
+    };
 
-        return PNGChunkTypeFilter.UNKNOWN;
-    }
-
-    private string ChunkTypeEnumToChunkName(PNGChunkTypeFilter chunkType)
+    private static string ChunkTypeEnumToChunkName(PNGChunkTypeFilter chunkType) => chunkType switch
     {
-        switch (chunkType)
-        {
-            case PNGChunkTypeFilter.IHDR:
-                return "IHDR";
-            case PNGChunkTypeFilter.sRGB:
-                return "sRGB";
-            case PNGChunkTypeFilter.iTXt:
-                return "iTXt";
-            case PNGChunkTypeFilter.IDAT:
-                return "IDAT";
-            case PNGChunkTypeFilter.IEND:
-                return "IEND";
-            case PNGChunkTypeFilter.UNKNOWN:
-                break;
-            default:
-                break;
-        }
-
-        return null;
-    }
-
-
-
-
+        PNGChunkTypeFilter.IHDR => "IHDR",
+        PNGChunkTypeFilter.sRGB => "sRGB",
+        PNGChunkTypeFilter.iTXt => "iTXt",
+        PNGChunkTypeFilter.IDAT => "IDAT",
+        PNGChunkTypeFilter.IEND => "IEND",
+        PNGChunkTypeFilter.UNKNOWN or _ => throw new ArgumentOutOfRangeException(nameof(chunkType), chunkType, "No PNG chunk name for this type"),
+    };
 
     public bool IsValid()
     {
-        if (fileStream.Length < 57)
+        if (_fileStream.Length < 57)
         {
             return false;
         }
 
         byte[] signature = new byte[8];
-        return fileStream.Read(signature, 0, 8) >= 8 && signature.SequenceEqual(pngSignatureBytes);
+        return _fileStream.Read(signature, 0, 8) >= 8 && signature.SequenceEqual(PngSignatureBytes);
     }
 
-
-
-
-    public void Dispose() => fileStream.Dispose();
+    public void Dispose() => _fileStream.Dispose();
 }
