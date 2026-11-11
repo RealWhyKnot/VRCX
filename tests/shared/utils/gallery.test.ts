@@ -314,6 +314,18 @@ describe("Gallery Utils", () => {
       expect(style).toContain("128px");
     });
 
+    test("registers the keyframes its animation names", () => {
+      const style = generateEmojiStyle("u", 10, 11, "linear", 100);
+      expect(style).toContain("animated-emoji-11");
+      expect(document.head.querySelector('style[data-emoji-keyframes="11"]')?.textContent).toContain("@keyframes animated-emoji-11 ");
+    });
+
+    test("leaves frame counts above 64 without keyframes", () => {
+      const style = generateEmojiStyle("u", 10, 65, "linear", 100);
+      expect(style).toContain("animated-emoji-65");
+      expect(document.head.querySelector('style[data-emoji-keyframes="65"]')).toBeNull();
+    });
+
     test("uses alternate for pingpong loopStyle", () => {
       const style = generateEmojiStyle("u", 10, 4, "pingpong", 100);
       expect(style).toContain("alternate");

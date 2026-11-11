@@ -1,4 +1,4 @@
-import { ensureEmojiKeyframes } from "./emoji-keyframes";
+import { ensureEmojiKeyframes, getEmojiFrameSize } from "./emoji-keyframes";
 
 type PrintFileInfo = {
   id: string;
@@ -53,11 +53,8 @@ function getEmojiFileName(emoji: Partial<EmojiFileInfo>): string {
 }
 
 function generateEmojiStyle(url: string, fps: number, frameCount: number, loopStyle: string | null | undefined, size: number): string {
-  let framesPerLine = 2;
-  if (frameCount > 4) framesPerLine = 4;
-  if (frameCount > 16) framesPerLine = 8;
   const animationDurationMs = (1000 / fps) * frameCount;
-  const frameSize = 1024 / framesPerLine;
+  const frameSize = getEmojiFrameSize(frameCount);
   const scale = 100 / (frameSize / size);
   const animStyle = loopStyle === "pingpong" ? "alternate" : "none";
   ensureEmojiKeyframes(frameCount);

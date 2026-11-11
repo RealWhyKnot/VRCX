@@ -1,3 +1,4 @@
+const EMOJI_SHEET_SIZE = 1024;
 const registeredFrameCounts = new Set<number>();
 
 function getFramesPerLine(frameCount: number): number {
@@ -6,13 +7,17 @@ function getFramesPerLine(frameCount: number): number {
   return 2;
 }
 
+function getEmojiFrameSize(frameCount: number): number {
+  return EMOJI_SHEET_SIZE / getFramesPerLine(frameCount);
+}
+
 function formatOffset(value: number): string {
   return value === 0 ? "-0" : `-${value}px`;
 }
 
 function buildEmojiKeyframes(frameCount: number): string {
   const framesPerLine = getFramesPerLine(frameCount);
-  const frameSize = 1024 / framesPerLine;
+  const frameSize = getEmojiFrameSize(frameCount);
   const steps: string[] = [];
   for (let frame = 0; frame < frameCount; frame += 1) {
     const column = frame % framesPerLine;
@@ -33,4 +38,4 @@ function ensureEmojiKeyframes(frameCount: number): void {
   registeredFrameCounts.add(frameCount);
 }
 
-export { buildEmojiKeyframes, ensureEmojiKeyframes };
+export { buildEmojiKeyframes, ensureEmojiKeyframes, getEmojiFrameSize };
