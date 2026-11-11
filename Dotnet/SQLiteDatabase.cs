@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Data.SQLite;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -134,6 +135,7 @@ sealed class SQLiteDatabase : IDisposable
         }
     }
 
+    [SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Query text is built inside this assembly and every value is bound as a parameter.")]
     private SQLiteCommand CreateCommand(string sql, IReadOnlyDictionary<string, object?>? args)
     {
         var command = new SQLiteCommand(sql, Connection);

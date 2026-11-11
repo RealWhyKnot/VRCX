@@ -1,9 +1,11 @@
 using System.Data.SQLite;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DBMerger;
 
 internal static class SqliteExtensions
 {
+    [SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Query text is built inside this assembly and every value is bound as a parameter.")]
     public static SQLiteCommand CreateCommand(this SQLiteConnection conn, string query, params object?[] args)
     {
         SQLiteCommand command = conn.CreateCommand();
