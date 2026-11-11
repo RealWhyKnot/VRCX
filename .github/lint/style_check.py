@@ -22,6 +22,7 @@ VENDORED_FILE = "vendored-paths.txt"
 LOCAL_FILE = "vendored-paths.local.txt"
 APPROVED_FILE = "approved-suppressions.local.txt"
 SUPPRESSION = "lint suppression (GEN-4)"
+ATTRIBUTE_SPAN = 6
 SEGMENT = r"(?!\.+/)[A-Za-z0-9_.@+-]+/"
 LEAF = r"(?!\.+$)[A-Za-z0-9_.@+-]+"
 ENTRY = re.compile(rf"/(?:{SEGMENT})+|/(?:{SEGMENT})*{LEAF}|{SEGMENT}")
@@ -61,25 +62,27 @@ def read_approvals(path: Path) -> list[Approval]:
     return approvals
 
 
-def source_line(root: Path, finding: Finding) -> str:
+def attribute_text(root: Path, finding: Finding) -> str:
     try:
         lines = (root / finding.path).read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except OSError:
         return ""
-    return lines[finding.line - 1] if 0 < finding.line <= len(lines) else ""
+    return "\n".join(lines[max(finding.line - 1, 0) : finding.line - 1 + ATTRIBUTE_SPAN])
 
 
 def apply_approvals(root: Path, findings: list[Finding], approvals: list[Approval]) -> list[Finding]:
     kept = list(findings)
     for approval in approvals:
-        rule = re.compile(rf"\b{re.escape(approval.rule)}\b")
+        rule = re.compile(
+            rf'^[^\n]*?\bSuppressMessage(?:Attribute)?\s*\(\s*"[^"\n]*"\s*,\s*"{re.escape(approval.rule)}\b',
+        )
         approved = next(
             (
                 finding
                 for finding in kept
                 if finding.path == approval.path
                 and finding.message == SUPPRESSION
-                and rule.search(source_line(root, finding))
+                and rule.search(attribute_text(root, finding))
             ),
             None,
         )
