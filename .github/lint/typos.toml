@@ -43,7 +43,7 @@ extend-ignore-re = ["wrld_[0-9a-f-]{36}"]
 StrCpy = "StrCpy"
 loginParmas = "loginParmas"
 CancelFriendRequst = "CancelFriendRequst"
+tha = "tha"
 
 [default.extend-words]
 paeth = "paeth"
-tha = "tha"

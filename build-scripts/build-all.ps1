@@ -127,6 +127,7 @@ if ($env:OS -eq 'Windows_NT') {
     [IO.File]::WriteAllText((Join-Path $root 'Installer/version_define.nsh'), $definition)
     $nsisPath = 'C:\Program Files (x86)\NSIS\makensis.exe'
     &$nsisPath installer.nsi
+    if ($LASTEXITCODE -ne 0) { throw "makensis failed with exit code $LASTEXITCODE" }
     Start-Sleep -Seconds 1
     Move-Item -LiteralPath VRCX_Setup_x64.exe -Destination "..\$SetupName" -Force
     Set-Location ..
