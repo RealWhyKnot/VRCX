@@ -178,7 +178,7 @@ const userDialogTabColor = computed(() => {
 });
 const scrollbarThumbColor = computed(() => {
   const color = userDialog.value.theme.buttonColor;
-  return color === "var(--primary)" ? "color-mix(in oklab, var(--foreground) 30%, transparent)" : `color-mix(in oklab, ${color} 50%, transparent)`;
+  return !color || color === "var(--primary)" ? "color-mix(in oklab, var(--foreground) 30%, transparent)" : `color-mix(in oklab, ${color} 50%, transparent)`;
 });
 const { cachedUsers, showSendBoopDialog, showEditProfileDialog } = useUserStore();
 const { showFavoriteDialog } = useFavoriteStore();
