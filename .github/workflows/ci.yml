@@ -134,7 +134,42 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Set up shell checks
-        run: sudo apt-get update && sudo apt-get install -y shellcheck shfmt
+      - name: Install shell tools
+        env:
+          SHELLCHECK_VERSION: "0.11.0"
+          SHELLCHECK_SHA256: "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+          SHFMT_VERSION: "3.14.1"
+          SHFMT_SHA256: "76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          set -euo pipefail
+          shopt -s inherit_errexit
+          download_directory=$(mktemp -d)
+          trap 'rm -rf "${download_directory}"' EXIT
+          tool_directory="${RUNNER_TEMP}/shell-tools/bin"
+          shellcheck_release_url="https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}"
+          curl -fsSL --max-time 60 --retry 3 \
+            "${shellcheck_release_url}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            -o "${download_directory}/shellcheck.tar.xz"
+          shfmt_release_url="https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}"
+          curl -fsSL --max-time 60 --retry 3 \
+            "${shfmt_release_url}/shfmt_v${SHFMT_VERSION}_linux_amd64" \
+            -o "${download_directory}/shfmt"
+          actionlint_release_url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}"
+          curl -fsSL --max-time 60 --retry 3 \
+            "${actionlint_release_url}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            -o "${download_directory}/actionlint.tar.gz"
+          printf '%s  %s\n' \
+            "${SHELLCHECK_SHA256}" "${download_directory}/shellcheck.tar.xz" \
+            "${SHFMT_SHA256}" "${download_directory}/shfmt" \
+            "${ACTIONLINT_SHA256}" "${download_directory}/actionlint.tar.gz" | sha256sum -c
+          mkdir -p "${tool_directory}"
+          tar -xJf "${download_directory}/shellcheck.tar.xz" -C "${tool_directory}" \
+            --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+          mv "${download_directory}/shfmt" "${tool_directory}/shfmt"
+          tar -xzf "${download_directory}/actionlint.tar.gz" -C "${tool_directory}" actionlint
+          chmod 755 "${tool_directory}/shellcheck" "${tool_directory}/shfmt" "${tool_directory}/actionlint"
+          printf '%s\n' "${tool_directory}" >> "${GITHUB_PATH}"
       - name: Shell style rules
         run: bash .githooks/check-shell
