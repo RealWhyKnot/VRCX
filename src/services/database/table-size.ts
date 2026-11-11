@@ -1,126 +1,74 @@
-import { dbVars } from "../database";
+import { cellNumber } from "./cells.ts";
 
 import { sqliteService } from "../sqlite.ts";
 
+async function readCount(call: Promise<string>): Promise<number> {
+  const rows = await sqliteService.rows(call);
+  const [row] = rows;
+  return row === undefined ? 0 : (cellNumber(row[0]) ?? 0);
+}
+
 const tableSize = {
-  async getMaxFriendLogNumber() {
-    let friendNumber = 0;
-    await sqliteService.execute((dbRow) => {
-      friendNumber = dbRow[0];
-    }, `SELECT MAX(friend_number) FROM ${dbVars.userPrefix}_friend_log_current`);
-    return friendNumber;
+  async getMaxFriendLogNumber(): Promise<number | null> {
+    const rows = await sqliteService.rows(DatabaseApi.GetMaxFriendLogNumber());
+    const [row] = rows;
+    return row === undefined ? 0 : cellNumber(row[0]);
   },
 
   async getGpsTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_feed_gps`);
-    return size;
+    return readCount(DatabaseApi.GetGpsTableSize());
   },
 
   async getStatusTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_feed_status`);
-    return size;
+    return readCount(DatabaseApi.GetStatusTableSize());
   },
 
   async getBioTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_feed_bio`);
-    return size;
+    return readCount(DatabaseApi.GetBioTableSize());
   },
 
   async getAvatarTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_feed_avatar`);
-    return size;
+    return readCount(DatabaseApi.GetAvatarTableSize());
   },
 
   async getOnlineOfflineTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_feed_online_offline`);
-    return size;
+    return readCount(DatabaseApi.GetOnlineOfflineTableSize());
   },
 
   async getFriendLogHistoryTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_friend_log_history`);
-    return size;
+    return readCount(DatabaseApi.GetFriendLogHistoryTableSize());
   },
 
   async getNotificationTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM ${dbVars.userPrefix}_notifications`);
-    return size;
+    return readCount(DatabaseApi.GetNotificationTableSize());
   },
 
   async getLocationTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_location`);
-    return size;
+    return readCount(DatabaseApi.GetLocationTableSize());
   },
 
   async getJoinLeaveTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_join_leave`);
-    return size;
+    return readCount(DatabaseApi.GetJoinLeaveTableSize());
   },
 
   async getPortalSpawnTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_portal_spawn`);
-    return size;
+    return readCount(DatabaseApi.GetPortalSpawnTableSize());
   },
 
   async getVideoPlayTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_video_play`);
-    return size;
+    return readCount(DatabaseApi.GetVideoPlayTableSize());
   },
 
   async getResourceLoadTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_resource_load`);
-    return size;
+    return readCount(DatabaseApi.GetResourceLoadTableSize());
   },
 
   async getEventTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_event`);
-    return size;
+    return readCount(DatabaseApi.GetEventTableSize());
   },
 
   async getExternalTableSize() {
-    let size = 0;
-    await sqliteService.execute((row) => {
-      size = row[0];
-    }, `SELECT COUNT(*) FROM gamelog_external`);
-    return size;
+    return readCount(DatabaseApi.GetExternalTableSize());
   },
 };
 

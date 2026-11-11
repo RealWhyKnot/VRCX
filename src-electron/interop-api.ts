@@ -16,7 +16,11 @@ export class InteropApi {
 
   getDotNetClass(className: string): unknown {
     const vrcx = readMember(this.dotnet, "VRCX");
-    return readMember(vrcx, className) ?? readMember(readMember(readMember(vrcx, "Overlay"), "Electron"), className);
+    return (
+      readMember(vrcx, className) ??
+      readMember(readMember(vrcx, "Database"), className) ??
+      readMember(readMember(readMember(vrcx, "Overlay"), "Electron"), className)
+    );
   }
 
   getDotNetObject(className: string): unknown {

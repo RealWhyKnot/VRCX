@@ -1,182 +1,111 @@
+import { cellNumber, cellText } from "./cells.ts";
+import { gameLog } from "./game-log.ts";
+
 import { sqliteService } from "../sqlite.ts";
+import type { DatabaseRow } from "../sqlite.ts";
+
+type TravelingLeave = {
+  rowId: number;
+  created_at: string | null;
+  displayName: string | null;
+};
+
+type BrokenDisplayName = {
+  id: number;
+  displayName: string;
+  createdAt: string | null;
+  type: string | null;
+};
+
+function toTravelingLeave(row: DatabaseRow): TravelingLeave | null {
+  const rowId = cellNumber(row[0]);
+  if (rowId === null) {
+    return null;
+  }
+  return { rowId, created_at: cellText(row[1]), displayName: cellText(row[3]) };
+}
+
+function toBrokenDisplayName(row: DatabaseRow): BrokenDisplayName | null {
+  const id = cellNumber(row[0]);
+  const displayName = cellText(row[1]);
+  if (id === null || displayName === null) {
+    return null;
+  }
+  return { id, displayName, createdAt: cellText(row[2]), type: cellText(row[3]) };
+}
 
 const tableFixes = {
   async cleanLegendFromFriendLog() {
-    const tables = [];
-    await sqliteService.execute((dbRow) => {
-      tables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_friend_log_history'`);
-    for (const tableName of tables) {
-      await sqliteService.executeNonQuery(
-        `DELETE FROM ${tableName}
-                WHERE type = 'TrustLevel' AND created_at > '2022-05-04T01:00:00.000Z'
-                AND ((trust_level = 'Veteran User' AND previous_trust_level = 'Trusted User') OR (trust_level = 'Trusted User' AND previous_trust_level = 'Veteran User'))`
-      );
-    }
+    await sqliteService.run(DatabaseApi.CleanLegendFromFriendLog());
   },
 
   async fixGameLogTraveling() {
-    const travelingList = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        rowId: dbRow[0],
-        created_at: dbRow[1],
-        type: dbRow[2],
-        displayName: dbRow[3],
-        location: dbRow[4],
-        userId: dbRow[5],
-        time: dbRow[6],
-      };
-      travelingList.unshift(row);
-    }, "SELECT * FROM gamelog_join_leave WHERE type = 'OnPlayerLeft' AND location = 'traveling'");
+    const travelingRows = await sqliteService.rows(DatabaseApi.GetTravelingLeaveRows());
+    const travelingList = travelingRows.flatMap((row) => toTravelingLeave(row) ?? []).reverse();
     for (const travelingEntry of travelingList) {
-      await sqliteService.execute(
-        async (dbRow) => {
-          const onPlayingJoin = {
-            rowId: dbRow[0],
-            created_at: dbRow[1],
-            type: dbRow[2],
-            displayName: dbRow[3],
-            location: dbRow[4],
-            userId: dbRow[5],
-            time: dbRow[6],
-          };
-          await sqliteService.executeNonQuery(`UPDATE gamelog_join_leave SET location = @location WHERE id = @rowId`, {
-            "@rowId": travelingEntry.rowId,
-            "@location": onPlayingJoin.location,
-          });
-        },
-        "SELECT * FROM gamelog_join_leave WHERE type = 'OnPlayerJoined' AND display_name = @displayName AND created_at <= @created_at ORDER BY created_at DESC LIMIT 1",
-        {
-          "@displayName": travelingEntry.displayName,
-          "@created_at": travelingEntry.created_at,
-        }
-      );
+      const joinRows = await sqliteService.rows(DatabaseApi.GetLastOnPlayerJoinRows(travelingEntry.displayName, travelingEntry.created_at));
+      const [joinRow] = joinRows;
+      if (joinRow !== undefined) {
+        await sqliteService.run(DatabaseApi.SetJoinLeaveLocation(travelingEntry.rowId, cellText(joinRow[4])));
+      }
     }
   },
 
   async fixNegativeGPS() {
-    const gpsTables = [];
-    await sqliteService.execute((dbRow) => {
-      gpsTables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_gps'`);
-    for (const tableName of gpsTables) {
-      await sqliteService.executeNonQuery(`UPDATE ${tableName} SET time = 0 WHERE time < 0`);
-    }
+    await sqliteService.run(DatabaseApi.FixNegativeGpsTimes());
   },
 
-  async getBrokenLeaveEntries() {
-    const instances = await this.getGameLogInstancesTime();
-    const badEntries = [];
-    await sqliteService.execute((dbRow) => {
-      if (typeof dbRow[1] === "number") {
-        const ref = instances.get(dbRow[0]);
-        if (typeof ref !== "undefined" && dbRow[1] > ref) {
-          badEntries.push(dbRow[2]);
-        }
+  async getBrokenLeaveEntries(): Promise<number[]> {
+    const instances: Map<unknown, unknown> = await gameLog.getGameLogInstancesTime();
+    const rows = await sqliteService.rows(DatabaseApi.GetOnPlayerLeftRowsWithTime());
+    const badEntries: number[] = [];
+    for (const row of rows) {
+      const time = cellNumber(row[1]);
+      const id = cellNumber(row[2]);
+      const ref = instances.get(row[0]);
+      if (time !== null && id !== null && typeof ref === "number" && time > ref) {
+        badEntries.push(id);
       }
-    }, `SELECT location, time, id FROM gamelog_join_leave WHERE type = 'OnPlayerLeft' AND time > 0`);
+    }
     return badEntries;
   },
 
   async fixBrokenLeaveEntries() {
     const badEntries = await this.getBrokenLeaveEntries();
-    let badEntriesList = "";
-    let count = badEntries.length;
-    badEntries.forEach((entry) => {
-      count--;
-      if (count === 0) {
-        badEntriesList = badEntriesList.concat(entry);
-      } else {
-        badEntriesList = badEntriesList.concat(`${entry}, `);
-      }
-    });
-
-    await sqliteService.executeNonQuery(`UPDATE gamelog_join_leave SET time = 0 WHERE id IN (${badEntriesList})`);
+    await sqliteService.run(DatabaseApi.ResetLeaveTimes(badEntries.map((id) => String(id))));
   },
 
   async fixBrokenGroupInvites() {
-    const notificationTables = [];
-    await sqliteService.execute((dbRow) => {
-      notificationTables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_notifications'`);
-    for (const tableName of notificationTables) {
-      await sqliteService.executeNonQuery(`DELETE FROM ${tableName} WHERE type LIKE '%.%'`);
-    }
+    await sqliteService.run(DatabaseApi.DeleteGroupInviteNotifications());
   },
 
   async fixBrokenNotifications() {
-    const tables = [];
-    await sqliteService.execute((dbRow) => {
-      tables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_notifications'`);
-    for (const tableName of tables) {
-      await sqliteService.executeNonQuery(`DELETE FROM ${tableName} WHERE (created_at is null or created_at = '')`);
-    }
+    await sqliteService.run(DatabaseApi.DeleteBrokenNotifications());
   },
 
   async fixBrokenGroupChange() {
-    const tables = [];
-    await sqliteService.execute((dbRow) => {
-      tables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_notifications'`);
-    for (const tableName of tables) {
-      await sqliteService.executeNonQuery(`DELETE FROM ${tableName} WHERE type = 'groupChange' AND created_at < '2024-04-23T03:00:00.000Z'`);
-    }
+    await sqliteService.run(DatabaseApi.DeleteOldGroupChangeNotifications());
   },
 
   async fixCancelFriendRequestTypo() {
-    const tables = [];
-    await sqliteService.execute((dbRow) => {
-      tables.push(dbRow[0]);
-    }, `SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%_friend_log_history'`);
-    for (const tableName of tables) {
-      await sqliteService.executeNonQuery(`UPDATE ${tableName} SET type = 'CancelFriendRequest' WHERE type = 'CancelFriendRequst'`);
-    }
+    await sqliteService.run(DatabaseApi.FixCancelFriendRequestTypo());
   },
 
-  async getBrokenGameLogDisplayNames() {
-    const badEntries = [];
-    await sqliteService.execute((dbRow) => {
-      badEntries.push({
-        id: dbRow[0],
-        displayName: dbRow[1],
-        createdAt: dbRow[2],
-        type: dbRow[3],
-      });
-    }, "SELECT id, display_name, created_at, type FROM gamelog_join_leave WHERE display_name LIKE '% (%'");
-    return badEntries;
+  async getBrokenGameLogDisplayNames(): Promise<BrokenDisplayName[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetBrokenGameLogDisplayNames());
+    return rows.flatMap((row) => toBrokenDisplayName(row) ?? []);
   },
 
   async fixBrokenGameLogDisplayNames() {
     const badEntries = await this.getBrokenGameLogDisplayNames();
     for (const entry of badEntries) {
-      const newDisplayName = entry.displayName.split(" (")[0];
-      var existingEntry = false;
-      await sqliteService.execute(
-        () => {
-          existingEntry = true;
-        },
-        `SELECT 1 FROM gamelog_join_leave
-                WHERE created_at = @created_at AND type = @type AND display_name = @display_name
-                LIMIT 1`,
-        {
-          "@created_at": entry.createdAt,
-          "@type": entry.type,
-          "@display_name": newDisplayName,
-        }
-      );
-
-      if (existingEntry) {
-        await sqliteService.executeNonQuery(`DELETE FROM gamelog_join_leave WHERE id = @id`, {
-          "@id": entry.id,
-        });
+      const newDisplayName = entry.displayName.split(" (")[0] ?? entry.displayName;
+      const existingRows = await sqliteService.rows(DatabaseApi.HasGameLogEntry(entry.createdAt, entry.type, newDisplayName));
+      if (existingRows.length > 0) {
+        await sqliteService.run(DatabaseApi.DeleteGameLogEntry(entry.id));
         continue;
       }
-      await sqliteService.executeNonQuery(`UPDATE gamelog_join_leave SET display_name = @new_display_name WHERE id = @id`, {
-        "@new_display_name": newDisplayName,
-        "@id": entry.id,
-      });
+      await sqliteService.run(DatabaseApi.RenameGameLogEntry(entry.id, newDisplayName));
     }
   },
 };

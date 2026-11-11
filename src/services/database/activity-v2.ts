@@ -1,360 +1,281 @@
-import { dbVars } from "../database";
+import type { ActivitySession } from "../../types/activity.ts";
 
+import { cellNumber, cellText } from "./cells.ts";
 import { sqliteService } from "../sqlite.ts";
+import type { DatabaseRow } from "../sqlite.ts";
 
 const ACTIVITY_VIEW_KIND = {
   ACTIVITY: "activity",
   OVERLAP: "overlap",
 };
 
-function syncStateTable() {
-  return `${dbVars.userPrefix}_activity_sync_state_v2`;
+type FriendPresenceRow = {
+  created_at: string;
+  type: string;
+};
+
+type CurrentUserLocationRow = {
+  created_at: string;
+  time: number;
+};
+
+type ActivitySourceRow = FriendPresenceRow | CurrentUserLocationRow;
+
+type ActivitySourceSliceRequest = {
+  userId: string;
+  isSelf: boolean;
+  fromDays: number;
+  toDays?: number;
+};
+
+type ActivitySourceAfterRequest = {
+  userId: string;
+  isSelf: boolean;
+  afterCreatedAt: string;
+  isInclusive?: boolean;
+};
+
+type ActivitySyncState = {
+  userId: string;
+  updatedAt: string;
+  isSelf: boolean;
+  sourceLastCreatedAt: string;
+  pendingSessionStartAt: number | null;
+  cachedRangeDays: number;
+};
+
+type ActivitySyncStateEntry = {
+  userId: string;
+  updatedAt?: string;
+  isSelf?: boolean;
+  sourceLastCreatedAt?: string;
+  pendingSessionStartAt?: number | null;
+  cachedRangeDays?: number;
+};
+
+type ActivityBucketCache = {
+  ownerUserId: string;
+  targetUserId: string;
+  rangeDays: number;
+  viewKind: string;
+  excludeKey: string;
+  bucketVersion: number;
+  builtFromCursor: string;
+  rawBuckets: unknown;
+  normalizedBuckets: unknown;
+  summary: unknown;
+  builtAt: string;
+};
+
+type ActivityBucketCacheRequest = {
+  ownerUserId: string;
+  targetUserId?: string;
+  rangeDays: number;
+  viewKind: string;
+  excludeKey?: string;
+};
+
+type ActivityBucketCacheEntry = ActivityBucketCacheRequest & {
+  bucketVersion?: number;
+  builtFromCursor?: string;
+  rawBuckets?: unknown;
+  normalizedBuckets?: unknown;
+  summary?: unknown;
+  builtAt?: string;
+};
+
+type SessionColumns = {
+  startAt: string[];
+  endAt: string[];
+  isOpenTail: string[];
+  sourceRevision: string[];
+};
+
+function textOr(cell: unknown, fallback: string): string {
+  const text = cellText(cell) ?? "";
+  return text.length > 0 ? text : fallback;
 }
 
-function sessionsTable() {
-  return `${dbVars.userPrefix}_activity_sessions_v2`;
+function numberOr(cell: unknown, fallback: number): number {
+  const value = cellNumber(cell);
+  return value === null || value === 0 ? fallback : value;
 }
 
-function bucketCacheTable() {
-  return `${dbVars.userPrefix}_activity_bucket_cache_v2`;
+function flagOf(cell: unknown): boolean {
+  return numberOr(cell, 0) !== 0;
 }
 
-function parseJson(value, fallback) {
-  if (!value) {
+function parseJson(cell: unknown, fallback: unknown): unknown {
+  const text = cellText(cell);
+  if (!text) {
     return fallback;
   }
   try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
+    const parsed: unknown = JSON.parse(text);
+    return parsed;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return fallback;
+    }
+    throw error;
   }
+}
+
+function mapFriendPresenceRows(rows: DatabaseRow[]): FriendPresenceRow[] {
+  return rows.map((row) => ({ created_at: textOr(row[0], ""), type: textOr(row[1], "") }));
+}
+
+function mapCurrentUserLocationRows(rows: DatabaseRow[]): CurrentUserLocationRow[] {
+  return rows.map((row) => ({ created_at: textOr(row[0], ""), time: numberOr(row[1], 0) }));
+}
+
+function sessionColumns(sessions: ActivitySession[]): SessionColumns {
+  return {
+    startAt: sessions.map((session) => String(session.start)),
+    endAt: sessions.map((session) => String(session.end)),
+    isOpenTail: sessions.map((session) => (session.isOpenTail ? "1" : "0")),
+    sourceRevision: sessions.map((session) => session.sourceRevision ?? ""),
+  };
 }
 
 const activityV2 = {
   ACTIVITY_VIEW_KIND,
 
-  async getActivitySourceSliceV2({ userId, isSelf, fromDays, toDays = 0 }) {
+  async getActivitySourceSliceV2({ userId, isSelf, fromDays, toDays = 0 }: ActivitySourceSliceRequest): Promise<ActivitySourceRow[]> {
     const fromDateIso = new Date(Date.now() - fromDays * 86400000).toISOString();
     const toDateIso = toDays > 0 ? new Date(Date.now() - toDays * 86400000).toISOString() : "";
     return isSelf ? this.getCurrentUserLocationSliceV2(fromDateIso, toDateIso) : this.getFriendPresenceSliceV2(userId, fromDateIso, toDateIso);
   },
 
-  async getActivitySourceAfterV2({ userId, isSelf, afterCreatedAt, inclusive = false }) {
-    return isSelf ? this.getCurrentUserLocationAfterV2(afterCreatedAt, inclusive) : this.getFriendPresenceAfterV2(userId, afterCreatedAt);
+  async getActivitySourceAfterV2({ userId, isSelf, afterCreatedAt, isInclusive = false }: ActivitySourceAfterRequest): Promise<ActivitySourceRow[]> {
+    return isSelf ? this.getCurrentUserLocationAfterV2(afterCreatedAt, isInclusive) : this.getFriendPresenceAfterV2(userId, afterCreatedAt);
   },
 
-  async getFriendPresenceSliceV2(userId, fromDateIso, toDateIso = "") {
-    const rows = [];
-    await sqliteService.execute(
-      (dbRow) => {
-        rows.push({ created_at: dbRow[0], type: dbRow[1] });
-      },
-      `
-                SELECT created_at, type
-                FROM (
-                    SELECT created_at, type, 0 AS sort_group
-                    FROM (
-                        SELECT created_at, type
-                        FROM ${dbVars.userPrefix}_feed_online_offline
-                        WHERE user_id = @userId
-                          AND (type = 'Online' OR type = 'Offline')
-                          AND created_at < @fromDateIso
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    )
-                    UNION ALL
-                    SELECT created_at, type, 1 AS sort_group
-                    FROM ${dbVars.userPrefix}_feed_online_offline
-                    WHERE user_id = @userId
-                      AND (type = 'Online' OR type = 'Offline')
-                      AND created_at >= @fromDateIso
-                      ${toDateIso ? "AND created_at < @toDateIso" : ""}
-                )
-                ORDER BY created_at ASC, sort_group ASC
-            `,
-      {
-        "@userId": userId,
-        "@fromDateIso": fromDateIso,
-        "@toDateIso": toDateIso,
-      }
-    );
-
+  async getFriendPresenceSliceV2(userId: string, fromDateIso: string, toDateIso = ""): Promise<FriendPresenceRow[]> {
+    const rows = mapFriendPresenceRows(await sqliteService.rows(DatabaseApi.GetFriendPresenceSliceWindow(userId, fromDateIso, toDateIso)));
     if (toDateIso) {
-      await sqliteService.execute(
-        (dbRow) => {
-          rows.push({ created_at: dbRow[0], type: dbRow[1] });
-        },
-        `SELECT created_at, type
-                 FROM ${dbVars.userPrefix}_feed_online_offline
-                 WHERE user_id = @userId
-                   AND (type = 'Online' OR type = 'Offline')
-                   AND created_at >= @toDateIso
-                 ORDER BY created_at ASC
-                 LIMIT 1`,
-        {
-          "@userId": userId,
-          "@toDateIso": toDateIso,
-        }
-      );
+      rows.push(...mapFriendPresenceRows(await sqliteService.rows(DatabaseApi.GetFriendPresenceSliceEnd(userId, toDateIso))));
     }
-
     return rows.sort((left, right) => left.created_at.localeCompare(right.created_at));
   },
 
-  async getFriendPresenceAfterV2(userId, afterCreatedAt) {
-    const rows = [];
-    await sqliteService.execute(
-      (dbRow) => {
-        rows.push({ created_at: dbRow[0], type: dbRow[1] });
-      },
-      `SELECT created_at, type
-             FROM ${dbVars.userPrefix}_feed_online_offline
-             WHERE user_id = @userId
-               AND (type = 'Online' OR type = 'Offline')
-               AND created_at > @afterCreatedAt
-             ORDER BY created_at`,
-      {
-        "@userId": userId,
-        "@afterCreatedAt": afterCreatedAt,
-      }
-    );
-    return rows;
+  async getFriendPresenceAfterV2(userId: string, afterCreatedAt: string): Promise<FriendPresenceRow[]> {
+    return mapFriendPresenceRows(await sqliteService.rows(DatabaseApi.GetFriendPresenceAfter(userId, afterCreatedAt)));
   },
 
-  async getCurrentUserLocationSliceV2(fromDateIso, toDateIso = "") {
-    const rows = [];
-    await sqliteService.execute(
-      (dbRow) => {
-        rows.push({ created_at: dbRow[0], time: dbRow[1] || 0 });
-      },
-      `
-                SELECT created_at, time
-                FROM (
-                    SELECT created_at, time, 0 AS sort_group
-                    FROM (
-                        SELECT created_at, time
-                        FROM gamelog_location
-                        WHERE created_at < @fromDateIso
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    )
-                    UNION ALL
-                    SELECT created_at, time, 1 AS sort_group
-                    FROM gamelog_location
-                    WHERE created_at >= @fromDateIso
-                      ${toDateIso ? "AND created_at < @toDateIso" : ""}
-                    ${
-                      toDateIso
-                        ? `UNION ALL
-                    SELECT created_at, time, 2 AS sort_group
-                    FROM (
-                        SELECT created_at, time
-                        FROM gamelog_location
-                        WHERE created_at >= @toDateIso
-                        ORDER BY created_at
-                        LIMIT 1
-                    )`
-                        : ""
-                    }
-                )
-                ORDER BY created_at ASC, sort_group ASC
-            `,
-      {
-        "@fromDateIso": fromDateIso,
-        "@toDateIso": toDateIso,
-      }
-    );
-    return rows;
+  async getCurrentUserLocationSliceV2(fromDateIso: string, toDateIso = ""): Promise<CurrentUserLocationRow[]> {
+    return mapCurrentUserLocationRows(await sqliteService.rows(DatabaseApi.GetCurrentUserLocationSlice(fromDateIso, toDateIso)));
   },
 
-  async getCurrentUserLocationAfterV2(afterCreatedAt, inclusive = false) {
-    const rows = [];
-    const operator = inclusive ? ">=" : ">";
-    await sqliteService.execute(
-      (dbRow) => {
-        rows.push({ created_at: dbRow[0], time: dbRow[1] || 0 });
-      },
-      `SELECT created_at, time
-             FROM gamelog_location
-             WHERE created_at ${operator} @afterCreatedAt
-             ORDER BY created_at`,
-      { "@afterCreatedAt": afterCreatedAt }
-    );
-    return rows;
+  async getCurrentUserLocationAfterV2(afterCreatedAt: string, isInclusive = false): Promise<CurrentUserLocationRow[]> {
+    return mapCurrentUserLocationRows(await sqliteService.rows(DatabaseApi.GetCurrentUserLocationAfter(afterCreatedAt, isInclusive)));
   },
 
-  async getActivitySyncStateV2(userId) {
-    let row = null;
-    await sqliteService.execute(
-      (dbRow) => {
-        row = {
-          userId: dbRow[0],
-          updatedAt: dbRow[1] || "",
-          isSelf: Boolean(dbRow[2]),
-          sourceLastCreatedAt: dbRow[3] || "",
-          pendingSessionStartAt: typeof dbRow[4] === "number" ? dbRow[4] : null,
-          cachedRangeDays: dbRow[5] || 0,
-        };
-      },
-      `SELECT user_id, updated_at, is_self, source_last_created_at, pending_session_start_at, cached_range_days
-             FROM ${syncStateTable()}
-             WHERE user_id = @userId`,
-      { "@userId": userId }
-    );
-    return row;
-  },
-
-  async upsertActivitySyncStateV2(entry) {
-    await sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${syncStateTable()}
-             (user_id, updated_at, is_self, source_last_created_at, pending_session_start_at, cached_range_days)
-             VALUES (@userId, @updatedAt, @isSelf, @sourceLastCreatedAt, @pendingSessionStartAt, @cachedRangeDays)`,
-      {
-        "@userId": entry.userId,
-        "@updatedAt": entry.updatedAt || "",
-        "@isSelf": entry.isSelf ? 1 : 0,
-        "@sourceLastCreatedAt": entry.sourceLastCreatedAt || "",
-        "@pendingSessionStartAt": entry.pendingSessionStartAt,
-        "@cachedRangeDays": entry.cachedRangeDays || 0,
-      }
-    );
-  },
-
-  async getActivitySessionsV2(userId) {
-    const sessions = [];
-    await sqliteService.execute(
-      (dbRow) => {
-        sessions.push({
-          start: dbRow[0],
-          end: dbRow[1],
-          isOpenTail: Boolean(dbRow[2]),
-          sourceRevision: dbRow[3] || "",
-        });
-      },
-      `SELECT start_at, end_at, is_open_tail, source_revision
-             FROM ${sessionsTable()}
-             WHERE user_id = @userId
-             ORDER BY start_at`,
-      { "@userId": userId }
-    );
-    return sessions;
-  },
-
-  async replaceActivitySessionsV2(userId, sessions = []) {
-    await sqliteService.executeNonQuery("BEGIN");
-    try {
-      await sqliteService.executeNonQuery(`DELETE FROM ${sessionsTable()} WHERE user_id = @userId`, {
-        "@userId": userId,
-      });
-      await insertSessions(userId, sessions);
-      await sqliteService.executeNonQuery("COMMIT");
-    } catch (error) {
-      await sqliteService.executeNonQuery("ROLLBACK");
-      throw error;
+  async getActivitySyncStateV2(userId: string): Promise<ActivitySyncState | null> {
+    const row = (await sqliteService.rows(DatabaseApi.GetActivitySyncState(userId))).at(-1);
+    if (!row) {
+      return null;
     }
+    return {
+      userId: textOr(row[0], ""),
+      updatedAt: textOr(row[1], ""),
+      isSelf: flagOf(row[2]),
+      sourceLastCreatedAt: textOr(row[3], ""),
+      pendingSessionStartAt: cellNumber(row[4]),
+      cachedRangeDays: numberOr(row[5], 0),
+    };
   },
 
-  async appendActivitySessionsV2({ userId, sessions = [], replaceFromStartAt = null }) {
-    await sqliteService.executeNonQuery("BEGIN");
-    try {
-      if (replaceFromStartAt !== null) {
-        await sqliteService.executeNonQuery(
-          `DELETE FROM ${sessionsTable()}
-                     WHERE user_id = @userId AND start_at >= @replaceFromStartAt`,
-          {
-            "@userId": userId,
-            "@replaceFromStartAt": replaceFromStartAt,
-          }
-        );
-      }
-      await insertSessions(userId, sessions);
-      await sqliteService.executeNonQuery("COMMIT");
-    } catch (error) {
-      await sqliteService.executeNonQuery("ROLLBACK");
-      throw error;
-    }
-  },
-
-  async getActivityBucketCacheV2({ ownerUserId, targetUserId = "", rangeDays, viewKind, excludeKey = "" }) {
-    let row = null;
-    await sqliteService.execute(
-      (dbRow) => {
-        row = {
-          ownerUserId: dbRow[0],
-          targetUserId: dbRow[1],
-          rangeDays: dbRow[2],
-          viewKind: dbRow[3],
-          excludeKey: dbRow[4] || "",
-          bucketVersion: dbRow[5] || 1,
-          builtFromCursor: dbRow[6] || "",
-          rawBuckets: parseJson(dbRow[7], []),
-          normalizedBuckets: parseJson(dbRow[8], []),
-          summary: parseJson(dbRow[9], {}),
-          builtAt: dbRow[10] || "",
-        };
-      },
-      `SELECT user_id, target_user_id, range_days, view_kind, exclude_key, bucket_version, built_from_cursor, raw_buckets_json, normalized_buckets_json, summary_json, built_at
-             FROM ${bucketCacheTable()}
-             WHERE user_id = @ownerUserId AND target_user_id = @targetUserId AND range_days = @rangeDays AND view_kind = @viewKind AND exclude_key = @excludeKey`,
-      {
-        "@ownerUserId": ownerUserId,
-        "@targetUserId": targetUserId,
-        "@rangeDays": rangeDays,
-        "@viewKind": viewKind,
-        "@excludeKey": excludeKey,
-      }
+  async upsertActivitySyncStateV2(entry: ActivitySyncStateEntry): Promise<void> {
+    await sqliteService.run(
+      DatabaseApi.UpsertActivitySyncState(
+        entry.userId,
+        entry.updatedAt ?? "",
+        entry.isSelf === true,
+        entry.sourceLastCreatedAt ?? "",
+        entry.pendingSessionStartAt ?? null,
+        entry.cachedRangeDays ?? 0
+      )
     );
-    return row;
   },
 
-  async upsertActivityBucketCacheV2(entry) {
-    await sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${bucketCacheTable()}
-             (user_id, target_user_id, range_days, view_kind, exclude_key, bucket_version, built_from_cursor, raw_buckets_json, normalized_buckets_json, summary_json, built_at)
-             VALUES (@ownerUserId, @targetUserId, @rangeDays, @viewKind, @excludeKey, @bucketVersion, @builtFromCursor, @rawBucketsJson, @normalizedBucketsJson, @summaryJson, @builtAt)`,
-      {
-        "@ownerUserId": entry.ownerUserId,
-        "@targetUserId": entry.targetUserId || "",
-        "@rangeDays": entry.rangeDays,
-        "@viewKind": entry.viewKind,
-        "@excludeKey": entry.excludeKey || "",
-        "@bucketVersion": entry.bucketVersion || 1,
-        "@builtFromCursor": entry.builtFromCursor || "",
-        "@rawBucketsJson": JSON.stringify(entry.rawBuckets || []),
-        "@normalizedBucketsJson": JSON.stringify(entry.normalizedBuckets || []),
-        "@summaryJson": JSON.stringify(entry.summary || {}),
-        "@builtAt": entry.builtAt || "",
-      }
+  async getActivitySessionsV2(userId: string): Promise<ActivitySession[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetActivitySessions(userId));
+    return rows.map((row) => ({
+      start: numberOr(row[0], 0),
+      end: numberOr(row[1], 0),
+      isOpenTail: flagOf(row[2]),
+      sourceRevision: textOr(row[3], ""),
+    }));
+  },
+
+  async replaceActivitySessionsV2(userId: string, sessions: ActivitySession[] = []): Promise<void> {
+    const columns = sessionColumns(sessions);
+    await sqliteService.run(DatabaseApi.ReplaceActivitySessions(userId, columns.startAt, columns.endAt, columns.isOpenTail, columns.sourceRevision));
+  },
+
+  async appendActivitySessionsV2({
+    userId,
+    sessions = [],
+    replaceFromStartAt = null,
+  }: {
+    userId: string;
+    sessions?: ActivitySession[];
+    replaceFromStartAt?: number | null;
+  }): Promise<void> {
+    const columns = sessionColumns(sessions);
+    if (replaceFromStartAt !== null) {
+      await sqliteService.run(
+        DatabaseApi.AppendActivitySessionsFrom(userId, replaceFromStartAt, columns.startAt, columns.endAt, columns.isOpenTail, columns.sourceRevision)
+      );
+      return;
+    }
+    await sqliteService.run(DatabaseApi.AppendActivitySessions(userId, columns.startAt, columns.endAt, columns.isOpenTail, columns.sourceRevision));
+  },
+
+  async getActivityBucketCacheV2({
+    ownerUserId,
+    targetUserId = "",
+    rangeDays,
+    viewKind,
+    excludeKey = "",
+  }: ActivityBucketCacheRequest): Promise<ActivityBucketCache | null> {
+    const row = (await sqliteService.rows(DatabaseApi.GetActivityBucketCache(ownerUserId, targetUserId, rangeDays, viewKind, excludeKey))).at(-1);
+    if (!row) {
+      return null;
+    }
+    return {
+      ownerUserId: textOr(row[0], ""),
+      targetUserId: textOr(row[1], ""),
+      rangeDays: numberOr(row[2], 0),
+      viewKind: textOr(row[3], ""),
+      excludeKey: textOr(row[4], ""),
+      bucketVersion: numberOr(row[5], 1),
+      builtFromCursor: textOr(row[6], ""),
+      rawBuckets: parseJson(row[7], []),
+      normalizedBuckets: parseJson(row[8], []),
+      summary: parseJson(row[9], {}),
+      builtAt: textOr(row[10], ""),
+    };
+  },
+
+  async upsertActivityBucketCacheV2(entry: ActivityBucketCacheEntry): Promise<void> {
+    await sqliteService.run(
+      DatabaseApi.UpsertActivityBucketCache(
+        entry.ownerUserId,
+        entry.targetUserId ?? "",
+        entry.rangeDays,
+        entry.viewKind,
+        entry.excludeKey ?? "",
+        entry.bucketVersion ?? 1,
+        entry.builtFromCursor ?? "",
+        JSON.stringify(entry.rawBuckets ?? []),
+        JSON.stringify(entry.normalizedBuckets ?? []),
+        JSON.stringify(entry.summary ?? {}),
+        entry.builtAt ?? ""
+      )
     );
   },
 };
-
-async function insertSessions(userId, sessions = []) {
-  if (sessions.length === 0) {
-    return;
-  }
-
-  const chunkSize = 250;
-  for (let chunkStart = 0; chunkStart < sessions.length; chunkStart += chunkSize) {
-    const chunk = sessions.slice(chunkStart, chunkStart + chunkSize);
-    const args = {};
-    const values = chunk.map((session, index) => {
-      const suffix = `${chunkStart + index}`;
-      args[`@userId_${suffix}`] = userId;
-      args[`@startAt_${suffix}`] = session.start;
-      args[`@endAt_${suffix}`] = session.end;
-      args[`@isOpenTail_${suffix}`] = session.isOpenTail ? 1 : 0;
-      args[`@sourceRevision_${suffix}`] = session.sourceRevision || "";
-      return `(@userId_${suffix}, @startAt_${suffix}, @endAt_${suffix}, @isOpenTail_${suffix}, @sourceRevision_${suffix})`;
-    });
-
-    await sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${sessionsTable()}
-             (user_id, start_at, end_at, is_open_tail, source_revision)
-             VALUES ${values.join(", ")}`,
-      args
-    );
-  }
-}
 
 export { activityV2 };

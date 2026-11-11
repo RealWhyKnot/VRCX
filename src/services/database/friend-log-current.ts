@@ -1,61 +1,71 @@
-import { dbVars } from "../database";
+import { cellNumber, cellText } from "./cells.ts";
 
-import { sqliteService } from "../sqlite.ts";
+import { sqliteService, type DatabaseRow } from "../sqlite.ts";
+
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
+type FriendLogCurrentEntry = {
+  userId: string | null;
+  displayName: string | null;
+  trustLevel: string | null;
+  friendNumber: number | null;
+};
+
+type FriendLogCurrentWriteEntry = {
+  userId: string;
+  displayName: string | null;
+  trustLevel: string | null;
+  friendNumber?: number | null;
+};
+
+type FriendLogCurrentArrayRow = {
+  userId?: unknown;
+  displayName?: unknown;
+  trustLevel?: unknown;
+  friendNumber: number;
+};
+
+function toFriendLogCurrentEntry(row: DatabaseRow): FriendLogCurrentEntry {
+  return {
+    userId: cellText(row[0]),
+    displayName: cellText(row[1]),
+    trustLevel: cellText(row[2]),
+    friendNumber: cellNumber(row[3]),
+  };
+}
 
 const friendLogCurrent = {
-  async getFriendLogCurrent() {
-    const friendLogCurrent = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        userId: dbRow[0],
-        displayName: dbRow[1],
-        trustLevel: dbRow[2],
-        friendNumber: dbRow[3],
-      };
-      friendLogCurrent.unshift(row);
-    }, `SELECT * FROM ${dbVars.userPrefix}_friend_log_current`);
-    return friendLogCurrent;
+  async getFriendLogCurrent(): Promise<FriendLogCurrentEntry[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetFriendLogCurrent());
+    return rows.map(toFriendLogCurrentEntry).reverse();
   },
 
-  setFriendLogCurrent(entry) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${dbVars.userPrefix}_friend_log_current (user_id, display_name, trust_level, friend_number) VALUES (@user_id, @display_name, @trust_level, @friend_number)`,
-      {
-        "@user_id": entry.userId,
-        "@display_name": entry.displayName,
-        "@trust_level": entry.trustLevel,
-        "@friend_number": entry.friendNumber,
-      }
-    );
+  setFriendLogCurrent(entry: FriendLogCurrentWriteEntry): void {
+    void sqliteService
+      .run(DatabaseApi.SetFriendLogCurrent(entry.userId, entry.displayName, entry.trustLevel, entry.friendNumber ?? null))
+      .catch(logDatabaseError);
   },
 
-  setFriendLogCurrentArray(inputData) {
+  setFriendLogCurrentArray(inputData: FriendLogCurrentArrayRow[]): void {
     if (inputData.length === 0) {
       return;
     }
-    let sqlValues = "";
-    const items = ["userId", "displayName", "trustLevel"];
-    for (const line of inputData) {
-      const field = {};
-      for (const item of items) {
-        if (typeof line[item] === "string") {
-          field[item] = line[item].replace(/'/g, "''");
-        } else {
-          field[item] = "";
-        }
-      }
-      sqlValues += `('${field.userId}', '${field.displayName}', '${field.trustLevel}', ${line.friendNumber}), `;
-    }
-    sqlValues = sqlValues.slice(0, -2);
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${dbVars.userPrefix}_friend_log_current (user_id, display_name, trust_level, friend_number) VALUES ${sqlValues}`
-    );
+    void sqliteService
+      .run(
+        DatabaseApi.SetFriendLogCurrentArray(
+          inputData.map((line) => cellText(line.userId) ?? ""),
+          inputData.map((line) => cellText(line.displayName) ?? ""),
+          inputData.map((line) => cellText(line.trustLevel) ?? ""),
+          inputData.map((line) => String(line.friendNumber))
+        )
+      )
+      .catch(logDatabaseError);
   },
 
-  deleteFriendLogCurrent(userId) {
-    sqliteService.executeNonQuery(`DELETE FROM ${dbVars.userPrefix}_friend_log_current WHERE user_id = @user_id`, {
-      "@user_id": userId,
-    });
+  deleteFriendLogCurrent(userId: string): void {
+    void sqliteService.run(DatabaseApi.DeleteFriendLogCurrent(userId)).catch(logDatabaseError);
   },
 };
 

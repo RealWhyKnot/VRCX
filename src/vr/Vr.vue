@@ -67,7 +67,11 @@
         <template v-if="nowPlaying.playing">
           <span style="float: right; padding-left: 10px">{{ nowPlaying.remainingText }}</span>
           <MarqueeText>{{ nowPlaying.name }}</MarqueeText>
-          <div class="np-progress-bar" style="margin-left: 5px" :style="{ '--vr-np-progress': nowPlaying.percentage + '%' }"></div>
+          <div
+            class="np-progress-bar"
+            style="margin-left: 5px"
+            :style="{ '--vr-np-progress': Number.isFinite(nowPlaying.percentage) ? nowPlaying.percentage + '%' : '0%' }"
+          ></div>
         </template>
         <div style="float: right">
           <span v-if="!config?.minimalFeed" style="display: inline-block; margin-right: 5px">{{ t("vr.status.timer") }}</span>

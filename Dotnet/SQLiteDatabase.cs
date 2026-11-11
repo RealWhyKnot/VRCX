@@ -1,4 +1,7 @@
+using System.Buffers;
 using System.Data.SQLite;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
 namespace VRCX;
@@ -45,26 +48,43 @@ sealed class SQLiteDatabase : IDisposable
         Connection.Dispose();
     }
 
-    public string ExecuteJson(string sql, IDictionary<string, object>? args = null)
+    internal string ExecuteJson(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
-        object[][] result = Execute(sql, args);
-        return JsonSerializer.Serialize(result);
+        var buffer = new ArrayBufferWriter<byte>();
+        _connectionLock.EnterReadLock();
+        try
+        {
+            using SQLiteCommand command = CreateCommand(sql, args);
+            using SQLiteDataReader reader = command.ExecuteReader();
+            using var writer = new Utf8JsonWriter(buffer);
+            writer.WriteStartArray();
+            while (reader.Read())
+            {
+                writer.WriteStartArray();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    WriteValue(writer, reader.GetValue(i));
+                }
+
+                writer.WriteEndArray();
+            }
+
+            writer.WriteEndArray();
+        }
+        finally
+        {
+            _connectionLock.ExitReadLock();
+        }
+
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
-    public object[][] Execute(string sql, IDictionary<string, object>? args = null)
+    internal object[][] Execute(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
         _connectionLock.EnterReadLock();
         try
         {
-            using var command = new SQLiteCommand(sql, Connection);
-            if (args != null)
-            {
-                foreach (KeyValuePair<string, object> arg in args)
-                {
-                    command.Parameters.Add(new SQLiteParameter(arg.Key, arg.Value));
-                }
-            }
-
+            using SQLiteCommand command = CreateCommand(sql, args);
             using SQLiteDataReader reader = command.ExecuteReader();
             var result = new List<object[]>();
             while (reader.Read())
@@ -74,8 +94,10 @@ sealed class SQLiteDatabase : IDisposable
                 {
                     values[i] = reader.GetValue(i);
                 }
+
                 result.Add(values);
             }
+
             return [.. result];
         }
         finally
@@ -84,49 +106,82 @@ sealed class SQLiteDatabase : IDisposable
         }
     }
 
-    public int ExecuteNonQuery(string sql, IDictionary<string, object>? args = null)
+    internal int ExecuteNonQuery(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
-        int result = -1;
         _connectionLock.EnterWriteLock();
         try
         {
-            using var command = new SQLiteCommand(sql, Connection);
-            if (args != null)
-            {
-                foreach (KeyValuePair<string, object> arg in args)
-                {
-                    command.Parameters.Add(new SQLiteParameter(arg.Key, arg.Value));
-                }
-            }
-            result = command.ExecuteNonQuery();
+            using SQLiteCommand command = CreateCommand(sql, args);
+            return command.ExecuteNonQuery();
         }
         finally
         {
             _connectionLock.ExitWriteLock();
         }
-
-        return result;
     }
 
-    public long ExecuteInsert(string sql, IDictionary<string, object>? args = null)
+    internal long ExecuteInsert(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
         _connectionLock.EnterWriteLock();
         try
         {
-            using var command = new SQLiteCommand(sql, Connection);
-            if (args != null)
-            {
-                foreach (KeyValuePair<string, object> arg in args)
-                {
-                    command.Parameters.Add(new SQLiteParameter(arg.Key, arg.Value));
-                }
-            }
-
+            using SQLiteCommand command = CreateCommand(sql, args);
             return command.ExecuteNonQuery() > 0 ? Connection.LastInsertRowId : 0;
         }
         finally
         {
             _connectionLock.ExitWriteLock();
+        }
+    }
+
+    private SQLiteCommand CreateCommand(string sql, IReadOnlyDictionary<string, object?>? args)
+    {
+        var command = new SQLiteCommand(sql, Connection);
+        if (args != null)
+        {
+            foreach (KeyValuePair<string, object?> arg in args)
+            {
+                command.Parameters.Add(new SQLiteParameter(arg.Key, arg.Value));
+            }
+        }
+
+        return command;
+    }
+
+    private static void WriteValue(Utf8JsonWriter writer, object value)
+    {
+        switch (value)
+        {
+            case DBNull:
+                writer.WriteNullValue();
+                break;
+            case string text:
+                writer.WriteStringValue(text);
+                break;
+            case long number:
+                writer.WriteNumberValue(number);
+                break;
+            case double number:
+                writer.WriteNumberValue(number);
+                break;
+            case int number:
+                writer.WriteNumberValue(number);
+                break;
+            case decimal number:
+                writer.WriteNumberValue(number);
+                break;
+            case bool flag:
+                writer.WriteBooleanValue(flag);
+                break;
+            case DateTime moment:
+                writer.WriteStringValue(moment);
+                break;
+            case byte[] bytes:
+                writer.WriteBase64StringValue(bytes);
+                break;
+            default:
+                writer.WriteStringValue(Convert.ToString(value, CultureInfo.InvariantCulture));
+                break;
         }
     }
 

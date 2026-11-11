@@ -1,194 +1,168 @@
-import { dbVars } from "../database";
+import { cellNumber, cellText } from "./cells.ts";
 
-import { sqliteService } from "../sqlite.ts";
+import { sqliteService, type DatabaseRow } from "../sqlite.ts";
+
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
+type CacheEntry = {
+  id: string;
+  authorId: string | null;
+  authorName: string | null;
+  created_at: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  name: string | null;
+  releaseStatus: string | null;
+  thumbnailImageUrl: string | null;
+  updated_at: string | null;
+  version: number | null;
+};
+
+type CachedAvatar = {
+  id: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  created_at: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  name: string | null;
+  releaseStatus: string | null;
+  thumbnailImageUrl: string | null;
+  updated_at: string | null;
+  version: number | null;
+};
+
+type AvatarHistoryEntry = CachedAvatar;
+
+type AvatarTimeSpent = { timeSpent: number | null; avatarId: string };
+
+function toCachedAvatar(row: DatabaseRow): CachedAvatar {
+  return {
+    id: cellText(row[0]),
+    authorId: cellText(row[2]),
+    authorName: cellText(row[3]),
+    created_at: cellText(row[4]),
+    description: cellText(row[5]),
+    imageUrl: cellText(row[6]),
+    name: cellText(row[7]),
+    releaseStatus: cellText(row[8]),
+    thumbnailImageUrl: cellText(row[9]),
+    updated_at: cellText(row[10]),
+    version: cellNumber(row[11]),
+  };
+}
+
+function toAvatarHistoryEntry(row: DatabaseRow): AvatarHistoryEntry {
+  return {
+    id: cellText(row[0]),
+    authorId: cellText(row[5]),
+    authorName: cellText(row[6]),
+    created_at: cellText(row[7]),
+    description: cellText(row[8]),
+    imageUrl: cellText(row[9]),
+    name: cellText(row[10]),
+    releaseStatus: cellText(row[11]),
+    thumbnailImageUrl: cellText(row[12]),
+    updated_at: cellText(row[13]),
+    version: cellNumber(row[14]),
+  };
+}
 
 const avatarFavorites = {
-  addAvatarToCache(entry) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO cache_avatar (id, added_at, author_id, author_name, created_at, description, image_url, name, release_status, thumbnail_image_url, updated_at, version) VALUES (@id, @added_at, @author_id, @author_name, @created_at, @description, @image_url, @name, @release_status, @thumbnail_image_url, @updated_at, @version)`,
-      {
-        "@id": entry.id,
-        "@added_at": new Date().toJSON(),
-        "@author_id": entry.authorId,
-        "@author_name": entry.authorName,
-        "@created_at": entry.created_at,
-        "@description": entry.description,
-        "@image_url": entry.imageUrl,
-        "@name": entry.name,
-        "@release_status": entry.releaseStatus,
-        "@thumbnail_image_url": entry.thumbnailImageUrl,
-        "@updated_at": entry.updated_at,
-        "@version": entry.version,
-      }
-    );
+  addAvatarToCache(entry: CacheEntry): void {
+    void sqliteService
+      .run(
+        DatabaseApi.AddAvatarToCache(
+          entry.id,
+          new Date().toJSON(),
+          entry.authorId,
+          entry.authorName,
+          entry.created_at,
+          entry.description,
+          entry.imageUrl,
+          entry.name,
+          entry.releaseStatus,
+          entry.thumbnailImageUrl,
+          entry.updated_at,
+          entry.version
+        )
+      )
+      .catch(logDatabaseError);
   },
 
-  addAvatarToHistory(avatarId) {
-    sqliteService.executeNonQuery(
-      `INSERT INTO ${dbVars.userPrefix}_avatar_history (avatar_id, created_at, time)
-            VALUES (@avatar_id, @created_at, 0)
-            ON CONFLICT(avatar_id) DO UPDATE SET created_at = @created_at`,
-      {
-        "@avatar_id": avatarId,
-        "@created_at": new Date().toJSON(),
-      }
-    );
+  addAvatarToHistory(avatarId: string): void {
+    void sqliteService.run(DatabaseApi.AddAvatarToHistory(avatarId, new Date().toJSON())).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async getAvatarTimeSpent(avatarId) {
-    const ref = {
-      timeSpent: 0,
-      avatarId,
-    };
-    await sqliteService.execute(
-      (row) => {
-        ref.timeSpent = row[0];
-      },
-      `SELECT time FROM ${dbVars.userPrefix}_avatar_history WHERE avatar_id = @avatarId`,
-      {
-        "@avatarId": avatarId,
-      }
-    );
-
-    return ref;
+  async getAvatarTimeSpent(avatarId: string): Promise<AvatarTimeSpent> {
+    const row = (await sqliteService.rows(DatabaseApi.GetAvatarTimeSpent(avatarId))).at(-1);
+    return { timeSpent: row === undefined ? 0 : cellNumber(row[0]), avatarId };
   },
 
-  async getAllAvatarTimeSpent() {
-    const map = new Map();
-    await sqliteService.execute((row) => {
-      map.set(row[0], row[1] || 0);
-    }, `SELECT avatar_id, time FROM ${dbVars.userPrefix}_avatar_history`);
-
+  async getAllAvatarTimeSpent(): Promise<Map<string | null, number>> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAllAvatarTimeSpent());
+    const map = new Map<string | null, number>();
+    for (const row of rows) {
+      map.set(cellText(row[0]), cellNumber(row[1]) ?? 0);
+    }
     return map;
   },
 
-  addAvatarTimeSpent(avatarId, timeSpent) {
-    sqliteService.executeNonQuery(`UPDATE ${dbVars.userPrefix}_avatar_history SET time = time + @timeSpent WHERE avatar_id = @avatarId`, {
-      "@avatarId": avatarId,
-      "@timeSpent": timeSpent,
-    });
+  addAvatarTimeSpent(avatarId: string, timeSpent: number): void {
+    void sqliteService.run(DatabaseApi.AddAvatarTimeSpent(avatarId, timeSpent)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async getAvatarHistory(currentUserId, limit = 100) {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-        authorId: dbRow[5],
-        authorName: dbRow[6],
-        created_at: dbRow[7],
-        description: dbRow[8],
-        imageUrl: dbRow[9],
-        name: dbRow[10],
-        releaseStatus: dbRow[11],
-        thumbnailImageUrl: dbRow[12],
-        updated_at: dbRow[13],
-        version: dbRow[14],
-      };
-      data.push(row);
-    }, `SELECT * FROM ${dbVars.userPrefix}_avatar_history INNER JOIN cache_avatar ON cache_avatar.id = ${dbVars.userPrefix}_avatar_history.avatar_id WHERE author_id != '${currentUserId}' ORDER BY ${dbVars.userPrefix}_avatar_history.created_at DESC LIMIT ${limit}`);
-    return data;
+  async getAvatarHistory(currentUserId: string, limit = 100): Promise<AvatarHistoryEntry[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAvatarHistory(currentUserId, limit));
+    return rows.map(toAvatarHistoryEntry);
   },
 
-  async getCachedAvatarById(id) {
-    let data = null;
-    await sqliteService.execute(
-      (dbRow) => {
-        data = {
-          id: dbRow[0],
-
-          authorId: dbRow[2],
-          authorName: dbRow[3],
-          created_at: dbRow[4],
-          description: dbRow[5],
-          imageUrl: dbRow[6],
-          name: dbRow[7],
-          releaseStatus: dbRow[8],
-          thumbnailImageUrl: dbRow[9],
-          updated_at: dbRow[10],
-          version: dbRow[11],
-        };
-      },
-      `SELECT * FROM cache_avatar WHERE id = @id`,
-      {
-        "@id": id,
-      }
-    );
-    return data;
+  async getCachedAvatarById(id: string): Promise<CachedAvatar | null> {
+    const row = (await sqliteService.rows(DatabaseApi.GetCachedAvatarById(id))).at(-1);
+    return row === undefined ? null : toCachedAvatar(row);
   },
 
-  clearAvatarHistory() {
-    sqliteService.executeNonQuery(`DELETE FROM ${dbVars.userPrefix}_avatar_history`);
-    sqliteService.executeNonQuery("DELETE FROM cache_avatar");
+  clearAvatarHistory(): void {
+    void sqliteService.run(DatabaseApi.ClearAvatarHistory()).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  addAvatarToFavorites(avatarId, groupName) {
-    sqliteService.executeNonQuery("INSERT OR REPLACE INTO favorite_avatar (avatar_id, group_name, created_at) VALUES (@avatar_id, @group_name, @created_at)", {
-      "@avatar_id": avatarId,
-      "@group_name": groupName,
-      "@created_at": new Date().toJSON(),
-    });
+  addAvatarToFavorites(avatarId: string, groupName: string): void {
+    void sqliteService
+      .run(DatabaseApi.AddAvatarToFavorites(avatarId, groupName, new Date().toJSON()))
+      .catch(logDatabaseError)
+      .catch(logDatabaseError);
   },
 
-  renameAvatarFavoriteGroup(newGroupName, groupName) {
-    sqliteService.executeNonQuery(`UPDATE favorite_avatar SET group_name = @new_group_name WHERE group_name = @group_name`, {
-      "@new_group_name": newGroupName,
-      "@group_name": groupName,
-    });
+  renameAvatarFavoriteGroup(newGroupName: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RenameAvatarFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  deleteAvatarFavoriteGroup(groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_avatar WHERE group_name = @group_name`, {
-      "@group_name": groupName,
-    });
+  deleteAvatarFavoriteGroup(groupName: string): void {
+    void sqliteService.run(DatabaseApi.DeleteAvatarFavoriteGroup(groupName)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  removeAvatarFromFavorites(avatarId, groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_avatar WHERE avatar_id = @avatar_id AND group_name = @group_name`, {
-      "@avatar_id": avatarId,
-      "@group_name": groupName,
-    });
+  removeAvatarFromFavorites(avatarId: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RemoveAvatarFromFavorites(avatarId, groupName)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async getAvatarFavorites() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        created_at: dbRow[1],
-        avatarId: dbRow[2],
-        groupName: dbRow[3],
-      };
-      data.push(row);
-    }, "SELECT * FROM favorite_avatar");
-    return data;
+  async getAvatarFavorites(): Promise<{ created_at: string | null; avatarId: string | null; groupName: string | null }[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAvatarFavorites());
+    return rows.map((row) => ({
+      created_at: cellText(row[1]),
+      avatarId: cellText(row[2]),
+      groupName: cellText(row[3]),
+    }));
   },
 
-  removeAvatarFromCache(avatarId) {
-    sqliteService.executeNonQuery(`DELETE FROM cache_avatar WHERE id = @avatar_id`, {
-      "@avatar_id": avatarId,
-    });
+  removeAvatarFromCache(avatarId: string): void {
+    void sqliteService.run(DatabaseApi.RemoveAvatarFromCache(avatarId)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async getAvatarCache() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-
-        authorId: dbRow[2],
-        authorName: dbRow[3],
-        created_at: dbRow[4],
-        description: dbRow[5],
-        imageUrl: dbRow[6],
-        name: dbRow[7],
-        releaseStatus: dbRow[8],
-        thumbnailImageUrl: dbRow[9],
-        updated_at: dbRow[10],
-        version: dbRow[11],
-      };
-      data.push(row);
-    }, "SELECT * FROM cache_avatar");
-    return data;
+  async getAvatarCache(): Promise<CachedAvatar[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAvatarCache());
+    return rows.map(toCachedAvatar);
   },
 };
 

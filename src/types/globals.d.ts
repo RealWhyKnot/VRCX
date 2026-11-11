@@ -166,13 +166,6 @@ type HostVRCXStorage = {
   SetObject(key: string, value: object): Promise<void>;
 };
 
-type HostSQLite = {
-  Execute(sql: string, args: Record<string, unknown> | Map<string, unknown> | null): Promise<unknown[][]>;
-  ExecuteJson(sql: string, args: Record<string, unknown> | Map<string, unknown> | null): Promise<string>;
-  ExecuteNonQuery(sql: string, args: Record<string, unknown> | Map<string, unknown> | null): Promise<number>;
-  ExecuteInsert(sql: string, args: Record<string, unknown> | Map<string, unknown> | null): Promise<number>;
-};
-
 type HostLogWatcher = {
   Get(): Promise<(string | null)[][]>;
   SetDateTill(date: string): Promise<void>;
@@ -276,7 +269,7 @@ declare global {
   var AppApiVrElectron: HostAppApiVr;
   var WebApi: HostWebApi;
   var VRCXStorage: HostVRCXStorage;
-  var SQLite: HostSQLite;
+  var DatabaseApi: import("../services/database/bridge-types.ts").DatabaseBridge;
   var LogWatcher: HostLogWatcher;
   var Discord: HostDiscord;
   var AssetBundleManager: HostAssetBundleManager;

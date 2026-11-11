@@ -154,7 +154,7 @@ sealed class WebApi : IDisposable
         SQLiteDatabase.Instance.ExecuteNonQuery(
             "CREATE TABLE IF NOT EXISTS `cookies` (`key` TEXT PRIMARY KEY, `value` TEXT)");
         object[][] values = SQLiteDatabase.Instance.Execute("SELECT `value` FROM `cookies` WHERE `key` = @key",
-            new Dictionary<string, object>(StringComparer.Ordinal)
+            new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 { "@key", "default" },
             }
@@ -236,7 +236,7 @@ sealed class WebApi : IDisposable
             System.Text.Json.JsonSerializer.Serialize(memoryStream, cookies);
             SQLiteDatabase.Instance.ExecuteNonQuery(
                 "INSERT OR REPLACE INTO `cookies` (`key`, `value`) VALUES (@key, @value)",
-                new Dictionary<string, object>(StringComparer.Ordinal)
+                new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     { "@key", "default" },
                     { "@value", Convert.ToBase64String(memoryStream.ToArray()) },

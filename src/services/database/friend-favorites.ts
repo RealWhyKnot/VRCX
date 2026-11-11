@@ -1,45 +1,35 @@
+import { cellText } from "./cells.ts";
+
 import { sqliteService } from "../sqlite.ts";
 
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
 const friendFavorites = {
-  addFriendToLocalFavorites(userId, groupName) {
-    sqliteService.executeNonQuery("INSERT OR REPLACE INTO favorite_friend (user_id, group_name, created_at) VALUES (@user_id, @group_name, @created_at)", {
-      "@user_id": userId,
-      "@group_name": groupName,
-      "@created_at": new Date().toJSON(),
-    });
+  addFriendToLocalFavorites(userId: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.AddFriendToLocalFavorites(userId, groupName, new Date().toJSON())).catch(logDatabaseError);
   },
 
-  removeFriendFromLocalFavorites(userId, groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_friend WHERE user_id = @user_id AND group_name = @group_name`, {
-      "@user_id": userId,
-      "@group_name": groupName,
-    });
+  removeFriendFromLocalFavorites(userId: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RemoveFriendFromLocalFavorites(userId, groupName)).catch(logDatabaseError);
   },
 
-  renameFriendFavoriteGroup(newGroupName, groupName) {
-    sqliteService.executeNonQuery(`UPDATE favorite_friend SET group_name = @new_group_name WHERE group_name = @group_name`, {
-      "@new_group_name": newGroupName,
-      "@group_name": groupName,
-    });
+  renameFriendFavoriteGroup(newGroupName: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RenameFriendFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError);
   },
 
-  deleteFriendFavoriteGroup(groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_friend WHERE group_name = @group_name`, {
-      "@group_name": groupName,
-    });
+  deleteFriendFavoriteGroup(groupName: string): void {
+    void sqliteService.run(DatabaseApi.DeleteFriendFavoriteGroup(groupName)).catch(logDatabaseError);
   },
 
-  async getFriendFavorites() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        created_at: dbRow[1],
-        userId: dbRow[2],
-        groupName: dbRow[3],
-      };
-      data.push(row);
-    }, "SELECT * FROM favorite_friend");
-    return data;
+  async getFriendFavorites(): Promise<{ created_at: string | null; userId: string | null; groupName: string | null }[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetFriendFavorites());
+    return rows.map((row) => ({
+      created_at: cellText(row[1]),
+      userId: cellText(row[2]),
+      groupName: cellText(row[3]),
+    }));
   },
 };
 

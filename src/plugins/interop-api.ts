@@ -11,13 +11,13 @@ export async function initInteropApi(isVrOverlay = false) {
     }
   } else {
     if (isHostWindows) {
-      await CefSharp.BindObjectAsync("AppApi", "WebApi", "VRCXStorage", "SQLite", "LogWatcher", "Discord", "AssetBundleManager");
+      await CefSharp.BindObjectAsync("AppApi", "WebApi", "VRCXStorage", "DatabaseApi", "LogWatcher", "Discord", "AssetBundleManager");
     } else {
       Object.assign(window, {
         AppApi: electronInterop.bridge("AppApiElectron"),
         WebApi: electronInterop.bridge("WebApi"),
         VRCXStorage: electronInterop.bridge("VRCXStorage"),
-        SQLite: electronInterop.bridge("SQLiteDatabase"),
+        DatabaseApi: electronInterop.bridge("DatabaseApi"),
         LogWatcher: electronInterop.bridge("LogWatcher"),
         Discord: electronInterop.bridge("Discord"),
         AssetBundleManager: electronInterop.bridge("AssetBundleManager"),

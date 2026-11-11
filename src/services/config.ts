@@ -20,30 +20,18 @@ function parseNumber(value: string): number | null {
 
 class ConfigRepository {
   async init(): Promise<void> {
-    await sqliteService.executeNonQuery("CREATE TABLE IF NOT EXISTS configs (`key` TEXT PRIMARY KEY, `value` TEXT)");
+    await sqliteService.run(DatabaseApi.CreateConfigTable());
   }
 
   async remove(key: string): Promise<void> {
-    await sqliteService.executeNonQuery(`DELETE FROM configs WHERE key = @key`, {
-      "@key": transformKey(key),
-    });
+    await sqliteService.run(DatabaseApi.RemoveConfigValue(transformKey(key)));
   }
 
   async getString(key: string): Promise<string | null>;
   async getString<TDefault extends string | null>(key: string, defaultValue: TDefault): Promise<string | TDefault>;
   async getString(key: string, defaultValue: string | null = null): Promise<string | null> {
-    let value: unknown = undefined;
-    await sqliteService.execute(
-      (row: unknown) => {
-        if (Array.isArray(row)) {
-          value = row[0];
-        }
-      },
-      `SELECT value FROM configs WHERE key = @key`,
-      {
-        "@key": transformKey(key),
-      }
-    );
+    const rows = await sqliteService.rows(DatabaseApi.GetConfigValue(transformKey(key)));
+    const value = rows.at(-1)?.[0];
 
     if (typeof value !== "string" || value === "undefined") {
       return defaultValue;
@@ -52,10 +40,7 @@ class ConfigRepository {
   }
 
   async setString(key: string, value: string | number | boolean): Promise<void> {
-    await sqliteService.executeNonQuery(`INSERT OR REPLACE INTO configs (key, value) VALUES (@key, @value)`, {
-      "@key": transformKey(key),
-      "@value": String(value),
-    });
+    await sqliteService.run(DatabaseApi.SetConfigValue(transformKey(key), String(value)));
   }
 
   async getBool(key: string): Promise<boolean | null>;

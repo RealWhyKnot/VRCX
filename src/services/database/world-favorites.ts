@@ -1,120 +1,114 @@
-import { sqliteService } from "../sqlite.ts";
+import { cellNumber, cellText } from "./cells.ts";
+
+import { sqliteService, type DatabaseRow } from "../sqlite.ts";
+
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
+type CacheEntry = {
+  id: string;
+  authorId: string | null;
+  authorName: string | null;
+  created_at: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  name: string | null;
+  releaseStatus: string | null;
+  thumbnailImageUrl: string | null;
+  updated_at: string | null;
+  version: number | null;
+};
+
+type CachedWorld = {
+  id: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  created_at: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  name: string | null;
+  releaseStatus: string | null;
+  thumbnailImageUrl: string | null;
+  updated_at: string | null;
+  version: number | null;
+};
+
+function toCachedWorld(row: DatabaseRow): CachedWorld {
+  return {
+    id: cellText(row[0]),
+    authorId: cellText(row[2]),
+    authorName: cellText(row[3]),
+    created_at: cellText(row[4]),
+    description: cellText(row[5]),
+    imageUrl: cellText(row[6]),
+    name: cellText(row[7]),
+    releaseStatus: cellText(row[8]),
+    thumbnailImageUrl: cellText(row[9]),
+    updated_at: cellText(row[10]),
+    version: cellNumber(row[11]),
+  };
+}
 
 const worldFavorites = {
-  addWorldToCache(entry) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO cache_world (id, added_at, author_id, author_name, created_at, description, image_url, name, release_status, thumbnail_image_url, updated_at, version) VALUES (@id, @added_at, @author_id, @author_name, @created_at, @description, @image_url, @name, @release_status, @thumbnail_image_url, @updated_at, @version)`,
-      {
-        "@id": entry.id,
-        "@added_at": new Date().toJSON(),
-        "@author_id": entry.authorId,
-        "@author_name": entry.authorName,
-        "@created_at": entry.created_at,
-        "@description": entry.description,
-        "@image_url": entry.imageUrl,
-        "@name": entry.name,
-        "@release_status": entry.releaseStatus,
-        "@thumbnail_image_url": entry.thumbnailImageUrl,
-        "@updated_at": entry.updated_at,
-        "@version": entry.version,
-      }
-    );
+  addWorldToCache(entry: CacheEntry): void {
+    void sqliteService
+      .run(
+        DatabaseApi.AddWorldToCache(
+          entry.id,
+          new Date().toJSON(),
+          entry.authorId,
+          entry.authorName,
+          entry.created_at,
+          entry.description,
+          entry.imageUrl,
+          entry.name,
+          entry.releaseStatus,
+          entry.thumbnailImageUrl,
+          entry.updated_at,
+          entry.version
+        )
+      )
+      .catch(logDatabaseError);
   },
 
-  addWorldToFavorites(worldId, groupName) {
-    sqliteService.executeNonQuery("INSERT OR REPLACE INTO favorite_world (world_id, group_name, created_at) VALUES (@world_id, @group_name, @created_at)", {
-      "@world_id": worldId,
-      "@group_name": groupName,
-      "@created_at": new Date().toJSON(),
-    });
+  addWorldToFavorites(worldId: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.AddWorldToFavorites(worldId, groupName, new Date().toJSON())).catch(logDatabaseError);
   },
 
-  renameWorldFavoriteGroup(newGroupName, groupName) {
-    sqliteService.executeNonQuery(`UPDATE favorite_world SET group_name = @new_group_name WHERE group_name = @group_name`, {
-      "@new_group_name": newGroupName,
-      "@group_name": groupName,
-    });
+  renameWorldFavoriteGroup(newGroupName: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RenameWorldFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError);
   },
 
-  deleteWorldFavoriteGroup(groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_world WHERE group_name = @group_name`, {
-      "@group_name": groupName,
-    });
+  deleteWorldFavoriteGroup(groupName: string): void {
+    void sqliteService.run(DatabaseApi.DeleteWorldFavoriteGroup(groupName)).catch(logDatabaseError);
   },
 
-  removeWorldFromFavorites(worldId, groupName) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_world WHERE world_id = @world_id AND group_name = @group_name`, {
-      "@world_id": worldId,
-      "@group_name": groupName,
-    });
+  removeWorldFromFavorites(worldId: string, groupName: string): void {
+    void sqliteService.run(DatabaseApi.RemoveWorldFromFavorites(worldId, groupName)).catch(logDatabaseError);
   },
 
-  async getWorldFavorites() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        created_at: dbRow[1],
-        worldId: dbRow[2],
-        groupName: dbRow[3],
-      };
-      data.push(row);
-    }, "SELECT * FROM favorite_world");
-    return data;
+  async getWorldFavorites(): Promise<{ created_at: string | null; worldId: string | null; groupName: string | null }[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetWorldFavorites());
+    return rows.map((row) => ({
+      created_at: cellText(row[1]),
+      worldId: cellText(row[2]),
+      groupName: cellText(row[3]),
+    }));
   },
 
-  removeWorldFromCache(worldId) {
-    sqliteService.executeNonQuery(`DELETE FROM cache_world WHERE id = @world_id`, {
-      "@world_id": worldId,
-    });
+  removeWorldFromCache(worldId: string): void {
+    void sqliteService.run(DatabaseApi.RemoveWorldFromCache(worldId)).catch(logDatabaseError);
   },
 
-  async getWorldCache() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-
-        authorId: dbRow[2],
-        authorName: dbRow[3],
-        created_at: dbRow[4],
-        description: dbRow[5],
-        imageUrl: dbRow[6],
-        name: dbRow[7],
-        releaseStatus: dbRow[8],
-        thumbnailImageUrl: dbRow[9],
-        updated_at: dbRow[10],
-        version: dbRow[11],
-      };
-      data.push(row);
-    }, "SELECT * FROM cache_world");
-    return data;
+  async getWorldCache(): Promise<CachedWorld[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetWorldCache());
+    return rows.map(toCachedWorld);
   },
 
-  async getCachedWorldById(id) {
-    let data = null;
-    await sqliteService.execute(
-      (dbRow) => {
-        data = {
-          id: dbRow[0],
-
-          authorId: dbRow[2],
-          authorName: dbRow[3],
-          created_at: dbRow[4],
-          description: dbRow[5],
-          imageUrl: dbRow[6],
-          name: dbRow[7],
-          releaseStatus: dbRow[8],
-          thumbnailImageUrl: dbRow[9],
-          updated_at: dbRow[10],
-          version: dbRow[11],
-        };
-      },
-      `SELECT * FROM cache_world WHERE id = @id`,
-      {
-        "@id": id,
-      }
-    );
-    return data;
+  async getCachedWorldById(id: string): Promise<CachedWorld | null> {
+    const row = (await sqliteService.rows(DatabaseApi.GetCachedWorldById(id))).at(-1);
+    return row === undefined ? null : toCachedWorld(row);
   },
 };
 

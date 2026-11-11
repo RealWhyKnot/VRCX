@@ -1,213 +1,237 @@
 import { dbVars } from "../database";
 
+import { cellNumber, cellText } from "./cells.ts";
 import { sqliteService } from "../sqlite.ts";
+import type { DatabaseRow } from "../sqlite.ts";
+
+type NotificationDetailsRow = {
+  worldId: string | null;
+  worldName: string | null;
+  imageUrl: string | null;
+  inviteMessage: string | null;
+  requestMessage: string | null;
+  responseMessage: string | null;
+};
+
+type NotificationRow = {
+  id: string | null;
+  created_at: string | null;
+  type: string | null;
+  senderUserId: string | null;
+  senderUsername: string | null;
+  receiverUserId: string | null;
+  message: string | null;
+  details: NotificationDetailsRow;
+  $isExpired: boolean;
+};
+
+type NotificationV2Row = {
+  id: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  expiresAt: string | null;
+  type: string | null;
+  link: string | null;
+  linkText: string | null;
+  message: string | null;
+  title: string | null;
+  imageUrl: string | null;
+  seen: boolean;
+  senderUserId: string | null;
+  senderUsername: string | null;
+  data: unknown;
+  responses: unknown;
+  details: unknown;
+  created_at: string | null;
+  version: number;
+};
+
+type NotificationDetailsInput = {
+  worldId?: string;
+  worldName?: string;
+  imageUrl?: string;
+  inviteMessage?: string;
+  requestMessage?: string;
+  responseMessage?: string;
+};
+
+type NotificationInput = {
+  id?: string;
+  created_at?: string;
+  type?: string;
+  senderUserId?: string;
+  senderUsername?: string;
+  receiverUserId?: string;
+  message?: string;
+  imageUrl?: string;
+  details?: NotificationDetailsInput;
+  $isExpired?: boolean;
+};
+
+type NotificationV2Input = {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
+  expiresAt?: string;
+  type?: string;
+  link?: string;
+  linkText?: string;
+  message?: string;
+  title?: string;
+  imageUrl?: string;
+  seen?: boolean;
+  senderUserId?: string;
+  senderUsername?: string;
+  data?: unknown;
+  responses?: unknown;
+  details?: unknown;
+};
+
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
+function parseJsonCell(cell: unknown, fallback: string): unknown {
+  const text = cellText(cell) ?? "";
+  const parsed: unknown = JSON.parse(text.length > 0 ? text : fallback);
+  return parsed;
+}
+
+function mapNotificationRow(row: DatabaseRow): NotificationRow {
+  return {
+    id: cellText(row[0]),
+    created_at: cellText(row[1]),
+    type: cellText(row[2]),
+    senderUserId: cellText(row[3]),
+    senderUsername: cellText(row[4]),
+    receiverUserId: cellText(row[5]),
+    message: cellText(row[6]),
+    details: {
+      worldId: cellText(row[7]),
+      worldName: cellText(row[8]),
+      imageUrl: cellText(row[9]),
+      inviteMessage: cellText(row[10]),
+      requestMessage: cellText(row[11]),
+      responseMessage: cellText(row[12]),
+    },
+    $isExpired: cellNumber(row[13]) === 1,
+  };
+}
+
+function mapNotificationV2Row(row: DatabaseRow): NotificationV2Row {
+  const createdAt = cellText(row[1]);
+  return {
+    id: cellText(row[0]),
+    createdAt,
+    updatedAt: cellText(row[2]),
+    expiresAt: cellText(row[3]),
+    type: cellText(row[4]),
+    link: cellText(row[5]),
+    linkText: cellText(row[6]),
+    message: cellText(row[7]),
+    title: cellText(row[8]),
+    imageUrl: cellText(row[9]),
+    seen: cellNumber(row[10]) === 1,
+    senderUserId: cellText(row[11]),
+    senderUsername: cellText(row[12]),
+    data: parseJsonCell(row[13], "{}"),
+    responses: parseJsonCell(row[14], "[]"),
+    details: parseJsonCell(row[15], "{}"),
+    created_at: createdAt,
+    version: 2,
+  };
+}
 
 const notifications = {
-  async getNotifications() {
-    const notifications = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-        created_at: dbRow[1],
-        type: dbRow[2],
-        senderUserId: dbRow[3],
-        senderUsername: dbRow[4],
-        receiverUserId: dbRow[5],
-        message: dbRow[6],
-        details: {
-          worldId: dbRow[7],
-          worldName: dbRow[8],
-          imageUrl: dbRow[9],
-          inviteMessage: dbRow[10],
-          requestMessage: dbRow[11],
-          responseMessage: dbRow[12],
-        },
-        $isExpired: dbRow[13] === 1,
-      };
-      notifications.unshift(row);
-    }, `SELECT * FROM ${dbVars.userPrefix}_notifications ORDER BY created_at DESC LIMIT ${dbVars.maxTableSize}`);
-    return notifications;
+  async getNotifications(): Promise<NotificationRow[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetNotifications(dbVars.maxTableSize));
+    return rows.map(mapNotificationRow).reverse();
   },
 
-  async lookupNotificationDatabase(search, filters, vipList, maxEntries = dbVars.maxTableSize) {
-    search = search.replaceAll("'", "''");
-    const notifications = [];
-
-    let vipQuery = "";
-    if (vipList.length > 0) {
-      const vipIds = vipList.map((userId) => `'${userId.replaceAll("'", "''")}'`);
-      vipQuery = `AND sender_user_id IN (${vipIds.join(",")})`;
-    }
-
-    let filterQuery = "";
-    if (filters.length > 0) {
-      const filterTypes = filters.map((type) => `'${type.replaceAll("'", "''")}'`);
-      filterQuery = `AND type IN (${filterTypes.join(",")})`;
-    }
-
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-        created_at: dbRow[1],
-        type: dbRow[2],
-        senderUserId: dbRow[3],
-        senderUsername: dbRow[4],
-        receiverUserId: dbRow[5],
-        message: dbRow[6],
-        details: {
-          worldId: dbRow[7],
-          worldName: dbRow[8],
-          imageUrl: dbRow[9],
-          inviteMessage: dbRow[10],
-          requestMessage: dbRow[11],
-          responseMessage: dbRow[12],
-        },
-        $isExpired: dbRow[13] === 1,
-      };
-      notifications.unshift(row);
-    }, `SELECT * FROM ${dbVars.userPrefix}_notifications WHERE (sender_username LIKE '%${search}%' OR message LIKE '%${search}%' OR world_name LIKE '%${search}%') ${vipQuery} ${filterQuery} ORDER BY created_at DESC LIMIT ${maxEntries}`);
-    return notifications;
+  async lookupNotificationDatabase(search: string, filters: string[], vipList: string[], maxEntries = dbVars.maxTableSize): Promise<NotificationRow[]> {
+    const rows = await sqliteService.rows(DatabaseApi.LookupNotifications(search, filters, vipList, maxEntries));
+    return rows.map(mapNotificationRow).reverse();
   },
 
-  addNotificationToDatabase(row) {
-    const entry = {
-      id: "",
-      created_at: "",
-      type: "",
-      senderUserId: "",
-      senderUsername: "",
-      receiverUserId: "",
-      message: "",
-      ...row,
-      details: {
-        worldId: "",
-        worldName: "",
-        imageUrl: "",
-        inviteMessage: "",
-        requestMessage: "",
-        responseMessage: "",
-        ...row.details,
-      },
-    };
-    if (entry.imageUrl && !entry.details.imageUrl) {
-      entry.details.imageUrl = entry.imageUrl;
-    }
-    let expired = 0;
-    if (row.$isExpired) {
-      expired = 1;
-    }
-    if (!entry.created_at || !entry.type || !entry.id) {
-      console.error("Notification is missing required field", entry);
+  addNotificationToDatabase(row: NotificationInput): void {
+    const id = row.id ?? "";
+    const createdAt = row.created_at ?? "";
+    const type = row.type ?? "";
+    if (!createdAt || !type || !id) {
+      console.error("Notification is missing required field", row);
       throw new Error("Notification is missing required field");
     }
-    sqliteService.executeNonQuery(
-      `INSERT OR IGNORE INTO ${dbVars.userPrefix}_notifications (id, created_at, type, sender_user_id, sender_username, receiver_user_id, message, world_id, world_name, image_url, invite_message, request_message, response_message, expired) VALUES (@id, @created_at, @type, @sender_user_id, @sender_username, @receiver_user_id, @message, @world_id, @world_name, @image_url, @invite_message, @request_message, @response_message, @expired)`,
-      {
-        "@id": entry.id,
-        "@created_at": entry.created_at,
-        "@type": entry.type,
-        "@sender_user_id": entry.senderUserId,
-        "@sender_username": entry.senderUsername,
-        "@receiver_user_id": entry.receiverUserId,
-        "@message": entry.message,
-        "@world_id": entry.details.worldId,
-        "@world_name": entry.details.worldName,
-        "@image_url": entry.details.imageUrl,
-        "@invite_message": entry.details.inviteMessage,
-        "@request_message": entry.details.requestMessage,
-        "@response_message": entry.details.responseMessage,
-        "@expired": expired,
-      }
-    );
+    const detailsImageUrl = row.details?.imageUrl ?? "";
+    void sqliteService
+      .run(
+        DatabaseApi.AddNotification(
+          id,
+          createdAt,
+          type,
+          row.senderUserId ?? "",
+          row.senderUsername ?? "",
+          row.receiverUserId ?? "",
+          row.message ?? "",
+          row.details?.worldId ?? "",
+          row.details?.worldName ?? "",
+          detailsImageUrl.length > 0 ? detailsImageUrl : (row.imageUrl ?? ""),
+          row.details?.inviteMessage ?? "",
+          row.details?.requestMessage ?? "",
+          row.details?.responseMessage ?? "",
+          row.$isExpired === true
+        )
+      )
+      .catch(logDatabaseError);
   },
 
-  deleteNotification(rowId) {
-    sqliteService.executeNonQuery(`DELETE FROM ${dbVars.userPrefix}_notifications WHERE id = @row_id`, {
-      "@row_id": rowId,
-    });
+  deleteNotification(rowId: string): void {
+    void sqliteService.run(DatabaseApi.DeleteNotification(rowId)).catch(logDatabaseError);
   },
 
-  updateNotificationExpired(entry) {
-    let expired = 0;
-    if (entry.$isExpired) {
-      expired = 1;
-    }
-    sqliteService.executeNonQuery(`UPDATE ${dbVars.userPrefix}_notifications SET expired = @expired WHERE id = @id`, {
-      "@id": entry.id,
-      "@expired": expired,
-    });
+  updateNotificationExpired(entry: { id: string; $isExpired?: boolean }): void {
+    void sqliteService.run(DatabaseApi.UpdateNotificationExpired(entry.id, entry.$isExpired === true)).catch(logDatabaseError);
   },
 
-  async getNotificationsV2() {
-    const notifications = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        id: dbRow[0],
-        createdAt: dbRow[1],
-        updatedAt: dbRow[2],
-        expiresAt: dbRow[3],
-        type: dbRow[4],
-        link: dbRow[5],
-        linkText: dbRow[6],
-        message: dbRow[7],
-        title: dbRow[8],
-        imageUrl: dbRow[9],
-        seen: dbRow[10] === 1,
-        senderUserId: dbRow[11],
-        senderUsername: dbRow[12],
-        data: JSON.parse(dbRow[13] || "{}"),
-        responses: JSON.parse(dbRow[14] || "[]"),
-        details: JSON.parse(dbRow[15] || "{}"),
-      };
-
-      row.created_at = row.createdAt;
-      row.version = 2;
-      notifications.unshift(row);
-    }, `SELECT * FROM ${dbVars.userPrefix}_notifications_v2 ORDER BY created_at DESC LIMIT ${dbVars.maxTableSize}`);
-    return notifications;
+  async getNotificationsV2(): Promise<NotificationV2Row[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetNotificationsV2(dbVars.maxTableSize));
+    return rows.map(mapNotificationV2Row).reverse();
   },
 
-  addNotificationV2ToDatabase(entry) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${dbVars.userPrefix}_notifications_v2 (id, created_at, updated_at, expires_at, type, link, link_text, message, title, image_url, seen, sender_user_id, sender_username, data, responses, details) VALUES (@id, @created_at, @updated_at, @expires_at, @type, @link, @link_text, @message, @title, @image_url, @seen, @sender_user_id, @sender_username, @data, @responses, @details)`,
-      {
-        "@id": entry.id,
-        "@created_at": entry.createdAt,
-        "@updated_at": entry.updatedAt,
-        "@expires_at": entry.expiresAt,
-        "@type": entry.type,
-        "@link": entry.link,
-        "@link_text": entry.linkText,
-        "@message": entry.message,
-        "@title": entry.title,
-        "@image_url": entry.imageUrl,
-        "@seen": entry.seen ? 1 : 0,
-        "@sender_user_id": entry.senderUserId,
-        "@sender_username": entry.senderUsername,
-        "@data": JSON.stringify(entry.data || {}),
-        "@responses": JSON.stringify(entry.responses || []),
-        "@details": JSON.stringify(entry.details || {}),
-      }
-    );
+  addNotificationV2ToDatabase(entry: NotificationV2Input): void {
+    void sqliteService
+      .run(
+        DatabaseApi.AddNotificationV2(
+          entry.id,
+          entry.createdAt ?? null,
+          entry.updatedAt ?? null,
+          entry.expiresAt ?? null,
+          entry.type ?? null,
+          entry.link ?? null,
+          entry.linkText ?? null,
+          entry.message ?? null,
+          entry.title ?? null,
+          entry.imageUrl ?? null,
+          entry.seen === true,
+          entry.senderUserId ?? null,
+          entry.senderUsername ?? null,
+          JSON.stringify(entry.data ?? {}),
+          JSON.stringify(entry.responses ?? []),
+          JSON.stringify(entry.details ?? {})
+        )
+      )
+      .catch(logDatabaseError);
   },
 
-  expireNotificationV2(id) {
-    sqliteService.executeNonQuery(`UPDATE ${dbVars.userPrefix}_notifications_v2 SET expires_at = @expires_at, seen = 1 WHERE id = @id`, {
-      "@id": id,
-      "@expires_at": new Date().toJSON(),
-    });
+  expireNotificationV2(id: string): void {
+    void sqliteService.run(DatabaseApi.ExpireNotificationV2(id, new Date().toJSON())).catch(logDatabaseError);
   },
 
-  seenNotificationV2(id) {
-    sqliteService.executeNonQuery(`UPDATE ${dbVars.userPrefix}_notifications_v2 SET seen = 1 WHERE id = @id`, {
-      "@id": id,
-    });
+  seenNotificationV2(id: string): void {
+    void sqliteService.run(DatabaseApi.SeenNotificationV2(id)).catch(logDatabaseError);
   },
 
-  deleteNotificationV2(id) {
-    sqliteService.executeNonQuery(`DELETE FROM ${dbVars.userPrefix}_notifications_v2 WHERE id = @id`, {
-      "@id": id,
-    });
+  deleteNotificationV2(id: string): void {
+    void sqliteService.run(DatabaseApi.DeleteNotificationV2(id)).catch(logDatabaseError);
   },
 };
 

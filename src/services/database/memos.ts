@@ -1,146 +1,105 @@
-import { dbVars } from "../database";
+import { cellText } from "./cells.ts";
 
-import { sqliteService } from "../sqlite.ts";
+import { sqliteService, type DatabaseRow } from "../sqlite.ts";
+
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
+type UserMemo = { userId: string | null; editedAt: string | null; memo: string | null };
+type WorldMemo = { worldId: string | null; editedAt: string | null; memo: string | null };
+type AvatarMemo = { avatarId: string | null; editedAt: string | null; memo: string | null };
+type UserMemoListItem = { userId: string | null; memo: string | null };
+type UserNote = { userId: string | null; displayName: string | null; note: string | null; createdAt: string | null };
+
+type UserMemoEntry = { userId: string; editedAt: string; memo: string | null };
+type WorldMemoEntry = { worldId: string; editedAt: string; memo: string | null };
+type AvatarMemoEntry = { avatarId: string; editedAt: string; memo: string | null };
+type UserNoteEntry = { userId: string; displayName: string | null; note: string | null; createdAt: string };
+
+function toUserMemo(row: DatabaseRow): UserMemo {
+  return { userId: cellText(row[0]), editedAt: cellText(row[1]), memo: cellText(row[2]) };
+}
+
+function toWorldMemo(row: DatabaseRow): WorldMemo {
+  return { worldId: cellText(row[0]), editedAt: cellText(row[1]), memo: cellText(row[2]) };
+}
+
+function toAvatarMemo(row: DatabaseRow): AvatarMemo {
+  return { avatarId: cellText(row[0]), editedAt: cellText(row[1]), memo: cellText(row[2]) };
+}
 
 const memos = {
-  async getUserMemo(userId) {
-    let row = {};
-    await sqliteService.execute(
-      (dbRow) => {
-        row = {
-          userId: dbRow[0],
-          editedAt: dbRow[1],
-          memo: dbRow[2],
-        };
-      },
-      `SELECT * FROM memos WHERE user_id = @user_id`,
-      {
-        "@user_id": userId,
-      }
-    );
-    return row;
+  async getUserMemo(userId: string): Promise<Partial<UserMemo>> {
+    const row = (await sqliteService.rows(DatabaseApi.GetUserMemo(userId))).at(-1);
+    return row === undefined ? {} : toUserMemo(row);
   },
 
-  async getAllUserMemos() {
-    const memos = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        userId: dbRow[0],
-        memo: dbRow[1],
-      };
-      memos.push(row);
-    }, "SELECT user_id, memo FROM memos");
-    return memos;
+  async getAllUserMemos(): Promise<UserMemoListItem[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAllUserMemos());
+    return rows.map((row) => ({ userId: cellText(row[0]), memo: cellText(row[1]) }));
   },
 
-  async setUserMemo(entry) {
-    await sqliteService.executeNonQuery(`INSERT OR REPLACE INTO memos (user_id, edited_at, memo) VALUES (@user_id, @edited_at, @memo)`, {
-      "@user_id": entry.userId,
-      "@edited_at": entry.editedAt,
-      "@memo": entry.memo,
-    });
+  async setUserMemo(entry: UserMemoEntry): Promise<void> {
+    await sqliteService.run(DatabaseApi.SetUserMemo(entry.userId, entry.editedAt, entry.memo));
   },
 
-  async deleteUserMemo(userId) {
-    await sqliteService.executeNonQuery(`DELETE FROM memos WHERE user_id = @user_id`, {
-      "@user_id": userId,
-    });
+  async deleteUserMemo(userId: string): Promise<void> {
+    await sqliteService.run(DatabaseApi.DeleteUserMemo(userId));
   },
 
-  async getWorldMemo(worldId) {
-    let row = {};
-    await sqliteService.execute(
-      (dbRow) => {
-        row = {
-          worldId: dbRow[0],
-          editedAt: dbRow[1],
-          memo: dbRow[2],
-        };
-      },
-      `SELECT * FROM world_memos WHERE world_id = @world_id`,
-      {
-        "@world_id": worldId,
-      }
-    );
-    return row;
+  async getWorldMemo(worldId: string): Promise<Partial<WorldMemo>> {
+    const row = (await sqliteService.rows(DatabaseApi.GetWorldMemo(worldId))).at(-1);
+    return row === undefined ? {} : toWorldMemo(row);
   },
 
-  setWorldMemo(entry) {
-    sqliteService.executeNonQuery(`INSERT OR REPLACE INTO world_memos (world_id, edited_at, memo) VALUES (@world_id, @edited_at, @memo)`, {
-      "@world_id": entry.worldId,
-      "@edited_at": entry.editedAt,
-      "@memo": entry.memo,
-    });
+  setWorldMemo(entry: WorldMemoEntry): void {
+    void sqliteService
+      .run(DatabaseApi.SetWorldMemo(entry.worldId, entry.editedAt, entry.memo))
+      .catch(logDatabaseError)
+      .catch(logDatabaseError);
   },
 
-  deleteWorldMemo(worldId) {
-    sqliteService.executeNonQuery(`DELETE FROM world_memos WHERE world_id = @world_id`, {
-      "@world_id": worldId,
-    });
+  deleteWorldMemo(worldId: string): void {
+    void sqliteService.run(DatabaseApi.DeleteWorldMemo(worldId)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async getAvatarMemoDB(avatarId) {
-    let row = {};
-    await sqliteService.execute(
-      (dbRow) => {
-        row = {
-          avatarId: dbRow[0],
-          editedAt: dbRow[1],
-          memo: dbRow[2],
-        };
-      },
-      `SELECT * FROM avatar_memos WHERE avatar_id = @avatar_id`,
-      {
-        "@avatar_id": avatarId,
-      }
-    );
-    return row;
+  async getAvatarMemoDB(avatarId: string): Promise<Partial<AvatarMemo>> {
+    const row = (await sqliteService.rows(DatabaseApi.GetAvatarMemo(avatarId))).at(-1);
+    return row === undefined ? {} : toAvatarMemo(row);
   },
 
-  setAvatarMemo(entry) {
-    sqliteService.executeNonQuery(`INSERT OR REPLACE INTO avatar_memos (avatar_id, edited_at, memo) VALUES (@avatar_id, @edited_at, @memo)`, {
-      "@avatar_id": entry.avatarId,
-      "@edited_at": entry.editedAt,
-      "@memo": entry.memo,
-    });
+  setAvatarMemo(entry: AvatarMemoEntry): void {
+    void sqliteService
+      .run(DatabaseApi.SetAvatarMemo(entry.avatarId, entry.editedAt, entry.memo))
+      .catch(logDatabaseError)
+      .catch(logDatabaseError);
   },
 
-  deleteAvatarMemo(avatarId) {
-    sqliteService.executeNonQuery(`DELETE FROM avatar_memos WHERE avatar_id = @avatar_id`, {
-      "@avatar_id": avatarId,
-    });
+  deleteAvatarMemo(avatarId: string): void {
+    void sqliteService.run(DatabaseApi.DeleteAvatarMemo(avatarId)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  async addUserNote(note) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO ${dbVars.userPrefix}_notes (user_id, display_name, note, created_at) VALUES (@user_id, @display_name, @note, @created_at)`,
-      {
-        "@user_id": note.userId,
-        "@display_name": note.displayName,
-        "@note": note.note,
-        "@created_at": note.createdAt,
-      }
-    );
+  addUserNote(note: UserNoteEntry): Promise<void> {
+    void sqliteService
+      .run(DatabaseApi.AddUserNote(note.userId, note.displayName, note.note, note.createdAt))
+      .catch(logDatabaseError)
+      .catch(logDatabaseError);
+    return Promise.resolve();
   },
 
-  async getAllUserNotes() {
-    const data = [];
-    await sqliteService.execute((dbRow) => {
-      const row = {
-        userId: dbRow[0],
-        displayName: dbRow[1],
-        note: dbRow[2],
-        createdAt: dbRow[3],
-      };
-      data.push(row);
-    }, `SELECT user_id, display_name, note, created_at FROM ${dbVars.userPrefix}_notes`);
-    return data;
+  async getAllUserNotes(): Promise<UserNote[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetAllUserNotes());
+    return rows.map((row) => ({
+      userId: cellText(row[0]),
+      displayName: cellText(row[1]),
+      note: cellText(row[2]),
+      createdAt: cellText(row[3]),
+    }));
   },
 
-  async deleteUserNote(userId) {
-    sqliteService.executeNonQuery(`DELETE FROM ${dbVars.userPrefix}_notes WHERE user_id = @userId`, {
-      "@userId": userId,
-    });
+  deleteUserNote(userId: string): void {
+    void sqliteService.run(DatabaseApi.DeleteUserNote(userId)).catch(logDatabaseError).catch(logDatabaseError);
   },
 };
 

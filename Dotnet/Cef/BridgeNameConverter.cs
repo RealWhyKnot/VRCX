@@ -20,8 +20,6 @@ internal sealed class BridgeNameConverter : IJavascriptNameConverter
             "SaveStickerToFileAsync" => "SaveStickerToFile",
             "SaveEmojiToFileAsync" => "SaveEmojiToFile",
             "DownloadUpdateAsync" => "DownloadUpdate",
-            "ExecuteJsonAsync" => "ExecuteJson",
-            "ExecuteAsync" => "Execute",
             _ => memberInfo.Name,
         };
     }

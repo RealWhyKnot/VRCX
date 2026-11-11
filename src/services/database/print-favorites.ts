@@ -1,33 +1,23 @@
+import { cellText } from "./cells.ts";
+
 import { sqliteService } from "../sqlite.ts";
 
+function logDatabaseError(error: unknown): void {
+  console.error(error);
+}
+
 const printFavorites = {
-  addPrintToFavorites(printId) {
-    sqliteService.executeNonQuery(
-      `INSERT OR REPLACE INTO favorite_print (print_id, created_at)
-             VALUES (@print_id, @created_at)`,
-      {
-        "@print_id": printId,
-        "@created_at": new Date().toJSON(),
-      }
-    );
+  addPrintToFavorites(printId: string): void {
+    void sqliteService.run(DatabaseApi.AddPrintToFavorites(printId, new Date().toJSON())).catch(logDatabaseError);
   },
 
-  removePrintFromFavorites(printId) {
-    sqliteService.executeNonQuery(`DELETE FROM favorite_print WHERE print_id = @print_id`, {
-      "@print_id": printId,
-    });
+  removePrintFromFavorites(printId: string): void {
+    void sqliteService.run(DatabaseApi.RemovePrintFromFavorites(printId)).catch(logDatabaseError);
   },
 
-  async getPrintFavorites() {
-    const data = [];
-
-    await sqliteService.execute((dbRow) => {
-      data.push({
-        printId: dbRow[1],
-      });
-    }, "SELECT * FROM favorite_print");
-
-    return data;
+  async getPrintFavorites(): Promise<{ printId: string | null }[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetPrintFavorites());
+    return rows.map((row) => ({ printId: cellText(row[1]) }));
   },
 };
 
