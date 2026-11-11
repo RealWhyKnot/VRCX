@@ -258,7 +258,7 @@ import Graph from "graphology";
 import Sigma from "sigma";
 import louvain from "graphology-communities-louvain";
 
-import GraphLayoutWorker from "../graph-layout-worker.js?worker&inline";
+import GraphLayoutWorker from "../graph-layout-worker.ts?worker&inline";
 
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useChartsStore } from "../../../stores/charts";

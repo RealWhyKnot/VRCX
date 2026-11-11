@@ -89,7 +89,7 @@ function findNode(node, predicate) {
   return findNode(node.children, predicate);
 }
 
-describe("views/Feed/columns.jsx", () => {
+describe("views/Feed/columns.tsx", () => {
   beforeEach(() => {
     globalThis.React = { createElement };
   });

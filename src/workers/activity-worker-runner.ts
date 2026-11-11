@@ -1,4 +1,4 @@
-import ActivityWorker from "./activity-worker.js?worker&inline";
+import ActivityWorker from "./activity-worker.ts?worker&inline";
 
 let worker = null;
 let workerSeq = 0;

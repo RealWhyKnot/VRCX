@@ -94,7 +94,7 @@ function makeRow(overrides = {}) {
   };
 }
 
-describe("views/PlayerList/columns.jsx", () => {
+describe("views/PlayerList/columns.tsx", () => {
   beforeEach(() => {
     globalThis.React = { createElement };
     mocks.openExternalLink.mockReset();

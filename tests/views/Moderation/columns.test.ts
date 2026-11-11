@@ -90,7 +90,7 @@ function findNode(node, predicate) {
   return findNode(node.children, predicate);
 }
 
-describe("views/Moderation/columns.jsx", () => {
+describe("views/Moderation/columns.tsx", () => {
   beforeEach(() => {
     globalThis.React = { createElement };
     mocks.shiftHeld.value = false;

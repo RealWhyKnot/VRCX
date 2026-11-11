@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   userStore: null,
 }));
 
-vi.mock("../../src/stores/quick-search-worker.js?worker&inline", () => ({
+vi.mock("../../src/stores/quick-search-worker.ts?worker&inline", () => ({
   default: class MockSearchWorker {
     constructor() {
       this.onmessage = null;
