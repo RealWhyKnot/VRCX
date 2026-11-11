@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO.Compression;
 using System.Text;
 using CefSharp;
 using CefSharp.SchemeHandler;
@@ -112,35 +111,10 @@ internal static class CefService
         string extensionsPath = Path.Join(Program.AppDataDirectory, "extensions");
         Directory.CreateDirectory(extensionsPath);
 
-        string vueDevtoolsCrxPath = Path.Join(Program.BaseDirectory, @"..\..\Dotnet\build-tools\Vue-js-devtools.crx");
-        if (File.Exists(vueDevtoolsCrxPath))
-        {
-            ExtractVueDevtools(vueDevtoolsCrxPath, extensionsPath);
-        }
-
         string[] folders = Directory.GetDirectories(extensionsPath);
         foreach (string folder in folders)
         {
             cefSettings.CefCommandLineArgs.Add("load-extension", folder);
-        }
-    }
-
-    private static void ExtractVueDevtools(string vueDevtoolsCrxPath, string extensionsPath)
-    {
-        string vueDevtoolsPath = Path.Join(extensionsPath, "Vue-js-devtools");
-        try
-        {
-            if (Directory.Exists(vueDevtoolsPath))
-            {
-                Directory.Delete(vueDevtoolsPath, recursive: true);
-            }
-
-            Directory.CreateDirectory(vueDevtoolsPath);
-            ZipFile.ExtractToDirectory(vueDevtoolsCrxPath, vueDevtoolsPath);
-        }
-        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException or InvalidDataException)
-        {
-            Logger.Error(ex, CultureInfo.InvariantCulture, "Failed to extract Vue Devtools");
         }
     }
 

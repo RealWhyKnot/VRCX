@@ -236,8 +236,6 @@ export default defineConfig(
     "**/.astro/",
     "**/.yarn/",
     "Dotnet/Overlay/OpenVR/openvr_api.cs",
-    "Dotnet/build-tools/Topten.nvpatch.exe",
-    "Dotnet/build-tools/Vue-js-devtools.crx",
     "Dotnet/libs/Blake2Sharp.dll",
     "Dotnet/libs/librsync.net.dll",
     "Dotnet/libs/openvr_api.dll",
