@@ -54,7 +54,7 @@ sealed partial class DatabaseApi
         if (IsFeedFilterEnabled(filters, "Avatar"))
         {
             string avatarQuery = isAvatarPrivate ? "OR user_id = owner_id" : isAvatarPublic ? "OR user_id != owner_id" : string.Empty;
-            selects.Add(FeedSelect(FeedAvatarColumns, UserTable("feed_avatar"), $"(display_name LIKE @searchLike OR avatar_name LIKE @searchLike) {avatarQuery} {dateQuery} {vipQuery}", "created_at DESC, id DESC"));
+            selects.Add(FeedSelect(FeedAvatarColumns, UserTable("feed_avatar"), $"(display_name LIKE @searchLike OR avatar_name LIKE @searchLike {avatarQuery}) {dateQuery} {vipQuery}", "created_at DESC, id DESC"));
         }
 
         if (isOnline || isOffline)
