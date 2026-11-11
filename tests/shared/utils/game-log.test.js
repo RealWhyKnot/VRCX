@@ -141,7 +141,7 @@ describe("getGameLogCreatedAtTs", () => {
     expect(getGameLogCreatedAtTs({})).toBe(0);
   });
 
-  test("returns 0 for unparseable string", () => {
+  test("returns 0 for unparsable string", () => {
     expect(getGameLogCreatedAtTs({ created_at: "not-a-date" })).toBe(0);
   });
 

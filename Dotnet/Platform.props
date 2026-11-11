@@ -35,7 +35,7 @@
   </PropertyGroup>
 
   <Target Name="ValidateRuntimeIdentifier" BeforeTargets="Build">
-    <Warning Condition="!($(IsWindows) or $(IsLinux) or $(IsOSX))" Text="Unable to determine platform, you will have to explicity use a RuntimeIdentifier." />
+    <Warning Condition="!($(IsWindows) or $(IsLinux) or $(IsOSX))" Text="Unable to determine platform, you will have to explicitly use a RuntimeIdentifier." />
 
     <Error Condition="'$(Platform)' == 'AnyCPU'"
       Text="The 'Platform' parameter cannot be AnyCPU (e.g., -p:Platform=x64)." />

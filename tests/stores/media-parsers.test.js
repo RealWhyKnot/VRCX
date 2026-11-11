@@ -208,7 +208,7 @@ describe("PyPyDance nowplaying events", () => {
     );
   });
 
-  test("returns early for unparseable data", async () => {
+  test("returns early for unparsable data", async () => {
     const gameLog = { dt: "2024-01-01", data: "garbage data" };
     await parsers.handleNowPlayingEvent(gameLog, "wrld_rpc");
 
@@ -319,7 +319,7 @@ describe("addGameLogVRDancing", () => {
     expect(deps.setNowPlaying).toHaveBeenCalledWith(expect.objectContaining({ videoPos: 0 }));
   });
 
-  test("returns early for unparseable data", () => {
+  test("returns early for unparsable data", () => {
     const gameLog = { dt: "2024-01-01", data: "bad data" };
     parsers.addGameLogVRDancing(gameLog, "wrld_rpc");
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
@@ -399,7 +399,7 @@ describe("ZuwaZuwaDance nowplaying events", () => {
     expect(deps.setNowPlaying).toHaveBeenCalledWith(expect.objectContaining({ displayName: "Random" }));
   });
 
-  test("returns early for unparseable data", async () => {
+  test("returns early for unparsable data", async () => {
     const gameLog = { dt: "2024-01-01", data: "bad" };
     await parsers.handleNowPlayingEvent(gameLog, "wrld_rpc");
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
@@ -443,7 +443,7 @@ describe("addGameLogLSMedia", () => {
     expect(deps.setNowPlaying).not.toHaveBeenCalled();
   });
 
-  test("returns early for unparseable data", () => {
+  test("returns early for unparsable data", () => {
     const gameLog = { dt: "2024-01-01", data: "bad data" };
     parsers.addGameLogLSMedia(gameLog, "wrld_123:456");
     expect(deps.setNowPlaying).not.toHaveBeenCalled();

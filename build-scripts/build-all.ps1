@@ -37,6 +37,7 @@ if ($env:OS -eq 'Windows_NT') {
         '-t:Clean;Build', '-maxcpucount', '--runtime', 'win-x64', '--self-contained'
     )
     dotnet build @buildArguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE" }
 }
 
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
@@ -52,6 +53,7 @@ if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux)) {
         )
     }
     dotnet build @buildArguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE" }
 }
 
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::OSX)) {
@@ -67,6 +69,7 @@ if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::OSX)) {
         )
     }
     dotnet build @buildArguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE" }
 }
 
 Write-Host 'Building Node.js...' -ForegroundColor Green
@@ -75,8 +78,10 @@ Remove-Item -Path 'node_modules' -Force -Recurse -ErrorAction SilentlyContinue
 if ($NoCI) {
     $installArguments = @('install', '--package-lock-only=false', '--no-save')
     npm @installArguments
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed with exit code $LASTEXITCODE" }
 } else {
     npm ci --loglevel=error
+    if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
 }
 
 
@@ -84,16 +89,21 @@ $ErrorActionPreference = 'Continue'
 
 if ($env:OS -eq 'Windows_NT') {
     npm run prod
+    if ($LASTEXITCODE -ne 0) { throw "npm run prod failed with exit code $LASTEXITCODE" }
 }
 
 if ([RuntimeInformation]::IsOSPlatform([OSPlatform]::Linux) -or
     [RuntimeInformation]::IsOSPlatform([OSPlatform]::OSX)) {
     if ($BuildArm64) {
         npm run prod
+        if ($LASTEXITCODE -ne 0) { throw "npm run prod failed with exit code $LASTEXITCODE" }
         npm run build-electron-arm64
+        if ($LASTEXITCODE -ne 0) { throw "npm run build-electron-arm64 failed with exit code $LASTEXITCODE" }
     } else {
         npm run prod
+        if ($LASTEXITCODE -ne 0) { throw "npm run prod failed with exit code $LASTEXITCODE" }
         npm run build-electron
+        if ($LASTEXITCODE -ne 0) { throw "npm run build-electron failed with exit code $LASTEXITCODE" }
     }
 }
 
@@ -106,6 +116,7 @@ if ($env:OS -eq 'Windows_NT') {
     Write-Host 'Creating Zip...' -ForegroundColor Green
     Set-Location 'build\Cef'
     7z a -tzip $ZipName * -mx=7 -xr0!"*.log" -xr0!"*.pdb"
+    if ($LASTEXITCODE -ne 0) { throw "7z a failed with exit code $LASTEXITCODE" }
     Move-Item -LiteralPath $ZipName -Destination "..\..\$ZipName" -Force
     Set-Location ..\..\
 

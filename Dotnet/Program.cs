@@ -202,7 +202,7 @@ internal static class Program
     {
         Logger.Fatal(exception, CultureInfo.InvariantCulture, "Unhandled SQLite Exception, closing.");
         DialogResult messageBoxResult = MessageBox.Show(
-            "A fatal database error has occured.\n" +
+            "A fatal database error has occurred.\n" +
             "Please try to repair your database by following the steps in the provided repair guide, or alternatively rename your \"%AppData%\\VRCX\" folder to reset VRCX. " +
             "If the issue still persists after following the repair guide please join the Discord (https://vrcx.app/discord) for further assistance. " +
             "Would you like to open the webpage for database repair steps?\n" +

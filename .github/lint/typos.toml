@@ -19,4 +19,31 @@ extend-exclude = [
   "/Installer/Plugins/x86-unicode/ShellExecAsUser.dll",
   "/Installer/Plugins/x86-unicode/nsProcess.dll",
   "/src-electron/libs/linux/libopenvr_api.so",
+  "/README/",
+  "/src/shared/constants/remixIconTags.json",
+  "/src/localization/cs.json",
+  "/src/localization/es.json",
+  "/src/localization/fr.json",
+  "/src/localization/hu.json",
+  "/src/localization/ja.json",
+  "/src/localization/ko.json",
+  "/src/localization/pl.json",
+  "/src/localization/pt.json",
+  "/src/localization/ru.json",
+  "/src/localization/th.json",
+  "/src/localization/vi.json",
+  "/src/localization/zh-CN.json",
+  "/src/localization/zh-TW.json",
 ]
+
+[default]
+extend-ignore-re = ["wrld_[0-9a-f-]{36}"]
+
+[default.extend-identifiers]
+StrCpy = "StrCpy"
+loginParmas = "loginParmas"
+CancelFriendRequst = "CancelFriendRequst"
+
+[default.extend-words]
+paeth = "paeth"
+tha = "tha"

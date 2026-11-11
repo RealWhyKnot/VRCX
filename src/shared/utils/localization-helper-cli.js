@@ -102,12 +102,12 @@ const Validate = function () {
   const enIndex = files.findIndex((file) => path.basename(file[0]) === "en.json");
   const [_, enObj] = files.splice(enIndex, 1)[0];
 
-  const traverse = function (obj, predicate, pathes = []) {
+  const traverse = function (obj, predicate, paths = []) {
     for (const key in obj) {
       if (typeof obj[key] === "string" || obj[key] instanceof String) {
-        predicate(obj, key, pathes);
+        predicate(obj, key, paths);
       } else {
-        traverse(obj[key], predicate, [...pathes, key]);
+        traverse(obj[key], predicate, [...paths, key]);
       }
     }
   };
@@ -115,18 +115,18 @@ const Validate = function () {
   let hasRemoved = false;
   for (const [_, localeObj] of files) {
     const toRemove = [];
-    traverse(localeObj, (_, key, pathes) => {
+    traverse(localeObj, (_, key, paths) => {
       let currObj = enObj;
-      for (const pathSegment of pathes) {
+      for (const pathSegment of paths) {
         if (Object.hasOwn(currObj, pathSegment)) {
           currObj = currObj[pathSegment];
         } else {
-          toRemove.push([...pathes, key]);
+          toRemove.push([...paths, key]);
           return;
         }
       }
       if (!Object.hasOwn(currObj, key)) {
-        toRemove.push([...pathes, key]);
+        toRemove.push([...paths, key]);
       }
     });
 
@@ -137,24 +137,24 @@ const Validate = function () {
   }
 
   const toAdd = [];
-  traverse(enObj, (obj, key, pathes) => {
-    if (toAdd.length > 0 && typeof toAdd.at(-1)[3] === "undefined" && toAdd.at(-1)[1].at(-2) === pathes.at(-1)) {
+  traverse(enObj, (obj, key, paths) => {
+    if (toAdd.length > 0 && typeof toAdd.at(-1)[3] === "undefined" && toAdd.at(-1)[1].at(-2) === paths.at(-1)) {
       toAdd.at(-1)[3] = key;
     }
 
     for (const [_, localeObj] of files) {
       let currObj = localeObj;
-      for (const pathSegment of pathes) {
+      for (const pathSegment of paths) {
         if (Object.hasOwn(currObj, pathSegment)) {
           currObj = currObj[pathSegment];
         } else {
-          toAdd.push([localeObj, [...pathes, key], obj[key], undefined]);
+          toAdd.push([localeObj, [...paths, key], obj[key], undefined]);
           return;
         }
       }
 
       if (!Object.hasOwn(currObj, key)) {
-        toAdd.push([localeObj, [...pathes, key], obj[key], undefined]);
+        toAdd.push([localeObj, [...paths, key], obj[key], undefined]);
       }
     }
   });

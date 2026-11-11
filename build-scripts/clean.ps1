@@ -2,6 +2,9 @@
 [CmdletBinding()]
 param()
 
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
 function Clear-BuildDirectory {
     [CmdletBinding()]
     [OutputType([void])]

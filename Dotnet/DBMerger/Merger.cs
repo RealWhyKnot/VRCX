@@ -43,7 +43,7 @@ internal sealed partial class Merger
         }
         catch
         {
-            Logger.Warn(CultureInfo.InvariantCulture, "Encoutered error! Rolling back changes to databases");
+            Logger.Warn(CultureInfo.InvariantCulture, "Encountered error! Rolling back changes to databases");
             transaction.Rollback();
 
             throw;
