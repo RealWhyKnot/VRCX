@@ -38,9 +38,7 @@ sealed class SQLiteDatabase : IDisposable
             dataSource = jsonDataSource;
         }
 
-        _connection = new SQLiteConnection($"Data Source=\"{dataSource}\";Version=3;PRAGMA locking_mode=NORMAL;PRAGMA busy_timeout=5000;PRAGMA journal_mode=WAL;PRAGMA optimize=0x10002;", parseViaFramework: true);
-
-        _connection.Open();
+        _connection = SQLiteConnectionFactory.Open(dataSource);
     }
 
     public void Exit()

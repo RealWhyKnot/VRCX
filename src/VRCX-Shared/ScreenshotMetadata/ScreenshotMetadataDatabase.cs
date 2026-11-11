@@ -8,8 +8,7 @@ internal sealed class ScreenshotMetadataDatabase : IDisposable
 
     public ScreenshotMetadataDatabase(string databaseLocation)
     {
-        _sqlite = new SQLiteConnection($"Data Source=\"{databaseLocation}\";Version=3;PRAGMA locking_mode=NORMAL;PRAGMA busy_timeout=5000;PRAGMA journal_mode=WAL;PRAGMA optimize=0x10002;", parseViaFramework: true);
-        _sqlite.Open();
+        _sqlite = SQLiteConnectionFactory.Open(databaseLocation);
         using var cmd = new SQLiteCommand(_sqlite);
         cmd.CommandText = @"CREATE TABLE IF NOT EXISTS cache (
                                     id INTEGER PRIMARY KEY AUTOINCREMENT,

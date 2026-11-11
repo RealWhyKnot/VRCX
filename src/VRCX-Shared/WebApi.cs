@@ -168,9 +168,10 @@ sealed class WebApi : IDisposable
         {
             object[] item = values[0];
             using var stream = new MemoryStream(Convert.FromBase64String((string)item[0]));
-            CookieContainer = new CookieContainer();
             CookieCollection cookies = System.Text.Json.JsonSerializer.Deserialize<CookieCollection>(stream) ?? [];
-            CookieContainer.Add(cookies);
+            var container = new CookieContainer();
+            container.Add(cookies);
+            CookieContainer = container;
             InitializeHttpClient();
         }
         catch (Exception e) when (e is ArgumentException or CookieException or FormatException or IndexOutOfRangeException or InvalidCastException or InvalidDataException or NotSupportedException or System.Text.Json.JsonException)
