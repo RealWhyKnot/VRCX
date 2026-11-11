@@ -8,11 +8,11 @@ import {
   findBestOverlapTime,
 } from "../../../src/shared/utils/overlap-calculator.ts";
 
-function utc(dateStr) {
+function utc(dateStr: string) {
   return new Date(dateStr).toISOString();
 }
 
-function ts(dateStr) {
+function ts(dateStr: string) {
   return new Date(dateStr).getTime();
 }
 
@@ -340,12 +340,12 @@ describe("findBestOverlapTime", () => {
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   test("returns empty string for all-zero grid", () => {
-    const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     expect(findBestOverlapTime(grid, dayLabels)).toBe("");
   });
 
   test("returns time range for adjacent high hours", () => {
-    const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
 
     grid[6][20] = 10;
     grid[6][21] = 10;
@@ -357,7 +357,7 @@ describe("findBestOverlapTime", () => {
   });
 
   test("picks the day with highest overlap in peak hours", () => {
-    const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
 
     grid[1][20] = 3;
     grid[5][20] = 8;
@@ -366,7 +366,7 @@ describe("findBestOverlapTime", () => {
   });
 
   test("handles activity spread across all days equally", () => {
-    const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const grid = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     for (let d = 0; d < 7; d++) {
       grid[d][15] = 5;
     }

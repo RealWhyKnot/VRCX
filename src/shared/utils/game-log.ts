@@ -1,4 +1,21 @@
-function gameLogSearchFilter(row, searchQuery) {
+type GameLogRow = {
+  type?: unknown;
+  location?: unknown;
+  worldName?: unknown;
+  displayName?: unknown;
+  data?: unknown;
+  message?: unknown;
+  videoName?: unknown;
+  videoUrl?: unknown;
+  resourceUrl?: unknown;
+  created_at?: unknown;
+  createdAt?: unknown;
+  dt?: unknown;
+  rowId?: unknown;
+  uid?: unknown;
+};
+
+function gameLogSearchFilter(row: GameLogRow, searchQuery: string) {
   const value = searchQuery.trim().toUpperCase();
   if (!value) {
     return true;
@@ -64,7 +81,7 @@ function gameLogSearchFilter(row, searchQuery) {
   return true;
 }
 
-function getGameLogCreatedAtTs(row) {
+function getGameLogCreatedAtTs(row: GameLogRow | undefined) {
   const createdAtRaw = row?.created_at ?? row?.createdAt ?? row?.dt;
   if (typeof createdAtRaw === "number") {
     const ts = createdAtRaw > 1_000_000_000_000 ? createdAtRaw : createdAtRaw * 1000;
@@ -77,7 +94,7 @@ function getGameLogCreatedAtTs(row) {
   return Number.isFinite(ts) ? ts : 0;
 }
 
-function compareGameLogRows(a, b) {
+function compareGameLogRows(a: GameLogRow | undefined, b: GameLogRow | undefined) {
   const aTs = getGameLogCreatedAtTs(a);
   const bTs = getGameLogCreatedAtTs(b);
   if (aTs !== bTs) {
@@ -97,7 +114,7 @@ function compareGameLogRows(a, b) {
 
 export { gameLogSearchFilter, getGameLogCreatedAtTs, compareGameLogRows };
 
-export function createLocationEntry(dt, location, worldId, worldName) {
+export function createLocationEntry(dt: string, location: string, worldId: string, worldName: string) {
   return {
     created_at: dt,
     type: "Location",
@@ -109,7 +126,7 @@ export function createLocationEntry(dt, location, worldId, worldName) {
   };
 }
 
-export function createJoinLeaveEntry(type, dt, displayName, location, userId, time = 0) {
+export function createJoinLeaveEntry(type: "OnPlayerJoined" | "OnPlayerLeft", dt: string, displayName: string, location: string, userId: string, time = 0) {
   return {
     created_at: dt,
     type,
@@ -120,7 +137,7 @@ export function createJoinLeaveEntry(type, dt, displayName, location, userId, ti
   };
 }
 
-export function createPortalSpawnEntry(dt, location) {
+export function createPortalSpawnEntry(dt: string, location: string) {
   return {
     created_at: dt,
     type: "PortalSpawn",
@@ -132,7 +149,7 @@ export function createPortalSpawnEntry(dt, location) {
   };
 }
 
-export function createResourceLoadEntry(rawType, dt, resourceUrl, location) {
+export function createResourceLoadEntry(rawType: string, dt: string, resourceUrl: string, location: string) {
   return {
     created_at: dt,
     type: rawType === "resource-load-string" ? "StringLoad" : "ImageLoad",
@@ -141,31 +158,35 @@ export function createResourceLoadEntry(rawType, dt, resourceUrl, location) {
   };
 }
 
-export function parseInventoryFromUrl(url) {
+export function parseInventoryFromUrl(url: string) {
   try {
     const parsed = new URL(url);
-    if (parsed.pathname.substring(0, 12) === "/api/1/user/" && parsed.pathname.includes("/inventory/inv_")) {
+    if (parsed.pathname.startsWith("/api/1/user/") && parsed.pathname.includes("/inventory/inv_")) {
       const pathArray = parsed.pathname.split("/");
       const userId = pathArray[4];
       const inventoryId = pathArray[6];
-      if (userId && inventoryId && inventoryId.length === 40) {
+      if (userId && inventoryId?.length === 40) {
         return { userId, inventoryId };
       }
     }
-  } catch {}
+  } catch {
+    return null;
+  }
   return null;
 }
 
-export function parsePrintFromUrl(url) {
+export function parsePrintFromUrl(url: string) {
   try {
     const parsed = new URL(url);
-    if (parsed.pathname.substring(0, 14) === "/api/1/prints/") {
+    if (parsed.pathname.startsWith("/api/1/prints/")) {
       const pathArray = parsed.pathname.split("/");
       const printId = pathArray[4];
-      if (printId && printId.length === 41) {
+      if (printId?.length === 41) {
         return printId;
       }
     }
-  } catch {}
+  } catch {
+    return null;
+  }
   return null;
 }

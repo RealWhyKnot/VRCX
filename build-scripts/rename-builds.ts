@@ -14,7 +14,7 @@ try {
   process.exit(1);
 }
 
-function renameBuild(arch, platform) {
+function renameBuild(arch: string, platform: string): void {
   if (platform === "linux") {
     const oldAppImage = path.join(buildDir, `VRCX_Version.AppImage`);
     const newAppImage = path.join(buildDir, `VRCX_${version}_${arch}.AppImage`);

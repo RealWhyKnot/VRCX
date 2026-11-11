@@ -1,6 +1,16 @@
+import type { FavoriteGroup } from "vrchat";
+
 import { replaceBioSymbols } from "./base/string";
 
-export function sanitizeEntityJson(json, fields) {
+type FavoriteCachedRef = {
+  id: string;
+  type: string;
+  favoriteId: string;
+  tags: string[];
+  $groupKey: string;
+};
+
+export function sanitizeEntityJson(json: Record<string, unknown>, fields: readonly string[]) {
   for (const field of fields) {
     if (json[field]) {
       json[field] = replaceBioSymbols(json[field]);
@@ -9,7 +19,7 @@ export function sanitizeEntityJson(json, fields) {
   return json;
 }
 
-export function createDefaultFavoriteGroupRef(json) {
+export function createDefaultFavoriteGroupRef(json: Partial<FavoriteGroup>) {
   return {
     id: "",
     ownerId: "",
@@ -23,8 +33,8 @@ export function createDefaultFavoriteGroupRef(json) {
   };
 }
 
-export function createDefaultFavoriteCachedRef(json) {
-  const ref = {
+export function createDefaultFavoriteCachedRef(json: Partial<FavoriteCachedRef>) {
+  const ref: FavoriteCachedRef = {
     id: "",
     type: "",
     favoriteId: "",

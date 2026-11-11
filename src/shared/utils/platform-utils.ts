@@ -1,8 +1,10 @@
-function getAvailablePlatforms(unityPackages) {
+type UnityPackageFields = { variant?: string; platform?: string };
+
+function getAvailablePlatforms(unityPackages: readonly UnityPackageFields[] | null | undefined) {
   let isPC = false;
   let isQuest = false;
   let isIos = false;
-  if (typeof unityPackages === "object") {
+  if (unityPackages) {
     for (const unityPackage of unityPackages) {
       if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
         continue;

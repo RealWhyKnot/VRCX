@@ -1,30 +1,61 @@
 import ActivityWorker from "./activity-worker.ts?worker&inline";
 
-let worker = null;
-let workerSeq = 0;
-const pendingWorkerCallbacks = new Map();
+type WorkerCallback = {
+  resolve: (payload: unknown) => void;
+  reject: (error: Error) => void;
+};
 
-function getWorker() {
+type WorkerResponse = {
+  type: string;
+  seq: number;
+  payload: unknown;
+};
+
+type Row = Record<string, unknown>;
+
+let worker: Worker | null = null;
+let workerSeq = 0;
+const pendingWorkerCallbacks = new Map<number, WorkerCallback>();
+
+function isRow(value: unknown): value is Row {
+  return typeof value === "object" && value !== null;
+}
+
+function isWorkerResponse(value: unknown): value is WorkerResponse {
+  return isRow(value) && typeof value["type"] === "string" && typeof value["seq"] === "number";
+}
+
+function readErrorMessage(payload: unknown): string {
+  if (isRow(payload) && typeof payload["message"] === "string") {
+    return payload["message"];
+  }
+  return "";
+}
+
+function getWorker(): Worker {
   if (!worker) {
     worker = new ActivityWorker();
-    worker.onmessage = (event) => {
-      const { type, seq, payload } = event.data;
-      const callback = pendingWorkerCallbacks.get(seq);
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      const data = event.data;
+      if (!isWorkerResponse(data)) {
+        return;
+      }
+      const callback = pendingWorkerCallbacks.get(data.seq);
       if (!callback) {
         return;
       }
-      pendingWorkerCallbacks.delete(seq);
-      if (type === "error") {
-        callback.reject(new Error(payload.message));
+      pendingWorkerCallbacks.delete(data.seq);
+      if (data.type === "error") {
+        callback.reject(new Error(readErrorMessage(data.payload)));
         return;
       }
-      callback.resolve(payload);
+      callback.resolve(data.payload);
     };
   }
   return worker;
 }
 
-export function runActivityWorkerTask(type, payload) {
+export function runActivityWorkerTask(type: string, payload: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const seq = ++workerSeq;
     pendingWorkerCallbacks.set(seq, { resolve, reject });

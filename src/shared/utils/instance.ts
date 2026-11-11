@@ -1,4 +1,30 @@
-function isRealInstance(instanceId) {
+type LaunchLocation = {
+  worldId: string;
+  instanceId?: string | null;
+  shortName?: string | null;
+};
+
+type LegacyInstanceTagInput = {
+  instanceName?: string | null;
+  userId?: string | null;
+  accessType: string;
+  groupId?: string | null;
+  groupAccessType?: string | null;
+  region: string;
+  ageGate?: boolean | null;
+  strict?: boolean | null;
+};
+
+const REGION_TAG_CODES = {
+  "US West": "us",
+  "US East": "use",
+  Europe: "eu",
+  Japan: "jp",
+} as const satisfies Record<string, string>;
+
+const regionTagMap: Readonly<Record<string, string | undefined>> = REGION_TAG_CODES;
+
+function isRealInstance(instanceId: string | null | undefined): boolean {
   if (!instanceId) {
     return false;
   }
@@ -18,7 +44,7 @@ function isRealInstance(instanceId) {
   return true;
 }
 
-function getLaunchURL(instance) {
+function getLaunchURL(instance: LaunchLocation): string {
   const L = instance;
   if (L.instanceId) {
     if (L.shortName) {
@@ -31,15 +57,8 @@ function getLaunchURL(instance) {
   return `https://vrchat.com/home/launch?worldId=${encodeURIComponent(L.worldId)}`;
 }
 
-const regionTagMap = {
-  "US West": "us",
-  "US East": "use",
-  Europe: "eu",
-  Japan: "jp",
-};
-
-function buildLegacyInstanceTag({ instanceName, userId, accessType, groupId, groupAccessType, region, ageGate, strict }) {
-  const tags = [];
+function buildLegacyInstanceTag({ instanceName, userId, accessType, groupId, groupAccessType, region, ageGate, strict }: LegacyInstanceTagInput): string {
+  const tags: string[] = [];
 
   if (instanceName) {
     tags.push(instanceName);
@@ -47,14 +66,14 @@ function buildLegacyInstanceTag({ instanceName, userId, accessType, groupId, gro
 
   if (accessType !== "public") {
     if (accessType === "friends+") {
-      tags.push(`~hidden(${userId})`);
+      tags.push(`~hidden(${String(userId)})`);
     } else if (accessType === "friends") {
-      tags.push(`~friends(${userId})`);
+      tags.push(`~friends(${String(userId)})`);
     } else if (accessType === "group") {
-      tags.push(`~group(${groupId})`);
-      tags.push(`~groupAccessType(${groupAccessType})`);
+      tags.push(`~group(${String(groupId)})`);
+      tags.push(`~groupAccessType(${String(groupAccessType)})`);
     } else {
-      tags.push(`~private(${userId})`);
+      tags.push(`~private(${String(userId)})`);
     }
     if (accessType === "invite+") {
       tags.push("~canRequestInvite");

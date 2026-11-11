@@ -1,6 +1,102 @@
+import type { Moderations, ParsedLocation } from "../../types/vrcx";
 import { removeEmojis, replaceBioSymbols } from "./base/string";
 
-export function sanitizeUserJson(json, robotUrl) {
+type Row = Record<string, unknown>;
+
+export type UserJson = {
+  statusDescription?: string;
+  note?: string | null;
+  currentAvatarImageUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+};
+
+export type UserRef = {
+  acceptedPrivacyVersion: number;
+  acceptedTOSVersion: number;
+  accountDeletionDate: string | null;
+  accountDeletionLog: unknown[] | null;
+  ageVerificationStatus: string;
+  ageVerified: boolean;
+  allowAvatarCopying: boolean;
+  appleDetails: Record<string, unknown>;
+  badges: unknown[];
+  bannerColor: string;
+  bannerType: string;
+  bannerUrl: string;
+  bio: string;
+  bioLinks: string[];
+  currentAvatarImageUrl: string;
+  currentAvatarTags: string[];
+  currentAvatarThumbnailImageUrl: string;
+  date_joined: string;
+  developerType: string;
+  discordId: string;
+  displayName: string;
+  friendKey: string;
+  friendRequestStatus: string;
+  iconFrame: string;
+  iconUrl: string;
+  id: string;
+  instanceId: string;
+  isEconomyCreator: boolean;
+  isFriend: boolean;
+  last_activity: string;
+  last_login: string;
+  last_mobile: string | null;
+  last_platform: string;
+  location: string;
+  nameplateEffect: string;
+  platform: string;
+  note: string | null;
+  profileEffect: string;
+  profilePicOverride: string;
+  profilePicOverrideThumbnail: string;
+  pronouns: string;
+  state: string;
+  status: string;
+  statusDescription: string;
+  tags: string[];
+  travelingToInstance: string;
+  travelingToLocation: string;
+  travelingToWorld: string;
+  userIcon: string;
+  worldId: string;
+  fallbackAvatar: string;
+  $location: Partial<ParsedLocation>;
+  $location_at: number;
+  $online_for: number;
+  $travelingToTime: number;
+  $offline_for: number | null;
+  $active_for: number;
+  $isVRCPlus: boolean;
+  $isModerator: boolean;
+  $isTroll: boolean;
+  $isProbableTroll: boolean;
+  $trustLevel: string;
+  $trustClass: string;
+  $userColour: string;
+  $trustSortNum: number;
+  $languages: string[];
+  $joinCount: number;
+  $timeSpent: number;
+  $lastSeen: string;
+  $mutualCount: number;
+  $mutualOptedOut: boolean;
+  $nickName: string;
+  $memo: string;
+  $previousLocation: string;
+  $customTag: string;
+  $customTagColour: string;
+  $friendNumber: number;
+  $platform: string;
+  $moderations: Partial<Moderations>;
+};
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+export function sanitizeUserJson(json: UserJson, robotUrl: string): void {
   if (json.statusDescription) {
     json.statusDescription = replaceBioSymbols(json.statusDescription);
     json.statusDescription = removeEmojis(json.statusDescription);
@@ -12,10 +108,9 @@ export function sanitizeUserJson(json, robotUrl) {
     delete json.currentAvatarImageUrl;
     delete json.currentAvatarThumbnailImageUrl;
   }
-  return json;
 }
 
-export function computeTrustLevel(tags, developerType) {
+export function computeTrustLevel(tags: readonly string[], developerType: string | null | undefined) {
   let isModerator = Boolean(developerType) && developerType !== "none";
   let isTroll = false;
   let isProbableTroll = false;
@@ -76,54 +171,55 @@ export function computeTrustLevel(tags, developerType) {
   };
 }
 
-export function computeUserPlatform(platform, lastPlatform) {
+export function computeUserPlatform(platform: string | undefined, lastPlatform: string | null | undefined): string {
   if (platform && platform !== "offline" && platform !== "web") {
     return platform;
   }
-  return lastPlatform || "";
+  return lastPlatform ?? "";
 }
 
-export function diffObjectProps(ref, json, arraysMatchFn) {
-  const changedProps = {};
+export function diffObjectProps(ref: Row, json: Row, arraysMatchFn: (a: unknown[], b: unknown[]) => boolean) {
+  const changes = new Map<string, true | [unknown, unknown]>();
   let hasPropChanged = false;
 
-  for (const prop in ref) {
+  for (const prop of Object.keys(ref)) {
     if (typeof json[prop] === "undefined") {
       continue;
     }
     if (ref[prop] === null || typeof ref[prop] !== "object") {
-      changedProps[prop] = true;
+      changes.set(prop, true);
     }
   }
 
-  for (const prop in json) {
+  for (const prop of Object.keys(json)) {
     if (typeof ref[prop] === "undefined") {
       continue;
     }
-    if (Array.isArray(json[prop]) && Array.isArray(ref[prop])) {
-      if (!arraysMatchFn(json[prop], ref[prop])) {
-        changedProps[prop] = true;
+    const jsonValue = json[prop];
+    const refValue = ref[prop];
+    if (isUnknownArray(jsonValue) && isUnknownArray(refValue)) {
+      if (!arraysMatchFn(jsonValue, refValue)) {
+        changes.set(prop, true);
       }
-    } else if (json[prop] === null || typeof json[prop] !== "object") {
-      changedProps[prop] = true;
+    } else if (jsonValue === null || typeof jsonValue !== "object") {
+      changes.set(prop, true);
     }
   }
 
-  for (const prop in changedProps) {
+  const changedEntries = new Map<string, true | [unknown, unknown]>();
+  for (const prop of changes.keys()) {
     const asIs = ref[prop];
     const toBe = json[prop];
-    if (asIs === toBe) {
-      delete changedProps[prop];
-    } else {
+    if (asIs !== toBe) {
       hasPropChanged = true;
-      changedProps[prop] = [toBe, asIs];
+      changedEntries.set(prop, [toBe, asIs]);
     }
   }
 
-  return { hasPropChanged, changedProps };
+  return { hasPropChanged, changedProps: Object.fromEntries(changedEntries) };
 }
 
-export function createDefaultUserRef(json) {
+export function createDefaultUserRef(json: Partial<UserRef>): UserRef {
   return {
     acceptedPrivacyVersion: 0,
     acceptedTOSVersion: 0,

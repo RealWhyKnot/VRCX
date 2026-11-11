@@ -1,21 +1,32 @@
-function escapeTag(tag) {
+type Row = Record<string, unknown>;
+
+type Comparer = {
+  compare: (a: string, b: string) => number;
+};
+
+function isRow(value: unknown): value is Row {
+  return typeof value === "object" && value !== null;
+}
+
+function escapeTag(tag: unknown): string {
   const s = String(tag);
   return s.replace(/["&'<>]/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-function escapeTagRecursive(obj) {
+function escapeTagRecursive<T>(obj: T): T;
+function escapeTagRecursive(obj: unknown): unknown {
   if (typeof obj === "string") {
     return escapeTag(obj);
   }
-  if (typeof obj === "object") {
-    for (const key in obj) {
+  if (isRow(obj)) {
+    for (const key of Object.keys(obj)) {
       obj[key] = escapeTagRecursive(obj[key]);
     }
   }
   return obj;
 }
 
-function textToHex(text) {
+function textToHex(text: unknown): string {
   const s = String(text);
   return s
     .split("")
@@ -23,95 +34,93 @@ function textToHex(text) {
     .join(" ");
 }
 
-function commaNumber(num) {
+function commaNumber(num: unknown): string {
   if (!num) {
     return "0";
   }
   const numValue = Number(num);
-  if (isNaN(numValue)) {
+  if (Number.isNaN(numValue)) {
     return "0";
   }
   const s = String(numValue);
   return s.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
 }
 
-function localeIncludes(str, search, comparer) {
+function localeIncludes(str: string | null | undefined, search: string | null | undefined, comparer: Comparer): boolean {
   if (search === "") {
     return true;
   } else if (!str || !search) {
     return false;
   }
-  const strObj = String(str);
-  const searchObj = String(search);
-
-  if (strObj.length === 0) {
+  if (str.length === 0) {
     return false;
   }
 
-  if (searchObj.length > strObj.length) {
+  if (search.length > str.length) {
     return false;
   }
 
-  for (let i = 0; i < str.length - searchObj.length + 1; i++) {
-    const substr = strObj.substring(i, i + searchObj.length);
-    if (comparer.compare(substr, searchObj) === 0) {
+  for (let i = 0; i < str.length - search.length + 1; i++) {
+    const substr = str.substring(i, i + search.length);
+    if (comparer.compare(substr, search) === 0) {
       return true;
     }
   }
   return false;
 }
 
-function changeLogRemoveLinks(text) {
+function changeLogRemoveLinks(text: string): string {
   return text.replace(/([^!])\[[^\]]+\]\([^)]+\)/g, "$1");
 }
 
-function replaceBioSymbols(text) {
+const BIO_SYMBOL_REPLACEMENTS = {
+  "@": "＠",
+  "#": "＃",
+  $: "＄",
+  "%": "％",
+  "&": "＆",
+  "=": "＝",
+  "+": "＋",
+  "/": "⁄",
+  "\\": "＼",
+  ";": ";",
+  ":": "˸",
+  ",": "‚",
+  "?": "？",
+  "!": "ǃ",
+  '"': "＂",
+  "<": "≺",
+  ">": "≻",
+  ".": "․",
+  "^": "＾",
+  "{": "｛",
+  "}": "｝",
+  "[": "［",
+  "]": "］",
+  "(": "（",
+  ")": "）",
+  "|": "｜",
+  "*": "∗",
+} satisfies Record<string, string>;
+
+function replaceBioSymbols(text: unknown): string {
   if (typeof text !== "string") {
     return "";
   }
-  const symbolList = {
-    "@": "＠",
-    "#": "＃",
-    $: "＄",
-    "%": "％",
-    "&": "＆",
-    "=": "＝",
-    "+": "＋",
-    "/": "⁄",
-    "\\": "＼",
-    ";": ";",
-    ":": "˸",
-    ",": "‚",
-    "?": "？",
-    "!": "ǃ",
-    '"': "＂",
-    "<": "≺",
-    ">": "≻",
-    ".": "․",
-    "^": "＾",
-    "{": "｛",
-    "}": "｝",
-    "[": "［",
-    "]": "］",
-    "(": "（",
-    ")": "）",
-    "|": "｜",
-    "*": "∗",
-  };
   let newText = text;
-  for (const key in symbolList) {
-    const regex = new RegExp(symbolList[key], "g");
-    newText = newText.replace(regex, key);
+  for (const [asciiSymbol, fullWidthSymbol] of Object.entries(BIO_SYMBOL_REPLACEMENTS)) {
+    const regex = new RegExp(fullWidthSymbol, "g");
+    newText = newText.replace(regex, asciiSymbol);
   }
-  return newText.replace(/ {1,}/g, " ").trimRight();
+  return newText.replace(/ {1,}/g, " ").trimEnd();
 }
 
-function removeEmojis(text) {
+function removeEmojis(text: string | null | undefined): string {
   if (!text) {
     return "";
   }
   return text
-    .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, "")
+    .replace(/([✀-➿]|[-]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[‑-⛿]|\uD83E[\uDD10-\uDDFF])/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }

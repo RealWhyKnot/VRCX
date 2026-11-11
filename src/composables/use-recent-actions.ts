@@ -2,7 +2,7 @@ import { useLocalStorage } from "@vueuse/core";
 
 import { useGeneralSettingsStore } from "../stores/settings/general";
 
-const recentActions = useLocalStorage("VRCX_recentActions", {});
+const recentActions = useLocalStorage<Record<string, number>>("VRCX_recentActions", {});
 
 const TRACKED_ACTIONS = new Set([
   "Send Friend Request",
@@ -14,14 +14,14 @@ const TRACKED_ACTIONS = new Set([
   "Request Invite Message",
 ]);
 
-export function recordRecentAction(userId, actionType) {
+export function recordRecentAction(userId: string, actionType: string): void {
   if (!TRACKED_ACTIONS.has(actionType)) {
     return;
   }
   recentActions.value[`${userId}:${actionType}`] = Date.now();
 }
 
-export function isActionRecent(userId, actionType) {
+export function isActionRecent(userId: string, actionType: string): boolean {
   const generalSettings = useGeneralSettingsStore();
   if (!generalSettings.recentActionCooldownEnabled) {
     return false;
@@ -36,10 +36,10 @@ export function isActionRecent(userId, actionType) {
     return true;
   }
 
-  delete recentActions.value[key];
+  Reflect.deleteProperty(recentActions.value, key);
   return false;
 }
 
-export function clearRecentActions() {
+export function clearRecentActions(): void {
   recentActions.value = {};
 }

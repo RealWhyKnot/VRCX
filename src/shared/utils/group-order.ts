@@ -1,9 +1,9 @@
 import { moveArrayItem } from "./base/array";
 
-export function normalizeGroupOrder(order, groupIds) {
+export function normalizeGroupOrder(order: readonly string[], groupIds: readonly string[]): string[] {
   const validGroupIds = new Set(groupIds);
-  const seen = new Set();
-  const normalized = [];
+  const seen = new Set<string>();
+  const normalized: string[] = [];
 
   for (const groupId of order) {
     if (validGroupIds.has(groupId) && !seen.has(groupId)) {
@@ -21,7 +21,7 @@ export function normalizeGroupOrder(order, groupIds) {
   return normalized;
 }
 
-export function moveGroupInOrder(order, groupId, toIndex) {
+export function moveGroupInOrder(order: string[], groupId: string, toIndex: number): boolean {
   const fromIndex = order.indexOf(groupId);
   if (fromIndex === -1 || toIndex < 0 || toIndex >= order.length || fromIndex === toIndex) {
     return false;

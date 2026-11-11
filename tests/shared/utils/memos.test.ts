@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  friends: new Map(),
+  friends: new Map<string, unknown>(),
   setUserDialogMemo: vi.fn(),
   database: {
     getUserMemo: vi.fn(),
@@ -23,7 +23,9 @@ vi.mock("../../../src/stores/friend", () => ({
 }));
 vi.mock("../../../src/stores/user", () => ({
   useUserStore: () => ({
-    setUserDialogMemo: (...args) => mocks.setUserDialogMemo(...args),
+    setUserDialogMemo: (...args: unknown[]) => {
+      mocks.setUserDialogMemo(...args);
+    },
   }),
 }));
 
@@ -34,11 +36,9 @@ vi.mock("../../../src/services/database", () => ({
 import { getUserMemo, getWorldMemo, migrateMemos } from "../../../src/coordinators/memo-coordinator.ts";
 
 describe("memos utils", () => {
-  let consoleErrorSpy;
-
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.friends = new Map();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.friends = new Map<string, unknown>();
     mocks.setUserDialogMemo.mockReset();
     mocks.database.getUserMemo.mockReset();
     mocks.database.setUserMemo.mockReset();
@@ -47,11 +47,11 @@ describe("memos utils", () => {
     mocks.database.getWorldMemo.mockReset();
     mocks.storage.GetAll.mockReset();
     mocks.storage.Remove.mockReset();
-    globalThis.VRCXStorage = mocks.storage;
+    Object.assign(globalThis, { VRCXStorage: mocks.storage });
   });
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore();
+    vi.mocked(console.error).mockRestore();
   });
 
   test("getUserMemo returns fallback when database throws", async () => {

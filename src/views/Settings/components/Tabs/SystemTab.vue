@@ -148,6 +148,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import { computed, defineAsyncComponent, ref } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import Switch from "@/components/ui/switch/Switch.vue";
@@ -188,7 +189,7 @@ const { appVersion, autoUpdateVRCX, latestAppVersion, noUpdater } = storeToRefs(
 const { setAutoUpdateVRCX, checkForVRCXUpdate, showVRCXUpdateDialog, showChangeLogDialog } = vrcxUpdaterStore;
 
 const ossDialog = ref(false);
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 const isMacOS = computed(() => {
   return navigator.platform.includes("Mac");
 });

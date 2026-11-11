@@ -812,7 +812,7 @@ export const useAdvancedSettingsStore = defineStore("AdvancedSettings", () => {
   }
 
   async function openUGCFolder() {
-    if (LINUX && ugcFolderPath.value == null) {
+    if (isHostLinux && ugcFolderPath.value == null) {
       resetUGCFolder();
     }
     await AppApi.OpenUGCPhotosFolder(ugcFolderPath.value);
@@ -826,7 +826,7 @@ export const useAdvancedSettingsStore = defineStore("AdvancedSettings", () => {
 
     state.folderSelectorDialogVisible = true;
     let newFolder = "";
-    if (WINDOWS) {
+    if (isHostWindows) {
       newFolder = await AppApi.OpenFolderSelectorDialog(oldPath);
     } else {
       newFolder = await window.electron.openDirectoryDialog();

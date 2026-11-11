@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getArchAndPlatform } from "./utils.ts";
 
-function patchFile(filePath) {
+function patchFile(filePath: string): boolean {
   if (!fs.existsSync(filePath)) {
     console.error(`Error: ${filePath} does not exist.`);
     return false;
@@ -30,7 +30,7 @@ managedHostPath = managedHostPath.indexOf('app.asar.unpacked') < 0 ?
   return false;
 }
 
-function patchNodeApiDotNet(arch, platform) {
+function patchNodeApiDotNet(arch: string, platform: string): void {
   let platformName = "";
   switch (platform) {
     case "win32":

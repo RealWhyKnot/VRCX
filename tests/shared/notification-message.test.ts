@@ -2,8 +2,8 @@ import { describe, expect, test, vi } from "vitest";
 import { getNotificationMessage, getUserIdFromNoty, toNotificationText } from "../../src/shared/utils/notification-message";
 
 vi.mock("../../src/shared/utils/location-parser", () => ({
-  displayLocation: (location, worldName, groupName) => {
-    let text = worldName || location;
+  displayLocation: (location: string, worldName: string | undefined, groupName?: string) => {
+    let text = worldName === undefined || worldName === "" ? location : worldName;
     if (groupName) text += ` (${groupName})`;
     return text;
   },
@@ -40,9 +40,9 @@ describe("getNotificationMessage", () => {
       },
       ""
     );
-    expect(result.title).toBe("Alice");
-    expect(result.body).toContain("is in");
-    expect(result.body).toContain("TestWorld");
+    expect(result?.title).toBe("Alice");
+    expect(result?.body).toContain("is in");
+    expect(result?.body).toContain("TestWorld");
   });
 
   test("Online with worldName", () => {
@@ -56,9 +56,9 @@ describe("getNotificationMessage", () => {
       },
       ""
     );
-    expect(result.title).toBe("Alice");
-    expect(result.body).toContain("has logged in");
-    expect(result.body).toContain("Lobby");
+    expect(result?.title).toBe("Alice");
+    expect(result?.body).toContain("has logged in");
+    expect(result?.body).toContain("Lobby");
   });
 
   test("Online without worldName", () => {
@@ -99,10 +99,10 @@ describe("getNotificationMessage", () => {
       },
       " (msg)"
     );
-    expect(result.title).toBe("Bob");
-    expect(result.body).toContain("has invited you to");
-    expect(result.body).toContain("Hub");
-    expect(result.body).toContain("(msg)");
+    expect(result?.title).toBe("Bob");
+    expect(result?.body).toContain("has invited you to");
+    expect(result?.body).toContain("Hub");
+    expect(result?.body).toContain("(msg)");
   });
 
   test("friendRequest", () => {
@@ -165,8 +165,8 @@ describe("getNotificationMessage", () => {
       },
       ""
     );
-    expect(result.title).toBe("Alice");
-    expect(result.body).toContain("has spawned a portal to");
+    expect(result?.title).toBe("Alice");
+    expect(result?.body).toContain("has spawned a portal to");
   });
 
   test("PortalSpawn without displayName", () => {

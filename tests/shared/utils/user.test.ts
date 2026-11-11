@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../../../src/shared/utils/common", () => ({
-  convertFileUrlToImageUrl: vi.fn((url) => `converted:${url}`),
+  convertFileUrlToImageUrl: vi.fn((url: string) => `converted:${url}`),
 }));
 
 vi.mock("../../../src/shared/utils/base/format", () => ({
-  timeToText: vi.fn((ms) => `${Math.round(ms / 1000)}s`),
+  timeToText: vi.fn((ms: number) => `${Math.round(ms / 1000)}s`),
 }));
 
 vi.mock("../../../src/shared/utils/base/ui", () => ({
-  HueToHex: vi.fn((h) => `#hue${h}`),
+  HueToHex: vi.fn((h: number) => `#hue${h}`),
 }));
 
 const storeMocks = vi.hoisted(() => ({
@@ -164,7 +164,7 @@ describe("User Utils", () => {
   });
 
   describe("userStatusClass (explicit currentUser)", () => {
-    let currentUser;
+    let currentUser: { id: string; presence: { platform: string }; onlineFriends: string[]; activeFriends: string[] };
 
     beforeEach(() => {
       vi.clearAllMocks();
@@ -212,7 +212,7 @@ describe("User Utils", () => {
         false,
         currentUser
       );
-      expect(result.mobile).toBe(true);
+      expect(result?.["mobile"]).toBe(true);
     });
 
     test("returns null for non-friend users", () => {
@@ -276,7 +276,7 @@ describe("User Utils", () => {
           false,
           currentUser
         );
-        expect(result[expected]).toBe(true);
+        expect(result?.[expected]).toBe(true);
       }
     });
 
@@ -292,7 +292,7 @@ describe("User Utils", () => {
         false,
         currentUser
       );
-      expect(result.offline).toBe(true);
+      expect(result?.["offline"]).toBe(true);
     });
 
     test("sets mobile flag for non-PC platform friend", () => {
@@ -308,7 +308,7 @@ describe("User Utils", () => {
         false,
         currentUser
       );
-      expect(result.mobile).toBe(true);
+      expect(result?.["mobile"]).toBe(true);
     });
 
     test("no mobile flag for standalonewindows platform", () => {
@@ -324,7 +324,7 @@ describe("User Utils", () => {
         false,
         currentUser
       );
-      expect(result.mobile).toBeUndefined();
+      expect(result?.["mobile"]).toBeUndefined();
     });
 
     test("uses userId as fallback when id is not present", () => {
@@ -356,67 +356,67 @@ describe("User Utils", () => {
         false,
         currentUser
       );
-      expect(result.offline).toBe(true);
+      expect(result?.["offline"]).toBe(true);
     });
   });
 
   describe("userImage (explicit settings)", () => {
     test("does not access appearance store when setting is passed (pure path)", () => {
-      userImage({ thumbnailUrl: "https://img.com/thumb" }, false, "128", false, false);
+      userImage({ thumbnailUrl: "https://img.com/thumb" }, false, "128");
       expect(storeMocks.useAppearanceSettingsStore).not.toHaveBeenCalled();
     });
 
     test("returns empty string for falsy user", () => {
-      expect(userImage(null, false, "128", false, false)).toBe("");
-      expect(userImage(undefined, false, "128", false, false)).toBe("");
+      expect(userImage(null, false, "128")).toBe("");
+      expect(userImage(undefined, false, "128")).toBe("");
     });
 
     test("returns thumbnailUrl as fallback", () => {
       const user = { thumbnailUrl: "https://img.com/thumb" };
-      expect(userImage(user, false, "128", false, false)).toBe("https://img.com/thumb");
+      expect(userImage(user, false, "128")).toBe("https://img.com/thumb");
     });
 
     test("returns currentAvatarThumbnailImageUrl as fallback", () => {
       const user = {
         currentAvatarThumbnailImageUrl: "https://img.com/avatar/256/thumb",
       };
-      expect(userImage(user, false, "128", false, false)).toBe("https://img.com/avatar/256/thumb");
+      expect(userImage(user, false, "128")).toBe("https://img.com/avatar/256/thumb");
     });
 
     test("replaces resolution for icon mode with currentAvatarThumbnailImageUrl", () => {
       const user = {
         currentAvatarThumbnailImageUrl: "https://img.com/avatar/256/thumb",
       };
-      expect(userImage(user, true, "64", false, false)).toBe("https://img.com/avatar/64/thumb");
+      expect(userImage(user, true, "64")).toBe("https://img.com/avatar/64/thumb");
     });
 
     test("returns currentAvatarImageUrl as last resort", () => {
       const user = {
         currentAvatarImageUrl: "https://img.com/avatar/full",
       };
-      expect(userImage(user, false, "128", false, false)).toBe("https://img.com/avatar/full");
+      expect(userImage(user, false, "128")).toBe("https://img.com/avatar/full");
     });
 
     test("converts currentAvatarImageUrl for icon mode", () => {
       const user = {
         currentAvatarImageUrl: "https://img.com/avatar/full",
       };
-      expect(userImage(user, true, "128", false, false)).toBe("converted:https://img.com/avatar/full");
+      expect(userImage(user, true, "128")).toBe("converted:https://img.com/avatar/full");
     });
 
     test("returns empty string when user has no image fields", () => {
-      expect(userImage({}, false, "128", false, false)).toBe("");
+      expect(userImage({}, false, "128")).toBe("");
     });
   });
 
   describe("userImageFull (explicit settings)", () => {
     test("does not access appearance store when setting is passed (pure path)", () => {
-      userImageFull({ currentAvatarImageUrl: "https://img.com/avatar" }, false);
+      userImageFull({ currentAvatarImageUrl: "https://img.com/avatar" });
       expect(storeMocks.useAppearanceSettingsStore).not.toHaveBeenCalled();
     });
 
     test("returns empty string for falsy user", () => {
-      expect(userImageFull(null, false)).toBe("");
+      expect(userImageFull(null)).toBe("");
     });
 
     test("returns profilePicOverride when available", () => {
@@ -424,14 +424,14 @@ describe("User Utils", () => {
         profilePicOverride: "https://img.com/full",
         currentAvatarImageUrl: "https://img.com/avatar",
       };
-      expect(userImageFull(user, false)).toBe("https://img.com/full");
+      expect(userImageFull(user)).toBe("https://img.com/full");
     });
 
     test("returns currentAvatarImageUrl as fallback", () => {
       const user = {
         currentAvatarImageUrl: "https://img.com/avatar",
       };
-      expect(userImageFull(user, false)).toBe("https://img.com/avatar");
+      expect(userImageFull(user)).toBe("https://img.com/avatar");
     });
   });
 });

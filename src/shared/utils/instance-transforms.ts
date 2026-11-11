@@ -1,10 +1,15 @@
-export function computeDisabledContentSettings(contentSettings, settingsList) {
-  const disabled = [];
+import type { VrcxInstance } from "../../types/vrcx";
+
+export function computeDisabledContentSettings(
+  contentSettings: Record<string, boolean | undefined> | null | undefined,
+  settingsList: readonly string[]
+): string[] {
+  const disabled: string[] = [];
   if (!contentSettings || Object.keys(contentSettings).length === 0) {
     return disabled;
   }
   for (const setting of settingsList) {
-    if (typeof contentSettings[setting] === "undefined" || contentSettings[setting] === true) {
+    if (contentSettings[setting] !== false) {
       continue;
     }
     disabled.push(setting);
@@ -12,7 +17,7 @@ export function computeDisabledContentSettings(contentSettings, settingsList) {
   return disabled;
 }
 
-export function createDefaultInstanceRef(json) {
+export function createDefaultInstanceRef(json: Partial<VrcxInstance>): VrcxInstance {
   return {
     id: "",
     location: "",
@@ -39,7 +44,6 @@ export function createDefaultInstanceRef(json) {
     shortName: "",
     world: {},
     users: [],
-    clientNumber: "",
     contentSettings: {},
     photonRegion: "",
     region: "",

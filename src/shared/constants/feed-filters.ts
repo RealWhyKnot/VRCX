@@ -1,20 +1,25 @@
-const getOptions = (optionTypes) => {
-  const optionMap = {
-    Off: { label: "Off", textKey: "dialog.shared_feed_filters.off" },
-    On: { label: "On", textKey: "dialog.shared_feed_filters.on" },
-    VIP: {
-      label: "VIP",
-      textKey: "dialog.shared_feed_filters.favorite",
-    },
-    Friends: {
-      label: "Friends",
-      textKey: "dialog.shared_feed_filters.friends",
-    },
-    Everyone: {
-      label: "Everyone",
-      textKey: "dialog.shared_feed_filters.everyone",
-    },
-  };
+type FeedOptionType = "Off" | "On" | "VIP" | "Friends" | "Everyone";
+
+type FeedOption = { label: string; textKey: string };
+
+const optionMap = {
+  Off: { label: "Off", textKey: "dialog.shared_feed_filters.off" },
+  On: { label: "On", textKey: "dialog.shared_feed_filters.on" },
+  VIP: {
+    label: "VIP",
+    textKey: "dialog.shared_feed_filters.favorite",
+  },
+  Friends: {
+    label: "Friends",
+    textKey: "dialog.shared_feed_filters.friends",
+  },
+  Everyone: {
+    label: "Everyone",
+    textKey: "dialog.shared_feed_filters.everyone",
+  },
+} as const satisfies Record<FeedOptionType, FeedOption>;
+
+const getOptions = (optionTypes: readonly FeedOptionType[]): FeedOption[] => {
   return optionTypes.map((type) => optionMap[type]);
 };
 

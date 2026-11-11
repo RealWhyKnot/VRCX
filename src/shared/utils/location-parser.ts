@@ -1,4 +1,6 @@
-function displayLocation(location, worldName, groupName = "") {
+import type { ParsedLocation } from "../../types/vrcx";
+
+function displayLocation(location: string | null | undefined, worldName: string | undefined, groupName = ""): string | undefined {
   let text = worldName;
   const L = parseLocation(location);
   if (L.isOffline) {
@@ -9,17 +11,17 @@ function displayLocation(location, worldName, groupName = "") {
     text = "Traveling";
   } else if (L.worldId) {
     if (groupName) {
-      text = `${worldName} ${L.accessTypeName}(${groupName})`;
+      text = `${String(worldName)} ${L.accessTypeName}(${groupName})`;
     } else if (L.instanceId) {
-      text = `${worldName} ${L.accessTypeName}`;
+      text = `${String(worldName)} ${L.accessTypeName}`;
     }
   }
   return text;
 }
 
-function parseLocation(tag) {
-  let _tag = String(tag || "");
-  const ctx = {
+function parseLocation(tag: string | null | undefined): ParsedLocation {
+  let _tag = tag ?? "";
+  const ctx: ParsedLocation = {
     tag: _tag,
     isOffline: false,
     isPrivate: false,
@@ -55,18 +57,18 @@ function parseLocation(tag) {
     const shortNameQualifier = "&shortName=";
     const shortNameIndex = _tag.indexOf(shortNameQualifier);
     if (shortNameIndex >= 0) {
-      ctx.shortName = _tag.substr(shortNameIndex + shortNameQualifier.length);
-      _tag = _tag.substr(0, shortNameIndex);
+      ctx.shortName = _tag.slice(shortNameIndex + shortNameQualifier.length);
+      _tag = _tag.slice(0, shortNameIndex);
     }
     if (sep >= 0) {
-      ctx.worldId = _tag.substr(0, sep);
-      ctx.instanceId = _tag.substr(sep + 1);
+      ctx.worldId = _tag.slice(0, sep);
+      ctx.instanceId = _tag.slice(sep + 1);
       ctx.instanceId.split("~").forEach((s, i) => {
         if (i) {
           const A = s.indexOf("(");
           const Z = A >= 0 ? s.lastIndexOf(")") : -1;
-          const key = Z >= 0 ? s.substr(0, A) : s;
-          const value = A < Z ? s.substr(A + 1, Z - A - 1) : "";
+          const key = Z >= 0 ? s.slice(0, A) : s;
+          const value = A < Z ? s.slice(A + 1, Z) : "";
           if (key === "hidden") {
             ctx.hiddenId = value;
           } else if (key === "private") {
@@ -122,27 +124,27 @@ function parseLocation(tag) {
   return ctx;
 }
 
-function resolveRegion(L) {
-  if (L.isOffline || L.isPrivate || L.isTraveling) {
+function resolveRegion(parsed: Pick<ParsedLocation, "isOffline" | "isPrivate" | "isTraveling" | "region" | "instanceId">): string {
+  if (parsed.isOffline || parsed.isPrivate || parsed.isTraveling) {
     return "";
   }
-  if (L.region) {
-    return L.region;
+  if (parsed.region) {
+    return parsed.region;
   }
-  if (L.instanceId) {
+  if (parsed.instanceId) {
     return "us";
   }
   return "";
 }
 
-function translateAccessType(accessTypeName, t, keyMap) {
+function translateAccessType(accessTypeName: string, t: (key: string) => string, keyMap: Partial<Record<string, string>>): string {
   const key = keyMap[accessTypeName];
   if (!key) {
     return accessTypeName;
   }
   if (accessTypeName === "groupPublic" || accessTypeName === "groupPlus") {
-    const groupKey = keyMap["group"];
-    return t(groupKey) + " " + t(key);
+    const groupKey = keyMap["group"] ?? "";
+    return `${t(groupKey)} ${t(key)}`;
   }
   return t(key);
 }

@@ -1,6 +1,15 @@
 import { ActivityType, StatusDisplayType } from "../constants/discord";
 
-const RPC_WORLD_CONFIGS = new Map([
+type RpcWorldConfig = {
+  activityType: number;
+  statusDisplayType: number;
+  appId: string;
+  bigIcon: string;
+};
+
+type TranslateFn = (key: string) => string;
+
+const RPC_WORLD_CONFIGS = new Map<string, RpcWorldConfig>([
   [
     "wrld_f20326da-f1ac-45fc-a062-609723b097b1",
     {
@@ -126,7 +135,7 @@ const RPC_WORLD_CONFIGS = new Map([
 
 const POPCORN_PALACE_WORLD_IDS = new Set(["wrld_266523e8-9161-40da-acd0-6bd82e075833", "wrld_27c7e6b2-d938-447e-a270-3d1a873e2cf3"]);
 
-export function getRpcWorldConfig(worldId) {
+export function getRpcWorldConfig(worldId: string): RpcWorldConfig | null {
   const config = RPC_WORLD_CONFIGS.get(worldId);
   if (!config) {
     return null;
@@ -134,15 +143,18 @@ export function getRpcWorldConfig(worldId) {
   return { ...config };
 }
 
-export function isPopcornPalaceWorld(worldId) {
+export function isPopcornPalaceWorld(worldId: string): boolean {
   return POPCORN_PALACE_WORLD_IDS.has(worldId);
 }
 
-export function getPlatformLabel(platform, isGameRunning, isGameNoVR, t) {
+export function getPlatformLabel(platform: string | null | undefined, isGameRunning: boolean, isGameNoVR: boolean, t: TranslateFn): string {
   if (isGameRunning) {
     return isGameNoVR ? ` (${t("view.settings.discord_presence.rpc.desktop")})` : ` (${t("view.settings.discord_presence.rpc.vr")})`;
   }
   switch (platform) {
+    case null:
+    case undefined:
+      return "";
     case "web":
       return "";
     case "standalonewindows":
@@ -156,7 +168,7 @@ export function getPlatformLabel(platform, isGameRunning, isGameNoVR, t) {
   }
 }
 
-export function getStatusInfo(status, discordHideInvite, t) {
+export function getStatusInfo(status: string | null | undefined, shouldHideInvite: boolean, t: TranslateFn) {
   switch (status) {
     case "active":
       return {
@@ -174,7 +186,7 @@ export function getStatusInfo(status, discordHideInvite, t) {
       return {
         statusName: t("dialog.user.status.ask_me"),
         statusImage: "askme",
-        hidePrivate: discordHideInvite,
+        hidePrivate: shouldHideInvite,
       };
     case "busy":
       return {
@@ -182,6 +194,8 @@ export function getStatusInfo(status, discordHideInvite, t) {
         statusImage: "busy",
         hidePrivate: true,
       };
+    case null:
+    case undefined:
     default:
       return {
         statusName: t("dialog.user.status.offline"),

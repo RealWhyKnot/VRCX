@@ -87,7 +87,7 @@ describe("LaunchOptionsDialog.vue", () => {
     isLaunchOptionsDialogVisible.value = true;
     mocks.configRepository.getString.mockResolvedValue("");
     vi.clearAllMocks();
-    globalThis.LINUX = false;
+    globalThis.isHostLinux = false;
   });
 
   describe("rendering", () => {
@@ -119,14 +119,14 @@ describe("LaunchOptionsDialog.vue", () => {
     });
 
     test("renders path override section when not Linux", async () => {
-      globalThis.LINUX = false;
+      globalThis.isHostLinux = false;
       const wrapper = mountComponent();
       await flushPromises();
       expect(wrapper.text()).toContain("dialog.launch_options.path_override");
     });
 
     test("hides path override section on Linux", async () => {
-      globalThis.LINUX = true;
+      globalThis.isHostLinux = true;
       const wrapper = mountComponent();
       await flushPromises();
       expect(wrapper.text()).not.toContain("dialog.launch_options.path_override");

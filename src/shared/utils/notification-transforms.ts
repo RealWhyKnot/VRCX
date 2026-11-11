@@ -1,28 +1,46 @@
 import { replaceBioSymbols } from "./base/string";
 
-export function sanitizeNotificationJson(json) {
+type NotificationJson = Record<string, unknown>;
+
+type BoopNotificationRef = {
+  type: string;
+  title: string;
+  message: string;
+  imageUrl: string;
+  details: Record<string, unknown>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function replaceBioSymbolsOrEmpty(value: unknown): string {
+  return typeof value === "string" ? replaceBioSymbols(value) : "";
+}
+
+export function sanitizeNotificationJson(json: NotificationJson): NotificationJson {
   for (const key in json) {
     if (json[key] === null || typeof json[key] === "undefined") {
-      delete json[key];
+      Reflect.deleteProperty(json, key);
     }
   }
-  if (json.message) {
-    json.message = replaceBioSymbols(json.message);
+  if (json["message"]) {
+    json["message"] = replaceBioSymbolsOrEmpty(json["message"]);
   }
-  if (json.title) {
-    json.title = replaceBioSymbols(json.title);
+  if (json["title"]) {
+    json["title"] = replaceBioSymbolsOrEmpty(json["title"]);
   }
   return json;
 }
 
-export function parseNotificationDetails(details) {
-  if (details === Object(details)) {
+export function parseNotificationDetails(details: unknown): Record<string, unknown> {
+  if (isRecord(details)) {
     return details;
   }
   if (details !== "{}" && typeof details === "string") {
     try {
-      const object = JSON.parse(details);
-      if (object === Object(object)) {
+      const object: unknown = JSON.parse(details);
+      if (isRecord(object)) {
         return object;
       }
     } catch (err) {
@@ -32,7 +50,7 @@ export function parseNotificationDetails(details) {
   return {};
 }
 
-export function createDefaultNotificationRef(json) {
+export function createDefaultNotificationRef(json: NotificationJson) {
   const ref = {
     id: "",
     senderUserId: "",
@@ -52,7 +70,7 @@ export function createDefaultNotificationRef(json) {
   return ref;
 }
 
-export function createDefaultNotificationV2Ref(json) {
+export function createDefaultNotificationV2Ref(json: NotificationJson) {
   return {
     id: "",
     createdAt: "",
@@ -69,7 +87,7 @@ export function createDefaultNotificationV2Ref(json) {
     senderUsername: "",
     receiverUserId: "",
     data: {},
-    responses: [],
+    responses: [] as unknown[],
     details: {},
     version: 2,
     canDelete: false,
@@ -87,16 +105,17 @@ export function createDefaultNotificationV2Ref(json) {
   };
 }
 
-export function applyBoopLegacyHandling(ref, endpointDomain) {
+export function applyBoopLegacyHandling(ref: BoopNotificationRef, endpointDomain: string): void {
   if (ref.type !== "boop" || !ref.title) {
     return;
   }
   ref.message = ref.title;
   ref.title = "";
-  if (ref.details?.emojiId?.startsWith("default_")) {
-    ref.imageUrl = ref.details.emojiId;
-    ref.message += ` ${ref.details.emojiId.replace("default_", "")}`;
+  const { emojiId, emojiVersion } = ref.details;
+  if (typeof emojiId === "string" && emojiId.startsWith("default_")) {
+    ref.imageUrl = emojiId;
+    ref.message += ` ${emojiId.replace("default_", "")}`;
   } else {
-    ref.imageUrl = `${endpointDomain}/file/${ref.details.emojiId}/${ref.details.emojiVersion}`;
+    ref.imageUrl = `${endpointDomain}/file/${String(emojiId)}/${String(emojiVersion)}`;
   }
 }

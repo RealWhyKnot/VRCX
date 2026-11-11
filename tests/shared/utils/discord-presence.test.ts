@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { getPlatformLabel, getStatusInfo, getRpcWorldConfig, isPopcornPalaceWorld } from "../../../src/shared/utils/discord-presence";
 import { ActivityType, StatusDisplayType } from "../../../src/shared/constants/discord";
 
-const t = (key) => key;
+const t = (key: string) => key;
 
 describe("getPlatformLabel", () => {
   test("returns VR label when game is running in VR", () => {
@@ -177,8 +177,8 @@ describe("getRpcWorldConfig", () => {
     const pypyIds = ["wrld_f20326da-f1ac-45fc-a062-609723b097b1", "wrld_10e5e467-fc65-42ed-8957-f02cace1398c", "wrld_04899f23-e182-4a8d-b2c7-2c74c7c15534"];
     for (const id of pypyIds) {
       const config = getRpcWorldConfig(id);
-      expect(config.appId).toBe("784094509008551956");
-      expect(config.bigIcon).toBe("pypy");
+      expect(config?.appId).toBe("784094509008551956");
+      expect(config?.bigIcon).toBe("pypy");
     }
   });
 
@@ -191,8 +191,8 @@ describe("getRpcWorldConfig", () => {
     ];
     for (const id of lsIds) {
       const config = getRpcWorldConfig(id);
-      expect(config.appId).toBe("968292722391785512");
-      expect(config.bigIcon).toBe("ls_media");
+      expect(config?.appId).toBe("968292722391785512");
+      expect(config?.bigIcon).toBe("ls_media");
     }
   });
 });

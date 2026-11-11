@@ -3,8 +3,28 @@ import { nextTick } from "vue";
 
 import { useVrcxVueTable } from "../../../src/lib/table/use-vrcx-vue-table";
 
-function makeColumns(...ids) {
+function makeColumns(...ids: string[]) {
   return ids.map((id) => ({ id, header: id, accessorKey: id }));
+}
+
+type StoredTable = {
+  sorting?: unknown;
+  columnSizing?: unknown;
+  columnOrder?: unknown;
+  columnVisibility?: unknown;
+  pageSize?: unknown;
+  columnOrderLocked?: unknown;
+  updatedAt?: unknown;
+};
+
+function isStoredTable(value: unknown): value is StoredTable {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readStored(key: string): StoredTable | null {
+  const raw = localStorage.getItem(key);
+  const parsed: unknown = raw === null ? null : JSON.parse(raw);
+  return isStoredTable(parsed) ? parsed : null;
 }
 
 describe("useVrcxVueTable persistence", () => {
@@ -32,9 +52,9 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-sort"));
+    const stored = readStored("vrcx:table:test-sort");
     expect(stored).toBeTruthy();
-    expect(stored.sorting).toEqual([{ id: "name", desc: false }]);
+    expect(stored?.sorting).toEqual([{ id: "name", desc: false }]);
   });
 
   it("restores persisted sorting on init, overriding initialSorting", () => {
@@ -85,7 +105,7 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-no-persist-sort"));
+    const stored = readStored("vrcx:table:test-no-persist-sort");
 
     expect(stored?.sorting).toBeUndefined();
   });
@@ -108,11 +128,11 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-both"));
+    const stored = readStored("vrcx:table:test-both");
     expect(stored).toBeTruthy();
 
-    expect("columnSizing" in stored).toBe(true);
-    expect(stored.sorting).toEqual([{ id: "date", desc: true }]);
+    expect("columnSizing" in (stored ?? {})).toBe(true);
+    expect(stored?.sorting).toEqual([{ id: "date", desc: true }]);
   });
 
   it("uses initialSorting when no persisted data exists", () => {
@@ -138,9 +158,9 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-col-order"));
+    const stored = readStored("vrcx:table:test-col-order");
     expect(stored).toBeTruthy();
-    expect(stored.columnOrder).toEqual(["date", "name", "status"]);
+    expect(stored?.columnOrder).toEqual(["date", "name", "status"]);
   });
 
   it("restores persisted columnOrder on init", () => {
@@ -167,10 +187,10 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-stale-order"));
+    const stored = readStored("vrcx:table:test-stale-order");
     expect(stored).toBeTruthy();
 
-    expect(stored.columnOrder).toEqual(["date", "name"]);
+    expect(stored?.columnOrder).toEqual(["date", "name"]);
   });
 
   it("does not persist columnOrder when persistColumnOrder is false", async () => {
@@ -186,7 +206,7 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-no-persist-order"));
+    const stored = readStored("vrcx:table:test-no-persist-order");
     expect(stored?.columnOrder).toBeUndefined();
   });
 
@@ -202,9 +222,9 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-col-vis"));
+    const stored = readStored("vrcx:table:test-col-vis");
     expect(stored).toBeTruthy();
-    expect(stored.columnVisibility).toEqual({ name: false, status: true });
+    expect(stored?.columnVisibility).toEqual({ name: false, status: true });
   });
 
   it("restores persisted columnVisibility on init", () => {
@@ -231,9 +251,9 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-stale-vis"));
+    const stored = readStored("vrcx:table:test-stale-vis");
     expect(stored).toBeTruthy();
-    expect(stored.columnVisibility).toEqual({ name: false });
+    expect(stored?.columnVisibility).toEqual({ name: false });
   });
 
   it("does not persist columnVisibility when persistColumnVisibility is false", async () => {
@@ -249,7 +269,7 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-no-persist-vis"));
+    const stored = readStored("vrcx:table:test-no-persist-vis");
     expect(stored?.columnVisibility).toBeUndefined();
   });
 
@@ -266,9 +286,9 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-page-size"));
+    const stored = readStored("vrcx:table:test-page-size");
     expect(stored).toBeTruthy();
-    expect(stored.pageSize).toBe(25);
+    expect(stored?.pageSize).toBe(25);
   });
 
   it("restores persisted pageSize on init, overriding initialPagination", () => {
@@ -309,7 +329,7 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(300);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-no-persist-ps"));
+    const stored = readStored("vrcx:table:test-no-persist-ps");
     expect(stored?.pageSize).toBeUndefined();
   });
 
@@ -334,7 +354,7 @@ describe("useVrcxVueTable persistence", () => {
     expect(columnOrder.value).toEqual([]);
     expect(columnVisibility.value).toEqual({});
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-reset-all"));
+    const stored = readStored("vrcx:table:test-reset-all");
     expect(stored?.columnSizing).toBeUndefined();
     expect(stored?.columnOrder).toBeUndefined();
     expect(stored?.columnVisibility).toBeUndefined();
@@ -354,7 +374,7 @@ describe("useVrcxVueTable persistence", () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(50);
 
-    const stored = JSON.parse(localStorage.getItem("vrcx:table:test-lock-order"));
+    const stored = readStored("vrcx:table:test-lock-order");
     expect(stored?.columnOrderLocked).toBe(true);
   });
 
@@ -371,16 +391,17 @@ describe("useVrcxVueTable persistence", () => {
   });
 
   it("attaches controls to table.options.meta when persistKey is set", () => {
-    const { table } = useVrcxVueTable({
+    const { table, columnOrderLocked } = useVrcxVueTable({
       data: [],
       columns: makeColumns("name", "date"),
       persistKey: "test-meta",
     });
 
-    const meta = table.options.meta;
-    expect(meta.resetAll).toBeTypeOf("function");
-    expect(meta.columnOrderLocked).toBeDefined();
-    expect(meta.columnOrderLocked.value).toBe(false);
+    const meta: unknown = table.options.meta;
+    expect(meta).toBeTypeOf("object");
+    expect(Reflect.get(meta ?? {}, "resetAll")).toBeTypeOf("function");
+    expect(Reflect.get(meta ?? {}, "columnOrderLocked")).toBe(columnOrderLocked);
+    expect(columnOrderLocked.value).toBe(false);
   });
 
   it("does not attach controls to meta without persistKey", () => {
@@ -389,8 +410,8 @@ describe("useVrcxVueTable persistence", () => {
       columns: makeColumns("name", "date"),
     });
 
-    const meta = table.options.meta;
-    expect(meta.resetAll).toBeUndefined();
-    expect(meta.columnOrderLocked).toBeUndefined();
+    const meta: unknown = table.options.meta;
+    expect(Reflect.get(meta ?? {}, "resetAll")).toBeUndefined();
+    expect(Reflect.get(meta ?? {}, "columnOrderLocked")).toBeUndefined();
   });
 });

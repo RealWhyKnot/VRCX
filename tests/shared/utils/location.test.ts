@@ -388,22 +388,22 @@ describe("Location Utils", () => {
   });
 
   describe("translateAccessType", () => {
-    const t = (key) => key;
+    const t = (key: string) => key;
 
     test("returns raw name when not in keyMap", () => {
       expect(translateAccessType("unknown", t, accessTypeLocaleKeyMap)).toBe("unknown");
     });
 
     test("translates public", () => {
-      expect(translateAccessType("public", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap["public"]);
+      expect(translateAccessType("public", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap.public);
     });
 
     test("translates invite", () => {
-      expect(translateAccessType("invite", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap["invite"]);
+      expect(translateAccessType("invite", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap.invite);
     });
 
     test("translates friends", () => {
-      expect(translateAccessType("friends", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap["friends"]);
+      expect(translateAccessType("friends", t, accessTypeLocaleKeyMap)).toBe(accessTypeLocaleKeyMap.friends);
     });
 
     test("translates friends+", () => {
@@ -412,20 +412,19 @@ describe("Location Utils", () => {
 
     test("prefixes Group for groupPublic", () => {
       const result = translateAccessType("groupPublic", t, accessTypeLocaleKeyMap);
-      expect(result).toBe(`${accessTypeLocaleKeyMap["group"]} ${accessTypeLocaleKeyMap["groupPublic"]}`);
+      expect(result).toBe(`${accessTypeLocaleKeyMap.group} ${accessTypeLocaleKeyMap.groupPublic}`);
     });
 
     test("prefixes Group for groupPlus", () => {
       const result = translateAccessType("groupPlus", t, accessTypeLocaleKeyMap);
-      expect(result).toBe(`${accessTypeLocaleKeyMap["group"]} ${accessTypeLocaleKeyMap["groupPlus"]}`);
+      expect(result).toBe(`${accessTypeLocaleKeyMap.group} ${accessTypeLocaleKeyMap.groupPlus}`);
     });
   });
 
   describe("getLocationText", () => {
-    const t = (key) => key;
-    const opts = (overrides = {}) => ({
+    const t = (key: string) => key;
+    const opts = (overrides: { hint?: string; worldName?: string } = {}) => ({
       hint: "",
-      worldName: undefined,
       accessTypeLabel: "Public",
       t,
       ...overrides,

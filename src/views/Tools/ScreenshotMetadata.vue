@@ -286,6 +286,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -521,7 +522,7 @@ function handleDrop(event) {
 async function getAndDisplayScreenshotFromFile() {
   let filePath = "";
 
-  if (LINUX) {
+  if (isLinuxHost()) {
     filePath = await window.electron.openFileDialog();
   } else {
     filePath = await AppApi.OpenFileSelectorDialog(await AppApi.GetVRChatPhotosLocation(), ".png", "PNG Files (*.png)|*.png");

@@ -7,9 +7,8 @@ import { worldRequest } from "../api/world";
 import { entityQueryPolicies, toQueryOptions } from "./policies";
 import { queryKeys } from "./keys";
 
-export function useUserQuery(userId, options = {}) {
+export function useUserQuery(userId: string) {
   return useQuery({
-    ...options,
     queryKey: queryKeys.user(userId),
     queryFn: () => userRequest.getUser({ userId }),
     enabled: Boolean(userId),
@@ -17,9 +16,8 @@ export function useUserQuery(userId, options = {}) {
   });
 }
 
-export function useAvatarQuery(avatarId, options = {}) {
+export function useAvatarQuery(avatarId: string) {
   return useQuery({
-    ...options,
     queryKey: queryKeys.avatar(avatarId),
     queryFn: () => avatarRequest.getAvatar({ avatarId }),
     enabled: Boolean(avatarId),
@@ -27,9 +25,8 @@ export function useAvatarQuery(avatarId, options = {}) {
   });
 }
 
-export function useWorldQuery(worldId, options = {}) {
+export function useWorldQuery(worldId: string) {
   return useQuery({
-    ...options,
     queryKey: queryKeys.world(worldId),
     queryFn: () => worldRequest.getWorld({ worldId }),
     enabled: Boolean(worldId),
@@ -37,11 +34,10 @@ export function useWorldQuery(worldId, options = {}) {
   });
 }
 
-export function useGroupQuery(groupId, includeRoles = false, options = {}) {
+export function useGroupQuery(groupId: string, shouldIncludeRoles = false) {
   return useQuery({
-    ...options,
-    queryKey: queryKeys.group(groupId, includeRoles),
-    queryFn: () => groupRequest.getGroup({ groupId, includeRoles }),
+    queryKey: queryKeys.group(groupId, shouldIncludeRoles),
+    queryFn: () => groupRequest.getGroup({ groupId, includeRoles: shouldIncludeRoles }),
     enabled: Boolean(groupId),
     ...toQueryOptions(entityQueryPolicies.group),
   });

@@ -10,20 +10,22 @@ vi.mock("../../../src/plugins/router", () => ({
 }));
 
 describe("findUserByDisplayName", () => {
-  function createCachedUsers(entries) {
-    const map = new Map();
+  type TestUser = { id: string; displayName: string };
+
+  function createCachedUsers(entries: TestUser[]) {
+    const map = new Map<string, TestUser>();
     for (const entry of entries) {
       map.set(entry.id, entry);
     }
     return map;
   }
 
-  function createDisplayNameIndex(entries) {
-    const index = new Map();
+  function createDisplayNameIndex(entries: TestUser[]) {
+    const index = new Map<string, Set<string>>();
     for (const entry of entries) {
       let ids = index.get(entry.displayName);
       if (!ids) {
-        ids = new Set();
+        ids = new Set<string>();
         index.set(entry.displayName, ids);
       }
       ids.add(entry.id);
@@ -47,7 +49,7 @@ describe("findUserByDisplayName", () => {
   });
 
   test("returns undefined for empty map", () => {
-    const users = new Map();
+    const users = new Map<string, TestUser>();
     expect(findUserByDisplayName(users, "Alice")).toBeUndefined();
   });
 
@@ -58,7 +60,7 @@ describe("findUserByDisplayName", () => {
     ]);
 
     const result = findUserByDisplayName(users, "Alice");
-    expect(result.id).toBe("usr_1");
+    expect(result?.id).toBe("usr_1");
   });
 
   test("match is exact (case-sensitive)", () => {

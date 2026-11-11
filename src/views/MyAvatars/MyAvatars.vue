@@ -249,6 +249,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import { Check, Eye, Image as ImageIcon, LayoutGrid, List, ListFilter, Pencil, RefreshCw, Settings as SettingsIcon, Tag, User } from "lucide-vue-next";
 import { computed, nextTick, onBeforeMount, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
@@ -571,7 +572,7 @@ async function onCropConfirmAvatar(blob) {
       (async () => {
         const base64Body = await readFileAsBase64(blob);
         const base64File = await resizeImageToFitLimits(base64Body);
-        if (typeof LINUX !== "undefined" && LINUX) {
+        if (isLinuxHost()) {
           const args = await avatarRequest.uploadAvatarImage(base64File);
           const fileUrl = args.json.versions[args.json.versions.length - 1].file.url;
           await avatarRequest.saveAvatar({

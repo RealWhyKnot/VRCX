@@ -43,7 +43,7 @@ describe("sanitizeUserJson", () => {
   });
 
   it("handles missing fields gracefully", () => {
-    const json = { id: "usr_123" };
+    const json = {};
     expect(() => sanitizeUserJson(json, "")).not.toThrow();
   });
 });
@@ -145,14 +145,14 @@ describe("computeUserPlatform", () => {
 });
 
 describe("diffObjectProps", () => {
-  const arraysMatch = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  const arraysMatch = (a: unknown[], b: unknown[]) => a.length === b.length && a.every((v, i) => v === b[i]);
 
   it("detects changed primitive props", () => {
     const ref = { name: "old", id: "1" };
     const json = { name: "new", id: "1" };
     const result = diffObjectProps(ref, json, arraysMatch);
     expect(result.hasPropChanged).toBe(true);
-    expect(result.changedProps.name).toEqual(["new", "old"]);
+    expect(result.changedProps["name"]).toEqual(["new", "old"]);
   });
 
   it("detects unchanged props", () => {
@@ -167,7 +167,7 @@ describe("diffObjectProps", () => {
     const json = { tags: ["a", "c"] };
     const result = diffObjectProps(ref, json, arraysMatch);
     expect(result.hasPropChanged).toBe(true);
-    expect(result.changedProps.tags).toBeDefined();
+    expect(result.changedProps["tags"]).toBeDefined();
   });
 
   it("ignores props only in json (not in ref)", () => {

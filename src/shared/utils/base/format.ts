@@ -19,28 +19,30 @@ const TIME_UNIT_KEYS = {
   hours: "common.time_units.hours",
   mins: "common.time_units.mins",
   secs: "common.time_units.secs",
-};
+} as const satisfies Record<string, string>;
 
-function getTimeUnitLabel(unit) {
-  const key = TIME_UNIT_KEYS[unit];
+const timeUnitKeysByName: Readonly<Record<string, string | undefined>> = TIME_UNIT_KEYS;
+
+function getTimeUnitLabel(unit: string): string {
+  const key = timeUnitKeysByName[unit];
   if (!key) {
     return unit;
   }
-  const t = i18n?.global?.t;
+  const t = i18n.global.t;
   return typeof t === "function" ? t(key) : unit;
 }
 
-function formatTimeUnit(value, unit) {
+function formatTimeUnit(value: number, unit: string): string {
   return `${value} ${getTimeUnitLabel(value === 1 ? unit : `${unit}s`)}`;
 }
 
-function timeToText(sec, isNeedSeconds = false) {
+function timeToText(sec: number | string, isNeedSeconds = false): string {
   let n = Number(sec);
   if (isNaN(n)) {
     return escapeTag(String(sec));
   }
   n = Math.floor(n / 1000);
-  const arr = [];
+  const arr: string[] = [];
   if (n < 0) {
     n = -n;
   }
@@ -67,11 +69,11 @@ function timeToText(sec, isNeedSeconds = false) {
   return arr.join(" ");
 }
 
-function timeAgo(datetime) {
+function timeAgo(datetime: number | string | null | undefined): string {
   if (!datetime) {
     return "—";
   }
-  let n;
+  let n: number;
   if (typeof datetime === "number") {
     n = Date.now() - datetime;
   } else {
@@ -84,7 +86,7 @@ function timeAgo(datetime) {
   if (n < 0) {
     n = -n;
   }
-  if (n == 0) {
+  if (n === 0) {
     return "—";
   }
   if (n >= 31536000) {
@@ -127,14 +129,12 @@ function timeAgo(datetime) {
     const value = Math.floor(n / 60);
     return `${value} ${getTimeUnitLabel(value === 1 ? "min" : "mins")}`;
   }
-  if (n < 60) {
-    n = Math.floor((n + 2.5) / 5) * 5;
-    return `${n} ${getTimeUnitLabel(n === 1 ? "sec" : "secs")}`;
-  }
+  n = Math.floor((n + 2.5) / 5) * 5;
+  return `${n} ${getTimeUnitLabel(n === 1 ? "sec" : "secs")}`;
 }
 
-function formatSeconds(duration) {
-  const pad = function (num, size) {
+function formatSeconds(duration: number | string): string {
+  const pad = function (num: number, size: number): string {
       return `000${num}`.slice(size * -1);
     },
     time = Number(Number(duration).toFixed(3)),
@@ -148,7 +148,7 @@ function formatSeconds(duration) {
   return `${hoursOut + pad(minutes, 2)}:${pad(seconds, 2)}`;
 }
 
-function formatFileSize(bytes) {
+function formatFileSize(bytes: number): string {
   const units = ["KB", "MB", "GB"];
   let value = bytes / 1024;
   let unitIndex = 0;
@@ -161,29 +161,29 @@ function formatFileSize(bytes) {
   return `${value.toFixed(2)} ${units[unitIndex]}`;
 }
 
-function convertYoutubeTime(duration) {
-  let a = duration.match(/\d+/g);
-  if (duration.indexOf("M") >= 0 && duration.indexOf("H") === -1 && duration.indexOf("S") === -1) {
-    a = ["0", a[0], "0"];
+function convertYoutubeTime(duration: string): number {
+  let parts: string[] = duration.match(/\d+/g) ?? [];
+  if (duration.includes("M") && !duration.includes("H") && !duration.includes("S")) {
+    parts = ["0", parts[0] ?? "", "0"];
   }
-  if (duration.indexOf("H") >= 0 && duration.indexOf("M") === -1) {
-    a = [a[0], "0", a[1]];
+  if (duration.includes("H") && !duration.includes("M")) {
+    parts = [parts[0] ?? "", "0", parts[1] ?? ""];
   }
-  if (duration.indexOf("H") >= 0 && duration.indexOf("M") === -1 && duration.indexOf("S") === -1) {
-    a = [a[0], "0", "0"];
+  if (duration.includes("H") && !duration.includes("M") && !duration.includes("S")) {
+    parts = [parts[0] ?? "", "0", "0"];
   }
   let length = 0;
-  if (a.length === 3) {
-    length += parseInt(a[0], 10) * 3600;
-    length += parseInt(a[1], 10) * 60;
-    length += parseInt(a[2], 10);
+  if (parts.length === 3) {
+    length += Number(parts[0]) * 3600;
+    length += Number(parts[1]) * 60;
+    length += Number(parts[2]);
   }
-  if (a.length === 2) {
-    length += parseInt(a[0], 10) * 60;
-    length += parseInt(a[1], 10);
+  if (parts.length === 2) {
+    length += Number(parts[0]) * 60;
+    length += Number(parts[1]);
   }
-  if (a.length === 1) {
-    length += parseInt(a[0], 10);
+  if (parts.length === 1) {
+    length += Number(parts[0]);
   }
   return length;
 }

@@ -1,4 +1,13 @@
-const whatsNewReleases = Object.freeze({
+type WhatsNewItem = {
+  key: string;
+  icon: string;
+};
+
+type WhatsNewRelease = {
+  items: readonly WhatsNewItem[];
+};
+
+const WHATS_NEW_RELEASE_TABLE = Object.freeze({
   "2026.05.03": {
     items: [
       {
@@ -19,16 +28,16 @@ const whatsNewReleases = Object.freeze({
       },
     ],
   },
-});
+} as const satisfies Record<string, WhatsNewRelease>);
 
-function normalizeReleaseVersion(version) {
-  const normalizedVersion = String(version || "")
-    .replace(/^VRCX\s+/, "")
-    .trim();
+const whatsNewReleases: Readonly<Record<string, WhatsNewRelease | undefined>> = WHATS_NEW_RELEASE_TABLE;
+
+function normalizeReleaseVersion(version: string | null | undefined): string {
+  const normalizedVersion = (version ?? "").replace(/^VRCX\s+/, "").trim();
   return /^\d{4}\.\d{2}\.\d{2}$/.test(normalizedVersion) ? normalizedVersion : "";
 }
 
-function getWhatsNewRelease(version) {
+function getWhatsNewRelease(version: string | null | undefined) {
   const normalizedVersion = normalizeReleaseVersion(version);
   if (!normalizedVersion) {
     return null;

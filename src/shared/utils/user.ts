@@ -2,12 +2,52 @@ import { HueToHex } from "./base/ui";
 import { convertFileUrlToImageUrl } from "./common";
 import { languageMappings } from "../constants/language";
 
+type ClassMap = Record<string, boolean>;
+
+type RgbColour = { r: number; g: number; b: number };
+
+type UserTimestampContext = {
+  ref: {
+    state?: string;
+    $online_for?: number;
+    $active_for?: number;
+    $offline_for?: number;
+  };
+};
+
+type StatusUser = {
+  id?: string;
+  userId?: string;
+  status?: string;
+  location?: string;
+  state?: string;
+  isFriend?: boolean;
+  $platform?: string;
+};
+
+type StatusCurrentUser = {
+  id?: string;
+  presence?: { platform?: string };
+  onlineFriends?: string[];
+  activeFriends?: string[];
+};
+
+type ImageUser = {
+  iconUrl?: string;
+  thumbnailUrl?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  currentAvatarImageUrl?: string;
+  profilePicOverride?: string;
+};
+
 const THEME_COLOR_LIMITS = Object.freeze({
   darkMinLuminance: 0.06,
   lightMaxLuminance: 0.74,
 });
 
-function userOnlineForTimestamp(ctx) {
+const languageFlagClasses: Readonly<Record<string, string | undefined>> = languageMappings;
+
+function userOnlineForTimestamp(ctx: UserTimestampContext): string | null {
   if (ctx.ref.state === "online" && ctx.ref.$online_for) {
     return new Date(ctx.ref.$online_for).toJSON();
   } else if (ctx.ref.state === "active" && ctx.ref.$active_for) {
@@ -18,39 +58,35 @@ function userOnlineForTimestamp(ctx) {
   return null;
 }
 
-function languageClass(language) {
-  const style = {};
-  const mapping = languageMappings[language];
+function languageClass(language: string): ClassMap {
+  const style: ClassMap = {};
+  const mapping = languageFlagClasses[language];
   if (typeof mapping !== "undefined") {
     style[mapping] = true;
   } else {
-    style.unknown = true;
+    style["unknown"] = true;
   }
   return style;
 }
 
-async function getNameColour(userId, isDarkMode) {
+async function getNameColour(userId: string, isDarkMode: boolean): Promise<string> {
   const hue = await AppApi.GetColourFromUserID(userId);
   return HueToHex(hue, isDarkMode);
 }
 
-function normalizeProfileHex(value) {
-  const hex = String(value || "")
-    .trim()
-    .replace(/^#/, "")
-    .toLowerCase();
+function normalizeProfileHex(value: string | null | undefined): string | null {
+  const hex = (value ?? "").trim().replace(/^#/, "").toLowerCase();
   if (!/^[0-9a-f]{6}$/.test(hex)) {
     return null;
   }
   return `#${hex}`;
 }
 
-function hexToRgb(hex) {
-  const match = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!match) {
+function hexToRgb(hex: string): RgbColour | null {
+  const value = /^#?([0-9a-f]{6})$/i.exec(hex)?.[1];
+  if (value === undefined) {
     return null;
   }
-  const value = match[1];
   return {
     r: parseInt(value.slice(0, 2), 16),
     g: parseInt(value.slice(2, 4), 16),
@@ -58,16 +94,16 @@ function hexToRgb(hex) {
   };
 }
 
-function rgbToHex(rgb) {
-  const toHex = (value) => {
+function rgbToHex(rgb: RgbColour): string {
+  const toHex = (value: number): string => {
     const n = Math.max(0, Math.min(255, Math.round(value)));
     return n.toString(16).padStart(2, "0");
   };
   return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
 }
 
-function getRelativeLuminance(rgb) {
-  const channel = (value) => {
+function getRelativeLuminance(rgb: RgbColour): number {
+  const channel = (value: number): number => {
     const normalized = value / 255;
     if (normalized <= 0.03928) {
       return normalized / 12.92;
@@ -80,7 +116,7 @@ function getRelativeLuminance(rgb) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function mixRgb(from, to, weight) {
+function mixRgb(from: RgbColour, to: RgbColour, weight: number): RgbColour {
   return {
     r: from.r + (to.r - from.r) * weight,
     g: from.g + (to.g - from.g) * weight,
@@ -88,7 +124,7 @@ function mixRgb(from, to, weight) {
   };
 }
 
-function getReadableProfileThemeColor(colorValue, fallback, isDarkMode) {
+function getReadableProfileThemeColor(colorValue: string | null | undefined, fallback: string, isDarkMode: boolean): string {
   const normalized = normalizeProfileHex(colorValue);
   if (!normalized) {
     return fallback;
@@ -100,8 +136,8 @@ function getReadableProfileThemeColor(colorValue, fallback, isDarkMode) {
 
   const luminanceThreshold = isDarkMode ? THEME_COLOR_LIMITS.darkMinLuminance : THEME_COLOR_LIMITS.lightMaxLuminance;
   let luminance = getRelativeLuminance(rgb);
-  const requiresAdjustment = isDarkMode ? luminance < luminanceThreshold : luminance > luminanceThreshold;
-  if (!requiresAdjustment) {
+  const needsAdjustment = isDarkMode ? luminance < luminanceThreshold : luminance > luminanceThreshold;
+  if (!needsAdjustment) {
     return normalized;
   }
 
@@ -116,7 +152,7 @@ function getReadableProfileThemeColor(colorValue, fallback, isDarkMode) {
   return rgbToHex(rgb);
 }
 
-function invertHexColor(colorValue) {
+function invertHexColor(colorValue: string): string {
   const normalized = normalizeProfileHex(colorValue);
   if (!normalized) {
     return colorValue;
@@ -133,8 +169,12 @@ function invertHexColor(colorValue) {
   return rgbToHex(invertedRgb);
 }
 
-function userStatusClass(user, pendingOffline = false, currentUser) {
-  const style = {
+function isMobilePlatform(platform: string | undefined): boolean {
+  return platform !== undefined && platform !== "standalonewindows" && platform !== "web";
+}
+
+function userStatusClass(user: StatusUser | undefined, isPendingOffline = false, currentUser?: StatusCurrentUser): ClassMap | null {
+  const style: ClassMap = {
     "status-icon": true,
   };
   if (typeof user === "undefined") {
@@ -147,20 +187,19 @@ function userStatusClass(user, pendingOffline = false, currentUser) {
     id = user.userId;
   }
   if (id === currentUser?.id) {
-    const platform = currentUser.presence?.platform;
     return {
       ...style,
       ...statusClass(user.status),
-      mobile: platform && platform !== "standalonewindows" && platform !== "web",
+      mobile: isMobilePlatform(currentUser.presence?.platform),
     };
   }
   if (!user.isFriend) {
     return null;
   }
-  if (pendingOffline) {
-    style.offline = true;
-  } else if (user.status !== "active" && user.location === "private" && user.state === "" && id && !(currentUser?.onlineFriends || []).includes(id)) {
-    if ((currentUser?.activeFriends || []).includes(id)) {
+  if (isPendingOffline) {
+    style["offline"] = true;
+  } else if (user.status !== "active" && user.location === "private" && user.state === "" && id && !(currentUser?.onlineFriends ?? []).includes(id)) {
+    if ((currentUser?.activeFriends ?? []).includes(id)) {
       if (user.status === "join me") {
         style["active-joinme"] = true;
       } else if (user.status === "ask me") {
@@ -168,10 +207,10 @@ function userStatusClass(user, pendingOffline = false, currentUser) {
       } else if (user.status === "busy") {
         style["active-busy"] = true;
       } else {
-        style.active = true;
+        style["active"] = true;
       }
     } else {
-      style.offline = true;
+      style["offline"] = true;
     }
   } else if (user.state === "active") {
     if (user.status === "join me") {
@@ -181,49 +220,49 @@ function userStatusClass(user, pendingOffline = false, currentUser) {
     } else if (user.status === "busy") {
       style["active-busy"] = true;
     } else {
-      style.active = true;
+      style["active"] = true;
     }
   } else if (user.location === "offline") {
-    style.offline = true;
+    style["offline"] = true;
   } else if (user.status === "active") {
-    style.online = true;
+    style["online"] = true;
   } else if (user.status === "join me") {
-    style.joinme = true;
+    style["joinme"] = true;
   } else if (user.status === "ask me") {
-    style.askme = true;
+    style["askme"] = true;
   } else if (user.status === "busy") {
-    style.busy = true;
+    style["busy"] = true;
   } else {
     return null;
   }
   if (user.$platform && user.$platform !== "standalonewindows" && user.$platform !== "web" && user.state === "online") {
-    style.mobile = true;
+    style["mobile"] = true;
   }
   return style;
 }
 
-function statusClass(status) {
+function statusClass(status: string | undefined): ClassMap | null {
   if (typeof status === "undefined") {
     return null;
   }
-  const style = {
+  const style: ClassMap = {
     "status-icon": true,
   };
   if (status === "active") {
-    style.online = true;
+    style["online"] = true;
   } else if (status === "join me") {
-    style.joinme = true;
+    style["joinme"] = true;
   } else if (status === "ask me") {
-    style.askme = true;
+    style["askme"] = true;
   } else if (status === "busy") {
-    style.busy = true;
+    style["busy"] = true;
   } else {
     return null;
   }
   return style;
 }
 
-function userImage(user, isIcon = false, resolution = "128") {
+function userImage(user: ImageUser | null | undefined, isIcon = false, resolution = "128"): string {
   if (!user) {
     return "";
   }
@@ -251,7 +290,7 @@ function userImage(user, isIcon = false, resolution = "128") {
   return "";
 }
 
-function userImageFull(user) {
+function userImageFull(user: ImageUser | null | undefined): string | undefined {
   if (!user) {
     return "";
   }
@@ -264,16 +303,21 @@ function userImageFull(user) {
   return user.currentAvatarImageUrl;
 }
 
-function parseUserUrl(user) {
+function parseUserUrl(user: string): string | undefined {
   const url = new URL(user);
   const urlPath = url.pathname;
   if (urlPath.substring(5, 11) === "/user/") {
     const userId = urlPath.substring(11);
     return userId;
   }
+  return undefined;
 }
 
-function findUserByDisplayName(cachedUsers, displayName, cachedUserIdsByDisplayName) {
+function findUserByDisplayName<Ref extends { displayName: string }>(
+  cachedUsers: ReadonlyMap<string, Ref>,
+  displayName: string,
+  cachedUserIdsByDisplayName?: ReadonlyMap<string, Iterable<string>>
+): Ref | undefined {
   const indexedUserIds = cachedUserIdsByDisplayName?.get(displayName);
   if (indexedUserIds) {
     for (const userId of indexedUserIds) {

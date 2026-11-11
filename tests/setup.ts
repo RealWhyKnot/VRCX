@@ -5,30 +5,39 @@ import { i18n } from "../src/plugins/i18n";
 import en from "../src/localization/en.json";
 
 const noopAsync = () => Promise.resolve("");
+const noopBridge = () => new Proxy({}, { get: () => noopAsync });
 
-globalThis.AppApi = new Proxy({}, { get: () => noopAsync });
-globalThis.WebApi = new Proxy({}, { get: () => noopAsync });
-globalThis.VRCXStorage = new Proxy({}, { get: () => noopAsync });
-globalThis.SQLite = new Proxy({}, { get: () => noopAsync });
-globalThis.LogWatcher = new Proxy({}, { get: () => noopAsync });
-globalThis.Discord = new Proxy({}, { get: () => noopAsync });
-globalThis.AssetBundleManager = new Proxy({}, { get: () => noopAsync });
+Object.assign(globalThis, {
+  AppApi: noopBridge(),
+  WebApi: noopBridge(),
+  VRCXStorage: noopBridge(),
+  SQLite: noopBridge(),
+  LogWatcher: noopBridge(),
+  Discord: noopBridge(),
+  AssetBundleManager: noopBridge(),
+});
 
-globalThis.ResizeObserver ??= class {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-};
+if (typeof ResizeObserver === "undefined") {
+  Object.assign(globalThis, {
+    ResizeObserver: class {
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    },
+  });
+}
 
-globalThis.speechSynthesis = {
-  getVoices: () => [],
-  cancel: vi.fn(),
-  speak: vi.fn(),
-};
+Object.assign(globalThis, {
+  speechSynthesis: {
+    getVoices: () => [],
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  },
+});
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -41,26 +50,30 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.clear !== "function") {
-  const store = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => store.get(key) ?? null,
-    setItem: (key, value) => store.set(key, String(value)),
-    removeItem: (key) => store.delete(key),
-    clear: () => store.clear(),
-    get length() {
-      return store.size;
+  const store = new Map<string, string>();
+  Object.assign(globalThis, {
+    localStorage: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: unknown) => store.set(key, String(value)),
+      removeItem: (key: string) => store.delete(key),
+      clear: () => store.clear(),
+      get length() {
+        return store.size;
+      },
+      key: (index: number) => [...store.keys()][index] ?? null,
     },
-    key: (index) => [...store.keys()][index] ?? null,
-  };
+  });
 }
 
-globalThis.Notification = class {
-  static permission = "denied";
-  static requestPermission = vi.fn().mockResolvedValue("denied");
-  close() {
-    return undefined;
-  }
-};
+Object.assign(globalThis, {
+  Notification: class {
+    static permission = "denied";
+    static requestPermission = vi.fn().mockResolvedValue("denied");
+    close() {
+      return undefined;
+    }
+  },
+});
 
 vi.mock("worker-timers", () => ({
   setInterval: globalThis.setInterval.bind(globalThis),

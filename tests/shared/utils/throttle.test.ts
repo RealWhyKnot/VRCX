@@ -16,7 +16,7 @@ describe("createRateLimiter", () => {
       limitPerInterval: 10,
       intervalMs: 1000,
     });
-    const result = await limiter.schedule(() => new Promise((r) => setTimeout(() => r("async"), 10)));
+    const result = await limiter.schedule(() => Promise.resolve("async"));
     expect(result).toBe("async");
   });
 
@@ -25,7 +25,7 @@ describe("createRateLimiter", () => {
       limitPerInterval: 3,
       intervalMs: 1000,
     });
-    const results = [];
+    const results: number[] = [];
     for (let i = 0; i < 3; i++) {
       results.push(await limiter.schedule(() => i));
     }

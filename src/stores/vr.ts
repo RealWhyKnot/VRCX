@@ -149,7 +149,7 @@ export const useVrStore = defineStore("Vr", () => {
       gameStore.setIsHmdAfk(false);
     }
 
-    if (LINUX) {
+    if (isHostLinux) {
       window.electron.updateVr(newState.active, newState.hmdOverlay, newState.wristOverlay, newState.menuButton, newState.overlayHand);
 
       vrInit();

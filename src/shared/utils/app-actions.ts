@@ -5,7 +5,7 @@ import { useSearchStore } from "../../stores/search";
 import { escapeTag } from "./base/string";
 import { i18n } from "../../plugins/i18n";
 
-function downloadAndSaveJson(fileName, data) {
+function downloadAndSaveJson(fileName: string | null | undefined, data: unknown): void {
   if (!fileName || !data) {
     return;
   }
@@ -21,19 +21,19 @@ function downloadAndSaveJson(fileName, data) {
   }
 }
 
-function copyToClipboard(text, message = "Copied successfully!") {
+function copyToClipboard(text: string, message = "Copied successfully!"): void {
   navigator.clipboard
     .writeText(text)
     .then(() => {
       toast.success(message);
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Copy failed:", err);
       toast.error(i18n.global.t("message.copy_failed"));
     });
 }
 
-function openExternalLink(link) {
+function openExternalLink(link: string): void {
   const searchStore = useSearchStore();
   if (searchStore.directAccessParse(link)) {
     return;
@@ -43,19 +43,21 @@ function openExternalLink(link) {
   externalLinkStore.showExternalLinkDialog(link);
 }
 
-function openDiscordProfile(discordId) {
+function openDiscordProfile(discordId: string | null | undefined): void {
   if (!discordId) {
     toast.error("No Discord ID provided!");
     return;
   }
-  AppApi.OpenDiscordProfile(discordId).catch((err) => {
+  AppApi.OpenDiscordProfile(discordId).catch((err: unknown) => {
     console.error("Failed to open Discord profile:", err);
     toast.error("Failed to open Discord profile!");
   });
 }
 
-function openFolderGeneric(path) {
-  AppApi.OpenFolderAndSelectItem(path, true);
+function openFolderGeneric(path: string): void {
+  AppApi.OpenFolderAndSelectItem(path, true).catch((err: unknown) => {
+    console.error("Failed to open folder:", err);
+  });
 }
 
 export { downloadAndSaveJson, copyToClipboard, openExternalLink, openDiscordProfile, openFolderGeneric };

@@ -6,7 +6,7 @@ const Z_STEP = 10;
 
 let nextLayerIndex = 0;
 
-function ensureModalPortalRoot() {
+function ensureModalPortalRoot(): HTMLElement | null {
   if (typeof document === "undefined") {
     return null;
   }
@@ -36,18 +36,24 @@ function ensureModalPortalRoot() {
   return root;
 }
 
-export function acquireModalPortalLayer() {
+type ModalPortalLayer = {
+  element: HTMLDivElement | undefined;
+  bringToFront: () => void;
+  release: () => void;
+};
+
+export function acquireModalPortalLayer(): ModalPortalLayer {
   const root = ensureModalPortalRoot();
   if (!root) {
     return {
       element: undefined,
-      bringToFront() {},
-      release() {},
+      bringToFront: () => undefined,
+      release: () => undefined,
     };
   }
 
   const element = document.createElement("div");
-  element.dataset.vrcxPortalLayer = "modal";
+  element.dataset["vrcxPortalLayer"] = "modal";
   element.style.position = "relative";
   element.style.isolation = "isolate";
   root.appendChild(element);

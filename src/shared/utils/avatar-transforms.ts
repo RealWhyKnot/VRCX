@@ -1,4 +1,6 @@
-export function createDefaultAvatarRef(json) {
+import type { Avatar } from "vrchat";
+
+export function createDefaultAvatarRef(json: Partial<Avatar>) {
   return {
     acknowledgements: "",
     activeAssetReviewId: "",

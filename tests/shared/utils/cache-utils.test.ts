@@ -54,7 +54,7 @@ describe("evictMapCache", () => {
   });
 
   it("logs when logLabel is provided", () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const cache = new Map([
       ["a", 1],
       ["b", 2],

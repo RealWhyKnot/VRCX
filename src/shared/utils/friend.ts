@@ -8,8 +8,15 @@ import {
   compareByTimeInInstance,
 } from "./compare";
 
-function getFriendsSortFunction(sortMethods) {
-  const sorts = [];
+type CompareFn = (a: unknown, b: unknown) => number;
+
+type FriendLike = {
+  state?: string;
+  ref?: { location?: string };
+};
+
+function getFriendsSortFunction(sortMethods: readonly string[]): CompareFn {
+  const sorts: CompareFn[] = [];
   for (const sortMethod of sortMethods) {
     switch (sortMethod) {
       case "Sort Alphabetically":
@@ -41,7 +48,7 @@ function getFriendsSortFunction(sortMethods) {
   sorts.push(compareByName);
 
   return (a, b) => {
-    let res;
+    let res = 0;
     for (const sort of sorts) {
       res = sort(a, b);
       if (res !== 0) {
@@ -52,7 +59,7 @@ function getFriendsSortFunction(sortMethods) {
   };
 }
 
-function sortStatus(a, b) {
+function sortStatus(a: unknown, b: unknown): number {
   switch (b) {
     case "join me":
       switch (a) {
@@ -118,17 +125,14 @@ function sortStatus(a, b) {
   return 0;
 }
 
-function isFriendOnline(friend) {
-  if (typeof friend === "undefined" || typeof friend?.ref === "undefined") {
+function isFriendOnline(friend: FriendLike | undefined): boolean {
+  if (friend?.ref === undefined) {
     return false;
   }
   if (friend.state === "online") {
     return true;
   }
-  if (friend.state !== "online" && friend.ref.location !== "private") {
-    return true;
-  }
-  return false;
+  return friend.ref.location !== "private";
 }
 
 export { getFriendsSortFunction, sortStatus, isFriendOnline };

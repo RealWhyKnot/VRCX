@@ -22,7 +22,23 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/vue-table";
-import { computed, ref, unref, watch } from "vue";
+import type {
+  ColumnDef,
+  ColumnOrderState,
+  ColumnPinningState,
+  ColumnSizingState,
+  ColumnVisibilityState,
+  ExpandedState,
+  PaginationState,
+  RowData,
+  SortingState,
+  TableFeatures,
+  TableOptions,
+  TableState,
+  Updater,
+} from "@tanstack/vue-table";
+import { computed, ref, toValue, watch } from "vue";
+import type { MaybeRefOrGetter, Ref } from "vue";
 
 const baseFeatures = {
   rowSortingFeature,
@@ -44,7 +60,114 @@ const baseFeatures = {
   },
 };
 
-export function safeJsonParse(str) {
+type RowModelSlots = Pick<TableFeatures, "expandedRowModel" | "filteredRowModel" | "paginatedRowModel" | "sortedRowModel">;
+
+type VrcxFeatures = typeof baseFeatures & RowModelSlots;
+
+type VrcxColumn<TData extends RowData> = ColumnDef<VrcxFeatures, TData>;
+
+type ColumnIdentity = {
+  id?: string | undefined;
+  accessorKey?: unknown;
+  meta?: unknown;
+};
+
+type SpacerColumn = {
+  id: string;
+  header: () => null;
+  cell: () => null;
+  enableSorting: false;
+  size: number;
+  minSize: number;
+  meta: { thClass: string; tdClass: string };
+};
+
+type PersistedState = {
+  sorting?: unknown;
+  columnSizing?: unknown;
+  columnOrder?: unknown;
+  columnVisibility?: unknown;
+  pageSize?: unknown;
+  columnOrderLocked?: unknown;
+  updatedAt?: unknown;
+};
+
+type TableUpdateHandlers = {
+  onSortingChange?: (updaterOrValue: Updater<SortingState>) => void;
+  onPaginationChange?: (updaterOrValue: Updater<PaginationState>) => void;
+  onExpandedChange?: (updaterOrValue: Updater<ExpandedState>) => void;
+  onColumnPinningChange?: (updaterOrValue: Updater<ColumnPinningState>) => void;
+  onColumnSizingChange?: (updaterOrValue: Updater<ColumnSizingState>) => void;
+  onColumnOrderChange?: (updaterOrValue: Updater<ColumnOrderState>) => void;
+  onColumnVisibilityChange?: (updaterOrValue: Updater<ColumnVisibilityState>) => void;
+};
+
+type VrcxTableOptions<TData extends RowData> = {
+  data: MaybeRefOrGetter<TData[]>;
+  columns: MaybeRefOrGetter<VrcxColumn<TData>[]>;
+  getRowId?: (row: TData, index: number, parent?: unknown) => string;
+  getRowCanExpand?: (row: unknown) => boolean;
+  enablePagination?: boolean;
+  initialPagination?: PaginationState;
+  enableSorting?: boolean;
+  initialSorting?: SortingState;
+  enableFiltering?: boolean;
+  enableExpanded?: boolean;
+  initialExpanded?: ExpandedState;
+  enablePinning?: boolean;
+  initialColumnPinning?: ColumnPinningState;
+  enableColumnResizing?: boolean;
+  columnResizeMode?: "onChange" | "onEnd";
+  initialColumnSizing?: ColumnSizingState;
+  enableColumnReorder?: boolean;
+  initialColumnOrder?: ColumnOrderState;
+  enableColumnVisibility?: boolean;
+  initialColumnVisibility?: ColumnVisibilityState;
+  fillRemainingSpace?: boolean;
+  spacerColumnId?: string;
+  persistKey?: string;
+  persistColumnSizing?: boolean;
+  persistSorting?: boolean;
+  persistColumnOrder?: boolean;
+  persistColumnVisibility?: boolean;
+  persistPageSize?: boolean;
+  persistDebounceMs?: number;
+  tableOptions?: Partial<TableOptions<VrcxFeatures, TData>>;
+};
+
+function isPersistedState(value: unknown): value is PersistedState {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSortingEntry(value: unknown): value is SortingState[number] {
+  return typeof value === "object" && value !== null && "id" in value && typeof value.id === "string" && "desc" in value && typeof value.desc === "boolean";
+}
+
+function isNumberRecord(value: unknown): value is ColumnSizingState {
+  return isPersistedState(value) && Object.values(value).every((item) => typeof item === "number");
+}
+
+function isBooleanRecord(value: unknown): value is ColumnVisibilityState {
+  return isPersistedState(value) && Object.values(value).every((item) => typeof item === "boolean");
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasMetaFlag(column: ColumnIdentity, flag: string): boolean {
+  return isRecord(column.meta) && Boolean(column.meta[flag]);
+}
+
+export function safeJsonParse(str: string | null | undefined): unknown {
   if (!str) {
     return null;
   }
@@ -55,86 +178,116 @@ export function safeJsonParse(str) {
   }
 }
 
-function debounce(fn, wait) {
-  let t = null;
-  return (...args) => {
-    if (t) {
-      clearTimeout(t);
+function readPersistedState(str: string | null): PersistedState | null {
+  const parsed = safeJsonParse(str);
+  return isPersistedState(parsed) ? parsed : null;
+}
+
+function debounce<TArgs extends unknown[]>(fn: (...args: TArgs) => void, wait: number): (...args: TArgs) => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return (...args: TArgs) => {
+    if (timer) {
+      clearTimeout(timer);
     }
-    t = setTimeout(() => fn(...args), wait);
+    timer = setTimeout(() => fn(...args), wait);
   };
 }
 
-export function filterSizingByColumns(sizing, columns) {
-  if (!sizing || typeof sizing !== "object") {
+function columnIdSet(columns: ColumnIdentity[] | null | undefined): Set<string | number> {
+  const ids = new Set<string | number>();
+  for (const column of columns ?? []) {
+    const id = getColumnId(column);
+    if (id !== null) {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
+export function filterSizingByColumns(sizing: unknown, columns: ColumnIdentity[] | null | undefined): ColumnSizingState {
+  if (!isPersistedState(sizing)) {
     return {};
   }
-  const ids = new Set((columns ?? []).map((c) => c?.id).filter(Boolean));
-  const out = {};
+  const ids = columnIdSet(columns);
+  const out: ColumnSizingState = {};
   for (const [key, value] of Object.entries(sizing)) {
-    if (ids.has(key)) {
+    if (ids.has(key) && typeof value === "number") {
       out[key] = value;
     }
   }
   return out;
 }
 
-export function filterSortingByColumns(sorting, columns) {
+export function filterSortingByColumns(sorting: unknown, columns: ColumnIdentity[] | null | undefined): SortingState {
   if (!Array.isArray(sorting)) {
     return [];
   }
-  const ids = new Set((columns ?? []).map((c) => c?.id).filter(Boolean));
-  return sorting.filter((s) => s && ids.has(s.id));
+  const ids = columnIdSet(columns);
+  return sorting.filter(isSortingEntry).filter((entry) => ids.has(entry.id));
 }
 
-export function filterOrderByColumns(order, columns) {
+export function filterOrderByColumns(order: unknown, columns: ColumnIdentity[] | null | undefined): ColumnOrderState {
   if (!Array.isArray(order)) {
     return [];
   }
-  const ids = new Set((columns ?? []).map((c) => c?.id).filter(Boolean));
-  return order.filter((id) => ids.has(id));
+  const ids = columnIdSet(columns);
+  return order.filter(isString).filter((id) => ids.has(id));
 }
 
-export function filterVisibilityByColumns(visibility, columns) {
-  if (!visibility || typeof visibility !== "object") {
+export function filterVisibilityByColumns(visibility: unknown, columns: ColumnIdentity[] | null | undefined): ColumnVisibilityState {
+  if (!isPersistedState(visibility)) {
     return {};
   }
-  const ids = new Set((columns ?? []).map((c) => c?.id).filter(Boolean));
-  const out = {};
+  const ids = columnIdSet(columns);
+  const out: ColumnVisibilityState = {};
   for (const [key, value] of Object.entries(visibility)) {
-    if (ids.has(key)) {
+    if (ids.has(key) && typeof value === "boolean") {
       out[key] = value;
     }
   }
   return out;
 }
 
-export function getColumnId(col) {
-  return col?.id ?? col?.accessorKey ?? null;
+export function getColumnId(col: ColumnIdentity | null | undefined): string | number | null {
+  const id = col?.id ?? col?.accessorKey;
+  return typeof id === "string" || typeof id === "number" ? id : null;
 }
 
-export function findStretchColumnId(columns) {
-  if (!Array.isArray(columns)) {
+function isColumnIdentityArray(value: unknown): value is ColumnIdentity[] {
+  return Array.isArray(value);
+}
+
+export function findStretchColumnId(columns: unknown): string | number | null {
+  if (!isColumnIdentityArray(columns)) {
     return null;
   }
   for (const col of columns) {
-    if (col?.meta?.["stretch"]) {
+    if (hasMetaFlag(col, "stretch")) {
       return getColumnId(col);
     }
   }
   return null;
 }
 
-function setRef(updaterOrValue, targetRef) {
+function setRef<T>(updaterOrValue: Updater<T>, targetRef: Ref<T>) {
   targetRef.value = isFunction(updaterOrValue) ? updaterOrValue(targetRef.value) : updaterOrValue;
 }
 
-function resolveMaybeGetter(func) {
-  return typeof func === "function" ? func() : unref(func);
+function bindUpdater<T>(source: Ref<T>): (updaterOrValue: Updater<T>) => void {
+  return (updaterOrValue) => setRef(updaterOrValue, source);
 }
 
-export function withSpacerColumn(columns, enabled, spacerId, stretchAfterId) {
-  if (!enabled) {
+export function isSpacerColumn(column: ColumnIdentity | SpacerColumn): column is SpacerColumn {
+  return "header" in column && typeof column.header === "function";
+}
+
+export function withSpacerColumn<TColumn extends ColumnIdentity>(
+  columns: TColumn[] | null | undefined,
+  isEnabled: boolean,
+  spacerId?: string,
+  stretchAfterId: string | number | null = null
+): (TColumn | SpacerColumn)[] | null | undefined {
+  if (!isEnabled) {
     return columns;
   }
   if (!Array.isArray(columns)) {
@@ -147,7 +300,7 @@ export function withSpacerColumn(columns, enabled, spacerId, stretchAfterId) {
     return columns;
   }
 
-  const spacerColumn = {
+  const spacerColumn: SpacerColumn = {
     id,
     header: () => null,
     cell: () => null,
@@ -167,7 +320,7 @@ export function withSpacerColumn(columns, enabled, spacerId, stretchAfterId) {
   return [...columns, spacerColumn];
 }
 
-export function useVrcxVueTable(options) {
+export function useVrcxVueTable<TData extends RowData>(options: VrcxTableOptions<TData>) {
   const {
     getRowId,
     getRowCanExpand,
@@ -206,45 +359,40 @@ export function useVrcxVueTable(options) {
     persistDebounceMs = 200,
 
     tableOptions = {},
-  } = options ?? {};
+  } = options;
 
-  const hasData = options && "data" in options;
-  const hasColumns = options && "columns" in options;
-  if (!hasData) console.warn("useVrcxVueTable: `data` is required");
-  if (!hasColumns) console.warn("useVrcxVueTable: `columns` is required");
-
-  const expanded = ref(initialExpanded ?? {});
-  const pagination = ref(initialPagination ?? { pageIndex: 0, pageSize: 50 });
-  const columnPinning = ref(initialColumnPinning ?? { start: [], end: [] });
-  const columnSizing = ref(initialColumnSizing ?? {});
-  const columnOrder = ref(initialColumnOrder ?? []);
-  const columnVisibility = ref(initialColumnVisibility ?? {});
+  const expanded = ref<ExpandedState>(initialExpanded ?? {});
+  const pagination = ref<PaginationState>(initialPagination ?? { pageIndex: 0, pageSize: 50 });
+  const columnPinning = ref<ColumnPinningState>(initialColumnPinning ?? { start: [], end: [] });
+  const columnSizing = ref<ColumnSizingState>(initialColumnSizing ?? {});
+  const columnOrder = ref<ColumnOrderState>(initialColumnOrder ?? []);
+  const columnVisibility = ref<ColumnVisibilityState>(initialColumnVisibility ?? {});
 
   const storageKey = persistKey ? `vrcx:table:${persistKey}` : null;
 
-  function readPersisted() {
+  function readPersisted(): PersistedState | null {
     if (!storageKey) {
       return null;
     }
-    return safeJsonParse(localStorage.getItem(storageKey));
+    return readPersistedState(localStorage.getItem(storageKey));
   }
 
-  function writePersisted(patch) {
+  function writePersisted(patch: PersistedState) {
     if (!storageKey) {
       return;
     }
-    const cur = safeJsonParse(localStorage.getItem(storageKey)) ?? {};
+    const cur = readPersistedState(localStorage.getItem(storageKey)) ?? {};
     const next = { ...cur, ...patch, updatedAt: Date.now() };
     localStorage.setItem(storageKey, JSON.stringify(next));
   }
 
-  function removePersisted(keys) {
+  function removePersisted(keys: (keyof PersistedState)[]) {
     if (!storageKey) {
       return;
     }
-    const cur = safeJsonParse(localStorage.getItem(storageKey)) ?? {};
+    const cur: PersistedState = readPersistedState(localStorage.getItem(storageKey)) ?? {};
     for (const key of keys) {
-      delete cur[key];
+      Reflect.deleteProperty(cur, key);
     }
     cur.updatedAt = Date.now();
     localStorage.setItem(storageKey, JSON.stringify(cur));
@@ -252,21 +400,21 @@ export function useVrcxVueTable(options) {
 
   const persisted = readPersisted();
 
-  let resolvedSorting = initialSorting ?? [];
+  let resolvedSorting: SortingState = initialSorting ?? [];
   if (persisted && persistSorting && Array.isArray(persisted.sorting)) {
-    resolvedSorting = persisted.sorting;
+    resolvedSorting = persisted.sorting.filter(isSortingEntry);
   }
-  const sorting = ref(resolvedSorting);
+  const sorting = ref<SortingState>(resolvedSorting);
 
-  if (persisted && persistColumnSizing && persisted.columnSizing) {
+  if (persisted && persistColumnSizing && isNumberRecord(persisted.columnSizing)) {
     columnSizing.value = persisted.columnSizing;
   }
 
-  if (persisted && persistColumnOrder && Array.isArray(persisted.columnOrder)) {
+  if (persisted && persistColumnOrder && isStringArray(persisted.columnOrder)) {
     columnOrder.value = persisted.columnOrder;
   }
 
-  if (persisted && persistColumnVisibility && persisted.columnVisibility) {
+  if (persisted && persistColumnVisibility && isBooleanRecord(persisted.columnVisibility)) {
     columnVisibility.value = persisted.columnVisibility;
   }
 
@@ -279,65 +427,72 @@ export function useVrcxVueTable(options) {
 
   const columnOrderLocked = ref(persisted?.columnOrderLocked === true);
 
-  const state = {};
-  const handlers = {};
-  const rowModels = {};
-  const extra = {};
+  const state: Partial<TableState<VrcxFeatures>> = {};
+  const handlers: TableUpdateHandlers = {
+    ...(enableSorting ? { onSortingChange: bindUpdater(sorting) } : {}),
+    ...(enablePagination ? { onPaginationChange: bindUpdater(pagination) } : {}),
+    ...(enableExpanded ? { onExpandedChange: bindUpdater(expanded) } : {}),
+    ...(enablePinning ? { onColumnPinningChange: bindUpdater(columnPinning) } : {}),
+    ...(enableColumnResizing ? { onColumnSizingChange: bindUpdater(columnSizing) } : {}),
+    ...(enableColumnReorder ? { onColumnOrderChange: bindUpdater(columnOrder) } : {}),
+    ...(enableColumnVisibility ? { onColumnVisibilityChange: bindUpdater(columnVisibility) } : {}),
+  };
+  const rowModels: RowModelSlots = {};
+  const extra: { getRowCanExpand?: (row: unknown) => boolean; enableColumnResizing?: boolean; columnResizeMode?: "onChange" | "onEnd" } = {};
 
-  function register(enabled, key, r, onChangeKey, rowModelPart, extraPart) {
-    if (!enabled) {
+  function register<T>(isEnabled: boolean, key: keyof TableState<VrcxFeatures>, source: Ref<T>, rowModelPart: RowModelSlots | null, extraPart?: typeof extra) {
+    if (!isEnabled) {
       return;
     }
 
     Object.defineProperty(state, key, {
       enumerable: true,
-      get: () => r.value,
+      get: () => source.value,
     });
 
-    if (onChangeKey) handlers[onChangeKey] = (val) => setRef(val, r);
     if (rowModelPart) Object.assign(rowModels, rowModelPart);
     if (extraPart) Object.assign(extra, extraPart);
   }
 
-  register(enableSorting, "sorting", sorting, "onSortingChange", {
+  register(enableSorting, "sorting", sorting, {
     sortedRowModel: createSortedRowModel(),
   });
 
-  register(enablePagination, "pagination", pagination, "onPaginationChange", {
+  register(enablePagination, "pagination", pagination, {
     paginatedRowModel: createPaginatedRowModel(),
   });
 
-  register(enableExpanded, "expanded", expanded, "onExpandedChange", { expandedRowModel: createExpandedRowModel() }, { getRowCanExpand });
+  register(enableExpanded, "expanded", expanded, { expandedRowModel: createExpandedRowModel() }, getRowCanExpand ? { getRowCanExpand } : undefined);
 
-  register(enablePinning, "columnPinning", columnPinning, "onColumnPinningChange");
+  register(enablePinning, "columnPinning", columnPinning, null);
 
-  register(enableColumnResizing, "columnSizing", columnSizing, "onColumnSizingChange", null, {
+  register(enableColumnResizing, "columnSizing", columnSizing, null, {
     enableColumnResizing: true,
     columnResizeMode,
   });
 
-  register(enableColumnReorder, "columnOrder", columnOrder, "onColumnOrderChange");
+  register(enableColumnReorder, "columnOrder", columnOrder, null);
 
-  register(enableColumnVisibility, "columnVisibility", columnVisibility, "onColumnVisibilityChange");
+  register(enableColumnVisibility, "columnVisibility", columnVisibility, null);
 
   if (enableFiltering) {
-    Object.assign(rowModels, {
-      filteredRowModel: createFilteredRowModel(),
-    });
+    rowModels.filteredRowModel = createFilteredRowModel();
   }
 
-  const dataSource = computed(() => options.data);
-  const columnsSource = computed(() => resolveMaybeGetter(options.columns));
+  const dataSource = computed(() => toValue(options.data));
+  const columnsSource = computed(() => toValue(options.columns));
+
+  const features = tableFeatures<VrcxFeatures>({ ...baseFeatures, ...rowModels });
 
   const table = useTable({
-    features: tableFeatures({ ...baseFeatures, ...rowModels }),
+    features,
     data: dataSource,
     get columns() {
       const cols = columnsSource.value;
 
       const stretchAfterId = findStretchColumnId(cols);
 
-      return withSpacerColumn(cols, fillRemainingSpace, spacerColumnId, stretchAfterId);
+      return withSpacerColumn(cols, fillRemainingSpace, spacerColumnId, stretchAfterId) ?? [];
     },
     getRowId,
 
@@ -359,21 +514,21 @@ export function useVrcxVueTable(options) {
     (next) => {
       table.setOptions((prev) => ({
         ...prev,
-        columns: withSpacerColumn(next, fillRemainingSpace, spacerColumnId, findStretchColumnId(next)),
+        columns: withSpacerColumn(next, fillRemainingSpace, spacerColumnId, findStretchColumnId(next)) ?? [],
       }));
     },
     { immediate: true }
   );
 
-  const persistWrite = debounce((payload) => writePersisted(payload), persistDebounceMs);
+  const persistWrite = debounce((payload: PersistedState) => writePersisted(payload), persistDebounceMs);
 
   if (storageKey && persistColumnSizing) {
     watch(
       columnSizing,
-      (val) => {
-        const cols = table.getAllLeafColumns?.() ?? [];
+      (value) => {
+        const cols = table.getAllLeafColumns();
         persistWrite({
-          columnSizing: filterSizingByColumns(val, cols),
+          columnSizing: filterSizingByColumns(value, cols),
         });
       },
       { deep: true }
@@ -383,10 +538,10 @@ export function useVrcxVueTable(options) {
   if (storageKey && persistSorting) {
     watch(
       sorting,
-      (val) => {
-        const cols = table.getAllLeafColumns?.() ?? [];
+      (value) => {
+        const cols = table.getAllLeafColumns();
         persistWrite({
-          sorting: filterSortingByColumns(val, cols),
+          sorting: filterSortingByColumns(value, cols),
         });
       },
       { deep: true }
@@ -396,10 +551,10 @@ export function useVrcxVueTable(options) {
   if (storageKey && persistColumnOrder) {
     watch(
       columnOrder,
-      (val) => {
-        const cols = table.getAllLeafColumns?.() ?? [];
+      (value) => {
+        const cols = table.getAllLeafColumns();
         persistWrite({
-          columnOrder: filterOrderByColumns(val, cols),
+          columnOrder: filterOrderByColumns(value, cols),
         });
       },
       { deep: true }
@@ -409,10 +564,10 @@ export function useVrcxVueTable(options) {
   if (storageKey && persistColumnVisibility) {
     watch(
       columnVisibility,
-      (val) => {
-        const cols = table.getAllLeafColumns?.() ?? [];
+      (value) => {
+        const cols = table.getAllLeafColumns();
         persistWrite({
-          columnVisibility: filterVisibilityByColumns(val, cols),
+          columnVisibility: filterVisibilityByColumns(value, cols),
         });
       },
       { deep: true }
@@ -422,17 +577,17 @@ export function useVrcxVueTable(options) {
   if (storageKey && persistPageSize) {
     watch(
       () => pagination.value.pageSize,
-      (val) => {
-        if (typeof val === "number" && val > 0) {
-          persistWrite({ pageSize: val });
+      (value) => {
+        if (typeof value === "number" && value > 0) {
+          persistWrite({ pageSize: value });
         }
       }
     );
   }
 
   if (storageKey) {
-    watch(columnOrderLocked, (val) => {
-      writePersisted({ columnOrderLocked: val });
+    watch(columnOrderLocked, (isLocked) => {
+      writePersisted({ columnOrderLocked: isLocked });
     });
   }
 
@@ -440,11 +595,11 @@ export function useVrcxVueTable(options) {
     columnSizing.value = {};
     columnOrder.value = [];
 
-    const cols = columnsSource.value ?? [];
-    const defaultHiddenVisibility = {};
+    const cols = columnsSource.value;
+    const defaultHiddenVisibility: ColumnVisibilityState = {};
     for (const col of cols) {
       const id = getColumnId(col);
-      if (id && col?.meta?.defaultHidden) {
+      if (id !== null && hasMetaFlag(col, "defaultHidden")) {
         defaultHiddenVisibility[id] = false;
       }
     }

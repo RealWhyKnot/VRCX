@@ -1,4 +1,6 @@
+import type { App } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
+import type { RouteRecordRaw } from "vue-router";
 
 import { watchState } from "../services/watch-state";
 
@@ -24,7 +26,7 @@ import Settings from "./../views/Settings/Settings.vue";
 import Tools from "./../views/Tools/Tools.vue";
 import VRChatStore from "./../views/Tools/VRChatStore.vue";
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   {
     path: "/login",
     name: "login",
@@ -148,7 +150,7 @@ export const router = createRouter({
   routes,
 });
 
-export function initRouter(app) {
+export function initRouter(app: App): void {
   app.use(router);
 }
 
@@ -161,8 +163,8 @@ router.beforeEach((to) => {
     return { name: "feed" };
   }
 
-  const requiresAuth = to.matched.some((record) => record.meta?.requiresAuth);
-  if (requiresAuth && !watchState.isLoggedIn) {
+  const needsAuth = to.matched.some((record) => record.meta["requiresAuth"]);
+  if (needsAuth && !watchState.isLoggedIn) {
     const redirect = to.fullPath;
     if (redirect && redirect !== "/feed") {
       return { name: "login", query: { redirect } };

@@ -15,7 +15,7 @@ class WebApiService {
     if (!options) {
       throw new Error("options is required");
     }
-    if (LINUX) {
+    if (isHostLinux) {
       const requestJson = JSON.stringify(options);
       const json = await WebApi.ExecuteJson(requestJson);
       const data = JSON.parse(json);

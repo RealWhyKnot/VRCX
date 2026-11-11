@@ -1,17 +1,47 @@
 import { isRealInstance } from "./instance.ts";
 
-function getFriendsLocations(friendsArr, lastLocation) {
+type FriendLocationEntry = {
+  id: string;
+  ref?: {
+    location?: string;
+    travelingToLocation?: string;
+  };
+};
+
+type LastLocationSnapshot = {
+  friendList: ReadonlySet<string>;
+  location: string;
+};
+
+type LocationTextFlags = {
+  isOffline: boolean;
+  isPrivate: boolean;
+  isTraveling: boolean;
+  worldId: string;
+  instanceId: string;
+};
+
+type LocationTextOptions = {
+  hint?: string | null;
+  worldName?: string | null;
+  accessTypeLabel: string;
+  t: (key: string) => string;
+};
+
+function getFriendsLocations(friendsArr: FriendLocationEntry[] | null | undefined, lastLocation?: LastLocationSnapshot | null): string | undefined {
   if (!friendsArr?.length) {
     return "";
   }
   for (const friend of friendsArr) {
-    if (isRealInstance(friend.ref?.location)) {
-      return friend.ref.location;
+    const location = friend.ref?.location;
+    if (isRealInstance(location)) {
+      return location;
     }
   }
   for (const friend of friendsArr) {
-    if (isRealInstance(friend.ref?.travelingToLocation)) {
-      return friend.ref.travelingToLocation;
+    const travelingToLocation = friend.ref?.travelingToLocation;
+    if (isRealInstance(travelingToLocation)) {
+      return travelingToLocation;
     }
   }
   if (lastLocation) {
@@ -21,27 +51,28 @@ function getFriendsLocations(friendsArr, lastLocation) {
       }
     }
   }
-  return friendsArr[0].ref?.location;
+  return friendsArr[0]?.ref?.location;
 }
 
 export { getFriendsLocations };
 
-function getLocationText(L, { hint, worldName, accessTypeLabel, t }) {
-  if (L.isOffline) {
+function getLocationText(flags: LocationTextFlags, { hint, worldName, accessTypeLabel, t }: LocationTextOptions): string {
+  if (flags.isOffline) {
     return t("location.offline");
   }
-  if (L.isPrivate) {
+  if (flags.isPrivate) {
     return t("location.private");
   }
-  if (L.isTraveling) {
+  if (flags.isTraveling) {
     return t("location.traveling");
   }
   if (typeof hint === "string" && hint !== "") {
-    return L.instanceId ? `${hint} · ${accessTypeLabel}` : hint;
+    return flags.instanceId ? `${hint} · ${accessTypeLabel}` : hint;
   }
-  if (L.worldId) {
-    const name = worldName || L.worldId;
-    return L.instanceId ? `${name} · ${accessTypeLabel}` : name;
+  if (flags.worldId) {
+    const name = worldName ?? "";
+    const displayName = name !== "" ? name : flags.worldId;
+    return flags.instanceId ? `${displayName} · ${accessTypeLabel}` : displayName;
   }
   return "";
 }

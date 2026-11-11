@@ -263,6 +263,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "@/components/ui/context-menu/ContextMenuCheckboxItem.vue";
 import ContextMenuContent from "@/components/ui/context-menu/ContextMenuContent.vue";
@@ -317,7 +318,7 @@ dayjs.extend(timezone);
 const { t } = useI18n();
 
 const isMacOS = computed(() => navigator.platform.includes("Mac"));
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 
 const gameStore = useGameStore();
 const gameLogStore = useGameLogStore();

@@ -1,8 +1,29 @@
+import type {
+  ActivityDailyTotal,
+  ActivityEvent,
+  ActivityExcludeHours,
+  ActivityHeatmapView,
+  ActivityNormalizeConfig,
+  ActivityOverlapView,
+  ActivitySession,
+  GamelogSessionRow,
+} from "../../types/activity.ts";
+
 export const ONLINE_SESSION_MERGE_GAP_MS = 5 * 60 * 1000;
 export const DEFAULT_MAX_SESSION_MS = 8 * 60 * 60 * 1000;
 
-export function buildSessionsFromEvents(events, initialStart = null) {
-  const sessions = [];
+export type MergedActivitySession = {
+  start: number;
+  end: number;
+  isOpenTail: boolean;
+  sourceRevision: string;
+};
+
+export function buildSessionsFromEvents(
+  events: ActivityEvent[],
+  initialStart: number | null = null
+): { pendingSessionStartAt: number | null; sessions: ActivitySession[] } {
+  const sessions: ActivitySession[] = [];
   let currentStart = initialStart;
 
   for (const event of events) {
@@ -24,18 +45,20 @@ export function buildSessionsFromEvents(events, initialStart = null) {
   };
 }
 
-export function buildSessionsFromGamelog(rows, mergeGapMs = ONLINE_SESSION_MERGE_GAP_MS, nowMs = Date.now()) {
+export function buildSessionsFromGamelog(rows: GamelogSessionRow[], mergeGapMs = ONLINE_SESSION_MERGE_GAP_MS, nowMs = Date.now()): MergedActivitySession[] {
   if (rows.length === 0) {
     return [];
   }
 
-  const rawSessions = [];
+  const rawSessions: ActivitySession[] = [];
   for (let i = 0; i < rows.length; i++) {
-    const start = new Date(rows[i].created_at).getTime();
-    let duration = rows[i].time || 0;
+    const row = rows[i];
+    const start = new Date(row?.created_at ?? "").getTime();
+    let duration = row?.time ?? 0;
     if (duration === 0) {
-      if (i < rows.length - 1) {
-        duration = new Date(rows[i + 1].created_at).getTime() - start;
+      const nextRow = rows[i + 1];
+      if (nextRow) {
+        duration = new Date(nextRow.created_at).getTime() - start;
       } else {
         duration = nowMs - start;
       }
@@ -50,7 +73,11 @@ export function buildSessionsFromGamelog(rows, mergeGapMs = ONLINE_SESSION_MERGE
   return mergeSessions([], rawSessions, mergeGapMs);
 }
 
-export function mergeSessions(olderSessions, newerSessions, mergeGapMs = ONLINE_SESSION_MERGE_GAP_MS) {
+export function mergeSessions(
+  olderSessions: ActivitySession[],
+  newerSessions: ActivitySession[],
+  mergeGapMs = ONLINE_SESSION_MERGE_GAP_MS
+): MergedActivitySession[] {
   if (olderSessions.length === 0 && newerSessions.length === 0) {
     return [];
   }
@@ -60,10 +87,17 @@ export function mergeSessions(olderSessions, newerSessions, mergeGapMs = ONLINE_
   }
   all.sort((a, b) => a.start - b.start);
 
-  const merged = [all[0]];
+  const first = all[0];
+  if (!first) {
+    return [];
+  }
+  const merged: MergedActivitySession[] = [first];
   for (let i = 1; i < all.length; i++) {
-    const last = merged[merged.length - 1];
     const current = all[i];
+    const last = merged[merged.length - 1];
+    if (!current || !last) {
+      continue;
+    }
     if (current.start <= last.end + mergeGapMs) {
       last.end = Math.max(last.end, current.end);
       last.isOpenTail = last.isOpenTail || current.isOpenTail;
@@ -75,7 +109,7 @@ export function mergeSessions(olderSessions, newerSessions, mergeGapMs = ONLINE_
   return merged;
 }
 
-export function clipSessionsToRange(sessions, rangeStartMs, rangeEndMs = Date.now()) {
+export function clipSessionsToRange(sessions: ActivitySession[], rangeStartMs: number, rangeEndMs = Date.now()): ActivitySession[] {
   return sessions
     .filter((session) => session.end > rangeStartMs && session.start < rangeEndMs)
     .map((session) => ({
@@ -86,7 +120,7 @@ export function clipSessionsToRange(sessions, rangeStartMs, rangeEndMs = Date.no
     .filter((session) => session.end > session.start);
 }
 
-export function buildHeatmapBuckets(sessions, windowStartMs, nowMs, maxSessionMs = DEFAULT_MAX_SESSION_MS) {
+export function buildHeatmapBuckets(sessions: ActivitySession[], windowStartMs: number, nowMs: number, maxSessionMs = DEFAULT_MAX_SESSION_MS): number[] {
   const buckets = new Float64Array(168);
 
   for (const session of sessions) {
@@ -104,7 +138,7 @@ export function buildHeatmapBuckets(sessions, windowStartMs, nowMs, maxSessionMs
       date.setHours(date.getHours() + 1, 0, 0, 0);
       const nextHourMs = date.getTime();
       const segmentEnd = Math.min(nextHourMs, end);
-      buckets[slot] += (segmentEnd - cursor) / 60000;
+      buckets[slot] = valueAt(buckets, slot) + (segmentEnd - cursor) / 60000;
       cursor = segmentEnd;
     }
   }
@@ -112,14 +146,23 @@ export function buildHeatmapBuckets(sessions, windowStartMs, nowMs, maxSessionMs
   return Array.from(buckets);
 }
 
-export function buildOverlapBuckets(selfSessions, targetSessions, windowStartMs, nowMs, maxSessionMs = DEFAULT_MAX_SESSION_MS) {
-  const intersections = [];
+export function buildOverlapBuckets(
+  selfSessions: ActivitySession[],
+  targetSessions: ActivitySession[],
+  windowStartMs: number,
+  nowMs: number,
+  maxSessionMs = DEFAULT_MAX_SESSION_MS
+): number[] {
+  const intersections: ActivitySession[] = [];
   let leftIndex = 0;
   let rightIndex = 0;
 
   while (leftIndex < selfSessions.length && rightIndex < targetSessions.length) {
     const left = selfSessions[leftIndex];
     const right = targetSessions[rightIndex];
+    if (!left || !right) {
+      break;
+    }
     const leftEnd = Math.min(left.end, left.start + maxSessionMs);
     const rightEnd = Math.min(right.end, right.start + maxSessionMs);
     const start = Math.max(left.start, right.start);
@@ -139,13 +182,14 @@ export function buildOverlapBuckets(selfSessions, targetSessions, windowStartMs,
   return buildHeatmapBuckets(intersections, windowStartMs, nowMs, maxSessionMs);
 }
 
-export function normalizeBuckets(buckets, config) {
+export function normalizeBuckets(buckets: ArrayLike<number>, config: ActivityNormalizeConfig): number[] {
   const { floorPercentile = 15, capPercentile = 85, rankWeight = 0.2, targetCoverage = 0.25, targetVolume = 60, rangeDays = 30 } = config;
 
-  const positiveEntries = [];
+  const positiveEntries: { value: number; index: number }[] = [];
   for (let i = 0; i < 168; i++) {
-    if (buckets[i] > 0) {
-      positiveEntries.push({ value: buckets[i], index: i });
+    const value = valueAt(buckets, i);
+    if (value > 0) {
+      positiveEntries.push({ value, index: i });
     }
   }
 
@@ -171,48 +215,48 @@ export function normalizeBuckets(buckets, config) {
   const normalized = new Float64Array(168);
   const tiedRanks = computeTiedRankScores(gated);
 
-  for (let rank = 0; rank < count; rank++) {
-    const { value, index } = gated[rank];
+  for (const [rank, { value, index }] of gated.entries()) {
     const base = logRange > 1e-9 ? Math.max((Math.log1p(value) - logFloor) / logRange, 0) : 0.5;
     const clampedBase = Math.min(base, 1);
-    normalized[index] = clampedBase * ampWeight + tiedRanks[rank] * rankWeight;
+    normalized[index] = clampedBase * ampWeight + valueAt(tiedRanks, rank) * rankWeight;
   }
 
   const coverage = count / 168;
-  const gatedMinutes = gated.reduce((sum, e) => sum + e.value, 0);
+  const gatedMinutes = gated.reduce((total, e) => total + e.value, 0);
   const volume = gatedMinutes / rangeDays;
   const confidence = Math.min(Math.max(Math.min(coverage / targetCoverage, volume / targetVolume), 0), 1);
 
   for (let i = 0; i < 168; i++) {
-    normalized[i] = Math.min(normalized[i] * confidence, 1);
+    normalized[i] = Math.min(valueAt(normalized, i) * confidence, 1);
   }
 
   return Array.from(normalized);
 }
 
-export function computePeaksFromBuckets(buckets, dayLabels) {
+export function computePeaksFromBuckets(buckets: ArrayLike<number>, dayLabels: string[]): { peakDay: string; peakTime: string } {
   const grid = bucketsToGrid(buckets);
-  const daySums = new Array(7).fill(0);
-  const hourSums = new Array(24).fill(0);
+  const daySums: number[] = Array.from({ length: 7 }, () => 0);
+  const hourSums: number[] = Array.from({ length: 24 }, () => 0);
   for (let day = 0; day < 7; day++) {
     for (let hour = 0; hour < 24; hour++) {
-      daySums[day] += grid[day][hour];
-      hourSums[hour] += grid[day][hour];
+      const value = gridValue(grid, day, hour);
+      daySums[day] = valueAt(daySums, day) + value;
+      hourSums[hour] = valueAt(hourSums, hour) + value;
     }
   }
 
   const maxDaySum = Math.max(...daySums, 0);
-  const peakDay = maxDaySum > 0 ? dayLabels[daySums.indexOf(maxDaySum)] : "";
+  const peakDay = maxDaySum > 0 ? (dayLabels[daySums.indexOf(maxDaySum)] ?? "") : "";
   const maxHourSum = Math.max(...hourSums, 0);
   let peakTime = "";
   if (maxHourSum > 0) {
     const threshold = maxHourSum * 0.7;
     let startHour = hourSums.indexOf(maxHourSum);
     let endHour = startHour;
-    while (startHour > 0 && hourSums[startHour - 1] >= threshold) {
+    while (startHour > 0 && valueAt(hourSums, startHour - 1) >= threshold) {
       startHour--;
     }
-    while (endHour < 23 && hourSums[endHour + 1] >= threshold) {
+    while (endHour < 23 && valueAt(hourSums, endHour + 1) >= threshold) {
       endHour++;
     }
     peakTime =
@@ -224,12 +268,12 @@ export function computePeaksFromBuckets(buckets, dayLabels) {
   return { peakDay, peakTime };
 }
 
-export function findBestOverlapTimeFromBuckets(buckets, dayLabels) {
+export function findBestOverlapTimeFromBuckets(buckets: ArrayLike<number>, dayLabels: string[]): string {
   const grid = bucketsToGrid(buckets);
-  const hourSums = new Array(24).fill(0);
+  const hourSums: number[] = Array.from({ length: 24 }, () => 0);
   for (let hour = 0; hour < 24; hour++) {
     for (let day = 0; day < 7; day++) {
-      hourSums[hour] += grid[day][hour];
+      hourSums[hour] = valueAt(hourSums, hour) + gridValue(grid, day, hour);
     }
   }
 
@@ -241,28 +285,42 @@ export function findBestOverlapTimeFromBuckets(buckets, dayLabels) {
   const threshold = maxHourSum * 0.6;
   let startHour = hourSums.indexOf(maxHourSum);
   let endHour = startHour;
-  while (startHour > 0 && hourSums[startHour - 1] >= threshold) {
+  while (startHour > 0 && valueAt(hourSums, startHour - 1) >= threshold) {
     startHour--;
   }
-  while (endHour < 23 && hourSums[endHour + 1] >= threshold) {
+  while (endHour < 23 && valueAt(hourSums, endHour + 1) >= threshold) {
     endHour++;
   }
 
-  const daySums = new Array(7).fill(0);
+  const daySums: number[] = Array.from({ length: 7 }, () => 0);
   for (let day = 0; day < 7; day++) {
     for (let hour = startHour; hour <= endHour; hour++) {
-      daySums[day] += grid[day][hour];
+      daySums[day] = valueAt(daySums, day) + gridValue(grid, day, hour);
     }
   }
   const maxDaySum = Math.max(...daySums, 0);
   if (maxDaySum === 0) {
     return "";
   }
-  const peakDayLabel = dayLabels[daySums.indexOf(maxDaySum)];
+  const peakDayLabel = dayLabels[daySums.indexOf(maxDaySum)] ?? "";
   return `${peakDayLabel}, ${String(startHour).padStart(2, "0")}:00-${String(endHour + 1).padStart(2, "0")}:00`;
 }
 
-export function computeActivityView({ sessions, dayLabels, rangeDays, nowMs = Date.now(), normalizeConfig, maxSessionMs = DEFAULT_MAX_SESSION_MS }) {
+export function computeActivityView({
+  sessions,
+  dayLabels,
+  rangeDays,
+  nowMs = Date.now(),
+  normalizeConfig,
+  maxSessionMs = DEFAULT_MAX_SESSION_MS,
+}: {
+  sessions: ActivitySession[];
+  dayLabels: string[];
+  rangeDays: number;
+  nowMs?: number;
+  normalizeConfig: ActivityNormalizeConfig;
+  maxSessionMs?: number;
+}): ActivityHeatmapView {
   const windowStartMs = nowMs - rangeDays * 86400000;
   const clippedSessions = clipSessionsToRange(sessions, windowStartMs, nowMs);
   const rawBuckets = buildHeatmapBuckets(clippedSessions, windowStartMs, nowMs, maxSessionMs);
@@ -290,7 +348,16 @@ export function computeOverlapView({
   nowMs = Date.now(),
   normalizeConfig,
   maxSessionMs = DEFAULT_MAX_SESSION_MS,
-}) {
+}: {
+  selfSessions: ActivitySession[];
+  targetSessions: ActivitySession[];
+  dayLabels: string[];
+  rangeDays: number;
+  excludeHours?: ActivityExcludeHours | null;
+  nowMs?: number;
+  normalizeConfig: ActivityNormalizeConfig;
+  maxSessionMs?: number;
+}): ActivityOverlapView {
   const windowStartMs = nowMs - rangeDays * 86400000;
   const clippedSelf = clipSessionsToRange(selfSessions, windowStartMs, nowMs);
   const clippedTarget = clipSessionsToRange(targetSessions, windowStartMs, nowMs);
@@ -322,17 +389,17 @@ export function computeOverlapView({
   };
 }
 
-export function buildDailySummary(sessions, rangeStartMs, rangeEndMs = Date.now()) {
-  const dayMap = new Map();
+export function buildDailySummary(sessions: ActivitySession[], rangeStartMs: number, rangeEndMs = Date.now()): ActivityDailyTotal[] {
+  const dayMap = new Map<string, number>();
   const clipped = clipSessionsToRange(sessions, rangeStartMs, rangeEndMs);
-  let lastDayStart;
+  let lastDayStart: number | undefined;
   let lastDayKey = "";
 
   for (const session of clipped) {
     let cursor = session.start;
     while (cursor < session.end) {
-      let dayKey;
-      if (cursor < lastDayStart) {
+      let dayKey: string;
+      if (lastDayStart !== undefined && cursor < lastDayStart) {
         dayKey = lastDayKey;
       } else {
         const dayStart = new Date(cursor);
@@ -345,12 +412,12 @@ export function buildDailySummary(sessions, rangeStartMs, rangeEndMs = Date.now(
       const nextDayStart = lastDayStart;
       const segmentEnd = Math.min(session.end, nextDayStart);
       const duration = segmentEnd - cursor;
-      dayMap.set(dayKey, (dayMap.get(dayKey) || 0) + duration);
+      dayMap.set(dayKey, (dayMap.get(dayKey) ?? 0) + duration);
       cursor = nextDayStart;
     }
   }
 
-  const result = [];
+  const result: ActivityDailyTotal[] = [];
   for (const [date, totalMs] of dayMap) {
     result.push({ date, totalMs });
   }
@@ -358,23 +425,31 @@ export function buildDailySummary(sessions, rangeStartMs, rangeEndMs = Date.now(
   return result;
 }
 
-export function formatTimestampKey(timestamp) {
+export function formatTimestampKey(timestamp: Date): string {
   const year = timestamp.getFullYear();
   const month = String(timestamp.getMonth() + 1).padStart(2, "0");
   const day = String(timestamp.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function cloneSession(session) {
+function cloneSession(session: ActivitySession): MergedActivitySession {
   return {
     start: session.start,
     end: session.end,
     isOpenTail: Boolean(session.isOpenTail),
-    sourceRevision: session.sourceRevision || "",
+    sourceRevision: session.sourceRevision ?? "",
   };
 }
 
-function percentile(sortedValues, percentileValue) {
+function valueAt(values: ArrayLike<number>, index: number): number {
+  return values[index] ?? 0;
+}
+
+function gridValue(grid: number[][], day: number, hour: number): number {
+  return valueAt(grid[day] ?? [], hour);
+}
+
+function percentile(sortedValues: number[], percentileValue: number): number {
   if (sortedValues.length === 0) {
     return 1;
   }
@@ -382,20 +457,21 @@ function percentile(sortedValues, percentileValue) {
   const lower = Math.floor(index);
   const upper = Math.ceil(index);
   if (lower === upper) {
-    return sortedValues[lower];
+    return valueAt(sortedValues, lower);
   }
-  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (index - lower);
+  const lowerValue = valueAt(sortedValues, lower);
+  return lowerValue + (valueAt(sortedValues, upper) - lowerValue) * (index - lower);
 }
 
-function bucketsToGrid(buckets) {
-  const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
-  for (let slot = 0; slot < 168; slot++) {
-    grid[Math.floor(slot / 24)][slot % 24] = buckets[slot];
+function bucketsToGrid(buckets: ArrayLike<number>): number[][] {
+  const grid: number[][] = [];
+  for (let day = 0; day < 7; day++) {
+    grid.push(Array.from({ length: 24 }, (_, hour) => valueAt(buckets, day * 24 + hour)));
   }
   return grid;
 }
 
-function applyExcludeHours(rawBuckets, selfBuckets, targetBuckets, excludeHours) {
+function applyExcludeHours(rawBuckets: number[], selfBuckets: number[], targetBuckets: number[], excludeHours: ActivityExcludeHours): void {
   const { startHour, endHour } = excludeHours;
   for (let day = 0; day < 7; day++) {
     if (startHour <= endHour) {
@@ -407,7 +483,7 @@ function applyExcludeHours(rawBuckets, selfBuckets, targetBuckets, excludeHours)
   }
 }
 
-function zeroHourRange(day, startHour, endHour, rawBuckets, selfBuckets, targetBuckets) {
+function zeroHourRange(day: number, startHour: number, endHour: number, rawBuckets: number[], selfBuckets: number[], targetBuckets: number[]): void {
   for (let hour = startHour; hour < endHour; hour++) {
     const slot = day * 24 + hour;
     rawBuckets[slot] = 0;
@@ -416,17 +492,18 @@ function zeroHourRange(day, startHour, endHour, rawBuckets, selfBuckets, targetB
   }
 }
 
-function sum(values) {
+function sum(values: number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
-function computeTiedRankScores(sortedEntries) {
-  const count = sortedEntries.length;
+function computeTiedRankScores(sortedEntries: { value: number }[]): Float64Array {
+  const values = sortedEntries.map((e) => e.value);
+  const count = values.length;
   const scores = new Float64Array(count);
   let i = 0;
   while (i < count) {
     let j = i;
-    while (j < count && sortedEntries[j].value === sortedEntries[i].value) {
+    while (j < count && valueAt(values, j) === valueAt(values, i)) {
       j++;
     }
     const avgRank = (i + 1 + j) / 2;

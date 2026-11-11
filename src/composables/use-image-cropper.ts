@@ -2,9 +2,22 @@ import { ref } from "vue";
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
+type CropCoordinates = { left: number; top: number; width: number; height: number };
+type CropTransforms = { rotate?: number; flip?: { horizontal?: boolean; vertical?: boolean } };
+type CropperResult = { coordinates?: CropCoordinates; image?: { transforms?: CropTransforms } };
+type CropperHandle = { getResult: () => CropperResult | null | undefined };
+
 const MAX_PREVIEW_SIZE = 800;
 
-export function applyTransforms(img, angleDeg, flipH, flipV) {
+function requireContext2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext("2d");
+  if (ctx === null) {
+    throw new Error("2D canvas context is not available");
+  }
+  return ctx;
+}
+
+export function applyTransforms(img: HTMLImageElement, angleDeg: number, isFlipHorizontal: boolean, isFlipVertical: boolean) {
   const angleRad = (angleDeg * Math.PI) / 180;
   const absCos = Math.abs(Math.cos(angleRad));
   const absSin = Math.abs(Math.sin(angleRad));
@@ -15,29 +28,35 @@ export function applyTransforms(img, angleDeg, flipH, flipV) {
   const cvs = document.createElement("canvas");
   cvs.width = rotW;
   cvs.height = rotH;
-  const ctx = cvs.getContext("2d");
+  const ctx = requireContext2d(cvs);
 
   ctx.translate(rotW / 2, rotH / 2);
   ctx.rotate(angleRad);
-  if (flipH) ctx.scale(-1, 1);
-  if (flipV) ctx.scale(1, -1);
+  if (isFlipHorizontal) ctx.scale(-1, 1);
+  if (isFlipVertical) ctx.scale(1, -1);
   ctx.drawImage(img, -img.width / 2, -img.height / 2);
 
   return cvs;
 }
 
-export function cropImage(originalImage, previewScale, cropperResult, originalFile) {
+export function cropImage(
+  originalImage: HTMLImageElement | null | undefined,
+  previewScale: number,
+  cropperResult: CropperResult | null | undefined,
+  originalFile?: File | null
+): Promise<File | Blob | null> {
   if (!cropperResult?.coordinates || !originalImage) {
     return Promise.resolve(null);
   }
 
   const { coordinates } = cropperResult;
   const scale = previewScale;
-  const transforms = cropperResult.image?.transforms || {};
-  const angle = transforms.rotate || 0;
-  const flipH = transforms.flip?.horizontal || false;
-  const flipV = transforms.flip?.vertical || false;
-  const hasTransform = angle !== 0 || flipH || flipV;
+  const transforms: CropTransforms = cropperResult.image?.transforms ?? {};
+  const rotate = transforms.rotate;
+  const angle = rotate === undefined || Number.isNaN(rotate) ? 0 : rotate;
+  const isFlipHorizontal = Boolean(transforms.flip?.horizontal);
+  const isFlipVertical = Boolean(transforms.flip?.vertical);
+  const hasTransform = angle !== 0 || isFlipHorizontal || isFlipVertical;
 
   const cropX = Math.round(coordinates.left / scale);
   const cropY = Math.round(coordinates.top / scale);
@@ -45,22 +64,22 @@ export function cropImage(originalImage, previewScale, cropperResult, originalFi
   const cropH = Math.round(coordinates.height / scale);
 
   if (!hasTransform) {
-    const noCrop = cropX <= 1 && cropY <= 1 && Math.abs(cropW - originalImage.width) <= 1 && Math.abs(cropH - originalImage.height) <= 1;
-    if (noCrop && originalFile) {
+    const isFullFrame = cropX <= 1 && cropY <= 1 && Math.abs(cropW - originalImage.width) <= 1 && Math.abs(cropH - originalImage.height) <= 1;
+    if (isFullFrame && originalFile) {
       return Promise.resolve(originalFile);
     }
   }
 
-  const source = hasTransform ? applyTransforms(originalImage, angle, flipH, flipV) : originalImage;
+  const source = hasTransform ? applyTransforms(originalImage, angle, isFlipHorizontal, isFlipVertical) : originalImage;
 
   const cropCanvas = document.createElement("canvas");
   cropCanvas.width = cropW;
   cropCanvas.height = cropH;
-  const ctx = cropCanvas.getContext("2d");
+  const ctx = requireContext2d(cropCanvas);
 
   ctx.drawImage(source, -cropX, -cropY);
 
-  return new Promise((resolve) => {
+  return new Promise<Blob | null>((resolve) => {
     cropCanvas.toBlob(resolve, "image/png");
   });
 }
@@ -68,9 +87,9 @@ export function cropImage(originalImage, previewScale, cropperResult, originalFi
 export function useImageCropper() {
   const { t } = useI18n();
 
-  const cropperRef = ref(null);
+  const cropperRef = ref<CropperHandle | null>(null);
   const cropperImageSrc = ref("");
-  const originalImage = ref(null);
+  const originalImage = ref<HTMLImageElement | null>(null);
   const previewScale = ref(1);
 
   function resetCropState() {
@@ -79,9 +98,10 @@ export function useImageCropper() {
     previewScale.value = 1;
   }
 
-  function loadImageForCrop(file) {
+  function loadImageForCrop(file: Blob) {
     const r = new FileReader();
     r.onload = () => {
+      const dataUrl = typeof r.result === "string" ? r.result : "";
       const img = new Image();
       img.onload = () => {
         originalImage.value = img;
@@ -91,20 +111,20 @@ export function useImageCropper() {
           const cvs = document.createElement("canvas");
           cvs.width = Math.round(img.width * scale);
           cvs.height = Math.round(img.height * scale);
-          const ctx = cvs.getContext("2d");
+          const ctx = requireContext2d(cvs);
           ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
           cropperImageSrc.value = cvs.toDataURL("image/jpeg", 0.9);
         } else {
           previewScale.value = 1;
 
-          cropperImageSrc.value = r.result;
+          cropperImageSrc.value = dataUrl;
         }
       };
       img.onerror = () => {
         resetCropState();
       };
 
-      img.src = r.result;
+      img.src = dataUrl;
     };
     r.onerror = () => {
       resetCropState();
@@ -113,7 +133,7 @@ export function useImageCropper() {
     r.readAsDataURL(file);
   }
 
-  function getCroppedBlob(originalFile) {
+  function getCroppedBlob(originalFile?: File | null) {
     const result = cropperRef.value?.getResult();
     return cropImage(originalImage.value, previewScale.value, result, originalFile);
   }

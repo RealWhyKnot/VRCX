@@ -367,7 +367,7 @@ export const useAppearanceSettingsStore = defineStore(
         console.warn("No user colour data found");
         return;
       }
-      if (LINUX) {
+      if (isHostLinux) {
         dictObject = Object.fromEntries(dictObject);
       }
       for (const [userId, hue] of Object.entries(dictObject)) {
@@ -397,7 +397,7 @@ export const useAppearanceSettingsStore = defineStore(
       }
     }
 
-    if (LINUX) {
+    if (isHostLinux) {
       window.electron.onSystemThemeChanged((_event, isDark) => {
         setSystemIsDarkMode(isDark);
         if (themeMode.value === "system" && isDarkMode.value !== isDark) {

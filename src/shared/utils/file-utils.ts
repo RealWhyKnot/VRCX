@@ -1,14 +1,14 @@
-function extractFileId(s) {
-  const match = String(s).match(/file_[0-9A-Za-z-]+/);
+function extractFileId(s: unknown): string {
+  const match = /file_[0-9A-Za-z-]+/.exec(String(s));
   return match ? match[0] : "";
 }
 
-function extractFileVersion(s) {
-  const match = /(?:\/file_[0-9A-Za-z-]+\/)([0-9]+)/gi.exec(s);
-  return match ? match[1] : "";
+function extractFileVersion(s: unknown): string {
+  const match = /(?:\/file_[0-9A-Za-z-]+\/)([0-9]+)/gi.exec(String(s));
+  return match?.[1] ?? "";
 }
 
-function extractVariantVersion(url) {
+function extractVariantVersion(url: string | null | undefined): string {
   if (!url) {
     return "0";
   }

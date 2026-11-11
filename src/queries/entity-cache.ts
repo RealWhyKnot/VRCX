@@ -1,7 +1,29 @@
+import type { QueryKey } from "@tanstack/vue-query";
 import { logWebRequest, withQueryLog } from "../services/app-config";
 import { queryClient } from "./client";
 import { queryKeys } from "./keys";
 import { toQueryOptions } from "./policies";
+
+type Row = Record<string, unknown>;
+
+type QueryLogRunner = <T>(fn: () => Promise<T>) => Promise<T>;
+
+function isQueryLogRunner(value: unknown): value is QueryLogRunner {
+  return typeof value === "function";
+}
+
+const queryLogRunnerValue: unknown = withQueryLog;
+if (!isQueryLogRunner(queryLogRunnerValue)) {
+  throw new TypeError("withQueryLog from services/app-config is not a function");
+}
+const runWithQueryLog: QueryLogRunner = queryLogRunnerValue;
+
+type EntityQueryPolicy = {
+  staleTime: number;
+  gcTime: number;
+  retry: number;
+  refetchOnWindowFocus: boolean;
+};
 
 const RECENCY_FIELDS = [
   "updated_at",
@@ -16,20 +38,24 @@ const RECENCY_FIELDS = [
   "createdAt",
 ];
 
-function getComparableEntity(data) {
-  if (!data || typeof data !== "object") {
+function isRow(value: unknown): value is Row {
+  return typeof value === "object" && value !== null;
+}
+
+function getComparableEntity(data: unknown): Row | null {
+  if (!isRow(data)) {
     return null;
   }
-  if (data.ref && typeof data.ref === "object") {
-    return data.ref;
+  if (isRow(data["ref"])) {
+    return data["ref"];
   }
-  if (data.json && typeof data.json === "object" && !Array.isArray(data.json)) {
-    return data.json;
+  if (isRow(data["json"]) && !Array.isArray(data["json"])) {
+    return data["json"];
   }
   return data;
 }
 
-function parseTimestamp(value) {
+function parseTimestamp(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
@@ -42,9 +68,9 @@ function parseTimestamp(value) {
   return null;
 }
 
-function getRecencyTimestamp(data) {
+function getRecencyTimestamp(data: unknown): number | null {
   const comparable = getComparableEntity(data);
-  if (!comparable) {
+  if (comparable === null) {
     return null;
   }
 
@@ -58,7 +84,7 @@ function getRecencyTimestamp(data) {
   return null;
 }
 
-function shouldReplaceCurrent(currentData, nextData) {
+function shouldReplaceCurrent(currentData: unknown, nextData: unknown): boolean {
   if (typeof currentData === "undefined") {
     return true;
   }
@@ -77,33 +103,34 @@ function shouldReplaceCurrent(currentData, nextData) {
   return true;
 }
 
-function hasCompleteEntityData(data) {
-  if (!data || typeof data !== "object") {
+function hasCompleteEntityData(data: unknown): boolean {
+  if (!isRow(data)) {
     return false;
   }
 
-  const params = data.params;
-  if (!params || typeof params !== "object") {
+  const params = data["params"];
+  if (!isRow(params)) {
     return false;
   }
 
-  const hasEntityId = Boolean(
-    data?.ref?.id ||
-    data?.json?.id ||
-    params.userId ||
-    params.avatarId ||
-    params.worldId ||
-    params.groupId ||
-    params.fileId ||
-    params.printId ||
-    params.inventoryId
+  const refId = isRow(data["ref"]) ? data["ref"]["id"] : undefined;
+  const jsonId = isRow(data["json"]) ? data["json"]["id"] : undefined;
+
+  return (
+    Boolean(refId) ||
+    Boolean(jsonId) ||
+    Boolean(params["userId"]) ||
+    Boolean(params["avatarId"]) ||
+    Boolean(params["worldId"]) ||
+    Boolean(params["groupId"]) ||
+    Boolean(params["fileId"]) ||
+    Boolean(params["printId"]) ||
+    Boolean(params["inventoryId"])
   );
-
-  return hasEntityId;
 }
 
-export function patchQueryDataWithRecency({ queryKey, nextData }) {
-  queryClient.setQueryData(queryKey, (currentData) => {
+export function patchQueryDataWithRecency({ queryKey, nextData }: { queryKey: QueryKey; nextData: unknown }): void {
+  queryClient.setQueryData(queryKey, (currentData: unknown) => {
     if (!shouldReplaceCurrent(currentData, nextData)) {
       return currentData;
     }
@@ -111,20 +138,32 @@ export function patchQueryDataWithRecency({ queryKey, nextData }) {
   });
 }
 
-export async function fetchWithEntityPolicy({ queryKey, policy, queryFn, label }) {
+export async function fetchWithEntityPolicy<T>({
+  queryKey,
+  policy,
+  queryFn,
+  label,
+}: {
+  queryKey: QueryKey;
+  policy: EntityQueryPolicy;
+  queryFn: () => Promise<T>;
+  label?: string;
+}): Promise<{ data: T; cache: boolean }> {
   const queryState = queryClient.getQueryState(queryKey);
-  const isFresh = Boolean(queryState?.dataUpdatedAt) && policy.staleTime > 0 && Date.now() - queryState.dataUpdatedAt < policy.staleTime;
+  const dataUpdatedAt = queryState?.dataUpdatedAt;
+  const isFresh = Boolean(dataUpdatedAt) && policy.staleTime > 0 && Date.now() - (dataUpdatedAt ?? 0) < policy.staleTime;
 
   const data = await queryClient.fetchQuery({
     queryKey,
-    queryFn: () => withQueryLog(queryFn),
+    queryFn: () => runWithQueryLog(queryFn),
     ...toQueryOptions(policy),
   });
 
+  const target = label === undefined || label === "" ? String(queryKey[0]) : label;
   if (isFresh) {
-    logWebRequest("[QUERY CACHE HIT]", label || String(queryKey[0]), queryKey, data);
+    logWebRequest("[QUERY CACHE HIT]", target, queryKey, data);
   } else {
-    logWebRequest("[QUERY FETCH]", label || String(queryKey[0]), queryKey, data);
+    logWebRequest("[QUERY FETCH]", target, queryKey, data);
   }
 
   return {
@@ -133,7 +172,7 @@ export async function fetchWithEntityPolicy({ queryKey, policy, queryFn, label }
   };
 }
 
-export async function refetchActiveEntityQuery(queryKey) {
+export async function refetchActiveEntityQuery(queryKey: QueryKey): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey,
     exact: true,
@@ -141,12 +180,12 @@ export async function refetchActiveEntityQuery(queryKey) {
   });
 }
 
-export async function patchAndRefetchActiveQuery({ queryKey, nextData }) {
+export async function patchAndRefetchActiveQuery({ queryKey, nextData }: { queryKey: QueryKey; nextData: unknown }): Promise<void> {
   patchQueryDataWithRecency({ queryKey, nextData });
   await refetchActiveEntityQuery(queryKey);
 }
 
-export function patchUserFromEvent(ref) {
+export function patchUserFromEvent(ref: { id?: string } | undefined): void {
   if (!ref?.id) return;
   const queryKey = queryKeys.user(ref.id);
   const existing = queryClient.getQueryData(queryKey);
@@ -162,7 +201,7 @@ export function patchUserFromEvent(ref) {
   });
 }
 
-export function patchAvatarFromEvent(ref) {
+export function patchAvatarFromEvent(ref: { id?: string } | undefined): void {
   if (!ref?.id) return;
   const queryKey = queryKeys.avatar(ref.id);
   const existing = queryClient.getQueryData(queryKey);
@@ -178,7 +217,7 @@ export function patchAvatarFromEvent(ref) {
   });
 }
 
-export function patchWorldFromEvent(ref) {
+export function patchWorldFromEvent(ref: { id?: string } | undefined): void {
   if (!ref?.id) return;
   const queryKey = queryKeys.world(ref.id);
   const existing = queryClient.getQueryData(queryKey);
@@ -194,7 +233,7 @@ export function patchWorldFromEvent(ref) {
   });
 }
 
-export function patchGroupFromEvent(ref) {
+export function patchGroupFromEvent(ref: { id?: string } | undefined): void {
   if (!ref?.id) return;
 
   const nextData = {

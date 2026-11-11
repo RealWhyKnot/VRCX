@@ -1,20 +1,55 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { Mock } from "vitest";
 
 vi.mock("vue-sonner", () => ({
   toast: { error: vi.fn() },
 }));
 
-vi.mock("vue-i18n", () => ({
-  useI18n: () => ({ t: (key) => key, locale: require("vue").ref("en") }),
-}));
+vi.mock("vue-i18n", async () => {
+  const { ref } = await import("vue");
+  return {
+    useI18n: () => ({ t: (key: string) => key, locale: ref("en") }),
+  };
+});
 
 import { applyTransforms, cropImage, useImageCropper } from "../../src/composables/use-image-cropper";
 
-function makeImage(width, height) {
-  return { width, height };
+type CropperOptions = {
+  left?: number;
+  top?: number;
+  width?: number;
+  height?: number;
+  imgW?: number;
+  imgH?: number;
+  rotate?: number;
+  flipH?: boolean;
+  flipV?: boolean;
+};
+
+type MockContext = {
+  drawImage: Mock;
+  fillRect: Mock;
+  translate: Mock;
+  rotate: Mock;
+  scale: Mock;
+  fillStyle: string;
+};
+
+function makeImage(width: number, height: number) {
+  return Object.assign(document.createElement("img"), { width, height });
 }
 
-function makeCropperResult({ left = 0, top = 0, width = 100, height = 75, imgW = 100, imgH = 75, rotate = 0, flipH = false, flipV = false } = {}) {
+function makeCropperResult({
+  left = 0,
+  top = 0,
+  width = 100,
+  height = 75,
+  imgW = 100,
+  imgH = 75,
+  rotate = 0,
+  flipH = false,
+  flipV = false,
+}: CropperOptions = {}) {
   return {
     coordinates: { left, top, width, height },
     image: {
@@ -28,8 +63,19 @@ function makeCropperResult({ left = 0, top = 0, width = 100, height = 75, imgW =
   };
 }
 
-let mockCtx;
-let canvasInstances;
+let mockCtx: MockContext;
+let canvasInstances: HTMLCanvasElement[];
+let toBlobSpy: Mock;
+
+function canvasAt(index: number): HTMLCanvasElement {
+  const canvas = canvasInstances.at(index);
+  if (canvas === undefined) {
+    throw new Error(`no canvas at index ${index}`);
+  }
+  return canvas;
+}
+
+let restoreCanvasPrototype: () => void = () => undefined;
 
 function setupCanvasMocks() {
   canvasInstances = [];
@@ -41,22 +87,30 @@ function setupCanvasMocks() {
     scale: vi.fn(),
     fillStyle: "",
   };
+  toBlobSpy = vi.fn((cb: BlobCallback) => cb(new Blob(["mock"], { type: "image/png" })));
 
-  const origCreateElement = document.createElement.bind(document);
-  vi.spyOn(document, "createElement").mockImplementation((tag) => {
-    if (tag === "canvas") {
-      const canvas = {
-        width: 0,
-        height: 0,
-        getContext: vi.fn(() => mockCtx),
-        toDataURL: vi.fn(() => "data:image/jpeg;base64,mock"),
-        toBlob: vi.fn((cb) => cb(new Blob(["mock"], { type: "image/png" }))),
-      };
-      canvasInstances.push(canvas);
-      return canvas;
-    }
-    return origCreateElement(tag);
+  const proto = HTMLCanvasElement.prototype;
+  const saved = ["getContext", "toDataURL", "toBlob"].map((name) => ({ name, descriptor: Object.getOwnPropertyDescriptor(proto, name) }));
+  Object.defineProperties(proto, {
+    getContext: {
+      configurable: true,
+      value: function (this: HTMLCanvasElement) {
+        if (!canvasInstances.includes(this)) {
+          canvasInstances.push(this);
+        }
+        return mockCtx;
+      },
+    },
+    toDataURL: { configurable: true, value: () => "data:image/jpeg;base64,mock" },
+    toBlob: { configurable: true, value: toBlobSpy },
   });
+  restoreCanvasPrototype = () => {
+    for (const { name, descriptor } of saved) {
+      if (descriptor) {
+        Object.defineProperty(proto, name, descriptor);
+      }
+    }
+  };
 
   return { mockCtx, canvasInstances };
 }
@@ -104,6 +158,7 @@ describe("cropImage", () => {
   });
 
   afterEach(() => {
+    restoreCanvasPrototype();
     vi.restoreAllMocks();
   });
 
@@ -202,7 +257,7 @@ describe("cropImage", () => {
 
     await cropImage(img, 0.25, cropResult);
 
-    const cropCanvas = canvasInstances[canvasInstances.length - 1];
+    const cropCanvas = canvasAt(-1);
     expect(cropCanvas.width).toBe(800);
     expect(cropCanvas.height).toBe(600);
   });
@@ -236,8 +291,7 @@ describe("cropImage", () => {
 
     const result = await cropImage(img, 1, cropResult);
 
-    const cropCanvas = canvasInstances[canvasInstances.length - 1];
-    expect(cropCanvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/png");
+    expect(toBlobSpy).toHaveBeenCalledWith(expect.any(Function), "image/png");
     expect(result).toBeInstanceOf(Blob);
   });
 
@@ -264,6 +318,7 @@ describe("cropImage with transforms", () => {
   });
 
   afterEach(() => {
+    restoreCanvasPrototype();
     vi.restoreAllMocks();
   });
 
@@ -283,7 +338,7 @@ describe("cropImage with transforms", () => {
 
     expect(canvasInstances.length).toBe(2);
 
-    const transformCanvas = canvasInstances[0];
+    const transformCanvas = canvasAt(0);
     expect(transformCanvas.width).toBe(150);
     expect(transformCanvas.height).toBe(200);
   });
@@ -384,6 +439,7 @@ describe("applyTransforms", () => {
   });
 
   afterEach(() => {
+    restoreCanvasPrototype();
     vi.restoreAllMocks();
   });
 

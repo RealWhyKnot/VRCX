@@ -83,7 +83,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
 
   async function init() {
     try {
-      if (LINUX) {
+      if (isHostLinux) {
         try {
           window.electron.ipcRenderer.on("launch-command", (command) => {
             if (command) {
@@ -285,7 +285,7 @@ export const useVrcxStore = defineStore("Vrcx", () => {
   }
 
   async function saveVRCXWindowOption() {
-    if (LINUX) {
+    if (isHostLinux) {
       VRCXStorage.Set("VRCX_LocationX", state.locationX.toString());
       VRCXStorage.Set("VRCX_LocationY", state.locationY.toString());
       VRCXStorage.Set("VRCX_SizeWidth", state.sizeWidth.toString());

@@ -60,7 +60,7 @@ describe("parseNotificationDetails", () => {
   });
 
   it("should return empty object for invalid JSON", () => {
-    const spy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     expect(parseNotificationDetails("not json")).toEqual({});
     spy.mockRestore();
   });

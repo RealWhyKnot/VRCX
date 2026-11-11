@@ -59,7 +59,7 @@ export function useAvatarDialogCommands(
         (async () => {
           const base64Body = await readFileAsBase64(blob);
           const base64File = await resizeImageToFitLimits(base64Body);
-          if (LINUX) {
+          if (isHostLinux) {
             const args = await avatarRequest.uploadAvatarImage(base64File);
             const fileUrl = args.json.versions[args.json.versions.length - 1].file.url;
             await avatarRequest.saveAvatar({

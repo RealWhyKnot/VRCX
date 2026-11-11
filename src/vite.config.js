@@ -120,7 +120,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       VERSION: JSON.stringify(version),
-      NIGHTLY: JSON.stringify(nightly),
+      isBuildNightly: JSON.stringify(nightly),
     },
     server: {
       port: 9000,

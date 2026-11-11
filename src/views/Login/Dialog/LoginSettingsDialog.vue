@@ -67,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
@@ -98,7 +99,7 @@ const { t } = useI18n();
 
 const open = ref(false);
 const proxyServerLocal = ref("");
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 
 watch(open, (isOpen) => {
   if (isOpen) {

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const mockLogWebRequest = vi.fn();
-const mockWithQueryLog = vi.fn(async (fn) => fn());
+const mockLogWebRequest = vi.fn<(...args: unknown[]) => void>();
+const mockWithQueryLog = vi.fn((fn: () => unknown) => fn());
 
 vi.mock("../../src/services/app-config", () => ({
   AppDebug: {
     debugWebRequests: false,
   },
-  logWebRequest: (...args) => mockLogWebRequest(...args),
-  withQueryLog: (...args) => mockWithQueryLog(...args),
+  logWebRequest: (...args: unknown[]) => mockLogWebRequest(...args),
+  withQueryLog: (fn: () => unknown) => mockWithQueryLog(fn),
 }));
 
 import {
@@ -39,13 +39,13 @@ describe("entity query cache helpers", () => {
       refetchOnWindowFocus: false,
     };
 
-    const queryFn = vi.fn(async () => {
+    const queryFn = vi.fn(() => {
       callCount++;
-      return {
+      return Promise.resolve({
         json: { id: "usr_1", updated_at: "2026-01-01T00:00:00.000Z" },
         params: { userId: "usr_1" },
         ref: { id: "usr_1", updated_at: "2026-01-01T00:00:00.000Z" },
-      };
+      });
     });
 
     const first = await fetchWithEntityPolicy({
@@ -75,9 +75,9 @@ describe("entity query cache helpers", () => {
       refetchOnWindowFocus: false,
     };
 
-    const queryFn = vi.fn(async () => {
+    const queryFn = vi.fn(() => {
       callCount++;
-      return {
+      return Promise.resolve({
         json: {
           id: "wrld_1:12345",
           $fetchedAt: new Date().toJSON(),
@@ -87,7 +87,7 @@ describe("entity query cache helpers", () => {
           id: "wrld_1:12345",
           $fetchedAt: new Date().toJSON(),
         },
-      };
+      });
     });
 
     await fetchWithEntityPolicy({ queryKey, policy, queryFn });
@@ -104,11 +104,13 @@ describe("entity query cache helpers", () => {
       retry: 1,
       refetchOnWindowFocus: false,
     };
-    const queryFn = vi.fn(async () => ({
-      json: { id: "usr_9", updated_at: "2026-01-01T00:00:00.000Z" },
-      params: { userId: "usr_9" },
-      ref: { id: "usr_9", updated_at: "2026-01-01T00:00:00.000Z" },
-    }));
+    const queryFn = vi.fn(() =>
+      Promise.resolve({
+        json: { id: "usr_9", updated_at: "2026-01-01T00:00:00.000Z" },
+        params: { userId: "usr_9" },
+        ref: { id: "usr_9", updated_at: "2026-01-01T00:00:00.000Z" },
+      })
+    );
 
     const first = await fetchWithEntityPolicy({
       queryKey,
@@ -145,8 +147,8 @@ describe("entity query cache helpers", () => {
       },
     });
 
-    const cached = queryClient.getQueryData(queryKey);
-    expect(cached.ref.updated_at).toBe("2026-01-01T00:00:00.000Z");
+    const cached = queryClient.getQueryData<{ ref: { updated_at: string } }>(queryKey);
+    expect(cached?.ref.updated_at).toBe("2026-01-01T00:00:00.000Z");
   });
 
   test("patch and refetch invalidates only active queries for that key", async () => {
@@ -223,7 +225,7 @@ describe("entity query cache helpers", () => {
       displayName: "New",
     });
 
-    const data = queryClient.getQueryData(queryKey);
-    expect(data.ref.displayName).toBe("New");
+    const data = queryClient.getQueryData<{ ref: { displayName: string } }>(queryKey);
+    expect(data?.ref.displayName).toBe("New");
   });
 });

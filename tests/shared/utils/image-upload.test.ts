@@ -39,7 +39,7 @@ describe("withUploadTimeout", () => {
   });
 
   test("rejects with timeout error if promise is too slow", async () => {
-    const neverResolves = new Promise(() => {});
+    const neverResolves = new Promise<never>(() => undefined);
     const result = withUploadTimeout(neverResolves);
 
     vi.advanceTimersByTime(30_000);
@@ -48,12 +48,14 @@ describe("withUploadTimeout", () => {
   });
 
   test("resolves if promise finishes just before timeout", async () => {
-    const slowPromise = new Promise((resolve) => {
-      setTimeout(() => resolve("just in time"), 29_999);
+    let finishSlowPromise: (value: string) => void = () => undefined;
+    const slowPromise = new Promise<string>((resolve) => {
+      finishSlowPromise = resolve;
     });
     const result = withUploadTimeout(slowPromise);
 
     vi.advanceTimersByTime(29_999);
+    finishSlowPromise("just in time");
 
     await expect(result).resolves.toBe("just in time");
   });
@@ -69,7 +71,7 @@ describe("handleImageUploadInput", () => {
     size,
     type,
   });
-  const makeEvent = (file) => ({
+  const makeEvent = (file: ReturnType<typeof makeFile> | undefined) => ({
     target: { files: file ? [file] : [] },
   });
 

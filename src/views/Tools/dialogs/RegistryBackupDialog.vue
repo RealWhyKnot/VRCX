@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost, isWindowsHost } from "@/shared/constants/platform";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
@@ -201,14 +202,14 @@ async function openJsonFileSelectorDialogElectron() {
 
 async function restoreVrcRegistryFromFile() {
   const filePath = await AppApi.OpenFileSelectorDialog(null, ".json", "JSON Files (*.json)|*.json");
-  if (WINDOWS) {
+  if (isWindowsHost()) {
     if (filePath === "") {
       return;
     }
   }
 
   let json;
-  if (LINUX) {
+  if (isLinuxHost()) {
     json = await openJsonFileSelectorDialogElectron();
   } else {
     json = await AppApi.ReadVrcRegJsonFile(filePath);

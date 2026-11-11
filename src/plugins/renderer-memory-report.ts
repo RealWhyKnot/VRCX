@@ -1,6 +1,28 @@
-function readPerformanceMemory() {
-  const memory = window?.performance?.memory;
-  if (!memory) return null;
+import type * as SentryTypes from "@sentry/vue";
+
+type Row = Record<string, unknown>;
+
+type SentryReporter = Pick<typeof SentryTypes, "withScope" | "captureMessage">;
+
+type MemoryReportOptions = {
+  intervalMs?: number;
+  thresholdRatio?: number;
+  cooldownMs?: number;
+};
+
+type HeapSnapshot = {
+  usedJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
+function isRow(value: unknown): value is Row {
+  return typeof value === "object" && value !== null;
+}
+
+function readPerformanceMemory(): HeapSnapshot | null {
+  const performanceValue: unknown = globalThis.performance;
+  const memory: unknown = isRow(performanceValue) ? performanceValue["memory"] : undefined;
+  if (!isRow(memory)) return null;
   const { usedJSHeapSize, jsHeapSizeLimit } = memory;
   if (typeof usedJSHeapSize !== "number" || typeof jsHeapSizeLimit !== "number") {
     return null;
@@ -8,11 +30,12 @@ function readPerformanceMemory() {
   return { usedJSHeapSize, jsHeapSizeLimit };
 }
 
-export function startRendererMemoryThresholdReport(Sentry, { intervalMs = 10_000, thresholdRatio = 0.8, cooldownMs = 5 * 60_000 } = {}) {
+export function startRendererMemoryThresholdReport(
+  sentry: SentryReporter,
+  { intervalMs = 10_000, thresholdRatio = 0.8, cooldownMs = 5 * 60_000 }: MemoryReportOptions = {}
+) {
   const initial = readPerformanceMemory();
   if (!initial) return null;
-
-  if (!Sentry?.withScope) return null;
 
   let lastSent = 0;
 
@@ -27,7 +50,7 @@ export function startRendererMemoryThresholdReport(Sentry, { intervalMs = 10_000
     if (now - lastSent < cooldownMs) return;
     lastSent = now;
 
-    Sentry.withScope((scope) => {
+    sentry.withScope((scope) => {
       scope.setLevel("warning");
       scope.setTag("reason", "high-js-heap");
       scope.setContext("memory", {
@@ -35,7 +58,7 @@ export function startRendererMemoryThresholdReport(Sentry, { intervalMs = 10_000
         limitMB: m.jsHeapSizeLimit / 1024 / 1024,
         ratio,
       });
-      Sentry.captureMessage("Memory usage critical: nearing JS heap limit");
+      sentry.captureMessage("Memory usage critical: nearing JS heap limit");
     });
   }, intervalMs);
 }

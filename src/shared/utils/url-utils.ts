@@ -1,4 +1,4 @@
-function getFaviconUrl(resource) {
+function getFaviconUrl(resource: string | null | undefined): string {
   if (!resource) {
     return "";
   }
@@ -11,7 +11,7 @@ function getFaviconUrl(resource) {
   }
 }
 
-function replaceVrcPackageUrl(url) {
+function replaceVrcPackageUrl(url: string | null | undefined): string {
   if (!url) {
     return "";
   }

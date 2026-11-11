@@ -13,21 +13,20 @@ import { Lock } from "lucide-vue-next";
 
 import { parseLocation } from "../../shared/utils/location-parser";
 
-const props = defineProps({
-  location: String,
-  hint: {
-    type: String,
-    default: "",
-  },
-  grouphint: {
-    type: String,
-    default: "",
-  },
-  instancedisplayname: {
-    type: String,
-    default: "",
-  },
-});
+const props = withDefaults(
+  defineProps<{
+    location?: string | undefined;
+    hint?: string | undefined;
+    grouphint?: string | undefined;
+    instancedisplayname?: string | undefined;
+  }>(),
+  {
+    location: "",
+    hint: "",
+    grouphint: "",
+    instancedisplayname: "",
+  }
+);
 
 const text = ref("");
 const region = ref("");

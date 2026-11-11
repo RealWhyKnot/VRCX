@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import { computed, ref } from "vue";
 import NumberField from "@/components/ui/number-field/NumberField.vue";
 import NumberFieldContent from "@/components/ui/number-field/NumberFieldContent.vue";
@@ -254,7 +255,7 @@ const { setNotificationOpacity } = advancedSettingsStore;
 
 const isNotificationPositionDialogVisible = ref(false);
 const feedFiltersDialogMode = ref("");
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 
 const notificationOpacityValue = computed({
   get: () => [notificationOpacity.value],

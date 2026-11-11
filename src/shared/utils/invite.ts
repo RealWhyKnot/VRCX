@@ -1,6 +1,20 @@
 import { parseLocation } from "./location-parser";
 
-function checkCanInvite(location, deps) {
+type InviteInstanceLike = { closedAt?: unknown };
+
+type InviteDeps = {
+  currentUserId?: string | null | undefined;
+  lastLocationStr?: string | null | undefined;
+  cachedInstances?: { get(key: string): InviteInstanceLike | undefined } | undefined;
+};
+
+type InviteSelfDeps = {
+  currentUserId?: string | null | undefined;
+  cachedInstances?: { get(key: string): InviteInstanceLike | undefined } | undefined;
+  friends?: { has(key: string): boolean } | undefined;
+};
+
+function checkCanInvite(location: string | null | undefined, deps: InviteDeps): boolean {
   if (!location) {
     return false;
   }
@@ -21,7 +35,7 @@ function checkCanInvite(location, deps) {
   return false;
 }
 
-function checkCanInviteSelf(location, deps) {
+function checkCanInviteSelf(location: string | null | undefined, deps: InviteSelfDeps): boolean {
   if (!location) {
     return false;
   }
@@ -33,7 +47,7 @@ function checkCanInviteSelf(location, deps) {
   if (L.userId === deps.currentUserId) {
     return true;
   }
-  if (L.accessType === "friends" && !deps.friends?.has(L.userId)) {
+  if (L.accessType === "friends" && !deps.friends?.has(L.userId ?? "")) {
     return false;
   }
   return true;

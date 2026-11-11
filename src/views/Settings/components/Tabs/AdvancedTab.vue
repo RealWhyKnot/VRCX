@@ -337,6 +337,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import { Trash2, TriangleAlert } from "lucide-vue-next";
 import { computed, reactive, ref } from "vue";
 import Button from "@/components/ui/button/Button.vue";
@@ -452,7 +453,7 @@ const cacheSize = reactive({
   cachedInstances: 0,
 });
 
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 
 function handlePurge() {
   const days = selectedPurgePeriod.value === "all" ? null : parseInt(selectedPurgePeriod.value, 10);

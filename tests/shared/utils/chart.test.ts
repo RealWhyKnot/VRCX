@@ -9,9 +9,9 @@ describe("loadEcharts", () => {
     }));
     const { loadEcharts } = await import("../../../src/shared/utils/chart.ts");
 
-    const module = await loadEcharts();
+    const loaded: unknown = await loadEcharts();
 
-    expect(module).toMatchObject({ marker: "mock-echarts" });
+    expect(loaded).toMatchObject({ marker: "mock-echarts" });
   });
 
   test("returns cached module reference on subsequent calls", async () => {
@@ -22,8 +22,8 @@ describe("loadEcharts", () => {
     }));
     const { loadEcharts } = await import("../../../src/shared/utils/chart.ts");
 
-    const first = await loadEcharts();
-    const second = await loadEcharts();
+    const first: unknown = await loadEcharts();
+    const second: unknown = await loadEcharts();
 
     expect(second).toBe(first);
   });

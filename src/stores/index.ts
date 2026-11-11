@@ -45,7 +45,7 @@ import { useWristOverlaySettingsStore } from "./settings/wrist-overlay";
 export const pinia = createPinia();
 
 async function registerSentryPiniaPlugin() {
-  if (!NIGHTLY) return;
+  if (!isBuildNightly) return;
   if (!(await isSentryOptedIn())) return;
 
   const Sentry = await getSentry();

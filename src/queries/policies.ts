@@ -124,7 +124,14 @@ export const entityQueryPolicies = Object.freeze({
   }),
 });
 
-export function toQueryOptions(policy) {
+type QueryPolicy = {
+  readonly staleTime: number;
+  readonly gcTime: number;
+  readonly retry: number;
+  readonly refetchOnWindowFocus: boolean;
+};
+
+export function toQueryOptions(policy: QueryPolicy) {
   return {
     staleTime: policy.staleTime,
     gcTime: policy.gcTime,

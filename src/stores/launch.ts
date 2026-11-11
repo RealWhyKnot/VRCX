@@ -113,7 +113,7 @@ export const useLaunchStore = defineStore("Launch", () => {
       args.push("--no-vr");
     }
     try {
-      if (vrcLaunchPathOverride && !LINUX) {
+      if (vrcLaunchPathOverride && !isHostLinux) {
         const result = await AppApi.StartGameFromPath(vrcLaunchPathOverride, args.join(" "));
         if (!result) {
           toast.error("Failed to launch VRChat, invalid custom path set");

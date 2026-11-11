@@ -93,7 +93,7 @@ export const useSearchStore = defineStore("Search", () => {
 
   async function directAccessPaste() {
     let cbText = "";
-    if (LINUX) {
+    if (isHostLinux) {
       cbText = await window.electron.getClipboardText();
     } else {
       cbText = await AppApi.GetClipboard().catch((e) => {

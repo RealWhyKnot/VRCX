@@ -8,6 +8,6 @@ const accessTypeLocaleKeyMap = {
   groupPublic: "dialog.new_instance.group_access_type_public",
   groupPlus: "dialog.new_instance.group_access_type_plus",
   groupMembers: "dialog.new_instance.group_access_type_members",
-};
+} as const satisfies Partial<Record<string, string>>;
 
 export { accessTypeLocaleKeyMap };

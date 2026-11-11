@@ -1,14 +1,24 @@
 import { parseLocation } from "./location-parser";
 import { queryRequest } from "../../api/query-request";
 
-function hasGroupPermission(ref, permission) {
-  if (ref && ref.myMember && ref.myMember.permissions && (ref.myMember.permissions.includes("*") || ref.myMember.permissions.includes(permission))) {
+type GroupPermissionHolder = {
+  myMember?: { permissions?: readonly string[] | null } | null;
+};
+
+type GroupMemberLike = {
+  userId: string;
+  user?: { displayName?: string | null } | null;
+};
+
+function hasGroupPermission(ref: GroupPermissionHolder | null | undefined, permission: string) {
+  const permissions = ref?.myMember?.permissions;
+  if (permissions && (permissions.includes("*") || permissions.includes(permission))) {
     return true;
   }
   return false;
 }
 
-function hasGroupModerationPermission(group) {
+function hasGroupModerationPermission(group: GroupPermissionHolder | null | undefined) {
   return (
     hasGroupPermission(group, "group-invites-manage") ||
     hasGroupPermission(group, "group-moderates-manage") ||
@@ -25,21 +35,17 @@ function hasGroupModerationPermission(group) {
   );
 }
 
-async function getGroupName(data) {
+async function getGroupName(data: string | null | undefined) {
   if (!data) {
     return "";
   }
   let groupName = "";
-  let groupId = data;
-  if (!data.startsWith("grp_")) {
-    const L = parseLocation(data);
-    groupId = L.groupId;
-    if (!L.groupId) {
-      return "";
-    }
+  const groupId = data.startsWith("grp_") ? data : parseLocation(data).groupId;
+  if (!groupId) {
+    return "";
   }
   try {
-    const args = await queryRequest.fetch("group.dialog", {
+    const args = await queryRequest.fetch<{ ref: { name: string } }>("group.dialog", {
       groupId,
     });
     groupName = args.ref.name;
@@ -49,7 +55,7 @@ async function getGroupName(data) {
   return groupName;
 }
 
-function mergeGroupMemberSearchResults(results, members, search) {
+function mergeGroupMemberSearchResults<T extends GroupMemberLike>(results: readonly T[], members: readonly T[], search: string) {
   const merged = [...results];
   const seenUserIds = new Set(merged.map((member) => member.userId));
   const query = search.toLowerCase();

@@ -7,11 +7,12 @@ import {
   filterVisibilityByColumns,
   findStretchColumnId,
   getColumnId,
+  isSpacerColumn,
   safeJsonParse,
   withSpacerColumn,
 } from "../../../src/lib/table/use-vrcx-vue-table";
 
-const cols = (...ids) => ids.map((id) => ({ id }));
+const cols = (...ids: string[]) => ids.map((id) => ({ id }));
 
 describe("safeJsonParse", () => {
   it("parses valid JSON", () => {
@@ -168,18 +169,18 @@ describe("withSpacerColumn", () => {
   it("appends spacer column at the end when no stretchAfterId", () => {
     const result = withSpacerColumn(baseCols, true);
     expect(result).toHaveLength(3);
-    expect(result[2].id).toBe("__spacer");
+    expect(result?.[2]?.id).toBe("__spacer");
   });
 
   it("uses custom spacerId", () => {
     const result = withSpacerColumn(baseCols, true, "custom_spacer");
-    expect(result[2].id).toBe("custom_spacer");
+    expect(result?.[2]?.id).toBe("custom_spacer");
   });
 
   it("inserts spacer after stretchAfterId column", () => {
     const columns = [{ id: "x" }, { id: "stretch" }, { id: "y" }];
     const result = withSpacerColumn(columns, true, "__spacer", "stretch");
-    expect(result.map((c) => c.id)).toEqual(["x", "stretch", "__spacer", "y"]);
+    expect(result?.map((c) => c.id)).toEqual(["x", "stretch", "__spacer", "y"]);
   });
 
   it("returns original columns when disabled", () => {
@@ -201,12 +202,15 @@ describe("withSpacerColumn", () => {
   it("appends spacer when stretchAfterId not found", () => {
     const result = withSpacerColumn(baseCols, true, "__spacer", "missing");
     expect(result).toHaveLength(3);
-    expect(result[2].id).toBe("__spacer");
+    expect(result?.[2]?.id).toBe("__spacer");
   });
 
   it("spacer column has correct defaults", () => {
     const result = withSpacerColumn(baseCols, true);
-    const spacer = result[2];
+    const spacer = result?.[2];
+    if (!spacer || !isSpacerColumn(spacer)) {
+      throw new Error("expected a spacer column at index 2");
+    }
     expect(spacer.enableSorting).toBe(false);
     expect(spacer.size).toBe(0);
     expect(spacer.minSize).toBe(0);

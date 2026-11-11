@@ -120,7 +120,7 @@ describe("displayDesktopToast", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.WINDOWS = true;
+    globalThis.isHostWindows = true;
     globalThis.AppApi = { DesktopNotification: vi.fn() };
     deps = makeDeps();
     dispatch = createOverlayDispatch(deps);

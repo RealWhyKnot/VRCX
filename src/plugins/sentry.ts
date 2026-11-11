@@ -1,18 +1,49 @@
+import type { App } from "vue";
+
 import { router } from "./router";
 import { startRendererMemoryThresholdReport } from "./renderer-memory-report";
 
 import { configRepository } from "../services/config";
 
+function hasStringMessage(value: unknown): value is { message: string } {
+  return (typeof value === "object" || typeof value === "function") && value !== null && "message" in value && typeof value.message === "string";
+}
+
+const ignoredErrorMessages = [
+  "401",
+  "403",
+  "404",
+  "500",
+  "503",
+  "No such host is known",
+  "The SSL connection could not be established",
+  "A connection attempt failed",
+  "no data of the requested type was found",
+  "An error occurred while sending the request",
+  "database or disk is full",
+  "disk I/O error",
+  "There is not enough space on the disk.",
+  "The requested address is not valid in its context.",
+];
+
+function isIgnoredError(error: unknown) {
+  if (!hasStringMessage(error)) {
+    return false;
+  }
+  const { message } = error;
+  return ignoredErrorMessages.some((text) => message.includes(text));
+}
+
 export async function isSentryOptedIn() {
-  return NIGHTLY && configRepository.getBool("VRCX_SentryEnabled", false);
+  return isBuildNightly && configRepository.getBool("VRCX_SentryEnabled", false);
 }
 
 export function getSentry() {
-  return NIGHTLY ? import("@sentry/vue") : null;
+  return isBuildNightly ? import("@sentry/vue") : null;
 }
 
-export async function initSentry(app) {
-  if (!NIGHTLY) return;
+export async function initSentry(app: App) {
+  if (!isBuildNightly) return;
 
   try {
     if (!(await isSentryOptedIn())) return;
@@ -32,6 +63,9 @@ export async function initSentry(app) {
     }
     const dsn = atob(response.data);
     const Sentry = await getSentry();
+    if (Sentry === null) {
+      return;
+    }
     Sentry.init({
       app,
       dsn,
@@ -41,29 +75,7 @@ export async function initSentry(app) {
       replaysOnErrorSampleRate: 1.0,
       tracesSampleRate: 0.0001,
       beforeSend(event, hint) {
-        const error = hint.originalException;
-        if (error && typeof error.message === "string") {
-          if (
-            error.message.includes("401") ||
-            error.message.includes("403") ||
-            error.message.includes("404") ||
-            error.message.includes("500") ||
-            error.message.includes("503") ||
-            error.message.includes("No such host is known") ||
-            error.message.includes("The SSL connection could not be established") ||
-            error.message.includes("A connection attempt failed") ||
-            error.message.includes("no data of the requested type was found") ||
-            error.message.includes("An error occurred while sending the request") ||
-            error.message.includes("database or disk is full") ||
-            error.message.includes("disk I/O error") ||
-            error.message.includes("There is not enough space on the disk.") ||
-            error.message.includes("The requested address is not valid in its context.")
-          ) {
-            return null;
-          }
-          return event;
-        }
-        return event;
+        return isIgnoredError(hint.originalException) ? null : event;
       },
 
       integrations: [

@@ -4,15 +4,15 @@ import { userImage as userImagePure, userImageFull as userImageFullPure, userSta
 export function useUserDisplay() {
   const userStore = useUserStore();
 
-  function userStatusClass(user, pendingOffline = false) {
-    return userStatusClassPure(user, pendingOffline, userStore.currentUser);
+  function userStatusClass(user: Parameters<typeof userStatusClassPure>[0], isPendingOffline = false) {
+    return userStatusClassPure(user, isPendingOffline, userStore.currentUser);
   }
 
-  function userImage(user, isIcon = false, resolution = "128") {
+  function userImage(user: Parameters<typeof userImagePure>[0], isIcon = false, resolution = "128") {
     return userImagePure(user, isIcon, resolution);
   }
 
-  function userImageFull(user) {
+  function userImageFull(user: Parameters<typeof userImageFullPure>[0]) {
     return userImageFullPure(user);
   }
 

@@ -19,6 +19,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import { computed, onBeforeMount, onMounted } from "vue";
 
 import { addGameLogEvent, getGameLogTable } from "./coordinators/game-log-coordinator";
@@ -38,7 +39,7 @@ import VRCXUpdateDialog from "./components/dialogs/VRCXUpdateDialog.vue";
 
 import "@/styles/globals.css";
 
-console.log(`isLinux: ${LINUX}`);
+console.log(`isLinux: ${isLinuxHost()}`);
 
 const isMacOS = computed(() => navigator.platform.includes("Mac"));
 

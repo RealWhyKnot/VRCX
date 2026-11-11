@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { ref } from "vue";
 
 import { getPlatformInfo, parseAvatarUrl, storeAvatarImage } from "../../../src/shared/utils/avatar";
+import type { CachedAvatarName } from "../../../src/shared/utils/avatar";
 
 vi.mock("../../../src/views/Feed/Feed.vue", () => ({
   default: { template: "<div />" },
@@ -19,7 +20,7 @@ vi.mock("../../../src/plugins/router", () => ({
 }));
 
 describe("storeAvatarImage", () => {
-  function makeArgs(name, ownerId, createdAt = "2024-01-01T00:00:00Z") {
+  function makeArgs(name: string, ownerId: string, createdAt = "2024-01-01T00:00:00Z") {
     return {
       params: { fileId: "file_abc123" },
       json: {
@@ -31,7 +32,7 @@ describe("storeAvatarImage", () => {
   }
 
   test("extracts avatar name from standard image file name", () => {
-    const cache = new Map();
+    const cache = new Map<string, CachedAvatarName>();
     const result = storeAvatarImage(makeArgs("Avatar - Cool Robot - Image - 2024.01.01", "usr_owner1"), cache);
     expect(result.avatarName).toBe("Cool Robot");
     expect(result.ownerId).toBe("usr_owner1");
@@ -39,20 +40,20 @@ describe("storeAvatarImage", () => {
   });
 
   test("stores result in cachedAvatarNames map", () => {
-    const cache = new Map();
+    const cache = new Map<string, CachedAvatarName>();
     storeAvatarImage(makeArgs("Avatar - Test - Image - x", "usr_123"), cache);
     expect(cache.has("file_abc123")).toBe(true);
-    expect(cache.get("file_abc123").avatarName).toBe("Test");
+    expect(cache.get("file_abc123")?.avatarName).toBe("Test");
   });
 
   test("returns empty avatarName when name does not match pattern", () => {
-    const cache = new Map();
+    const cache = new Map<string, CachedAvatarName>();
     const result = storeAvatarImage(makeArgs("SomeOtherFileName.png", "usr_456"), cache);
     expect(result.avatarName).toBe("");
   });
 
   test("handles special characters in avatar name", () => {
-    const cache = new Map();
+    const cache = new Map<string, CachedAvatarName>();
     const result = storeAvatarImage(makeArgs("Avatar - ★ Fancy (Name) ★ - Image - v1", "usr_789"), cache);
     expect(result.avatarName).toContain("Fancy");
   });

@@ -57,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
@@ -85,7 +86,7 @@ const launchOptionsDialog = ref({
   vrcLaunchPathOverride: "",
 });
 
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 
 function init() {
   configRepository.getString("launchArguments").then((launchArguments) => (launchOptionsDialog.value.launchArguments = launchArguments));

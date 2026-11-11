@@ -1,9 +1,17 @@
 import { displayLocation } from "./location-parser";
 import { i18n } from "../../plugins/i18n";
+import type { NotificationMessage, NotificationRecord } from "../../types/notification.ts";
 
-export function getNotificationMessage(noty, message, displayNameOverride) {
-  const name = displayNameOverride || noty.displayName;
-  const sender = displayNameOverride || noty.senderUsername;
+function pick(value: string | undefined, fallback: string | undefined): string | undefined {
+  if (!value) {
+    return fallback;
+  }
+  return value;
+}
+
+export function getNotificationMessage(noty: NotificationRecord, message: string | undefined, displayNameOverride?: string): NotificationMessage | null {
+  const name = pick(displayNameOverride, noty.displayName);
+  const sender = pick(displayNameOverride, noty.senderUsername);
   const t = i18n.global.t;
 
   switch (noty.type) {
@@ -48,7 +56,7 @@ export function getNotificationMessage(noty, message, displayNameOverride) {
       return {
         title: sender,
         body: t("notifications.invite", {
-          location: displayLocation(noty.details.worldId, noty.details.worldName),
+          location: displayLocation(noty.details?.worldId, noty.details?.worldName),
           message,
         }),
       };
@@ -88,7 +96,7 @@ export function getNotificationMessage(noty, message, displayNameOverride) {
       };
     case "DisplayName":
       return {
-        title: displayNameOverride || noty.previousDisplayName,
+        title: pick(displayNameOverride, noty.previousDisplayName),
         body: t("notifications.display_name", {
           displayName: noty.displayName,
         }),
@@ -99,47 +107,47 @@ export function getNotificationMessage(noty, message, displayNameOverride) {
       return { title: sender, body: noty.message };
     case "group.announcement":
       return {
-        title: noty.title || t("notifications.group_announcement_title"),
+        title: pick(noty.title, t("notifications.group_announcement_title")),
         body: noty.message,
       };
     case "group.event.created":
       return {
-        title: noty.title || t("notifications.group_event_created_title"),
+        title: pick(noty.title, t("notifications.group_event_created_title")),
         body: noty.message,
       };
     case "group.event.starting":
       return {
-        title: noty.title || t("notifications.group_event_starting_title"),
+        title: pick(noty.title, t("notifications.group_event_starting_title")),
         body: noty.message,
       };
     case "group.informative":
       return {
-        title: noty.title || t("notifications.group_informative_title"),
+        title: pick(noty.title, t("notifications.group_informative_title")),
         body: noty.message,
       };
     case "group.invite":
       return {
-        title: noty.title || t("notifications.group_invite_title"),
+        title: pick(noty.title, t("notifications.group_invite_title")),
         body: noty.message,
       };
     case "group.joinRequest":
       return {
-        title: noty.title || t("notifications.group_join_request_title"),
+        title: pick(noty.title, t("notifications.group_join_request_title")),
         body: noty.message,
       };
     case "group.transfer":
       return {
-        title: noty.title || t("notifications.group_transfer_request_title"),
+        title: pick(noty.title, t("notifications.group_transfer_request_title")),
         body: noty.message,
       };
     case "group.queueReady":
       return {
-        title: noty.title || t("notifications.group_queue_ready_title"),
+        title: pick(noty.title, t("notifications.group_queue_ready_title")),
         body: noty.message,
       };
     case "instance.closed":
       return {
-        title: noty.title || t("notifications.instance_closed_title"),
+        title: pick(noty.title, t("notifications.instance_closed_title")),
         body: noty.message,
       };
     case "PortalSpawn":
@@ -216,30 +224,27 @@ const BODY_ONLY_TYPES = new Set([
 
 const COLON_SEPARATOR_TYPES = new Set(["groupChange", "VideoPlay"]);
 
-const CUSTOM_FORMAT_MESSAGES = {
-  BlockedOnPlayerJoined: (title) => `Blocked user ${title} has joined`,
-  BlockedOnPlayerLeft: (title) => `Blocked user ${title} has left`,
-  MutedOnPlayerJoined: (title) => `Muted user ${title} has joined`,
-  MutedOnPlayerLeft: (title) => `Muted user ${title} has left`,
-};
+const CUSTOM_FORMAT_MESSAGES = new Map<string, (title: string | undefined) => string>([
+  ["BlockedOnPlayerJoined", (title) => `Blocked user ${String(title)} has joined`],
+  ["BlockedOnPlayerLeft", (title) => `Blocked user ${String(title)} has left`],
+  ["MutedOnPlayerJoined", (title) => `Muted user ${String(title)} has joined`],
+  ["MutedOnPlayerLeft", (title) => `Muted user ${String(title)} has left`],
+]);
 
-export function toNotificationText(title, body, type) {
+export function toNotificationText(title: string | undefined, body: string | undefined, type: string): string | undefined {
   if (BODY_ONLY_TYPES.has(type)) {
     return body;
   }
   if (COLON_SEPARATOR_TYPES.has(type)) {
-    return title ? `${title}: ${body}` : body;
+    return title ? `${title}: ${String(body)}` : body;
   }
-  const customFmt = CUSTOM_FORMAT_MESSAGES[type];
+  const customFmt = CUSTOM_FORMAT_MESSAGES.get(type);
   if (customFmt) {
     return customFmt(title);
   }
-  return title ? `${title} ${body}` : body;
+  return title ? `${title} ${String(body)}` : body;
 }
 
-export function getUserIdFromNoty(noty) {
-  if (noty.userId) return noty.userId;
-  if (noty.senderUserId) return noty.senderUserId;
-  if (noty.sourceUserId) return noty.sourceUserId;
-  return "";
+export function getUserIdFromNoty(noty: NotificationRecord): string {
+  return [noty.userId, noty.senderUserId, noty.sourceUserId].find((id) => id) ?? "";
 }

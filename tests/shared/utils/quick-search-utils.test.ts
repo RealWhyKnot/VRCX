@@ -59,7 +59,18 @@ describe("isPrefixMatch", () => {
 });
 
 describe("searchFriends", () => {
-  function makeFriend(id, name, memo = "", note = "") {
+  type FriendFixture = {
+    id: string;
+    name: string;
+    memo: string;
+    ref: {
+      currentAvatarThumbnailImageUrl: string;
+      note: string;
+      $userColour: string;
+    };
+  };
+
+  function makeFriend(id: string, name: string, memo = "", note = ""): [string, FriendFixture] {
     return [
       id,
       {
@@ -85,16 +96,16 @@ describe("searchFriends", () => {
   test("matches by name", () => {
     const results = searchFriends("alice", friends, comparer);
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("u1");
-    expect(results[0].matchedField).toBe("name");
+    expect(results[0]?.id).toBe("u1");
+    expect(results[0]?.matchedField).toBe("name");
   });
 
   test("matches by note", () => {
     const results = searchFriends("roommate", friends, comparer);
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("u3");
-    expect(results[0].matchedField).toBe("note");
-    expect(results[0].note).toBe("roommate");
+    expect(results[0]?.id).toBe("u3");
+    expect(results[0]?.matchedField).toBe("note");
+    expect(results[0]?.note).toBe("roommate");
   });
 
   test("returns empty for short / empty query", () => {
@@ -110,7 +121,7 @@ describe("searchFriends", () => {
   test("prefix matches sort first", () => {
     const f = new Map([makeFriend("u1", "XAliceX"), makeFriend("u2", "Alice")]);
     const results = searchFriends("Alice", f, comparer);
-    expect(results[0].id).toBe("u2");
+    expect(results[0]?.id).toBe("u2");
   });
 
   test("skips entries without ref", () => {
@@ -158,7 +169,7 @@ describe("searchAvatars", () => {
   test("filters by authorId", () => {
     const results = searchAvatars("Avatar", avatarMap, comparer, "me");
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("a1");
+    expect(results[0]?.id).toBe("a1");
   });
 
   test("returns all when authorId is null", () => {
@@ -201,7 +212,7 @@ describe("searchWorlds", () => {
   test("filters by ownerId (authorId)", () => {
     const results = searchWorlds("Fun", worldMap, comparer, "me");
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("w1");
+    expect(results[0]?.id).toBe("w1");
   });
 });
 
@@ -254,7 +265,12 @@ describe("searchGroups", () => {
 });
 
 describe("searchFavoriteAvatars", () => {
-  const favorites = [
+  type FavoriteFixture = {
+    name: string;
+    ref?: { id: string; name: string; thumbnailImageUrl: string };
+  };
+
+  const favorites: FavoriteFixture[] = [
     {
       name: "Fav Avatar",
       ref: { id: "fa1", name: "Fav Avatar", thumbnailImageUrl: "img1" },
@@ -263,7 +279,7 @@ describe("searchFavoriteAvatars", () => {
       name: "Cool Fav",
       ref: { id: "fa2", name: "Cool Fav", thumbnailImageUrl: "img2" },
     },
-    { name: "Broken", ref: null },
+    { name: "Broken" },
   ];
 
   test("finds matching favorite avatars", () => {
@@ -305,8 +321,8 @@ describe("searchFavoriteWorlds", () => {
   test("finds matching favorite worlds", () => {
     const results = searchFavoriteWorlds("Cool", favorites, comparer);
     expect(results).toHaveLength(1);
-    expect(results[0].id).toBe("fw2");
-    expect(results[0].type).toBe("world");
+    expect(results[0]?.id).toBe("fw2");
+    expect(results[0]?.type).toBe("world");
   });
 
   test("returns empty for empty query", () => {

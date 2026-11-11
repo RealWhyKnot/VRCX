@@ -52,7 +52,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
   const updateToastRelease = ref("");
 
   async function initVRCXUpdaterSettings() {
-    if (LINUX) {
+    if (isHostLinux) {
       arch.value = await window.electron.getArch();
       noUpdater.value = await window.electron.getNoUpdater();
       console.log("Architecture:", arch.value);
@@ -204,7 +204,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
         continue;
       }
       if (
-        WINDOWS &&
+        isHostWindows &&
         (asset.name.endsWith("Setup_x64.exe") || asset.name.endsWith("Setup.exe")) &&
         (asset.content_type === "application/x-msdownload" || asset.content_type === "application/x-msdos-program")
       ) {
@@ -215,7 +215,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
         size = asset.size;
         break;
       }
-      if (LINUX && asset.name.endsWith(`${arch.value}.AppImage`) && asset.content_type === "application/octet-stream") {
+      if (isHostLinux && asset.name.endsWith(`${arch.value}.AppImage`) && asset.content_type === "application/octet-stream") {
         downloadUrl = asset.browser_download_url;
         if (asset.digest && asset.digest.startsWith("sha256:")) {
           hashString = asset.digest.replace("sha256:", "");
@@ -432,7 +432,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
     return checkForVRCXUpdate();
   }
   function restartVRCX(isUpgrade) {
-    if (!LINUX) {
+    if (!isHostLinux) {
       AppApi.RestartApplication(isUpgrade);
     } else {
       window.electron.restartApp();

@@ -75,7 +75,7 @@ describe("String Utils", () => {
 
   describe("localeIncludes", () => {
     const comparer = {
-      compare: (a, b) => a.toLowerCase().localeCompare(b.toLowerCase()),
+      compare: (a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase()),
     };
 
     test("finds substrings", () => {

@@ -7,7 +7,7 @@ describe("createDefaultGroupRef", () => {
     expect(ref.id).toBe("");
     expect(ref.name).toBe("");
     expect(ref.myMember).toBeDefined();
-    expect(ref.myMember.roleIds).toEqual([]);
+    expect(ref.myMember?.roleIds).toEqual([]);
     expect(ref.roles).toEqual([]);
   });
 

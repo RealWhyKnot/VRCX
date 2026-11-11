@@ -1,3 +1,5 @@
+import type { App } from "vue";
+
 import TooltipWrapper from "../components/ui/tooltip/TooltipWrapper.vue";
 
 import AvatarInfo from "../components/AvatarInfo.vue";
@@ -7,7 +9,7 @@ import Location from "../components/Location.vue";
 import LocationWorld from "../components/LocationWorld.vue";
 import Timer from "../components/Timer.vue";
 
-export function initComponents(app) {
+export function initComponents(app: App): void {
   app.component("Location", Location);
   app.component("Timer", Timer);
   app.component("CountdownTimer", CountdownTimer);

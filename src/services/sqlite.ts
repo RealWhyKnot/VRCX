@@ -42,7 +42,7 @@ class SQLiteService {
 
   async execute(callback, sql, args = null) {
     try {
-      if (LINUX) {
+      if (isHostLinux) {
         if (args) {
           args = new Map(Object.entries(args));
         }
@@ -64,7 +64,7 @@ class SQLiteService {
 
   async executeNonQuery(sql, args = null) {
     try {
-      if (LINUX && args) {
+      if (isHostLinux && args) {
         args = new Map(Object.entries(args));
       }
       return await SQLite.ExecuteNonQuery(sql, args);
@@ -75,7 +75,7 @@ class SQLiteService {
 
   async executeInsert(sql, args = null) {
     try {
-      if (LINUX && args) {
+      if (isHostLinux && args) {
         args = new Map(Object.entries(args));
       }
       return await SQLite.ExecuteInsert(sql, args);

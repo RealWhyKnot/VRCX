@@ -10,14 +10,22 @@ const DOTNET_VERSION = "10.0.8";
 const DOTNET_RUNTIME_DIR = path.join(import.meta.dirname, "..", "build", "Electron", "dotnet-runtime");
 
 const DOTNET_CACHE_DIR = path.join(os.homedir(), ".cache", "vrcx-build", "dotnet-cache");
+const DOWNLOAD_TIMEOUT_MS = 15 * 60 * 1000;
 
-async function downloadFile(url, targetPath) {
+function errorCode(error: unknown): unknown {
+  return error instanceof Error && "code" in error ? error.code : undefined;
+}
+
+async function downloadFile(url: string, targetPath: string): Promise<void> {
   const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
     if (!response.ok) {
       throw new Error(`Failed to download, url: ${url} status code: ${response.status}`);
+    }
+    if (response.body === null) {
+      throw new Error(`Failed to download, url: ${url} returned an empty body`);
     }
 
     const fileStream = fs.createWriteStream(tempPath);
@@ -26,14 +34,12 @@ async function downloadFile(url, targetPath) {
 
     await rename(tempPath, targetPath);
   } catch (error) {
-    const error2 = error;
-    console.error("Error downloading file:", error2.message);
+    console.error("Error downloading file:", error instanceof Error ? error.message : error);
 
     try {
       await unlink(tempPath);
-    } catch (error) {
-      const unlinkError = error;
-      if (unlinkError.code !== "ENOENT") {
+    } catch (unlinkError) {
+      if (errorCode(unlinkError) !== "ENOENT") {
         console.error("Error cleaning up temporary file:", unlinkError);
       }
     }
@@ -42,42 +48,34 @@ async function downloadFile(url, targetPath) {
   }
 }
 
-async function extractTarGz(tarGzPath, extractDir) {
-  return new Promise((resolve, reject) => {
-    const tar = spawnSync("tar", ["-xzf", tarGzPath, "-C", extractDir, "--strip-components=1"], {
-      stdio: "inherit",
-      windowsHide: true,
-    });
-
-    if (tar.status === 0) {
-      resolve(undefined);
-    } else {
-      reject(new Error(`tar extraction failed with status ${tar.status}`));
-    }
+function extractTarGz(tarGzPath: string, extractDir: string): void {
+  const tar = spawnSync("tar", ["-xzf", tarGzPath, "-C", extractDir, "--strip-components=1"], {
+    stdio: "inherit",
+    windowsHide: true,
   });
+
+  if (tar.status !== 0) {
+    throw new Error(`tar extraction failed with status ${tar.status}`);
+  }
 }
 
-async function extractZip(zipPath, extractDir) {
-  return new Promise((resolve, reject) => {
-    const tar = spawnSync("tar", ["-xf", zipPath, "-C", extractDir], {
-      stdio: "inherit",
-      windowsHide: true,
-    });
-
-    if (tar.status === 0) {
-      resolve(undefined);
-    } else {
-      reject(new Error(`zip extraction failed with status ${tar.status}`));
-    }
+function extractZip(zipPath: string, extractDir: string): void {
+  const tar = spawnSync("tar", ["-xf", zipPath, "-C", extractDir], {
+    stdio: "inherit",
+    windowsHide: true,
   });
+
+  if (tar.status !== 0) {
+    throw new Error(`zip extraction failed with status ${tar.status}`);
+  }
 }
 
-async function downloadDotnetRuntime(arch, platform) {
+async function downloadDotnetRuntime(arch: string, platform: string): Promise<void> {
   if (!arch || !platform) {
     throw new Error("Architecture and platform must be specified");
   }
 
-  let dotnetPlatform;
+  let dotnetPlatform: string;
   if (platform === "linux") {
     dotnetPlatform = "linux";
   } else if (platform === "darwin") {
@@ -120,9 +118,9 @@ async function downloadDotnetRuntime(arch, platform) {
 
   console.log("Extracting .NET runtime...");
   if (archiveExt === "zip") {
-    await extractZip(archivePath, tempExtractDir);
+    extractZip(archivePath, tempExtractDir);
   } else {
-    await extractTarGz(archivePath, tempExtractDir);
+    extractTarGz(archivePath, tempExtractDir);
   }
   console.log("Extraction completed");
 
@@ -156,4 +154,7 @@ async function downloadDotnetRuntime(arch, platform) {
 }
 
 const { arch, platform } = getArchAndPlatform();
-downloadDotnetRuntime(arch, platform);
+downloadDotnetRuntime(arch, platform).catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,4 +1,6 @@
-export function createDefaultGroupRef(json) {
+import type { VrcxGroup } from "../../types/vrcx";
+
+export function createDefaultGroupRef(json: Partial<VrcxGroup>): VrcxGroup {
   return {
     id: "",
     name: "",

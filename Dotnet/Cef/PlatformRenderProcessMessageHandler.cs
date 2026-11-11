@@ -10,7 +10,7 @@ internal sealed class PlatformRenderProcessMessageHandler : IRenderProcessMessag
     {
         if (frame.IsMain)
         {
-            frame.ExecuteJavaScriptAsync("window.WINDOWS = true; window.LINUX = false;");
+            frame.ExecuteJavaScriptAsync("window.isHostWindows = true; window.isHostLinux = false;");
         }
     }
 

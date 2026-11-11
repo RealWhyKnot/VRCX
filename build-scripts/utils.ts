@@ -1,7 +1,7 @@
-export function getArchAndPlatform() {
+export function getArchAndPlatform(): { arch: string; platform: string } {
   const args = process.argv.slice(2);
-  let arch = process.arch.toString();
-  let platform = process.platform.toString();
+  let arch: string = process.arch;
+  let platform: string = process.platform;
   for (const argument of args) {
     if (argument.startsWith("--arch=")) {
       arch = argument.slice(7).split("=")[0] ?? "";

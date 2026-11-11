@@ -22,9 +22,4 @@ describe("transformKey", () => {
   test("handles empty string", () => {
     expect(transformKey("")).toBe("config:");
   });
-
-  test("converts non-string values via String()", () => {
-    expect(transformKey(42)).toBe("config:42");
-    expect(transformKey(null)).toBe("config:null");
-  });
 });

@@ -21,17 +21,21 @@ try {
   process.exit(1);
 }
 
-let packageJson = {};
+let packageJson: Record<string, unknown>;
 try {
   console.log(`Reading package.json from ${packageJsonPath}`);
   const packageData = fs.readFileSync(packageJsonPath, "utf8");
-  packageJson = JSON.parse(packageData);
+  const parsed: unknown = JSON.parse(packageData);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error(`${packageJsonPath} must contain a JSON object`);
+  }
+  packageJson = Object.fromEntries(Object.entries(parsed));
 } catch (err) {
   console.error("Error reading package.json:", err);
   process.exit(1);
 }
 
-packageJson.version = version;
+packageJson["version"] = version;
 
 try {
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 4), "utf8");

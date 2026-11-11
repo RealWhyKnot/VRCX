@@ -1,4 +1,19 @@
-function getPrintFileName(print) {
+type PrintFileInfo = {
+  id: string;
+  authorName: string;
+  createdAt?: string | number | Date | null;
+  timestamp?: string | number | Date | null;
+};
+
+type EmojiFileInfo = {
+  name: string;
+  animationStyle: string;
+  frames?: number | null;
+  framesOverTime?: number | null;
+  loopStyle?: string | null;
+};
+
+function getPrintFileName(print: PrintFileInfo): string {
   const authorName = print.authorName;
 
   const createdAt = getPrintLocalDate(print);
@@ -7,7 +22,7 @@ function getPrintFileName(print) {
   return fileName;
 }
 
-function getPrintLocalDate(print) {
+function getPrintLocalDate(print: Pick<PrintFileInfo, "createdAt" | "timestamp">): Date {
   if (print.createdAt) {
     const createdAt = new Date(print.createdAt);
 
@@ -24,16 +39,16 @@ function getPrintLocalDate(print) {
   return createdAt;
 }
 
-function getEmojiFileName(emoji) {
+function getEmojiFileName(emoji: EmojiFileInfo): string {
   if (emoji.frames) {
-    const loopStyle = emoji.loopStyle || "linear";
+    const loopStyle = emoji.loopStyle ?? "linear";
     return `${emoji.name}_${emoji.animationStyle}animationStyle_${emoji.frames}frames_${emoji.framesOverTime}fps_${loopStyle}loopStyle.png`;
   } else {
     return `${emoji.name}_${emoji.animationStyle}animationStyle.png`;
   }
 }
 
-function generateEmojiStyle(url, fps, frameCount, loopStyle, size) {
+function generateEmojiStyle(url: string, fps: number, frameCount: number, loopStyle: string | null | undefined, size: number): string {
   let framesPerLine = 2;
   if (frameCount > 4) framesPerLine = 4;
   if (frameCount > 16) framesPerLine = 8;

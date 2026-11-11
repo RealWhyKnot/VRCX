@@ -1,0 +1,46 @@
+import type { VrState } from "./vr-types";
+
+export function createVrState(): VrState {
+  return {
+    appLanguage: "en",
+    currentCulture: "en-gb",
+    currentTime: new Date().toJSON(),
+    cpuUsageEnabled: false,
+    cpuUsage: "0",
+    pcUptimeEnabled: false,
+    pcUptime: "",
+    customInfo: "",
+    config: {},
+    onlineFriendCount: 0,
+    nowPlaying: {
+      url: "",
+      name: "",
+      length: 0,
+      startTime: 0,
+      elapsed: 0,
+      percentage: 0,
+      remainingText: "",
+      playing: false,
+    },
+    lastLocation: {
+      date: 0,
+      location: "",
+      name: "",
+      playerList: [],
+      friendList: [],
+      progressPie: false,
+      onlineFor: 0,
+    },
+    lastLocationTimer: "",
+    onlineForTimer: "",
+    wristFeed: [],
+    devices: [],
+    deviceCount: 0,
+    notificationOpacity: 100,
+    hudFeed: [],
+    hudTimeout: [],
+    cleanHudFeedLoopStatus: false,
+    isHmdDisabled: false,
+    isWristDisabled: false,
+  };
+}

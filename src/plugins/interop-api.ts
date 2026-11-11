@@ -1,31 +1,35 @@
-import { interopApi } from "../ipc-electron/interop-api.ts";
+import { electronInterop } from "../ipc-electron/interop-api.ts";
 import { configRepository } from "../services/config.ts";
 import { VrcxJsonStorage } from "../services/json-storage.ts";
 
 export async function initInteropApi(isVrOverlay = false) {
   if (isVrOverlay) {
-    if (WINDOWS) {
+    if (isHostWindows) {
       await CefSharp.BindObjectAsync("AppApiVr");
     } else {
-      window.AppApiVr = interopApi.AppApiVrElectron;
+      Object.assign(window, { AppApiVr: electronInterop.bridge("AppApiVrElectron") });
     }
   } else {
-    if (WINDOWS) {
+    if (isHostWindows) {
       await CefSharp.BindObjectAsync("AppApi", "WebApi", "VRCXStorage", "SQLite", "LogWatcher", "Discord", "AssetBundleManager");
     } else {
-      window.AppApi = interopApi.AppApiElectron;
-      window.WebApi = interopApi.WebApi;
-      window.VRCXStorage = interopApi.VRCXStorage;
-      window.SQLite = interopApi.SQLiteDatabase;
-      window.LogWatcher = interopApi.LogWatcher;
-      window.Discord = interopApi.Discord;
-      window.AssetBundleManager = interopApi.AssetBundleManager;
-      window.AppApiVrElectron = interopApi.AppApiVrElectron;
+      Object.assign(window, {
+        AppApi: electronInterop.bridge("AppApiElectron"),
+        WebApi: electronInterop.bridge("WebApi"),
+        VRCXStorage: electronInterop.bridge("VRCXStorage"),
+        SQLite: electronInterop.bridge("SQLiteDatabase"),
+        LogWatcher: electronInterop.bridge("LogWatcher"),
+        Discord: electronInterop.bridge("Discord"),
+        AssetBundleManager: electronInterop.bridge("AssetBundleManager"),
+        AppApiVrElectron: electronInterop.bridge("AppApiVrElectron"),
+      });
     }
 
     await configRepository.init();
     new VrcxJsonStorage(VRCXStorage);
 
-    AppApi.SetUserAgent();
+    AppApi.SetUserAgent().catch((error: unknown) => {
+      console.error("Failed to set user agent", error);
+    });
   }
 }

@@ -307,7 +307,7 @@ button {
 }
 
 .np-progress-bar {
-  width: 0%;
+  width: var(--vr-np-progress, 0%);
   height: 3px;
   background: linear-gradient(90deg, var(--vr-np-progress-bar-background), var(--vr-np-progress-bar-background-2));
   border-radius: 2px;
@@ -366,6 +366,10 @@ button {
 
 .favorite .name {
   color: var(--vr-text-favorite);
+}
+
+.name[style*="--vr-name-colour"] {
+  color: var(--vr-name-colour);
 }
 
 .x-friend-item > .avatar {

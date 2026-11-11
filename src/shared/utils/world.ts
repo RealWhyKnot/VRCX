@@ -2,30 +2,34 @@ import { parseLocation } from "./location-parser";
 import { queryRequest } from "../../api/query-request";
 import { rpcWorlds } from "../constants/world";
 
-async function getWorldName(location) {
+type WorldDialogResponse = {
+  ref: {
+    name?: unknown;
+  };
+};
+
+async function getWorldName(location: string | null | undefined): Promise<string> {
   let worldName = "";
 
   const L = parseLocation(location);
   if (L.isRealInstance && L.worldId) {
     try {
-      const args = await queryRequest.fetch("world.dialog", {
+      const args = await queryRequest.fetch<WorldDialogResponse>("world.dialog", {
         worldId: L.worldId,
       });
-      worldName = args.ref.name;
-    } catch (e) {
-      console.error("getWorldName failed location", location, e);
+      const name = args.ref.name;
+      worldName = typeof name === "string" ? name : "";
+    } catch (error) {
+      console.error("getWorldName failed location", location, error);
     }
   }
 
   return worldName;
 }
 
-function isRpcWorld(location) {
+function isRpcWorld(location: string | null | undefined): boolean {
   const L = parseLocation(location);
-  if (rpcWorlds.includes(L.worldId)) {
-    return true;
-  }
-  return false;
+  return rpcWorlds.includes(L.worldId);
 }
 
 export { getWorldName, isRpcWorld };

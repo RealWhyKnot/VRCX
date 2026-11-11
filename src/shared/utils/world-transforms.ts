@@ -1,4 +1,6 @@
-export function createDefaultWorldRef(json) {
+import type { VrcxWorld } from "../../types/vrcx";
+
+export function createDefaultWorldRef(json: Partial<VrcxWorld> = {}) {
   return {
     id: "",
     name: "",

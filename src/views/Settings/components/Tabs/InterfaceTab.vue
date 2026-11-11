@@ -410,6 +410,7 @@
 </template>
 
 <script setup lang="ts">
+import { isLinuxHost } from "@/shared/constants/platform";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -642,7 +643,7 @@ function saveCustomFont() {
 }
 
 const zoomLevel = ref(100);
-const isLinux = computed(() => LINUX);
+const isLinux = computed(() => isLinuxHost());
 let cleanupWheel = null;
 
 onBeforeUnmount(() => {

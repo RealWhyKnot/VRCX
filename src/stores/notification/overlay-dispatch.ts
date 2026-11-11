@@ -90,7 +90,7 @@ export function createOverlayDispatch({ getUserIdFromNoty, queryRequest, notific
   }
 
   function desktopNotification(displayName, message, image) {
-    if (WINDOWS) {
+    if (isHostWindows) {
       AppApi.DesktopNotification(displayName, message, image);
     } else {
       window.electron.desktopNotification(displayName, message, image);

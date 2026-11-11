@@ -4,58 +4,69 @@ import { useAvatarStore } from "../../../stores/avatar";
 import { useWorldStore } from "../../../stores/world";
 import { compareUnityVersion } from "../avatar";
 
-async function getBundleLocation(input) {
+type UnityPackageRef = {
+  variant?: string | null;
+  platform?: string | null;
+  unitySortNumber?: bigint | number | string;
+  assetUrl?: string | null;
+};
+
+type DialogRef = {
+  assetUrl?: string | null;
+  unityPackages?: UnityPackageRef[] | null;
+};
+
+function parseVersion(text: string): number {
+  return text.length > 0 && Number.isFinite(Number(text)) ? Number(text) : Number.NaN;
+}
+
+async function getBundleLocation(input: string | null | undefined): Promise<string | null> {
   const authStore = useAuthStore();
-  const sdkUnityVersion = authStore.cachedConfig.sdkUnityVersion;
+  const cachedConfig: { sdkUnityVersion?: string | null } = authStore.cachedConfig;
+  const sdkUnityVersion = cachedConfig.sdkUnityVersion;
   const worldStore = useWorldStore();
   const avatarStore = useAvatarStore();
-  let unityPackage;
-  let unityPackages;
+  const avatarDialogRef: DialogRef = avatarStore.avatarDialog.ref;
+  const worldDialogRef: DialogRef = worldStore.worldDialog.ref;
   let assetUrl = input;
   let variant = "";
-  if (assetUrl) {
-  } else if (avatarStore.avatarDialog.visible && avatarStore.avatarDialog.ref.unityPackages.length > 0) {
-    unityPackages = avatarStore.avatarDialog.ref.unityPackages;
-    for (let i = unityPackages.length - 1; i > -1; i--) {
-      unityPackage = unityPackages[i];
-      if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
-        continue;
-      }
-      if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
-        assetUrl = unityPackage.assetUrl;
-        if (unityPackage.variant !== "standard") {
-          variant = unityPackage.variant;
+  if (!assetUrl) {
+    if (avatarStore.avatarDialog.visible && (avatarDialogRef.unityPackages?.length ?? 0) > 0) {
+      for (const unityPackage of avatarDialogRef.unityPackages?.slice().reverse() ?? []) {
+        if (unityPackage.variant && unityPackage.variant !== "standard" && unityPackage.variant !== "security") {
+          continue;
         }
-        break;
+        if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
+          assetUrl = unityPackage.assetUrl;
+          if (unityPackage.variant !== "standard") {
+            variant = unityPackage.variant ?? "";
+          }
+          break;
+        }
       }
-    }
-  } else if (avatarStore.avatarDialog.visible && avatarStore.avatarDialog.ref.assetUrl) {
-    assetUrl = avatarStore.avatarDialog.ref.assetUrl;
-  } else if (worldStore.worldDialog.visible && worldStore.worldDialog.ref.unityPackages.length > 0) {
-    unityPackages = worldStore.worldDialog.ref.unityPackages;
-    for (let i = unityPackages.length - 1; i > -1; i--) {
-      unityPackage = unityPackages[i];
-      if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
-        assetUrl = unityPackage.assetUrl;
-        break;
+    } else if (avatarStore.avatarDialog.visible && avatarDialogRef.assetUrl) {
+      assetUrl = avatarDialogRef.assetUrl;
+    } else if (worldStore.worldDialog.visible && (worldDialogRef.unityPackages?.length ?? 0) > 0) {
+      for (const unityPackage of worldDialogRef.unityPackages?.slice().reverse() ?? []) {
+        if (unityPackage.platform === "standalonewindows" && compareUnityVersion(unityPackage.unitySortNumber, sdkUnityVersion)) {
+          assetUrl = unityPackage.assetUrl;
+          break;
+        }
       }
+    } else if (worldStore.worldDialog.visible && worldDialogRef.assetUrl) {
+      assetUrl = worldDialogRef.assetUrl;
     }
-  } else if (worldStore.worldDialog.visible && worldStore.worldDialog.ref.assetUrl) {
-    assetUrl = worldStore.worldDialog.ref.assetUrl;
   }
   if (!assetUrl) {
     return null;
   }
   const fileId = extractFileId(assetUrl);
-  const fileVersion = parseInt(extractFileVersion(assetUrl), 10);
-  const variantVersion = parseInt(extractVariantVersion(assetUrl), 10);
+  const fileVersion = parseVersion(extractFileVersion(assetUrl));
+  const variantVersion = parseVersion(extractVariantVersion(assetUrl));
   const assetLocation = await AssetBundleManager.GetVRChatCacheFullLocation(fileId, fileVersion, variant, variantVersion);
   const cacheInfo = await AssetBundleManager.CheckVRChatCache(fileId, fileVersion, variant, variantVersion);
-  let inCache = false;
-  if (cacheInfo.Item1 > 0) {
-    inCache = true;
-  }
-  console.log(`InCache: ${inCache}`);
+  const isInCache = cacheInfo.Item1 > 0;
+  console.log(`InCache: ${isInCache}`);
   const fullAssetLocation = `${assetLocation}\\__data`;
   console.log(fullAssetLocation);
   return fullAssetLocation;
