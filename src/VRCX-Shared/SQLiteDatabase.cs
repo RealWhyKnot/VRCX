@@ -24,7 +24,11 @@ sealed class SQLiteDatabase : IDisposable
         _connectionLock = new ReaderWriterLockSlim();
     }
 
+    internal string DataSource { get; private set; } = string.Empty;
+
     private SQLiteConnection Connection => _connection ?? throw new InvalidOperationException("The database connection is not open.");
+
+    internal static SQLiteDatabase OpenReadOnly(string path) => new() { _connection = SQLiteConnectionFactory.OpenReadOnly(path) };
 
     public void Init()
     {
@@ -38,7 +42,24 @@ sealed class SQLiteDatabase : IDisposable
             dataSource = jsonDataSource;
         }
 
-        _connection = SQLiteConnectionFactory.Open(dataSource);
+        DataSource = Database.DatabaseUpgrade.Prepare(dataSource);
+        _connection = SQLiteConnectionFactory.Open(DataSource);
+    }
+
+    internal void BackupTo(string targetPath)
+    {
+        _connectionLock.EnterWriteLock();
+        try
+        {
+            File.Delete(targetPath);
+            using var copy = new SQLiteCommand("VACUUM INTO @target", Connection);
+            _ = copy.Parameters.AddWithValue("@target", targetPath);
+            _ = copy.ExecuteNonQuery();
+        }
+        finally
+        {
+            _connectionLock.ExitWriteLock();
+        }
     }
 
     public void Exit()

@@ -43,7 +43,7 @@ sealed partial class DatabaseApi
         string whereClause = string.Empty;
         if (days > 0)
         {
-            whereClause = "AND created_at >= datetime('now', @daysOffset)";
+            whereClause = "AND created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @daysOffset)";
             args.Add(("@daysOffset", $"-{days.ToString(CultureInfo.InvariantCulture)} days"));
         }
 

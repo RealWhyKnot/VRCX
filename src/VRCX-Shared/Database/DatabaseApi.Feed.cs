@@ -82,7 +82,7 @@ sealed partial class DatabaseApi
                       COUNT(DISTINCT user_id) AS unique_friends,
                       MAX(created_at) AS last_visited
                   FROM {UserTable("feed_gps")}
-                  WHERE created_at >= datetime('now', @daysOffset)
+                  WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @daysOffset)
                       AND location LIKE 'wrld_%'
                       AND INSTR(location, ':') > 0
                       AND world_name IS NOT NULL AND world_name != ''
@@ -100,8 +100,8 @@ sealed partial class DatabaseApi
                       SUBSTR(location, 1, INSTR(location, ':') - 1) AS world_id,
                       COUNT(DISTINCT user_id) AS unique_friends
                   FROM {UserTable("feed_gps")}
-                  WHERE created_at >= datetime('now', @daysOffset)
-                      AND created_at < datetime('now', @halfOffset)
+                  WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @daysOffset)
+                      AND created_at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @halfOffset)
                       AND location LIKE 'wrld_%'
                       AND INSTR(location, ':') > 0
                       AND world_name IS NOT NULL AND world_name != ''
@@ -117,7 +117,7 @@ sealed partial class DatabaseApi
                       SUBSTR(location, 1, INSTR(location, ':') - 1) AS world_id,
                       COUNT(DISTINCT user_id) AS unique_friends
                   FROM {UserTable("feed_gps")}
-                  WHERE created_at >= datetime('now', @halfOffset)
+                  WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @halfOffset)
                       AND location LIKE 'wrld_%'
                       AND INSTR(location, ':') > 0
                       AND world_name IS NOT NULL AND world_name != ''
@@ -135,7 +135,7 @@ sealed partial class DatabaseApi
                       MAX(created_at) AS last_visit
                   FROM {UserTable("feed_gps")}
                   WHERE SUBSTR(location, 1, INSTR(location, ':') - 1) = @worldId
-                      AND created_at >= datetime('now', @daysOffset)
+                      AND created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', @daysOffset)
                   GROUP BY user_id
                   ORDER BY visit_count DESC
             """,

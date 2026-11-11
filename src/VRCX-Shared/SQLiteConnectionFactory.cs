@@ -8,13 +8,33 @@ internal static class SQLiteConnectionFactory
 
     public static SQLiteConnection Open(string dataSource)
     {
-        var connection = new SQLiteConnection($"Data Source=\"{dataSource}\";Version=3;", parseViaFramework: true);
+        SQLiteConnection connection = OpenConnection($"Data Source=\"{dataSource}\";Version=3;");
+        bool isReady = false;
+        try
+        {
+            using var command = new SQLiteCommand(Pragmas, connection);
+            _ = command.ExecuteNonQuery();
+            isReady = true;
+            return connection;
+        }
+        finally
+        {
+            if (!isReady)
+            {
+                connection.Dispose();
+            }
+        }
+    }
+
+    public static SQLiteConnection OpenReadOnly(string dataSource) => OpenConnection($"Data Source=\"{dataSource}\";Version=3;Read Only=True;");
+
+    private static SQLiteConnection OpenConnection(string connectionString)
+    {
+        var connection = new SQLiteConnection(connectionString, parseViaFramework: true);
         bool isOpen = false;
         try
         {
             connection.Open();
-            using var command = new SQLiteCommand(Pragmas, connection);
-            _ = command.ExecuteNonQuery();
             isOpen = true;
             return connection;
         }
