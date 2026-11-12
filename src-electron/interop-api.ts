@@ -43,7 +43,7 @@ export class InteropApi {
   callMethod(className: string, methodName: string, args: unknown[]): unknown {
     try {
       const obj = this.getDotNetObject(className);
-      const method: unknown = readMember(obj, methodName);
+      const method: unknown = readMember(obj, methodName) ?? readMember(obj, `${methodName}Async`);
       if (!isDotNetMethod(method)) {
         throw new Error(`Method ${methodName} does not exist on class ${className}`);
       }

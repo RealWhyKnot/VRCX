@@ -80,61 +80,61 @@ function handleLinkClick(event: MouseEvent) {
 </script>
 
 <style scoped>
-.changelog-dialog :global(img) {
+.changelog-dialog :deep(img) {
   width: 100%;
 }
 
-.changelog-markdown :global(ul),
-.changelog-markdown :global(ol) {
+.changelog-markdown :deep(ul),
+.changelog-markdown :deep(ol) {
   padding-left: 1.5rem;
   margin: 0.5rem 0 1rem;
   list-style-position: outside;
 }
 
-.changelog-markdown :global(ul) {
+.changelog-markdown :deep(ul) {
   list-style-type: disc;
 }
 
-.changelog-markdown :global(ol) {
+.changelog-markdown :deep(ol) {
   list-style-type: decimal;
 }
 
-.changelog-markdown :global(li) {
+.changelog-markdown :deep(li) {
   margin: 0.25rem 0;
 }
 
-.changelog-markdown :global(h1),
-.changelog-markdown :global(h2),
-.changelog-markdown :global(h3),
-.changelog-markdown :global(h4),
-.changelog-markdown :global(h5),
-.changelog-markdown :global(h6) {
+.changelog-markdown :deep(h1),
+.changelog-markdown :deep(h2),
+.changelog-markdown :deep(h3),
+.changelog-markdown :deep(h4),
+.changelog-markdown :deep(h5),
+.changelog-markdown :deep(h6) {
   font-weight: 600;
   line-height: 1.25;
   margin: 1.25rem 0 0.5rem;
 }
 
-.changelog-markdown :global(h1) {
+.changelog-markdown :deep(h1) {
   font-size: 1.5rem;
 }
 
-.changelog-markdown :global(h2) {
+.changelog-markdown :deep(h2) {
   font-size: 1.25rem;
 }
 
-.changelog-markdown :global(h3) {
+.changelog-markdown :deep(h3) {
   font-size: 1.125rem;
 }
 
-.changelog-markdown :global(h4) {
+.changelog-markdown :deep(h4) {
   font-size: 1rem;
 }
 
-.changelog-markdown :global(h5) {
+.changelog-markdown :deep(h5) {
   font-size: 0.95rem;
 }
 
-.changelog-markdown :global(h6) {
+.changelog-markdown :deep(h6) {
   font-size: 0.9rem;
 }
 </style>

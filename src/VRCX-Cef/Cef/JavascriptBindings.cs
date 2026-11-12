@@ -8,12 +8,19 @@ internal static class JavascriptBindings
     public static void ApplyAppJavascriptBindings(IJavascriptObjectRepository repository)
     {
         repository.NameConverter = new BridgeNameConverter();
-        repository.Register("AppApi", Program.AppApiInstance);
-        repository.Register("WebApi", WebApi.Instance);
-        repository.Register("VRCXStorage", VRCXStorage.Instance);
-        repository.Register("DatabaseApi", DatabaseApi.Instance);
-        repository.Register("LogWatcher", LogWatcher.Instance);
-        repository.Register("Discord", Discord.Instance);
-        repository.Register("AssetBundleManager", AssetBundleManager.Instance);
+        Register(repository, "AppApi", Program.AppApiInstance ?? throw new InvalidOperationException("The application API is not initialized."));
+        Register(repository, "WebApi", WebApi.Instance);
+        Register(repository, "VRCXStorage", VRCXStorage.Instance);
+        Register(repository, "DatabaseApi", DatabaseApi.Instance);
+        Register(repository, "LogWatcher", LogWatcher.Instance);
+        Register(repository, "Discord", Discord.Instance);
+        Register(repository, "AssetBundleManager", AssetBundleManager.Instance);
+    }
+
+    private static void Register(IJavascriptObjectRepository repository, string name, object target)
+    {
+        BindingOptions options = BindingOptions.DefaultBinder;
+        options.MethodInterceptor = new BridgeMethodInterceptor(target.GetType());
+        repository.Register(name, target, options);
     }
 }

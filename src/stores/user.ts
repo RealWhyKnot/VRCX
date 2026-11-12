@@ -99,7 +99,9 @@ export const useUserStore = defineStore("User", () => {
   const notesDeps: UserNotesDeps = {
     state,
     cachedUsers,
-    friends: friendStore.friends,
+    get friends() {
+      return friendStore.friends;
+    },
   };
 
   function addCachedUserDisplayNameEntry(displayName: string, userId: string) {

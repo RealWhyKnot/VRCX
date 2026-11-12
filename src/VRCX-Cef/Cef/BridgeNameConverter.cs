@@ -5,23 +5,13 @@ namespace VRCX.Cef;
 
 internal sealed class BridgeNameConverter : IJavascriptNameConverter
 {
+    private const string AsyncSuffix = "Async";
+
     public string ConvertToJavascript(MemberInfo memberInfo)
     {
-        return memberInfo.Name switch
-        {
-            "GetZoomAsync" => "GetZoom",
-            "OpenFolderSelectorDialogAsync" => "OpenFolderSelectorDialog",
-            "OpenFileSelectorDialogAsync" => "OpenFileSelectorDialog",
-            "TryOpenInstanceInVrcAsync" => "TryOpenInstanceInVrc",
-            "GetImageAsync" => "GetImage",
-            "CropAllPrintsAsync" => "CropAllPrints",
-            "CropPrintImageAsync" => "CropPrintImage",
-            "SavePrintToFileAsync" => "SavePrintToFile",
-            "SaveStickerToFileAsync" => "SaveStickerToFile",
-            "SaveEmojiToFileAsync" => "SaveEmojiToFile",
-            "DownloadUpdateAsync" => "DownloadUpdate",
-            _ => memberInfo.Name,
-        };
+        string name = memberInfo.Name;
+        bool isAsyncMethod = memberInfo is MethodInfo && name.Length > AsyncSuffix.Length && name.EndsWith(AsyncSuffix, StringComparison.Ordinal);
+        return isAsyncMethod ? name[..^AsyncSuffix.Length] : name;
     }
 
     public string ConvertReturnedObjectPropertyAndFieldToNameJavascript(MemberInfo memberInfo) => memberInfo.Name;
