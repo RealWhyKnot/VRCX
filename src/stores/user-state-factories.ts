@@ -244,6 +244,7 @@ export function createUserDialogState(): UserDialogState {
     unFriended: false,
     dateFriendedInfo: [],
     firstMet: "",
+    sightings: { spottedAt: "", spottedLocation: "", spottedWorldName: "", hostedCount: 0, lastHostedAt: "" },
     trustHistory: [],
     mutualFriendCount: 0,
     mutualGroupCount: 0,

@@ -122,6 +122,7 @@ export function showUserDialog(userId: unknown) {
   };
   D.lastSeen = "";
   D.firstMet = "";
+  D.sightings = { spottedAt: "", spottedLocation: "", spottedWorldName: "", hostedCount: 0, lastHostedAt: "" };
   D.trustHistory = [];
   D.joinCount = 0;
   D.timeSpent = 0;
@@ -227,9 +228,10 @@ export function showUserDialog(userId: unknown) {
               }
               D.dateFriendedInfo = dateFriendedInfo;
               D.trustHistory = trustHistory;
-              const firstMet = await database.getFirstMet(userId);
+              const [firstMet, sightings] = await Promise.all([database.getFirstMet(userId), database.getSightingSummary(userId)]);
               if (D.id === userId) {
                 D.firstMet = firstMet;
+                D.sightings = sightings;
               }
               const latestFriendedInfo = dateFriendedInfo[0];
               if (latestFriendedInfo !== undefined) {

@@ -262,7 +262,7 @@
                   <span class="text-right text-muted-foreground">{{ timeAgo(userDialog.dateFriended) }}</span>
                 </div>
               </TooltipWrapper>
-              <UserDialogHistoryRows :first-met="userDialog.firstMet" :trust-history="userDialog.trustHistory" />
+              <UserDialogHistoryRows :first-met="userDialog.firstMet" :sightings="userDialog.sightings" :trust-history="userDialog.trustHistory" />
               <TooltipWrapper side="right" :content="timeToText(userDialog.timeSpent, true)" :disabled="!userDialog.timeSpent">
                 <div class="flex justify-between items-start gap-2 text-xs">
                   <span class="text-muted-foreground shrink-0">{{ t("dialog.user.info.time_together") }}</span>

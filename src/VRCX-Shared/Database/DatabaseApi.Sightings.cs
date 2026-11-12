@@ -7,6 +7,8 @@ internal
 #endif
 sealed partial class DatabaseApi
 {
+    private const long KeptSightings = 50_000;
+
     public void AddInstanceSighting(string createdAt, string location, string worldId, string worldName, string creatorId, string creatorName, long userCount, long capacity, string[] userIds, string[] fileIds, string[] displayNames, string[] isFriend)
     {
         if (userIds.Length != fileIds.Length || userIds.Length != displayNames.Length || userIds.Length != isFriend.Length)
@@ -70,6 +72,49 @@ sealed partial class DatabaseApi
         """,
         ("@limit", limit));
 
+    public string GetSightingSummary(string id) => Rows($"""
+        SELECT s.created_at, s.location, COALESCE(NULLIF(s.world_name, ''), (SELECT w.name FROM cache_world w WHERE w.id = s.world_id), ''),
+            (SELECT COUNT(*) FROM {UserTable("instance_sightings")} h WHERE h.creator_id = @id),
+            (SELECT MAX(h.created_at) FROM {UserTable("instance_sightings")} h WHERE h.creator_id = @id)
+        FROM (SELECT 1) one
+        LEFT JOIN {UserTable("instance_sightings")} s ON s.id = (
+            SELECT MAX(seen.sighting_id) FROM (
+                SELECT p.sighting_id FROM {UserTable("instance_sighting_people")} p WHERE p.user_id = @id
+                UNION ALL
+                SELECT p.sighting_id FROM picture_owners o
+                JOIN {UserTable("instance_sighting_people")} p ON p.file_id = o.file_id
+                WHERE o.user_id = @id AND p.user_id = ''
+            ) seen)
+        """,
+        ("@id", id));
+
+    public string GetLocationSightingSummary(string location) => Rows($"""
+        SELECT COUNT(*), MAX(user_count), MAX(capacity), MAX(created_at)
+        FROM {UserTable("instance_sightings")}
+        WHERE location = @location
+        """,
+        ("@location", location));
+
+    public string GetWorldSightingSummary(string worldId) => Rows($"""
+        SELECT COUNT(*), CAST(ROUND(AVG(user_count)) AS INTEGER), MAX(user_count), COUNT(DISTINCT location)
+        FROM {UserTable("instance_sightings")}
+        WHERE location >= @from AND location < @to AND user_count > 0
+        """,
+        ("@from", worldId + ":"),
+        ("@to", worldId + ";"));
+
+    public void PruneInstanceSightings(long keep)
+    {
+        string sightings = UserTable("instance_sightings");
+        string people = UserTable("instance_sighting_people");
+        RunInWriteTransaction(() =>
+        {
+            string oldest = $"(SELECT id FROM {sightings} ORDER BY id DESC LIMIT 1 OFFSET @keep)";
+            _ = Run($"DELETE FROM {people} WHERE sighting_id <= {oldest}", ("@keep", keep));
+            _ = Run($"DELETE FROM {sightings} WHERE id <= {oldest}", ("@keep", keep));
+        });
+    }
+
     public string GetUnresolvedSightingPictures(string retryFailedBefore, long limit) => Rows($"""
         SELECT p.file_id
         FROM {UserTable("instance_sighting_people")} p
@@ -107,6 +152,7 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE TABLE IF NOT EXISTS {people} (sighting_id INTEGER NOT NULL, user_id TEXT NOT NULL DEFAULT '', file_id TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '', is_friend INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sighting_id, user_id, file_id)) WITHOUT ROWID");
         _ = Run($"CREATE INDEX IF NOT EXISTS {people}_user_idx ON {people} (user_id)");
         _ = Run($"CREATE INDEX IF NOT EXISTS {people}_file_idx ON {people} (file_id)");
+        PruneInstanceSightings(KeptSightings);
     }
 
     private void CreatePictureOwnerTable()

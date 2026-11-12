@@ -59,6 +59,8 @@ export type GroupDialogState = {
   memberRoles: Json<GroupRole>[];
   lastVisit: string;
   joinCount: number;
+  instancesSeen: number;
+  lastInstanceSeenAt: string;
   memberFilter: { name: string; id: string | null };
   memberSortOrder: { name: string; value: string };
   postsSearch: string;

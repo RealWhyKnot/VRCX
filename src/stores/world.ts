@@ -7,6 +7,7 @@ import { formatFileSize } from "../shared/utils/base/format";
 import { preloadOwnWorlds } from "../coordinators/world-coordinator";
 import type { WorldRef } from "../shared/utils/world-transforms";
 import type { InstanceRoom } from "./instance-types";
+import type { WorldSightingSummary } from "../services/database/sightings";
 import type { Json, ParsedLocation, WorldRatingValue } from "../types/vrcx";
 import { watchState } from "../services/watch-state";
 
@@ -31,6 +32,7 @@ export type WorldDialogState = {
   lastVisit: string;
   visitCount: number;
   timeSpent: number;
+  crowd: WorldSightingSummary;
   isPC: boolean;
   isQuest: boolean;
   isIos: boolean;
@@ -61,6 +63,7 @@ export const useWorldStore = defineStore("World", () => {
     lastVisit: "",
     visitCount: 0,
     timeSpent: 0,
+    crowd: { count: 0, typicalUsers: 0, peakUsers: 0, instanceCount: 0 },
     isPC: false,
     isQuest: false,
     isIos: false,

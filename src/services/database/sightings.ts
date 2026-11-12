@@ -11,6 +11,64 @@ type SavedPictureOwner = {
   displayName: string;
 };
 
+type SightingSummary = {
+  spottedAt: string;
+  spottedLocation: string;
+  spottedWorldName: string;
+  hostedCount: number;
+  lastHostedAt: string;
+};
+
+type LocationSightingSummary = {
+  count: number;
+  peakUsers: number;
+  capacity: number;
+  lastAt: string;
+};
+
+type WorldSightingSummary = {
+  count: number;
+  typicalUsers: number;
+  peakUsers: number;
+  instanceCount: number;
+};
+
+async function firstRow(call: Promise<string>): Promise<unknown[]> {
+  const rows = await sqliteService.rows(call);
+  return rows[0] ?? [];
+}
+
+async function getSightingSummary(id: string): Promise<SightingSummary> {
+  const row = await firstRow(DatabaseApi.GetSightingSummary(id));
+  return {
+    spottedAt: cellText(row[0]) ?? "",
+    spottedLocation: cellText(row[1]) ?? "",
+    spottedWorldName: cellText(row[2]) ?? "",
+    hostedCount: cellNumber(row[3]) ?? 0,
+    lastHostedAt: cellText(row[4]) ?? "",
+  };
+}
+
+async function getLocationSightingSummary(location: string): Promise<LocationSightingSummary> {
+  const row = await firstRow(DatabaseApi.GetLocationSightingSummary(location));
+  return {
+    count: cellNumber(row[0]) ?? 0,
+    peakUsers: cellNumber(row[1]) ?? 0,
+    capacity: cellNumber(row[2]) ?? 0,
+    lastAt: cellText(row[3]) ?? "",
+  };
+}
+
+async function getWorldSightingSummary(worldId: string): Promise<WorldSightingSummary> {
+  const row = await firstRow(DatabaseApi.GetWorldSightingSummary(worldId));
+  return {
+    count: cellNumber(row[0]) ?? 0,
+    typicalUsers: cellNumber(row[1]) ?? 0,
+    peakUsers: cellNumber(row[2]) ?? 0,
+    instanceCount: cellNumber(row[3]) ?? 0,
+  };
+}
+
 async function addInstanceSighting(sighting: Sighting, createdAt: string): Promise<void> {
   await sqliteService.run(
     DatabaseApi.AddInstanceSighting(
@@ -94,10 +152,13 @@ async function savePictureOwner(fileId: string, kind: PictureOwnerKind, userId: 
 const sightings = {
   addInstanceSighting,
   getInstanceSightings,
+  getSightingSummary,
+  getLocationSightingSummary,
+  getWorldSightingSummary,
   getUnresolvedSightingPictures,
   getPictureOwners,
   savePictureOwner,
 };
 
 export { sightings };
-export type { SavedPictureOwner };
+export type { LocationSightingSummary, SightingSummary, SavedPictureOwner, WorldSightingSummary };

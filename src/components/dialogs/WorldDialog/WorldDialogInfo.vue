@@ -31,6 +31,12 @@
             </span>
           </div>
         </TooltipWrapper>
+        <div v-if="worldDialog.crowd.count > 0" class="flex items-start justify-between gap-2 text-xs" data-testid="world-crowd">
+          <span class="text-muted-foreground shrink-0">{{ t("dialog.world.info.crowd") }}</span>
+          <span class="text-right text-muted-foreground tabular-nums">
+            {{ t("dialog.world.info.crowd_value", { typical: worldDialog.crowd.typicalUsers, peak: worldDialog.crowd.peakUsers }) }}
+          </span>
+        </div>
       </div>
     </div>
 

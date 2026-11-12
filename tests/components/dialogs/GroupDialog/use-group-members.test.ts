@@ -138,6 +138,8 @@ function createGroupDialog(overrides: Partial<GroupMembersSource> = {}): Ref<Gro
     memberRoles: [],
     lastVisit: "",
     joinCount: 0,
+    instancesSeen: 0,
+    lastInstanceSeenAt: "",
     memberSortOrder: { value: "" },
     memberFilter: { id: null, name: "Everyone" },
     postsSearch: "",

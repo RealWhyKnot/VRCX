@@ -54,6 +54,8 @@ function createGroupDialog(overrides: Partial<GroupGalleriesSource> = {}): Ref<G
     memberRoles: [],
     lastVisit: "",
     joinCount: 0,
+    instancesSeen: 0,
+    lastInstanceSeenAt: "",
     memberFilter: { name: "", id: null },
     memberSortOrder: { name: "", value: "" },
     postsSearch: "",

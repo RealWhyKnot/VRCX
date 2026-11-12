@@ -40,6 +40,7 @@ function createWorldDialog(overrides: Partial<WorldDialogState> = {}) {
     lastActiveTab: "Info",
     memo: "",
     timeSpent: 60000,
+    crowd: { count: 0, typicalUsers: 0, peakUsers: 0, instanceCount: 0 },
     $location: {},
     isFavorite: false,
     avatarScalingDisabled: false,

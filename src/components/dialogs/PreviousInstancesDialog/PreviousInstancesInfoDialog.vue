@@ -32,6 +32,9 @@
               </TooltipWrapper>
             </ToggleGroup>
             <Location :location="location.tag" class="text-sm" />
+            <TooltipWrapper v-if="seenSummary" side="bottom" :content="formatDateFilter(seen.lastAt, 'long')">
+              <span class="shrink-0 text-xs text-muted-foreground tabular-nums" data-testid="instance-seen-summary">{{ seenSummary }}</span>
+            </TooltipWrapper>
           </div>
           <InputGroupField v-model="search" :placeholder="t('dialog.previous_instances.search_placeholder')" class="w-[150px]" clearable />
         </div>
@@ -54,6 +57,9 @@
             </TooltipWrapper>
           </ToggleGroup>
           <Location :location="location.tag" class="text-sm" />
+          <TooltipWrapper v-if="seenSummary" side="bottom" :content="formatDateFilter(seen.lastAt, 'long')">
+            <span class="shrink-0 text-xs text-muted-foreground tabular-nums">{{ seenSummary }}</span>
+          </TooltipWrapper>
         </div>
       </div>
       <div class="flex-1 overflow-auto min-h-0">
@@ -95,6 +101,8 @@ import { createColumns, type InstancePlayerRow } from "./previous-instances-info
 import { database } from "../../../services/database";
 import { useVrcxVueTable } from "../../../lib/table/use-vrcx-vue-table";
 import { lookupUser } from "../../../coordinators/user-coordinator";
+import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import type { LocationSightingSummary } from "../../../services/database/sightings";
 import { logError } from "../../../stores/vrcx-messages";
 
 import PreviousInstancesInfoChart from "./PreviousInstancesInfoChart.vue";
@@ -168,6 +176,16 @@ const location = ref<ParsedLocation>({
 });
 
 const { stringComparer } = storeToRefs(useSearchStore());
+
+const seen = ref<LocationSightingSummary>({ count: 0, peakUsers: 0, capacity: 0, lastAt: "" });
+const seenSummary = computed(() => {
+  const { count, peakUsers, capacity } = seen.value;
+  if (count === 0) {
+    return "";
+  }
+  const peak = capacity > 0 ? `${peakUsers}/${capacity}` : String(peakUsers);
+  return t("dialog.previous_instances.seen_summary", { count: count.toLocaleString(), peak });
+});
 
 const viewMode = ref("table");
 const chartData = ref<ChartRow[]>([]);
@@ -285,6 +303,16 @@ function init() {
 }
 
 function refreshPreviousInstancesInfoTable() {
+  const tag = location.value.tag;
+  seen.value = { count: 0, peakUsers: 0, capacity: 0, lastAt: "" };
+  void database
+    .getLocationSightingSummary(tag)
+    .then((summary) => {
+      if (location.value.tag === tag) {
+        seen.value = summary;
+      }
+    })
+    .catch(logError);
   void database
     .getPlayersFromInstance(location.value.tag)
     .then((data) => {

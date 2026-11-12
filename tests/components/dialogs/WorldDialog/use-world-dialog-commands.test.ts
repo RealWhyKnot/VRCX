@@ -103,6 +103,7 @@ function createWorldDialog(overrides: Partial<WorldDialogState> = {}) {
     lastVisit: "",
     visitCount: 0,
     timeSpent: 0,
+    crowd: { count: 0, typicalUsers: 0, peakUsers: 0, instanceCount: 0 },
     isPC: false,
     isQuest: false,
     isIos: false,

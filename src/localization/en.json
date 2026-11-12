@@ -1589,6 +1589,8 @@
         "last_seen": "Last Seen",
         "join_count": "Join Count",
         "first_met": "First Met",
+        "spotted": "Spotted In",
+        "hosted": "Instances Hosted",
         "rank_changed": "Rank Changed",
         "time_together": "Time Together",
         "play_time": "Play Time",
@@ -1831,6 +1833,8 @@
         "last_visited": "Last Visited",
         "visit_count": "Visit Count",
         "time_spent": "Time Spent",
+        "crowd": "Usual Crowd",
+        "crowd_value": "{typical}, peak {peak}",
         "description": "Description"
       },
       "store": {
@@ -2113,6 +2117,7 @@
         "role_created_at": "Created At:",
         "role_permissions": "Permissions:",
         "last_visited": "Last Visited",
+        "instances_seen": "Instances Seen",
         "past_events": "Past Events",
         "upcoming_events": "Upcoming Events",
         "member_info": "Member Info",
@@ -2710,7 +2715,8 @@
       "info": "Previous Instance Info",
       "search_placeholder": "Search",
       "table_view": "Table View",
-      "chart_view": "Chart View"
+      "chart_view": "Chart View",
+      "seen_summary": "Seen {count}×, peak {peak}"
     },
     "group_member_moderation": {
       "header": "Group Member Moderation",

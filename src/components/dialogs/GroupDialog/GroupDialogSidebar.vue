@@ -259,6 +259,12 @@
             <span class="text-right text-muted-foreground">{{ groupDialog.joinCount || "—" }}</span>
           </div>
         </TooltipWrapper>
+        <TooltipWrapper v-if="groupDialog.instancesSeen > 0" side="right" :content="formatDateFilter(groupDialog.lastInstanceSeenAt, 'long')">
+          <div class="flex justify-between items-start gap-2 text-xs" data-testid="group-instances-seen">
+            <span class="text-muted-foreground shrink-0">{{ t("dialog.group.info.instances_seen") }}</span>
+            <span class="text-right text-muted-foreground tabular-nums">{{ groupDialog.instancesSeen.toLocaleString() }}</span>
+          </div>
+        </TooltipWrapper>
       </div>
     </div>
 

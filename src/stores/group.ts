@@ -44,6 +44,8 @@ export const useGroupStore = defineStore("Group", () => {
     memberRoles: [],
     lastVisit: "",
     joinCount: 0,
+    instancesSeen: 0,
+    lastInstanceSeenAt: "",
     memberFilter: {
       name: "dialog.group.members.filters.everyone",
       id: null,

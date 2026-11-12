@@ -13,6 +13,7 @@ import type {
   ProfileTheme,
 } from "vrchat";
 import type { Json, ParsedLocation, VrcxInstance, VrcxUser } from "../types/vrcx";
+import type { SightingSummary } from "../services/database/sightings";
 import type { FriendContext } from "./friend-types";
 
 export type ConnectedAccountDetails = Record<string, unknown>;
@@ -290,6 +291,7 @@ export type UserDialogState = {
   unFriended: boolean;
   dateFriendedInfo: UserDialogFriendedInfo[];
   firstMet: string;
+  sightings: SightingSummary;
   trustHistory: UserDialogTrustChange[];
   mutualFriendCount: number;
   mutualGroupCount: number;

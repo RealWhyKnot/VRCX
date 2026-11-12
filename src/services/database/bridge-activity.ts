@@ -78,6 +78,9 @@ type ActivityBridge = {
     isFriend: string[]
   ): Promise<void>;
   GetInstanceSightings(limit: number): Promise<string>;
+  GetSightingSummary(id: string): Promise<string>;
+  GetLocationSightingSummary(location: string): Promise<string>;
+  GetWorldSightingSummary(worldId: string): Promise<string>;
   GetUnresolvedSightingPictures(retryFailedBefore: string, limit: number): Promise<string>;
   GetPictureOwners(limit: number): Promise<string>;
   SavePictureOwner(fileId: string, kind: string, userId: string, displayName: string, resolvedAt: string): Promise<void>;

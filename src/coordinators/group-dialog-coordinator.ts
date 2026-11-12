@@ -57,6 +57,8 @@ export function showGroupDialog(groupId: string, options: { forceRefresh?: boole
   D.memberRoles = [];
   D.lastVisit = "";
   D.joinCount = 0;
+  D.instancesSeen = 0;
+  D.lastInstanceSeenAt = "";
   D.memberSearch = "";
   D.memberSearchResults = [];
   D.galleries = {};
@@ -108,6 +110,15 @@ export function showGroupDialog(groupId: string, options: { forceRefresh?: boole
           .then((r) => {
             if (D.id === ref.id) {
               D.joinCount = r.joinCount;
+            }
+          })
+          .catch(logError);
+        database
+          .getSightingSummary(D.id)
+          .then((summary) => {
+            if (D.id === ref.id) {
+              D.instancesSeen = summary.hostedCount;
+              D.lastInstanceSeenAt = summary.lastHostedAt;
             }
           })
           .catch(logError);

@@ -90,6 +90,7 @@ export function showWorldDialog(tag: string, shortName: string | null = null, op
   D.lastVisit = "";
   D.visitCount = 0;
   D.timeSpent = 0;
+  D.crowd = { count: 0, typicalUsers: 0, peakUsers: 0, instanceCount: 0 };
   D.isFavorite = false;
   D.avatarScalingDisabled = false;
   D.focusViewDisabled = false;
@@ -136,6 +137,15 @@ export function showWorldDialog(tag: string, shortName: string | null = null, op
       }
     })
     .catch(logFailure("Failed to load time spent in world:"));
+  const crowdWorldId = D.id;
+  database
+    .getWorldSightingSummary(crowdWorldId)
+    .then((crowd) => {
+      if (D.id === crowdWorldId) {
+        D.crowd = crowd;
+      }
+    })
+    .catch(logFailure("Failed to load world crowd:"));
   const loadWorldRequest = worldRequest.getWorld({
     worldId: L.worldId,
   });
