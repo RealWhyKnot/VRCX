@@ -13,16 +13,18 @@ const VRChatCameraResolutions = [
   { name: "7680x4320 (8K)", width: 7680, height: 4320 },
 ];
 
+const RELEASES_API = "https://api.github.com/repos/RealWhyKnot/VRCX/releases";
+
 const branches = {
   Stable: {
     name: "Stable",
-    urlReleases: "https://api0.vrcx.app/releases/stable",
-    urlLatest: "https://api0.vrcx.app/releases/stable/latest",
+    urlReleases: `${RELEASES_API}?per_page=30`,
+    urlLatest: `${RELEASES_API}/latest`,
   },
   Nightly: {
     name: "Nightly",
-    urlReleases: "https://api0.vrcx.app/releases/nightly",
-    urlLatest: "https://api0.vrcx.app/releases/nightly/latest",
+    urlReleases: `${RELEASES_API}?per_page=30`,
+    urlLatest: `${RELEASES_API}?per_page=30`,
   },
 };
 

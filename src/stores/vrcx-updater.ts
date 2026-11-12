@@ -7,6 +7,15 @@ import { logWebRequest } from "../services/app-config";
 import { branches } from "../shared/constants/settings";
 import { getWhatsNewRelease, normalizeReleaseVersion } from "../shared/constants/whats-new-releases";
 import { changeLogRemoveLinks } from "../shared/utils/base/string";
+import {
+  isNewerRelease,
+  listReleases,
+  parseReleaseVersion,
+  pickLatestRelease,
+  releaseVersionText,
+  type GitHubAsset,
+  type GitHubRelease,
+} from "../shared/utils/release-version";
 
 import { configRepository } from "../services/config";
 
@@ -19,24 +28,6 @@ type WhatsNewDialog = {
   titleKey: string;
   subtitleKey: string;
   items: WhatsNewItem[];
-};
-
-type GitHubAsset = {
-  name: string;
-  state: string;
-  content_type: string;
-  browser_download_url: string;
-  digest?: string | null;
-  size: number;
-};
-
-type GitHubRelease = {
-  name: string;
-  tag_name?: string | undefined;
-  body: string;
-  published_at: string;
-  prerelease: boolean;
-  assets: GitHubAsset[];
 };
 
 type VrcxUpdateDialog = {
@@ -65,32 +56,14 @@ type WebApiResponse = {
 
 const branchUrls: Readonly<Record<string, BranchUrls | undefined>> = branches;
 
+const RELEASE_REQUEST_HEADERS = { Accept: "application/vnd.github+json" } as const;
+
 function getBranchUrls(name: string): BranchUrls {
   const urls = branchUrls[name];
   if (urls === undefined) {
     throw new Error(`Unknown VRCX update branch: ${name}`);
   }
   return urls;
-}
-
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
-function isGitHubRelease(value: unknown): value is GitHubRelease {
-  return typeof value === "object" && value !== null && "name" in value && typeof value.name === "string" && "assets" in value && Array.isArray(value.assets);
-}
-
-function isLatestRelease(value: unknown): value is GitHubRelease {
-  return (
-    isGitHubRelease(value) &&
-    value.name !== "" &&
-    "published_at" in value &&
-    typeof value.published_at === "string" &&
-    value.published_at !== "" &&
-    "body" in value &&
-    typeof value.body === "string"
-  );
 }
 
 function readJsonMessage(value: unknown): unknown {
@@ -314,7 +287,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
     return { downloadUrl, hashString, size };
   }
   async function checkForVRCXUpdate() {
-    if (!currentVersion.value || currentVersion.value === "VRCX Nightly Build" || currentVersion.value === "VRCX Build") {
+    if (parseReleaseVersion(currentVersion.value) === null) {
       return false;
     }
     if (branch.value === "Beta") {
@@ -331,9 +304,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       response = await webApiService.execute({
         url,
         method: "GET",
-        headers: {
-          "VRCX-ID": vrcxId.value,
-        },
+        headers: RELEASE_REQUEST_HEADERS,
       });
       json = JSON.parse(response.data);
     } catch (error) {
@@ -341,6 +312,9 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       return false;
     } finally {
       checkingForVRCXUpdate.value = false;
+    }
+    if (response.status === 404) {
+      return false;
     }
     if (response.status !== 200) {
       toast.error(
@@ -352,10 +326,11 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
     }
     pendingVRCXUpdate.value = false;
     logWebRequest("[EXTERNAL GET]", url, `(${response.status})`, json);
-    if (isLatestRelease(json)) {
-      changeLogDialog.value.buildName = json.name;
-      changeLogDialog.value.changeLog = changeLogRemoveLinks(json.body);
-      const releaseName = json.name;
+    const latest = pickLatestRelease(json, branch.value === "Nightly");
+    if (latest !== null) {
+      changeLogDialog.value.buildName = latest.name;
+      changeLogDialog.value.changeLog = changeLogRemoveLinks(latest.body);
+      const releaseName = latest.name;
       setLatestAppVersion(releaseName);
       VRCXUpdateDialog.value.updatePendingIsLatest = false;
       if (autoUpdateVRCX.value === "Off") {
@@ -363,8 +338,8 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       }
       if (releaseName === pendingVRCXInstall.value) {
         VRCXUpdateDialog.value.updatePendingIsLatest = true;
-      } else if (releaseName > currentVersion.value) {
-        const { downloadUrl, hashString, size } = getAssetOfInterest(json.assets);
+      } else if (isNewerRelease(releaseVersionText(latest), currentVersion.value)) {
+        const { downloadUrl, hashString, size } = getAssetOfInterest(latest.assets);
         if (!downloadUrl) {
           return true;
         }
@@ -411,9 +386,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       response = await webApiService.execute({
         url,
         method: "GET",
-        headers: {
-          "VRCX-ID": vrcxId.value,
-        },
+        headers: RELEASE_REQUEST_HEADERS,
       });
       json = JSON.parse(response.data);
     } catch (error) {
@@ -440,18 +413,10 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       );
       return;
     }
-    if (!isUnknownArray(json)) {
+    if (!Array.isArray(json)) {
       return;
     }
-    const releases: GitHubRelease[] = [];
-    for (const release of json) {
-      if (!isGitHubRelease(release) || release.prerelease) {
-        continue;
-      }
-      if (release.assets.some((asset) => asset.state === "uploaded")) {
-        releases.push(release);
-      }
-    }
+    const releases = listReleases(json, branch.value === "Nightly");
     D.releases = releases;
     D.release = releases[0]?.name ?? "";
     VRCXUpdateDialog.value.updatePendingIsLatest = false;

@@ -15,7 +15,7 @@
         />
       </div>
       <DialogFooter>
-        <Button variant="ghost" class="mr-2" @click="openExternalLink('https://github.com/vrcx-team/VRCX/releases')">
+        <Button variant="ghost" class="mr-2" @click="openExternalLink(links.releases)">
           {{ t("dialog.change_log.github") }}
         </Button>
         <Button @click="closeDialog">
@@ -37,6 +37,7 @@ import { defineAsyncComponent } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
+import { links } from "../../../shared/constants/link";
 import { openExternalLink } from "../../../shared/utils/app-actions";
 import { useVRCXUpdaterStore } from "../../../stores/vrcx-updater";
 
