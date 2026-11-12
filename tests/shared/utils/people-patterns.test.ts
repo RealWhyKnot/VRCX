@@ -167,7 +167,7 @@ describe("filters and helpers", () => {
     expect(filterGatherings(gatherings, "bob")).toHaveLength(1);
     expect(filterGatherings(gatherings, "zzz")).toHaveLength(0);
     const encounter = { id: "usr_1", displayName: "Stranger", placeCount: 4, lastSeenAt: "", timeTogether: 0 };
-    expect(filterRepeatEncounters([encounter], "stran")).toEqual([encounter]);
+    expect(filterRepeatEncounters([encounter], "STRANGE")).toEqual([encounter]);
     expect(filterRepeatEncounters([encounter], "x".repeat(5000))).toEqual([]);
     const overlap = { id: "usr_2", displayName: "Friend", timeTogether: 1, theirTime: 2, theirShare: 50, myShare: 10 };
     expect(filterOnlineOverlap([overlap], "")).toEqual([overlap]);
