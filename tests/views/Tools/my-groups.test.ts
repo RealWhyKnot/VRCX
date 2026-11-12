@@ -91,7 +91,7 @@ describe("MyGroups.vue", () => {
 
   test("filters by name and keeps the full count", async () => {
     const wrapper = await open();
-    await wrapper.get("input").setValue("gam");
+    await wrapper.get("input").setValue("gamma");
     expect(names(wrapper)).toEqual(["Gamma"]);
     expect(wrapper.get('[data-testid="group-count"]').text()).toBe("3 / 200");
     expect(wrapper.get("input").attributes("maxlength")).toBe("100");

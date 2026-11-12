@@ -42,7 +42,7 @@ describe("InstancePeople.vue", () => {
   });
 
   test("shows the people VRChat lists for the instance and leaves out friends shown elsewhere", () => {
-    mocks.friends.set("usr_f", { id: "usr_f", ref: { id: "usr_f", displayName: "Rin", userIcon: icon("pf"), profilePicOverride: "", location: LOCATION } });
+    mocks.friends.set("usr_f", { id: "usr_f", ref: { id: "usr_f", displayName: "Rina", userIcon: icon("pf"), profilePicOverride: "", location: LOCATION } });
     mocks.cachedUsers.set("usr_k", { id: "usr_k", displayName: "Kai", userIcon: icon("pk"), profilePicOverride: "", location: "" });
     const wrapper = open({ userCount: 5, userIcons: [icon("pf"), icon("pk"), icon("px"), "http://insecure.test/a.png"] });
     const faces = wrapper.findAll("button");

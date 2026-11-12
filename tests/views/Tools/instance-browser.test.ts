@@ -158,13 +158,13 @@ describe("InstanceBrowser.vue", () => {
   test("shows friends by name first and opens their profile", async () => {
     mocks.friends.set("usr_f", {
       id: "usr_f",
-      ref: { id: "usr_f", displayName: "Rin", userIcon: icon("f"), profilePicOverride: "", location: "wrld_1:1~region(eu)" },
+      ref: { id: "usr_f", displayName: "Rina", userIcon: icon("f"), profilePicOverride: "", location: "wrld_1:1~region(eu)" },
     });
     mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("x"), null, icon("f")], friendIcons: [icon("f")] })] });
     const wrapper = await open();
     const faces = wrapper.findAll('[data-testid="instance-faces"] button');
     expect(faces.map((face) => face.attributes("data-testid"))).toEqual(["face-known", "face-unknown"]);
-    expect(faces[0]?.attributes("aria-label")).toBe("Rin");
+    expect(faces[0]?.attributes("aria-label")).toBe("Rina");
     await faces[0]?.trigger("click");
     expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_f");
     expect(wrapper.get('[data-testid="faces-hidden"]').text()).toBe("+10");
