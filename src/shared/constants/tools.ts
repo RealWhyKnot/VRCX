@@ -1,6 +1,7 @@
 const toolCategories = [
   { key: "image", labelKey: "view.tools.pictures.header" },
   { key: "shortcuts", labelKey: "view.tools.shortcuts.header" },
+  { key: "social", labelKey: "nav_tooltip.social" },
   { key: "group", labelKey: "view.tools.group.header" },
   { key: "system", labelKey: "view.tools.system_tools.header" },
   { key: "marketplace", labelKey: "view.tools.marketplace.header" },
@@ -198,7 +199,7 @@ const toolDefinitions = [
   },
   {
     key: "people-patterns",
-    category: "user",
+    category: "social",
     iconKey: "users",
     navIcon: "ri-user-search-line",
     titleKey: "view.tools.user.people_patterns",
@@ -278,7 +279,7 @@ const toolDefinitions = [
   },
   {
     key: "instance-browser",
-    category: "other",
+    category: "social",
     iconKey: "compass",
     navIcon: "ri-compass-3-line",
     titleKey: "view.tools.instance_browser.title",

@@ -95,6 +95,7 @@ const categoryCollapsed = ref<Record<string, boolean>>({
   group: false,
   image: false,
   shortcuts: false,
+  social: false,
   system: false,
   user: false,
   marketplace: false,

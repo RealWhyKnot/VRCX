@@ -41,7 +41,7 @@ type SightingRow = {
   search: string;
 };
 
-type PictureOwnerKind = "user" | "avatar" | "unknown" | "failed";
+type PictureOwnerKind = "user" | "wearer" | "avatar" | "unknown" | "failed";
 
 type SightingThrottle = {
   shouldLog: (sighting: Sighting, now: number) => boolean;

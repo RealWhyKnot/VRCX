@@ -2,7 +2,7 @@ import { computed, effectScope, shallowReactive, type ComputedRef, type Ref } fr
 import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 
-import { lookUpPicture, pictureOwnerName } from "../coordinators/picture-owner-coordinator";
+import { lookUpPictureOwner, pictureOwnerName } from "../coordinators/picture-owner-coordinator";
 import { showUserDialog } from "../coordinators/user-coordinator";
 import { database } from "../services/database";
 import {
@@ -22,7 +22,7 @@ import { logError } from "../stores/vrcx-messages";
 import type { VrcxUser } from "../types/vrcx";
 
 const NO_FACES: InstanceFaces = { faces: [], hiddenCount: 0 };
-const MAX_OWNERS = 2000;
+const MAX_OWNERS = 5000;
 
 function toKnownUser(user: VrcxUser, isFriend: boolean): KnownUser {
   return {
@@ -118,7 +118,7 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
     if (known) {
       return known;
     }
-    const { owner } = await lookUpPicture(fileId);
+    const { owner, isAvatarWearer } = await lookUpPictureOwner(fileId);
     if (owner.kind === "unknown") {
       return null;
     }
@@ -134,11 +134,16 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
             }),
           };
     if (owners.size >= MAX_OWNERS) {
-      owners.clear();
+      for (const oldest of owners.keys()) {
+        owners.delete(oldest);
+        break;
+      }
     }
     owners.set(fileId, resolved);
     const saved = resolved.kind === "user" ? { userId: resolved.userId, name: resolved.name } : { userId: "", name: "" };
-    void database.savePictureOwner(fileId, resolved.kind, saved.userId, saved.name, new Date().toJSON()).catch(logError);
+    if (resolved.kind === "avatar" || resolved.name) {
+      void database.savePictureOwner(fileId, isAvatarWearer ? "wearer" : resolved.kind, saved.userId, saved.name, new Date().toJSON()).catch(logError);
+    }
     return resolved;
   }
 

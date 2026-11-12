@@ -10,13 +10,15 @@ const mocks = vi.hoisted(() => ({
   getUnresolvedSightingPictures: vi.fn<(retryFailedBefore: string, limit: number) => Promise<string[]>>(),
   getPictureOwners: vi.fn<(limit: number) => Promise<SavedOwner[]>>(),
   savePictureOwner: vi.fn<(fileId: string, kind: string, userId: string, displayName: string, resolvedAt: string) => Promise<void>>(),
-  lookUpPicture: vi.fn<(fileId: string) => Promise<{ owner: FileOwner; uploaderId: string }>>(),
+  lookUpPictureOwner: vi.fn<(fileId: string) => Promise<{ owner: FileOwner; isAvatarWearer: boolean }>>(),
   pictureOwnerName: vi.fn<(userId: string) => Promise<string>>(),
   logError: vi.fn<(err: unknown) => void>(),
   owners: new Map<string, FaceOwner>(),
   faceIndex: { value: new Map<string, KnownUser>() },
   friendsByLocation: { value: new Map<string, KnownUser[]>() },
   cachedUsers: new Map<string, { displayName: string }>(),
+  cachedGroups: new Map<string, { name: string }>(),
+  getGroupName: vi.fn<(groupId: string) => Promise<string>>(),
 }));
 
 vi.mock("worker-timers", () => ({
@@ -36,8 +38,10 @@ vi.mock("../../src/services/database", () => ({
   },
 }));
 vi.mock("../../src/stores/user", () => ({ useUserStore: () => ({ cachedUsers: mocks.cachedUsers }) }));
+vi.mock("../../src/stores/group", () => ({ useGroupStore: () => ({ cachedGroups: mocks.cachedGroups }) }));
+vi.mock("../../src/shared/utils/group", () => ({ getGroupName: mocks.getGroupName }));
 vi.mock("../../src/stores/vrcx-messages", () => ({ logError: mocks.logError }));
-vi.mock("../../src/coordinators/picture-owner-coordinator", () => ({ lookUpPicture: mocks.lookUpPicture, pictureOwnerName: mocks.pictureOwnerName }));
+vi.mock("../../src/coordinators/picture-owner-coordinator", () => ({ lookUpPictureOwner: mocks.lookUpPictureOwner, pictureOwnerName: mocks.pictureOwnerName }));
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -65,6 +69,8 @@ describe("instance sighting coordinator", () => {
     mocks.faceIndex.value = new Map();
     mocks.friendsByLocation.value = new Map();
     mocks.cachedUsers.clear();
+    mocks.cachedGroups.clear();
+    mocks.getGroupName.mockResolvedValue("");
     mocks.addInstanceSighting.mockResolvedValue();
     mocks.savePictureOwner.mockResolvedValue();
     mocks.getPictureOwners.mockResolvedValue([]);
@@ -101,6 +107,32 @@ describe("instance sighting coordinator", () => {
     expect(mocks.addInstanceSighting.mock.calls[0]?.[1]).toBe(new Date(NOW).toJSON());
   });
 
+  test("names a group creator from the cached group without asking VRChat", async () => {
+    mocks.cachedGroups.set("grp_1", { name: "Party Club" });
+    const { recordSighting } = await load();
+    recordSighting({ ...instance("wrld_a:1", []), ownerId: "grp_1" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getGroupName).not.toHaveBeenCalled();
+    expect(mocks.addInstanceSighting.mock.calls[0]?.[0]).toMatchObject({ creatorId: "grp_1", creatorName: "Party Club" });
+  });
+
+  test("fetches the name of a group creator it has not seen", async () => {
+    mocks.getGroupName.mockResolvedValue("N".repeat(5000));
+    const { recordSighting } = await load();
+    recordSighting({ ...instance("wrld_a:1", []), ownerId: "grp_2" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getGroupName).toHaveBeenCalledWith("grp_2");
+    expect(mocks.addInstanceSighting.mock.calls[0]?.[0]).toMatchObject({ creatorId: "grp_2", creatorName: "N".repeat(5000) });
+  });
+
+  test("does not fetch a group name for a user creator", async () => {
+    const { recordSighting } = await load();
+    recordSighting(instance("wrld_a:1", []));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.getGroupName).not.toHaveBeenCalled();
+    expect(mocks.addInstanceSighting.mock.calls[0]?.[0]).toMatchObject({ creatorId: "usr_owner", creatorName: "" });
+  });
+
   test("does not store the same view of an instance twice in a row", async () => {
     const { recordSighting } = await load();
     recordSighting(instance("wrld_a:1", [icon("file_s")]));
@@ -112,26 +144,36 @@ describe("instance sighting coordinator", () => {
 
   test("looks up one unknown face every six seconds and keeps the name", async () => {
     mocks.getUnresolvedSightingPictures.mockResolvedValueOnce(["file_a", "file_b"]).mockResolvedValue([]);
-    mocks.lookUpPicture
-      .mockResolvedValueOnce({ owner: { kind: "user", userId: "usr_a" }, uploaderId: "usr_a" })
-      .mockResolvedValueOnce({ owner: { kind: "avatar" }, uploaderId: "" });
+    mocks.lookUpPictureOwner
+      .mockResolvedValueOnce({ owner: { kind: "user", userId: "usr_a" }, isAvatarWearer: false })
+      .mockResolvedValueOnce({ owner: { kind: "avatar" }, isAvatarWearer: false });
     const { recordSighting } = await load();
     recordSighting(instance("wrld_a:1", [icon("file_a"), icon("file_b")]));
     await vi.advanceTimersByTimeAsync(5 * SECOND);
-    expect(mocks.lookUpPicture).not.toHaveBeenCalled();
+    expect(mocks.lookUpPictureOwner).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(SECOND);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(1);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(1);
     expect(mocks.owners.get("file_a")).toEqual({ kind: "user", userId: "usr_a", name: "Stranger" });
     expect(mocks.savePictureOwner).toHaveBeenCalledWith("file_a", "user", "usr_a", "Stranger", expect.any(String));
     await vi.advanceTimersByTimeAsync(5 * SECOND);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(1);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(SECOND);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(2);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(2);
     expect(mocks.savePictureOwner).toHaveBeenCalledWith("file_b", "avatar", "", "", expect.any(String));
     await vi.advanceTimersByTimeAsync(10 * MINUTE);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(2);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(2);
     expect(mocks.getUnresolvedSightingPictures).toHaveBeenCalledTimes(2);
     expect(mocks.getUnresolvedSightingPictures.mock.calls[0]).toEqual([new Date(NOW + 6 * SECOND - 24 * 60 * MINUTE).toJSON(), 20]);
+  });
+
+  test("names the wearer of a private avatar and marks how the name was found", async () => {
+    mocks.getUnresolvedSightingPictures.mockResolvedValueOnce(["file_avi"]).mockResolvedValue([]);
+    mocks.lookUpPictureOwner.mockResolvedValue({ owner: { kind: "user", userId: "usr_w" }, isAvatarWearer: true });
+    const { recordSighting } = await load();
+    recordSighting(instance("wrld_a:1", [icon("file_avi")]));
+    await vi.advanceTimersByTimeAsync(6 * SECOND);
+    expect(mocks.owners.get("file_avi")).toEqual({ kind: "user", userId: "usr_w", name: "Stranger" });
+    expect(mocks.savePictureOwner).toHaveBeenCalledWith("file_avi", "wearer", "usr_w", "Stranger", expect.any(String));
   });
 
   test("starts looking again when a later sighting brings new faces", async () => {
@@ -140,20 +182,20 @@ describe("instance sighting coordinator", () => {
     await vi.advanceTimersByTimeAsync(6 * SECOND);
     expect(mocks.getUnresolvedSightingPictures).toHaveBeenCalledTimes(1);
     mocks.getUnresolvedSightingPictures.mockResolvedValueOnce(["file_b"]);
-    mocks.lookUpPicture.mockResolvedValue({ owner: { kind: "unknown" }, uploaderId: "" });
+    mocks.lookUpPictureOwner.mockResolvedValue({ owner: { kind: "unknown" }, isAvatarWearer: false });
     recordSighting(instance("wrld_a:2", [icon("file_b")]));
     await vi.advanceTimersByTimeAsync(6 * SECOND);
-    expect(mocks.lookUpPicture).toHaveBeenCalledWith("file_b");
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledWith("file_b");
     expect(mocks.savePictureOwner).toHaveBeenCalledWith("file_b", "unknown", "", "", expect.any(String));
   });
 
   test("marks failed lookups and rests ten minutes after three in a row", async () => {
     mocks.getUnresolvedSightingPictures.mockResolvedValue(["file_a", "file_b", "file_c", "file_d"]);
-    mocks.lookUpPicture.mockRejectedValue(new Error("429"));
+    mocks.lookUpPictureOwner.mockRejectedValue(new Error("429"));
     const { recordSighting } = await load();
     recordSighting(instance("wrld_a:1", [icon("file_a")]));
     await vi.advanceTimersByTimeAsync(18 * SECOND);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(3);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(3);
     expect(mocks.savePictureOwner.mock.calls.map((call) => [call[0], call[1]])).toEqual([
       ["file_a", "failed"],
       ["file_b", "failed"],
@@ -161,9 +203,9 @@ describe("instance sighting coordinator", () => {
     ]);
     expect(mocks.logError).toHaveBeenCalledTimes(3);
     await vi.advanceTimersByTimeAsync(9 * MINUTE);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(3);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(3);
     await vi.advanceTimersByTimeAsync(MINUTE);
-    expect(mocks.lookUpPicture).toHaveBeenCalledTimes(4);
+    expect(mocks.lookUpPictureOwner).toHaveBeenCalledTimes(4);
   });
 
   test("loads saved names once and keeps the ones already known", async () => {

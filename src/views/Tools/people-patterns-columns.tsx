@@ -1,5 +1,6 @@
 import type { RowData } from "@tanstack/vue-table";
 
+import Location from "../../components/Location.vue";
 import { i18n } from "../../plugins/i18n";
 import { timeToText } from "../../shared/utils/base/format";
 import type { Gathering, OnlineOverlap, RepeatEncounter, VoteKick } from "../../shared/utils/people-patterns";
@@ -104,21 +105,14 @@ function createGatheringColumns({ onOpenUser }: PeopleColumnsOptions): VrcxColum
       meta: { label: () => t("view.tools.people_patterns.world") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.world")),
       cell: ({ row }) => (
-        <div class="flex min-w-0 flex-col pl-2">
-          <span class="truncate" title={row.original.worldName}>
-            {row.original.worldName || t("view.tools.people_patterns.unknown_world")}
-          </span>
-          {row.original.groupName ? (
-            <span class="truncate text-xs text-muted-foreground" title={row.original.groupName}>
-              {row.original.groupName}
-            </span>
-          ) : null}
+        <div class="w-full min-w-0 truncate pl-2" data-testid="gathering-world">
+          <Location location={row.original.id} hint={row.original.worldName} grouphint={row.original.groupName} enableContextMenu />
         </div>
       ),
     },
     {
       accessorKey: "peopleCount",
-      size: 300,
+      size: 230,
       minSize: 160,
       meta: { stretch: true, label: () => t("view.tools.people_patterns.friends") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.friends")),

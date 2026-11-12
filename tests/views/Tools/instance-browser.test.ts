@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   toastInfo: vi.fn<(message: string) => void>(),
   showUserDialog: vi.fn<(userId: string) => void>(),
   getAvatarImages: vi.fn<(params: { fileId: string }) => Promise<{ json: unknown }>>(),
-  getUser: vi.fn<(params: { userId: string }) => Promise<{ ref: { displayName: string } }>>(),
+  getUser: vi.fn<(params: { userId: string }) => Promise<{ json?: { iconUrl?: string }; ref: { displayName: string } }>>(),
   friends: new Map<string, { id: string; ref: Record<string, unknown> }>(),
   cachedUsers: new Map<string, Record<string, unknown>>(),
 }));
@@ -216,6 +216,7 @@ describe("InstanceBrowser.vue", () => {
   test("says so when a face is only an avatar thumbnail or the lookup fails", async () => {
     mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("avi1"), icon("gone1")] })] });
     mocks.getAvatarImages.mockResolvedValueOnce({ json: { ownerId: "usr_a", name: "Avatar - Fox - Image", tags: [] } }).mockRejectedValueOnce(new Error("404"));
+    mocks.getUser.mockResolvedValue({ json: { iconUrl: icon("other1") }, ref: { displayName: "Uploader" } });
     const wrapper = await open();
     const faces = wrapper.findAll('[data-testid="face-unknown"]');
     await faces[0]?.trigger("click");
@@ -225,6 +226,30 @@ describe("InstanceBrowser.vue", () => {
     expect(mocks.toastInfo.mock.calls).toEqual([["view.tools.instance_browser.face_is_avatar"], ["view.tools.instance_browser.face_not_found"]]);
     expect(wrapper.findAll('[data-testid="face-unknown"]')[0]?.attributes("aria-label")).toBe("view.tools.instance_browser.face_is_avatar");
     expect(mocks.showUserDialog).not.toHaveBeenCalled();
+  });
+
+  test("does not save a name it could not read", async () => {
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("noname1")] })] });
+    mocks.getAvatarImages.mockResolvedValue({ json: { ownerId: "usr_n", name: "icon", tags: ["icon"] } });
+    mocks.getUser.mockRejectedValue(new Error("429"));
+    const wrapper = await open();
+    await wrapper.get('[data-testid="face-unknown"]').trigger("click");
+    await flushPromises();
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_n");
+    expect(mocks.savePictureOwner).not.toHaveBeenCalled();
+  });
+
+  test("opens the uploader when their profile picture is the avatar on the face", async () => {
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("private1")] })] });
+    mocks.getAvatarImages.mockResolvedValue({ json: { ownerId: "usr_w", name: "Avatar - Fox - Image", tags: [] } });
+    mocks.getUser.mockResolvedValue({ json: { iconUrl: icon("private1") }, ref: { displayName: "Wearer" } });
+    const wrapper = await open();
+    await wrapper.get('[data-testid="face-unknown"]').trigger("click");
+    await flushPromises();
+    expect(mocks.getUser).toHaveBeenCalledWith({ userId: "usr_w" });
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_w");
+    expect(mocks.savePictureOwner).toHaveBeenCalledWith("file_private1", "wearer", "usr_w", "Wearer", expect.any(String));
+    expect(mocks.toastInfo).not.toHaveBeenCalled();
   });
 
   test("keeps a crowded instance to a fixed number of faces that cannot grow the card", async () => {
@@ -255,7 +280,7 @@ describe("InstanceBrowser.vue", () => {
   test("switches to my open instances and hides the discover filters", async () => {
     vi.useFakeTimers();
     const wrapper = mount(InstanceBrowser, mountOptions);
-    await wrapper.get('[data-testid="source-mine"]').trigger("click");
+    await wrapper.get('[data-testid="source-mine"]').trigger("mousedown", { button: 0 });
     await vi.advanceTimersByTimeAsync(400);
     vi.useRealTimers();
     await flushPromises();

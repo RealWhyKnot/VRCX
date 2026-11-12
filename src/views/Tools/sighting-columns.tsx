@@ -1,3 +1,4 @@
+import Location from "../../components/Location.vue";
 import { i18n } from "../../plugins/i18n";
 import type { SightingRow } from "../../shared/utils/instance-sightings";
 import type { VrcxColumn } from "../FriendList/vrcx-column";
@@ -10,16 +11,20 @@ const MAX_NAMES_SHOWN = 6;
 
 type SightingColumnsOptions = {
   onOpenUser: (userId: string) => void;
+  onOpenGroup: (groupId: string) => void;
   onLookUp: (displayName: string) => void;
 };
 
-function creatorCell(row: SightingRow, onOpenUser: (userId: string) => void) {
+function creatorCell(row: SightingRow, { onOpenUser, onOpenGroup }: SightingColumnsOptions) {
   const label = row.creatorName || row.creatorId;
   if (!label) {
     return null;
   }
   if (row.creatorId.startsWith("usr_")) {
     return personButton(row.creatorId, label, onOpenUser);
+  }
+  if (row.creatorId.startsWith("grp_")) {
+    return personButton(row.creatorId, label, onOpenGroup);
   }
   return (
     <span class="min-w-0 truncate" title={label}>
@@ -28,43 +33,44 @@ function creatorCell(row: SightingRow, onOpenUser: (userId: string) => void) {
   );
 }
 
-function createSightingColumns({ onOpenUser, onLookUp }: SightingColumnsOptions): VrcxColumn<SightingRow>[] {
+function createSightingColumns(options: SightingColumnsOptions): VrcxColumn<SightingRow>[] {
+  const { onLookUp } = options;
   return [
     spacer<SightingRow>(),
     {
       accessorKey: "at",
-      size: 130,
+      size: 120,
       meta: { label: () => t("view.tools.people_patterns.when") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.when")),
       cell: ({ row }) => dateCell(row.original.at, ""),
     },
     {
       accessorKey: "worldName",
-      size: 200,
+      size: 170,
       minSize: 120,
       meta: { label: () => t("view.tools.people_patterns.world") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.world")),
       cell: ({ row }) => (
-        <span class="block min-w-0 truncate pl-2" title={row.original.worldName}>
-          {row.original.worldName || t("view.tools.people_patterns.unknown_world")}
-        </span>
+        <div class="w-full min-w-0 truncate pl-2" data-testid="sighting-world">
+          <Location location={row.original.location} hint={row.original.worldName} enableContextMenu />
+        </div>
       ),
     },
     {
       accessorKey: "creatorName",
-      size: 170,
+      size: 140,
       minSize: 100,
       meta: { label: () => t("view.tools.people_patterns.created_by") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.created_by")),
       cell: ({ row }) => (
         <div class="flex min-w-0 pl-2" data-testid="sighting-creator">
-          {creatorCell(row.original, onOpenUser)}
+          {creatorCell(row.original, options)}
         </div>
       ),
     },
     {
       accessorKey: "userCount",
-      size: 110,
+      size: 100,
       meta: { label: () => t("view.tools.people_patterns.in_instance") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.in_instance")),
       cell: ({ row }) => (
@@ -73,8 +79,8 @@ function createSightingColumns({ onOpenUser, onLookUp }: SightingColumnsOptions)
     },
     {
       accessorKey: "peopleCount",
-      size: 320,
-      minSize: 160,
+      size: 190,
+      minSize: 120,
       meta: { stretch: true, label: () => t("view.tools.people_patterns.people") },
       header: ({ column }) => sortButton(column, t("view.tools.people_patterns.people")),
       cell: ({ row }) => {

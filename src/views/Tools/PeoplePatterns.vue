@@ -75,6 +75,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
+import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { lookupUser, showUserDialog } from "@/coordinators/user-coordinator";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 import { database } from "@/services/database";
@@ -234,7 +235,7 @@ const seenTable = useVrcxVueTable({
   get data() {
     return seenRows.value;
   },
-  columns: createSightingColumns({ onOpenUser: showUserDialog, onLookUp: lookUpByName }),
+  columns: createSightingColumns({ onOpenUser: showUserDialog, onOpenGroup: showGroupDialog, onLookUp: lookUpByName }),
   getRowId: (row) => row.id,
   initialSorting: [{ id: "at", desc: true }],
   initialPagination,

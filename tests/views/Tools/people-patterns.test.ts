@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   getFriendPresenceSince: vi.fn<(since: string) => Promise<PresenceEvent[]>>(),
   getOwnLocationSpans: vi.fn<(since: string) => Promise<TimeSpan[]>>(),
   showUserDialog: vi.fn<(userId: unknown) => void>(),
+  showGroupDialog: vi.fn<(groupId: string) => void>(),
   getVoteKickEvents: vi.fn<() => Promise<VoteKickEvent[]>>(),
   getInstanceSightings: vi.fn<() => Promise<SightingRow[]>>(),
   lookupUser: vi.fn<(ref: { displayName?: string }) => Promise<void>>(),
@@ -27,6 +28,7 @@ vi.mock("../../../src/plugins/i18n", () => ({ i18n: { global: { t: (key: string)
 vi.mock("../../../src/coordinators/date-coordinator", () => ({ formatDateFilter: (value: string, format: string) => `${format}:${value}` }));
 vi.mock("../../../src/shared/utils/base/format", () => ({ timeToText: (ms: number) => `${ms}ms` }));
 vi.mock("../../../src/coordinators/user-coordinator", () => ({ showUserDialog: mocks.showUserDialog, lookupUser: mocks.lookupUser }));
+vi.mock("../../../src/coordinators/group-dialog-coordinator", () => ({ showGroupDialog: mocks.showGroupDialog }));
 vi.mock("../../../src/services/database", () => ({
   database: {
     getRepeatEncounters: mocks.getRepeatEncounters,
@@ -40,6 +42,9 @@ vi.mock("../../../src/services/database", () => ({
 vi.mock("../../../src/stores/user", () => ({ useUserStore: () => ({ currentUser: { id: "usr_me" } }) }));
 vi.mock("../../../src/stores/settings/appearance", () => ({ useAppearanceSettingsStore: () => ({ tablePageSizes: [10, 25, 50], tablePageSize: 25 }) }));
 vi.mock("../../../src/stores/vrcx-messages", () => ({ logError: mocks.logError }));
+vi.mock("../../../src/components/Location.vue", () => ({
+  default: (props: { location?: string; hint?: string }) => h("span", { "data-location": props.location }, props.hint ?? props.location),
+}));
 
 import PeoplePatterns from "../../../src/views/Tools/PeoplePatterns.vue";
 
@@ -120,7 +125,8 @@ describe("PeoplePatterns.vue", () => {
     const wrapper = await open();
     expect(mocks.getRepeatEncounters).toHaveBeenCalledWith("usr_me");
     expect(names(wrapper)).toEqual(["Bob", "Cy", "Ann"]);
-    expect(wrapper.get('[data-testid="people-hint"]').text()).toBe("view.tools.people_patterns.hint_repeat");
+    expect(wrapper.get('[data-testid="people-tab-repeat"]').text()).toBe("view.tools.people_patterns.tab_repeat");
+    expect(wrapper.find('[data-testid="people-hint"]').exists()).toBe(false);
     expect(mocks.getFriendStays).not.toHaveBeenCalled();
     await wrapper.findAll('[data-testid="person-name"]')[0]?.trigger("click");
     expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_b");
@@ -177,21 +183,28 @@ describe("PeoplePatterns.vue", () => {
     mocks.getInstanceSightings.mockResolvedValue([
       seen("1", "2026-11-10T10:00:00.000Z", "Black Cat", "", "", ["Ann"], 0),
       seen("2", "2026-11-12T10:00:00.000Z", "Miami Beach", "usr_owner", "Sheepa", ["Amnesty"], 4),
-      seen("3", "2026-11-11T10:00:00.000Z", "", "grp_1", "", [], 0),
+      seen("3", "2026-11-11T10:00:00.000Z", "", "grp_1", "Party Club", [], 0),
+      seen("4", "2026-11-09T10:00:00.000Z", "", "grp_2", "", [], 0),
     ]);
     const wrapper = await open();
     await showTab(wrapper, "seen");
-    expect(names(wrapper)).toEqual(["Sheepa", "Amnesty", "Ann"]);
-    expect(wrapper.findAll('[data-testid="sighting-creator"]').map((cell) => cell.text())).toEqual(["Sheepa", "grp_1", ""]);
+    expect(names(wrapper)).toEqual(["Sheepa", "Amnesty", "Party Club", "Ann", "grp_2"]);
+    expect(wrapper.findAll('[data-testid="sighting-creator"]').map((cell) => cell.text())).toEqual(["Sheepa", "Party Club", "", "grp_2"]);
     expect(wrapper.get('[data-testid="sighting-extra"]').text()).toBe("+4");
     expect(wrapper.text()).toContain("5/60");
-    expect(wrapper.text()).toContain("view.tools.people_patterns.unknown_world");
-    expect(wrapper.get('[data-testid="people-hint"]').text()).toBe("view.tools.people_patterns.hint_seen");
+    expect(wrapper.findAll('[data-testid="sighting-world"] [data-location]').map((cell) => cell.attributes("data-location"))).toEqual([
+      "wrld_2:1",
+      "wrld_3:1",
+      "wrld_1:1",
+      "wrld_4:1",
+    ]);
     const people = wrapper.findAll('[data-testid="person-name"]');
     await people[0]?.trigger("click");
     expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_owner");
     await people[1]?.trigger("click");
     expect(mocks.lookupUser).toHaveBeenCalledWith({ displayName: "Amnesty" });
+    await people[2]?.trigger("click");
+    expect(mocks.showGroupDialog).toHaveBeenCalledWith("grp_1");
     await wrapper.get("input").setValue("black");
     expect(names(wrapper)).toEqual(["Ann"]);
     wrapper.unmount();
@@ -242,7 +255,6 @@ describe("PeoplePatterns.vue", () => {
     expect(cell.classes()).toEqual(expect.arrayContaining(["min-w-0", "max-w-full", "truncate"]));
     expect(cell.attributes("title")).toBe(LONG);
     expect(wrapper.text()).toContain("123,456");
-    expect(wrapper.get('[data-testid="people-hint"]').classes()).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
     await showTab(wrapper, "gatherings");
     expect(names(wrapper)).toHaveLength(6);
     expect(wrapper.get('[data-testid="gathering-people"]').text()).toContain("+34");

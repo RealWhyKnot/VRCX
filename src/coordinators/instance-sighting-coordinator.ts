@@ -3,10 +3,12 @@ import * as workerTimers from "worker-timers";
 import { useKnownFaces } from "../composables/use-instance-faces";
 import { database } from "../services/database";
 import type { DiscoveredInstance } from "../shared/utils/instance-discovery";
+import { getGroupName } from "../shared/utils/group";
 import { buildSightingPeople, createSightingThrottle, type PictureOwnerKind, type Sighting } from "../shared/utils/instance-sightings";
+import { useGroupStore } from "../stores/group";
 import { useUserStore } from "../stores/user";
 import { logError } from "../stores/vrcx-messages";
-import { lookUpPicture, pictureOwnerName } from "./picture-owner-coordinator";
+import { lookUpPictureOwner, pictureOwnerName } from "./picture-owner-coordinator";
 
 type SightedInstance = {
   location: string;
@@ -37,6 +39,9 @@ function creatorName(instance: SightedInstance): string {
   if (instance.ownerName) {
     return instance.ownerName;
   }
+  if (instance.ownerId.startsWith("grp_")) {
+    return useGroupStore().cachedGroups.get(instance.ownerId)?.name ?? "";
+  }
   return useUserStore().cachedUsers.get(instance.ownerId)?.displayName ?? "";
 }
 
@@ -59,14 +64,14 @@ async function saveOwner(fileId: string, kind: PictureOwnerKind, userId: string,
 }
 
 async function resolvePicture(fileId: string): Promise<void> {
-  const { owner } = await lookUpPicture(fileId);
+  const { owner, isAvatarWearer } = await lookUpPictureOwner(fileId);
   if (owner.kind !== "user") {
     await saveOwner(fileId, owner.kind, "", "");
     return;
   }
   const name = await pictureOwnerName(owner.userId);
   useKnownFaces().owners.set(fileId, { kind: "user", userId: owner.userId, name });
-  await saveOwner(fileId, "user", owner.userId, name);
+  await saveOwner(fileId, isAvatarWearer ? "wearer" : "user", owner.userId, name);
 }
 
 async function resolveNext(): Promise<void> {
@@ -130,6 +135,13 @@ async function loadSavedOwners(): Promise<void> {
   }
 }
 
+async function withCreatorName(sighting: Sighting): Promise<Sighting> {
+  if (sighting.creatorName || !sighting.creatorId.startsWith("grp_")) {
+    return sighting;
+  }
+  return { ...sighting, creatorName: await getGroupName(sighting.creatorId) };
+}
+
 export function recordSighting(instance: SightedInstance): void {
   const sighting = toSighting(instance);
   if (!throttle.shouldLog(sighting, Date.now())) {
@@ -137,7 +149,8 @@ export function recordSighting(instance: SightedInstance): void {
   }
   const createdAt = new Date().toJSON();
   writes = writes
-    .then(() => database.addInstanceSighting(sighting, createdAt))
+    .then(() => withCreatorName(sighting))
+    .then((named) => database.addInstanceSighting(named, createdAt))
     .then(loadSavedOwners)
     .then(startResolving)
     .catch(logError);

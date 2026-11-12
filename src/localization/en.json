@@ -688,14 +688,14 @@
         "group_invites": "Group Invites",
         "group_invites_description": "Accept, decline or block pending group invites",
         "my_groups": "My Groups",
-        "my_groups_description": "See how active each of your groups is and when you last visited, and leave the ones you don't use"
+        "my_groups_description": "View your groups and leave the ones you don't use"
       },
       "user": {
         "discord_names_description": "Find the Discord usernames of your VRChat friends",
         "export_friend_list_description": "Export your friends list from VRChat",
         "export_own_avatars_description": "Export your personal avatars from VRChat",
         "people_patterns": "Who You Meet",
-        "people_patterns_description": "Strangers you keep running into, friends who met up without you, and who's online when you are"
+        "people_patterns_description": "Familiar faces, friend meetups and time online together"
       },
       "export": {
         "header": "Export",
@@ -793,7 +793,7 @@
         "load_failed": "Couldn't load instances. Try again in a moment.",
         "face_look_up": "Find out who this is",
         "face_open_profile": "Open profile",
-        "face_is_avatar": "That picture is an avatar thumbnail, so it doesn't say who's wearing it.",
+        "face_is_avatar": "Can't tell who's wearing this avatar.",
         "face_not_found": "Couldn't work out who this is from the picture."
       },
       "my_groups": {
@@ -809,29 +809,22 @@
         "owner": "Owner",
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
-        "limit_hint": "VRChat lets you join up to {limit} groups.",
-        "history_hint": "Visits and notifications only count what VRCX has recorded on this PC.",
         "load_failed": "Couldn't load your groups."
       },
       "people_patterns": {
-        "tab_repeat": "Keep meeting",
-        "tab_gatherings": "Met without you",
-        "tab_overlap": "Online with you",
+        "tab_repeat": "Familiar faces",
+        "tab_gatherings": "Friend meetups",
+        "tab_overlap": "Online together",
         "tab_votekicks": "Vote kicks",
-        "tab_seen": "Seen in instances",
-        "hint_repeat": "People who aren't your friends but have been in {count} or more instances with you.",
-        "hint_gatherings": "Instances from the last {days} days where friends were together and you never joined.",
-        "hint_votekicks": "Vote kicks that happened in instances you were in, from your VRChat logs.",
-        "hint_seen": "Instances you looked at in VRCX, who made them and the people shown inside. Unknown faces get a name once VRCX has looked them up.",
+        "tab_seen": "Instance log",
         "created_by": "Created by",
-        "in_instance": "In instance",
+        "in_instance": "Players",
         "people": "People",
         "who": "Who",
         "result": "Result",
         "outcome_started": "Vote started",
         "outcome_passed": "Kicked",
         "outcome_self": "You were kicked",
-        "hint_overlap": "How long you and each friend were online at the same time over the last {days} days, as recorded on this PC.",
         "name": "Name",
         "friend": "Friend",
         "friends": "Friends",

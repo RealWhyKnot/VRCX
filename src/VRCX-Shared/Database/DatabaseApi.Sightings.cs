@@ -85,7 +85,7 @@ sealed partial class DatabaseApi
         ("@limit", limit));
 
     public string GetPictureOwners(long limit) => Rows(
-        "SELECT file_id, kind, user_id, display_name FROM picture_owners WHERE kind IN ('user', 'avatar') ORDER BY resolved_at DESC LIMIT @limit",
+        "SELECT file_id, kind, user_id, display_name FROM picture_owners WHERE kind IN ('user', 'wearer', 'avatar') ORDER BY resolved_at DESC LIMIT @limit",
         ("@limit", limit));
 
     public void SavePictureOwner(string fileId, string kind, string userId, string displayName, string resolvedAt) =>

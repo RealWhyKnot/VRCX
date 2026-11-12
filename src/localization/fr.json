@@ -393,7 +393,7 @@
         "calendar": "Calendrier",
         "calendar_description": "Groupe d'événement dans le calendrier",
         "my_groups": "My Groups",
-        "my_groups_description": "See how active each of your groups is and when you last visited, and leave the ones you don't use"
+        "my_groups_description": "View your groups and leave the ones you don't use"
       },
       "user": {
         "discord_names_description": "Find the Discord usernames of your VRChat friends",
@@ -436,7 +436,7 @@
         "load_failed": "Couldn't load instances. Try again in a moment.",
         "face_look_up": "Find out who this is",
         "face_open_profile": "Open profile",
-        "face_is_avatar": "That picture is an avatar thumbnail, so it doesn't say who's wearing it.",
+        "face_is_avatar": "Can't tell who's wearing this avatar.",
         "face_not_found": "Couldn't work out who this is from the picture."
       },
       "marketplace": {
@@ -456,8 +456,6 @@
         "owner": "Owner",
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
-        "limit_hint": "VRChat lets you join up to {limit} groups.",
-        "history_hint": "Visits and notifications only count what VRCX has recorded on this PC.",
         "load_failed": "Couldn't load your groups."
       }
     },

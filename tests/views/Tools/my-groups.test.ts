@@ -147,7 +147,7 @@ describe("MyGroups.vue", () => {
     expect(cell.classes()).toEqual(expect.arrayContaining(["min-w-0", "w-full"]));
     expect(cell.get("span:last-child").classes()).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
     expect(cell.attributes("title")).toBe(LONG);
-    expect(wrapper.get('[data-testid="history-hint"]').classes()).toEqual(expect.arrayContaining(["min-w-0", "truncate"]));
+    expect(wrapper.find('[data-testid="history-hint"]').exists()).toBe(false);
     expect(wrapper.text()).toContain("123,456,789");
     wrapper.unmount();
   });

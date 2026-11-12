@@ -1,4 +1,5 @@
-import Button from "../../components/ui/button/Button.vue";
+import { LogOut } from "lucide-vue-next";
+
 import { formatDateFilter } from "../../coordinators/date-coordinator";
 import { i18n } from "../../plugins/i18n";
 import { timeToText } from "../../shared/utils/base/format";
@@ -88,9 +89,16 @@ export const createColumns = ({ onOpen, onLeave }: MyGroupsColumnsOptions): Vrcx
     cell: ({ row }) => (
       <div class="flex justify-end">
         {row.original.canLeave ? (
-          <Button variant="outline" size="sm" data-testid="group-leave" onClick={() => onLeave(row.original.id)}>
-            {t("view.tools.my_groups.leave")}
-          </Button>
+          <button
+            type="button"
+            class="inline-flex h-6 cursor-pointer items-center justify-center text-muted-foreground hover:text-foreground"
+            title={t("view.tools.my_groups.leave")}
+            aria-label={t("view.tools.my_groups.leave")}
+            data-testid="group-leave"
+            onClick={() => onLeave(row.original.id)}
+          >
+            <LogOut class="h-4 w-4" />
+          </button>
         ) : (
           <span class="text-xs text-muted-foreground">{t("view.tools.my_groups.owner")}</span>
         )}

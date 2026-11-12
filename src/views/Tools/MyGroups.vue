@@ -9,24 +9,34 @@
       :on-page-size-change="handlePageSizeChange"
     >
       <template #toolbar>
-        <div class="mb-2 flex min-w-0 flex-wrap items-center gap-2">
-          <Button variant="ghost" size="sm" @click="goBack">
-            <ArrowLeft />
-            {{ t("nav_tooltip.tools") }}
-          </Button>
-          <span class="header">{{ t("view.tools.group.my_groups") }}</span>
-          <TooltipWrapper side="bottom" :content="t('view.tools.my_groups.limit_hint', { limit: GROUP_LIMIT })">
-            <Badge :variant="groupCount >= GROUP_LIMIT ? 'destructive' : 'outline'" class="shrink-0 tabular-nums" data-testid="group-count"
-              >{{ groupCount }} / {{ GROUP_LIMIT }}</Badge
+        <div class="flex min-w-0 flex-col">
+          <div class="ml-2 flex items-center gap-2">
+            <Button variant="ghost" size="sm" class="mr-3" @click="goBack">
+              <ArrowLeft />
+              {{ t("nav_tooltip.tools") }}
+            </Button>
+            <span class="header">{{ t("view.tools.group.my_groups") }}</span>
+            <span :class="['text-xs tabular-nums', groupCount >= GROUP_LIMIT ? 'text-destructive' : 'text-muted-foreground']" data-testid="group-count"
+              >{{ groupCount }} / {{ GROUP_LIMIT }}</span
             >
-          </TooltipWrapper>
-          <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground" data-testid="history-hint">{{ t("view.tools.my_groups.history_hint") }}</span>
-          <InputGroupSearch v-model="searchText" :maxlength="100" :placeholder="t('view.tools.my_groups.search_placeholder')" class="w-[220px] shrink-0" />
-          <Button size="sm" variant="outline" class="shrink-0" :disabled="isLoading" data-testid="groups-refresh" @click="reload">
-            <Spinner v-if="isLoading" />
-            <RefreshCw v-else />
-            {{ t("view.tools.my_groups.refresh") }}
-          </Button>
+          </div>
+          <div class="my-2 flex min-w-0 items-center justify-end gap-2">
+            <InputGroupField v-model="searchText" :maxlength="100" :placeholder="t('view.tools.my_groups.search_placeholder')" class="w-[220px] min-w-0" />
+            <TooltipWrapper side="bottom" :content="t('view.tools.my_groups.refresh')">
+              <Button
+                class="shrink-0 rounded-full"
+                size="icon-sm"
+                variant="ghost"
+                :aria-label="t('view.tools.my_groups.refresh')"
+                :disabled="isLoading"
+                data-testid="groups-refresh"
+                @click="reload"
+              >
+                <Spinner v-if="isLoading" />
+                <RefreshCw v-else />
+              </Button>
+            </TooltipWrapper>
+          </div>
         </div>
       </template>
     </DataTableLayout>
@@ -40,10 +50,9 @@ import { toast } from "vue-sonner";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
-import Badge from "@/components/ui/badge/Badge.vue";
 import Button from "@/components/ui/button/Button.vue";
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
-import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
+import InputGroupField from "@/components/ui/input-group/InputGroupField.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
