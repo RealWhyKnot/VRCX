@@ -260,7 +260,7 @@ onActivated(() => {
   void refresh().catch(logError);
 });
 
-const SOURCES: readonly InstanceBrowserSource[] = ["discover", "mine"];
+const SOURCES: readonly InstanceBrowserSource[] = ["discover", "active"];
 const sourceTabs = computed(() => SOURCES.map((entry) => ({ value: entry, label: t(`view.tools.instance_browser.source_${entry}`) })));
 
 function pickSource(value: string | number) {

@@ -40,19 +40,6 @@
       </template>
     </DataTableLayout>
     <DataTableLayout
-      v-else-if="view === 'seen'"
-      :table="seenTable.table"
-      :loading="isLoading"
-      auto-height
-      :page-sizes="pageSizes"
-      :total-items="seenRows.length"
-      :on-page-size-change="resizeSeen"
-    >
-      <template #toolbar>
-        <PeoplePatternsToolbar v-model:view="view" v-model:search="searchText" :is-loading="isLoading" @refresh="reload" @back="goBack" />
-      </template>
-    </DataTableLayout>
-    <DataTableLayout
       v-else
       :table="overlapTable.table"
       :loading="isLoading"
@@ -75,7 +62,6 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 
 import DataTableLayout from "@/components/ui/data-table/DataTableLayout.vue";
-import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 import { lookupUser, showUserDialog } from "@/coordinators/user-coordinator";
 import { useVrcxVueTable } from "@/lib/table/use-vrcx-vue-table";
 import { database } from "@/services/database";
@@ -94,13 +80,11 @@ import {
   type RepeatEncounter,
   type VoteKick,
 } from "@/shared/utils/people-patterns";
-import { filterSightings, type SightingRow } from "@/shared/utils/instance-sightings";
 import { useAppearanceSettingsStore } from "@/stores/settings/appearance";
 import { useUserStore } from "@/stores/user";
 import { logError } from "@/stores/vrcx-messages";
 import PeoplePatternsToolbar from "./components/PeoplePatternsToolbar.vue";
 import { createGatheringColumns, createOverlapColumns, createRepeatColumns, createVoteKickColumns } from "./people-patterns-columns.tsx";
-import { createSightingColumns } from "./sighting-columns.tsx";
 
 defineOptions({ name: "PeoplePatternsView" });
 
@@ -117,13 +101,11 @@ const encounters = shallowRef<RepeatEncounter[]>([]);
 const gatherings = shallowRef<Gathering[]>([]);
 const overlaps = shallowRef<OnlineOverlap[]>([]);
 const voteKicks = shallowRef<VoteKick[]>([]);
-const sightings = shallowRef<SightingRow[]>([]);
 
 const repeatRows = computed(() => filterRepeatEncounters(encounters.value, searchText.value));
 const gatheringRows = computed(() => filterGatherings(gatherings.value, searchText.value));
 const overlapRows = computed(() => filterOnlineOverlap(overlaps.value, searchText.value));
 const voteKickRows = computed(() => filterVoteKicks(voteKicks.value, searchText.value));
-const seenRows = computed(() => filterSightings(sightings.value, searchText.value));
 
 const loaders = {
   repeat: async () => {
@@ -140,9 +122,6 @@ const loaders = {
   },
   votekicks: async () => {
     voteKicks.value = buildVoteKicks(await database.getVoteKickEvents());
-  },
-  seen: async () => {
-    sightings.value = await database.getInstanceSightings();
   },
 } as const satisfies Record<PeopleView, () => Promise<void>>;
 
@@ -228,22 +207,6 @@ const voteKickTable = useVrcxVueTable({
 
 function lookUpByName(displayName: string) {
   void lookupUser({ displayName }).catch(logError);
-}
-
-const seenTable = useVrcxVueTable({
-  persistKey: "peopleSeen",
-  get data() {
-    return seenRows.value;
-  },
-  columns: createSightingColumns({ onOpenUser: showUserDialog, onOpenGroup: showGroupDialog, onLookUp: lookUpByName }),
-  getRowId: (row) => row.id,
-  initialSorting: [{ id: "at", desc: true }],
-  initialPagination,
-  tableOptions,
-});
-
-function resizeSeen(size: number) {
-  seenTable.pagination.value = { ...seenTable.pagination.value, pageIndex: 0, pageSize: size };
 }
 
 function resizeVoteKicks(size: number) {

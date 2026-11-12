@@ -15,6 +15,7 @@ import Dashboard from "./../views/Dashboard/Dashboard.vue";
 import Gallery from "./../views/Tools/Gallery.vue";
 import GameLog from "./../views/GameLog/GameLog.vue";
 import InstanceBrowser from "./../views/Tools/InstanceBrowser.vue";
+import InstanceLog from "./../views/Tools/InstanceLog.vue";
 import MyGroups from "./../views/Tools/MyGroups.vue";
 import PeoplePatterns from "./../views/Tools/PeoplePatterns.vue";
 import Login from "./../views/Login/Login.vue";
@@ -142,6 +143,12 @@ const routes: RouteRecordRaw[] = [
         name: "instance-browser",
         component: InstanceBrowser,
         meta: { navKeys: ["tool-instance-browser", "tools"] },
+      },
+      {
+        path: "tools/instance-log",
+        name: "instance-log",
+        component: InstanceLog,
+        meta: { navKeys: ["tool-instance-log", "tools"] },
       },
       {
         path: "tools/my-groups",

@@ -762,11 +762,18 @@
         "info_push": "Info Push",
         "info_push_description": "Browse VRChat info push announcements and content"
       },
+      "instance_log": {
+        "title": "Instance Log",
+        "description": "Instances you've seen and who was in them",
+        "search_placeholder": "Search",
+        "refresh": "Refresh",
+        "load_failed": "Couldn't load the instance log."
+      },
       "instance_browser": {
         "title": "Instance Browser",
         "description": "Find open instances by region, category and vibe",
         "source_discover": "Discover",
-        "source_mine": "My open instances",
+        "source_active": "All active",
         "mode_active": "Most active",
         "mode_population": "Most people",
         "mode_match": "Best match",
@@ -816,7 +823,6 @@
         "tab_gatherings": "Friend meetups",
         "tab_overlap": "Online together",
         "tab_votekicks": "Vote kicks",
-        "tab_seen": "Instance log",
         "created_by": "Created by",
         "in_instance": "Players",
         "people": "People",

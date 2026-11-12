@@ -377,7 +377,7 @@
         "title": "Instance Browser",
         "description": "Find open instances by region, category and vibe",
         "source_discover": "Discover",
-        "source_mine": "My open instances",
+        "source_active": "All active",
         "mode_active": "Most active",
         "mode_population": "Most people",
         "mode_match": "Best match",

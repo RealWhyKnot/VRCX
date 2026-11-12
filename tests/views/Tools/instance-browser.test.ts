@@ -280,7 +280,7 @@ describe("InstanceBrowser.vue", () => {
   test("switches to my open instances and hides the discover filters", async () => {
     vi.useFakeTimers();
     const wrapper = mount(InstanceBrowser, mountOptions);
-    await wrapper.get('[data-testid="source-mine"]').trigger("mousedown", { button: 0 });
+    await wrapper.get('[data-testid="source-active"]').trigger("mousedown", { button: 0 });
     await vi.advanceTimersByTimeAsync(400);
     vi.useRealTimers();
     await flushPromises();

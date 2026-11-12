@@ -4,7 +4,7 @@ const MAX_REPEAT_ROWS = 500;
 const MAX_OPEN_SESSION_MS = 12 * 60 * 60 * 1000;
 const MERGE_GAP_MS = 60 * 1000;
 
-const PEOPLE_VIEWS = ["repeat", "gatherings", "overlap", "votekicks", "seen"] as const;
+const PEOPLE_VIEWS = ["repeat", "gatherings", "overlap", "votekicks"] as const;
 const MAX_VOTE_KICK_EVENTS = 2000;
 const VOTE_RESULT_WINDOW_MS = 5 * 60 * 1000;
 const VOTE_STARTED = /^A vote kick has been initiated against (.+), do you agree\?$/;

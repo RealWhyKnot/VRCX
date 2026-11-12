@@ -14,7 +14,7 @@ import {
 } from "../../../shared/utils/instance-discovery";
 import { logError } from "../../../stores/vrcx-messages";
 
-export type InstanceBrowserSource = "discover" | "mine";
+export type InstanceBrowserSource = "discover" | "active";
 
 const REFRESH_DELAY_MS = 400;
 
@@ -32,7 +32,7 @@ export function useInstanceBrowser() {
   const visibleInstances = computed(() => filterDiscovered(instances.value, searchText.value));
 
   async function fetchPage(offset: number): Promise<DiscoveredInstance[]> {
-    if (source.value === "mine") {
+    if (source.value === "active") {
       return parseDiscovery(await instanceRequest.getActiveInstances({ n: DISCOVER_PAGE_SIZE, offset }));
     }
     return parseDiscovery(await instanceRequest.discoverInstances(buildDiscoverQuery(filters.value)));
@@ -53,7 +53,7 @@ export function useInstanceBrowser() {
       const fresh = page.filter((instance) => !known.has(instance.location));
       instances.value = offset > 0 ? [...instances.value, ...fresh] : fresh;
       nextOffset = offset + DISCOVER_PAGE_SIZE;
-      hasMore.value = source.value === "mine" && page.length >= DISCOVER_PAGE_SIZE;
+      hasMore.value = source.value === "active" && page.length >= DISCOVER_PAGE_SIZE;
     } catch (err) {
       if (ticket === latest) {
         hasLoadFailed.value = true;

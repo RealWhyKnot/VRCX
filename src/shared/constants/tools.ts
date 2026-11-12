@@ -288,6 +288,16 @@ const toolDefinitions = [
     action: { type: "route", routeName: "instance-browser" },
   },
   {
+    key: "instance-log",
+    category: "social",
+    iconKey: "history",
+    navIcon: "ri-history-line",
+    titleKey: "view.tools.instance_log.title",
+    descriptionKey: "view.tools.instance_log.description",
+    navEligible: true,
+    action: { type: "route", routeName: "instance-log" },
+  },
+  {
     key: "edit-invite-message",
     category: "other",
     iconKey: "pencil",

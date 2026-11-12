@@ -175,8 +175,8 @@ describe("filters and helpers", () => {
 
   test("knows the view names and the start of the window", () => {
     expect(isPeopleView("gatherings")).toBe(true);
-    expect(isPeopleView("seen")).toBe(true);
-    expect(isPeopleView("other")).toBe(false);
+    expect(isPeopleView("votekicks")).toBe(true);
+    expect(isPeopleView("seen")).toBe(false);
     expect(patternWindowStart(Date.UTC(2026, 10, 11))).toBe("2026-08-13T00:00:00.000Z");
   });
 });

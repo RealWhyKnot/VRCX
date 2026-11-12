@@ -108,7 +108,7 @@ describe("useInstanceBrowser", () => {
 
   test("pages through my open instances without repeats", async () => {
     const { scope, browser } = setup();
-    browser.source.value = "mine";
+    browser.source.value = "active";
     mocks.getActiveInstances.mockResolvedValueOnce(rows(50)).mockResolvedValueOnce([...rows(1, 49), ...rows(4, 50)]);
     await browser.refresh();
     expect(mocks.getActiveInstances).toHaveBeenLastCalledWith({ n: 50, offset: 0 });
