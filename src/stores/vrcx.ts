@@ -10,6 +10,7 @@ import { parseFileSaveResult } from "../shared/utils/file-save-result";
 import type { FileSaveResult } from "../shared/utils/file-save-result";
 import { AppDebug } from "../services/app-config";
 import { database } from "../services/database";
+import { DATABASE_VERSION, isDatabaseUpgradeNeeded, prepareSchema } from "../services/database/schema-setup";
 import { refreshCustomScript } from "../shared/utils/base/ui";
 import { useAdvancedSettingsStore } from "./settings/advanced";
 import { useAvatarProviderStore } from "./avatar-provider";
@@ -170,33 +171,33 @@ export const useVrcxStore = defineStore("Vrcx", () => {
   init().catch(logError);
 
   async function updateDatabaseVersion() {
-    const databaseVersion = 18;
-    if (state.databaseVersion < databaseVersion) {
+    const isUpgrade = isDatabaseUpgradeNeeded(state.databaseVersion);
+    if (isUpgrade) {
       databaseUpgradeState.value = {
         visible: state.databaseVersion > 0,
         fromVersion: state.databaseVersion,
-        toVersion: databaseVersion,
+        toVersion: DATABASE_VERSION,
       };
-      console.log(`Updating database from ${state.databaseVersion} to ${databaseVersion}...`);
-      try {
-        await database.upgradeDatabaseVersion();
-        await database.vacuum();
-        await database.optimize();
-        await configRepository.setInt("VRCX_databaseVersion", databaseVersion);
+      console.log(`Updating database from ${state.databaseVersion} to ${DATABASE_VERSION}...`);
+    }
+    try {
+      await prepareSchema(state.databaseVersion, database);
+      if (isUpgrade) {
+        await configRepository.setInt("VRCX_databaseVersion", DATABASE_VERSION);
         console.log("Database update complete.");
-        state.databaseVersion = databaseVersion;
+        state.databaseVersion = DATABASE_VERSION;
         databaseUpgradeState.value.visible = false;
-      } catch (err) {
-        console.error(err);
-        databaseUpgradeState.value.visible = false;
-        await modalStore.alert({
-          title: t("message.database.upgrade_failed_title"),
-          description: t("message.database.upgrade_failed_description"),
-          dismissible: false,
-        });
-        AppApi.ShowDevTools().catch(logError);
-        return false;
       }
+    } catch (err) {
+      console.error(err);
+      databaseUpgradeState.value.visible = false;
+      await modalStore.alert({
+        title: t("message.database.upgrade_failed_title"),
+        description: t("message.database.upgrade_failed_description"),
+        dismissible: false,
+      });
+      AppApi.ShowDevTools().catch(logError);
+      return false;
     }
     return true;
   }
