@@ -91,6 +91,8 @@ export function cropImage(
   });
 }
 
+const PREVIEW_MAX_SIDE = 480;
+
 export function useImageCropper() {
   const { t } = useI18n();
 
@@ -147,7 +149,19 @@ export function useImageCropper() {
 
   function getPreviewUrl(): string {
     const canvas = cropperRef.value?.getResult()?.canvas;
-    return canvas && canvas.width > 0 && canvas.height > 0 ? canvas.toDataURL("image/jpeg", 0.8) : "";
+    if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
+      return "";
+    }
+    const scale = Math.min(1, PREVIEW_MAX_SIDE / Math.max(canvas.width, canvas.height));
+    const small = document.createElement("canvas");
+    small.width = Math.max(1, Math.round(canvas.width * scale));
+    small.height = Math.max(1, Math.round(canvas.height * scale));
+    const context = scale < 1 ? small.getContext("2d") : null;
+    if (!context) {
+      return canvas.toDataURL("image/jpeg", 0.8);
+    }
+    context.drawImage(canvas, 0, 0, small.width, small.height);
+    return small.toDataURL("image/jpeg", 0.8);
   }
 
   return {

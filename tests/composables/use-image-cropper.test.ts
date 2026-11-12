@@ -156,6 +156,50 @@ describe("useImageCropper", () => {
     const result = await getCroppedBlob();
     expect(result).toBeNull();
   });
+
+  test("getPreviewUrl shrinks a large crop before encoding it", () => {
+    const { getPreviewUrl, cropperRef } = useImageCropper();
+    const drawn: number[][] = [];
+    const sizes: number[][] = [];
+    const large = document.createElement("canvas");
+    large.width = 2048;
+    large.height = 1152;
+    const proto = HTMLCanvasElement.prototype;
+    const saved = ["getContext", "toDataURL"].map((name) => ({ name, descriptor: Object.getOwnPropertyDescriptor(proto, name) }));
+    Object.defineProperties(proto, {
+      getContext: {
+        configurable: true,
+        value: () => ({ drawImage: (_source: unknown, x: number, y: number, width: number, height: number) => drawn.push([x, y, width, height]) }),
+      },
+      toDataURL: {
+        configurable: true,
+        value: function (this: HTMLCanvasElement) {
+          sizes.push([this.width, this.height]);
+          return "data:image/jpeg;base64,small";
+        },
+      },
+    });
+    try {
+      cropperRef.value = {
+        getResult: () => ({ canvas: large }),
+        setCoordinates: () => undefined,
+        zoom: () => undefined,
+        rotate: () => undefined,
+        flip: () => undefined,
+      };
+      expect(getPreviewUrl()).toBe("data:image/jpeg;base64,small");
+      expect(drawn).toEqual([[0, 0, 480, 270]]);
+      expect(sizes).toEqual([[480, 270]]);
+      cropperRef.value = null;
+      expect(getPreviewUrl()).toBe("");
+    } finally {
+      for (const { name, descriptor } of saved) {
+        if (descriptor) {
+          Object.defineProperty(proto, name, descriptor);
+        }
+      }
+    }
+  });
 });
 
 describe("cropImage", () => {
