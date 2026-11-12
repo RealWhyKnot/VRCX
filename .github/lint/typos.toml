@@ -17,7 +17,6 @@ extend-exclude = [
   "/Installer/Plugins/x86-unicode/ShellExecAsUser.dll",
   "/Installer/Plugins/x86-unicode/nsProcess.dll",
   "/src-electron/libs/linux/libopenvr_api.so",
-  "/README/",
   "/src/shared/constants/remixIconTags.json",
   "/src/localization/cs.json",
   "/src/localization/es.json",
