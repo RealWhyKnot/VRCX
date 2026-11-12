@@ -95,6 +95,9 @@ type GameLogBridge = {
   GetPreviousDisplayNamesByUserId(userId: string): Promise<string>;
   GetPreviousInstancesByUserId(userId: string | null, displayName: string | null): Promise<string>;
   GetJoinLeaveDatesByUserId(userId: string): Promise<string>;
+  GetRepeatEncounters(selfId: string, minPlaces: number, limit: number): Promise<string>;
+  GetFirstMetByUserId(userId: string): Promise<string>;
+  GetVoteKickEvents(limit: number): Promise<string>;
   GetRecentInstanceJoinsByUserId(userId: string, since: string): Promise<string>;
   GetInstanceActivityRows(startDate: string, endDate: string): Promise<string>;
 };

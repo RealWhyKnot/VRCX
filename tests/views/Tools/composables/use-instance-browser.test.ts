@@ -5,12 +5,14 @@ const mocks = vi.hoisted(() => ({
   discoverInstances: vi.fn<(query: string) => Promise<unknown>>(),
   getActiveInstances: vi.fn<(params: { n: number; offset: number }) => Promise<unknown>>(),
   logError: vi.fn<(err: unknown) => void>(),
+  recordDiscoveredSightings: vi.fn<(instances: readonly { location: string }[]) => void>(),
 }));
 
 vi.mock("../../../../src/api/instance", () => ({
   instanceRequest: { discoverInstances: mocks.discoverInstances, getActiveInstances: mocks.getActiveInstances },
 }));
 vi.mock("../../../../src/stores/vrcx-messages", () => ({ logError: mocks.logError }));
+vi.mock("../../../../src/coordinators/instance-sighting-coordinator", () => ({ recordDiscoveredSightings: mocks.recordDiscoveredSightings }));
 
 import { useInstanceBrowser } from "../../../../src/views/Tools/composables/use-instance-browser";
 
@@ -42,6 +44,14 @@ describe("useInstanceBrowser", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  test("hands each loaded page to the sightings log", async () => {
+    const { scope, browser } = setup();
+    await browser.refresh();
+    expect(mocks.recordDiscoveredSightings).toHaveBeenCalledTimes(1);
+    expect(mocks.recordDiscoveredSightings.mock.calls[0]?.[0].map((instance) => instance.location)).toEqual(["wrld_1:0", "wrld_1:1", "wrld_1:2"]);
+    scope.stop();
   });
 
   test("loads discover results", async () => {

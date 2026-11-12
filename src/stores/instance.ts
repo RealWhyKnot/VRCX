@@ -15,6 +15,7 @@ import type {
   UserRefTarget,
 } from "./instance-types";
 import { checkVRChatCache, getBundleDateSize } from "../coordinators/cache-coordinator";
+import { recordAppliedInstance } from "../coordinators/instance-sighting-coordinator";
 import { computeDisabledContentSettings, createDefaultInstanceRef, toInstanceRecord } from "../shared/utils/instance-transforms";
 import type { InstanceJsonInput } from "../shared/utils/instance-transforms";
 import { parseLocation } from "../shared/utils/location-parser";
@@ -430,6 +431,7 @@ export const useInstanceStore = defineStore("Instance", () => {
         groupInstance.instance = ref;
       }
     }
+    recordAppliedInstance(ref);
     lastInstanceApplied.value = ref.id;
     return ref;
   }

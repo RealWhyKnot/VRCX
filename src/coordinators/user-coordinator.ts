@@ -30,6 +30,7 @@ import { useSearchStore } from "../stores/search";
 import { removeAvatarFromCache } from "./avatar-coordinator";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
+import type { UserDialogTrustChange } from "../stores/user-state";
 import { refreshStaleUserProfile } from "./user-profile-apply";
 
 export const getRobotUrl = () => `${AppDebug.endpointDomain}/file/file_0e8c4e32-7444-44ea-ade4-313c010d4bae/1/file`;
@@ -120,6 +121,8 @@ export function showUserDialog(userId: unknown) {
     $memberId: "",
   };
   D.lastSeen = "";
+  D.firstMet = "";
+  D.trustHistory = [];
   D.joinCount = 0;
   D.timeSpent = 0;
   D.avatarModeration = 0;
@@ -205,8 +208,9 @@ export function showUserDialog(userId: unknown) {
                 D.timeSpent = ref1.timeSpent;
               }
               const displayNameMap = ref1.previousDisplayNames;
-              const userNotifications = await database.getFriendLogHistoryForUserId(D.id, ["DisplayName", "Friend", "Unfriend"]);
+              const userNotifications = await database.getFriendLogHistoryForUserId(D.id, ["DisplayName", "Friend", "Unfriend", "TrustLevel"]);
               const dateFriendedInfo = [];
+              const trustHistory: UserDialogTrustChange[] = [];
               for (const notification of userNotifications) {
                 if (notification.userId !== D.id) {
                   continue;
@@ -217,8 +221,16 @@ export function showUserDialog(userId: unknown) {
                 if (notification.type === "Friend" || (notification.type === "Unfriend" && !appearanceSettingsStore.hideUnfriends)) {
                   dateFriendedInfo.unshift(notification);
                 }
+                if (notification.type === "TrustLevel" && notification.created_at) {
+                  trustHistory.unshift({ from: notification.previousTrustLevel ?? "", to: notification.trustLevel ?? "", created_at: notification.created_at });
+                }
               }
               D.dateFriendedInfo = dateFriendedInfo;
+              D.trustHistory = trustHistory;
+              const firstMet = await database.getFirstMet(userId);
+              if (D.id === userId) {
+                D.firstMet = firstMet;
+              }
               const latestFriendedInfo = dateFriendedInfo[0];
               if (latestFriendedInfo !== undefined) {
                 D.unFriended = latestFriendedInfo.type === "Unfriend";

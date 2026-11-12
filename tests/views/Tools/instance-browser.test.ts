@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { flushPromises, mount } from "@vue/test-utils";
 
 const mocks = vi.hoisted(() => ({
+  savePictureOwner: vi.fn<(...args: string[]) => Promise<void>>(() => Promise.resolve()),
   discoverInstances: vi.fn<(query: string) => Promise<unknown>>(),
   getActiveInstances: vi.fn<(params: { n: number; offset: number }) => Promise<unknown>>(),
   selfInvite: vi.fn<(params: { worldId: string; instanceId: string; shortName?: string }) => Promise<unknown>>(),
@@ -33,6 +34,8 @@ vi.mock("../../../src/api/instance", () => ({
 }));
 vi.mock("../../../src/coordinators/world-coordinator", () => ({ showWorldDialog: mocks.showWorldDialog }));
 vi.mock("../../../src/stores/vrcx-messages", () => ({ logError: mocks.logError }));
+vi.mock("../../../src/coordinators/instance-sighting-coordinator", () => ({ recordDiscoveredSightings: vi.fn<() => void>() }));
+vi.mock("../../../src/services/database", () => ({ database: { savePictureOwner: mocks.savePictureOwner } }));
 vi.mock("../../../src/stores/launch", () => ({ useLaunchStore: () => ({ showLaunchDialog: mocks.showLaunchDialog }) }));
 vi.mock("../../../src/stores/instance", async () => {
   const { defineStore } = await import("pinia");

@@ -32,6 +32,7 @@ type GameLogColumnsOptions = {
 const { t } = i18n.global;
 
 const UNACTIONABLE_TYPES = new Set(["OnPlayerJoined", "OnPlayerLeft", "Location", "PortalSpawn"]);
+const PLAYER_ROW_TYPES = new Set(["OnPlayerJoined", "OnPlayerLeft"]);
 
 function firstNonEmpty(...values: (string | null | undefined)[]): string {
   for (const value of values) {
@@ -282,7 +283,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }: GameLo
       cell: ({ row }) => {
         const original = row.original;
         const canDelete = !UNACTIONABLE_TYPES.has(original.type);
-        const canShowPrevious = original.type === "Location";
+        const canShowPrevious = original.type === "Location" || (PLAYER_ROW_TYPES.has(original.type) && Boolean(original.location));
 
         if (!canDelete && !canShowPrevious) {
           return null;
@@ -304,6 +305,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }: GameLo
                 <button
                   type="button"
                   class="inline-flex h-6 items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+                  data-testid="gamelog-instance-info"
                   onClick={() => showPreviousInstancesInfoDialog(original.location ?? "")}
                 >
                   <FileText class="h-4 w-4" />

@@ -7,6 +7,8 @@ import { friendLogCurrent } from "./friend-log-current.ts";
 import { friendLogHistory } from "./friend-log-history.ts";
 import { gameLog } from "./game-log.ts";
 import { groupStats } from "./group-stats.ts";
+import { peoplePatterns } from "./people-patterns.ts";
+import { sightings } from "./sightings.ts";
 import { memos } from "./memos.ts";
 import { moderation } from "./moderation.ts";
 import { mutualGraph } from "./mutual-graph.ts";
@@ -47,6 +49,8 @@ const database = {
   ...activityV2,
   ...gameLog,
   ...groupStats,
+  ...peoplePatterns,
+  ...sightings,
   ...notifications,
   ...moderation,
   ...friendLogHistory,

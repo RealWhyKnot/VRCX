@@ -60,6 +60,27 @@ type ActivityBridge = {
   UpdateNotificationExpired(id: string, expired: boolean): Promise<void>;
   GetNotificationsV2(maxEntries: number): Promise<string>;
   GetGroupNotificationStats(): Promise<string>;
+  GetFriendGatherings(since: string): Promise<string>;
+  GetFriendPresenceSince(since: string): Promise<string>;
+  GetOwnLocationsSince(since: string): Promise<string>;
+  AddInstanceSighting(
+    createdAt: string,
+    location: string,
+    worldId: string,
+    worldName: string,
+    creatorId: string,
+    creatorName: string,
+    userCount: number,
+    capacity: number,
+    userIds: string[],
+    fileIds: string[],
+    displayNames: string[],
+    isFriend: string[]
+  ): Promise<void>;
+  GetInstanceSightings(limit: number): Promise<string>;
+  GetUnresolvedSightingPictures(retryFailedBefore: string, limit: number): Promise<string>;
+  GetPictureOwners(limit: number): Promise<string>;
+  SavePictureOwner(fileId: string, kind: string, userId: string, displayName: string, resolvedAt: string): Promise<void>;
   AddNotificationV2(
     id: string,
     createdAt: string | null,

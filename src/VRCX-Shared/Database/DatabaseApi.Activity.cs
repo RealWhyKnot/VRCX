@@ -238,4 +238,42 @@ sealed partial class DatabaseApi
 
     private static string InPlaceholders(string prefix, int count) =>
         string.Join(", ", Enumerable.Range(0, count).Select(index => $"@{prefix}{index.ToString(CultureInfo.InvariantCulture)}"));
+
+    public string GetFriendGatherings(string since) => Rows($"""
+        WITH stays AS (
+            SELECT previous_location AS location, user_id, display_name, unixepoch(created_at) * 1000 - time AS started, unixepoch(created_at) * 1000 AS ended
+            FROM {UserTable("feed_gps")}
+            WHERE created_at > @since AND time > 0 AND previous_location LIKE 'wrld_%:%'
+            UNION ALL
+            SELECT location, user_id, display_name, unixepoch(created_at) * 1000 - time, unixepoch(created_at) * 1000
+            FROM {UserTable("feed_online_offline")}
+            WHERE type = 'Offline' AND created_at > @since AND time > 0 AND location LIKE 'wrld_%:%'
+        ),
+        shared AS (
+            SELECT location FROM stays
+            WHERE location NOT IN (SELECT location FROM gamelog_location)
+            GROUP BY location
+            HAVING COUNT(DISTINCT user_id) >= 2
+        ),
+        named AS (
+            SELECT location, MAX(world_name) AS world_name, MAX(group_name) AS group_name
+            FROM {UserTable("feed_gps")}
+            WHERE created_at > @since AND location IN (SELECT location FROM shared)
+            GROUP BY location
+        )
+        SELECT stays.location, named.world_name, named.group_name, stays.user_id, stays.display_name, stays.started, stays.ended
+        FROM stays
+        JOIN shared ON shared.location = stays.location
+        LEFT JOIN named ON named.location = stays.location
+        ORDER BY stays.started DESC
+        """, ("@since", since));
+
+    public string GetFriendPresenceSince(string since) => Rows($"""
+        SELECT user_id, display_name, unixepoch(created_at) * 1000, type
+        FROM {UserTable("feed_online_offline")}
+        WHERE created_at > @since AND (type = 'Online' OR type = 'Offline')
+        ORDER BY user_id, created_at
+        """, ("@since", since));
+
+    public string GetOwnLocationsSince(string since) => Rows("SELECT unixepoch(created_at) * 1000, time FROM gamelog_location WHERE created_at > @since AND time > 0 ORDER BY created_at", ("@since", since));
 }

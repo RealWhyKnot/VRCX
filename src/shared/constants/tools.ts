@@ -197,6 +197,16 @@ const toolDefinitions = [
     action: { type: "route", routeName: "my-groups" },
   },
   {
+    key: "people-patterns",
+    category: "user",
+    iconKey: "users",
+    navIcon: "ri-user-search-line",
+    titleKey: "view.tools.user.people_patterns",
+    descriptionKey: "view.tools.user.people_patterns_description",
+    navEligible: true,
+    action: { type: "route", routeName: "people-patterns" },
+  },
+  {
     key: "discord-names",
     category: "user",
     iconKey: "users",

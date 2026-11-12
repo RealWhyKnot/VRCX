@@ -16,6 +16,7 @@ import Gallery from "./../views/Tools/Gallery.vue";
 import GameLog from "./../views/GameLog/GameLog.vue";
 import InstanceBrowser from "./../views/Tools/InstanceBrowser.vue";
 import MyGroups from "./../views/Tools/MyGroups.vue";
+import PeoplePatterns from "./../views/Tools/PeoplePatterns.vue";
 import Login from "./../views/Login/Login.vue";
 import MainLayout from "../views/Layout/MainLayout.vue";
 import Moderation from "./../views/Moderation/Moderation.vue";
@@ -147,6 +148,12 @@ const routes: RouteRecordRaw[] = [
         name: "my-groups",
         component: MyGroups,
         meta: { navKeys: ["tool-my-groups", "tools"] },
+      },
+      {
+        path: "tools/people-patterns",
+        name: "people-patterns",
+        component: PeoplePatterns,
+        meta: { navKeys: ["tool-people-patterns", "tools"] },
       },
       {
         path: "settings",

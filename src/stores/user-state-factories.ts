@@ -243,6 +243,8 @@ export function createUserDialogState(): UserDialogState {
     dateFriended: "",
     unFriended: false,
     dateFriendedInfo: [],
+    firstMet: "",
+    trustHistory: [],
     mutualFriendCount: 0,
     mutualGroupCount: 0,
     mutualFriends: [],

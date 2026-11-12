@@ -217,6 +217,12 @@ export type UserDialogFriendedInfo = {
   created_at?: string | null | undefined;
 };
 
+export type UserDialogTrustChange = {
+  from: string;
+  to: string;
+  created_at: string;
+};
+
 export type UserDialogFriend = {
   id: string;
   displayName?: string | undefined;
@@ -283,6 +289,8 @@ export type UserDialogState = {
   dateFriended: string;
   unFriended: boolean;
   dateFriendedInfo: UserDialogFriendedInfo[];
+  firstMet: string;
+  trustHistory: UserDialogTrustChange[];
   mutualFriendCount: number;
   mutualGroupCount: number;
   mutualFriends: UserDialogFriend[];

@@ -86,4 +86,27 @@ sealed partial class DatabaseApi
                 OR created_at BETWEEN @utc_start_date AND @utc_end_date
             );
         """, ("@utc_start_date", startDate), ("@utc_end_date", endDate));
+
+    public string GetRepeatEncounters(string selfId, long minPlaces, long limit) => Rows($"""
+        SELECT user_id, display_name, COUNT(DISTINCT location) AS places, MAX(created_at), SUM(time)
+        FROM gamelog_join_leave
+        WHERE type = 'OnPlayerLeft'
+          AND user_id != ''
+          AND user_id != @selfId
+          AND user_id NOT IN (SELECT user_id FROM {UserTable("friend_log_current")})
+        GROUP BY user_id
+        HAVING places >= @minPlaces
+        ORDER BY places DESC
+        LIMIT @limit
+        """, ("@selfId", selfId), ("@minPlaces", minPlaces), ("@limit", limit));
+
+    public string GetVoteKickEvents(long limit) => Rows("""
+        SELECT created_at, data, (SELECT world_name FROM gamelog_location WHERE gamelog_location.created_at <= gamelog_event.created_at ORDER BY gamelog_location.created_at DESC LIMIT 1)
+        FROM gamelog_event
+        WHERE data LIKE 'A vote kick has been initiated against %' OR data LIKE 'Vote to kick %' OR data LIKE '%You have been kicked%'
+        ORDER BY created_at DESC
+        LIMIT @limit
+        """, ("@limit", limit));
+
+    public string GetFirstMetByUserId(string userId) => Rows("SELECT MIN(created_at) FROM gamelog_join_leave WHERE user_id = @userId", ("@userId", userId));
 }

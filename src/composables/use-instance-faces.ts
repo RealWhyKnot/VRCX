@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 
 import { lookUpPicture, pictureOwnerName } from "../coordinators/picture-owner-coordinator";
 import { showUserDialog } from "../coordinators/user-coordinator";
+import { database } from "../services/database";
 import {
   buildFaceIndex,
   buildInstanceFaces,
@@ -73,7 +74,7 @@ function buildKnownFaces(): KnownFaces {
   };
 }
 
-function useKnownFaces(): KnownFaces {
+export function useKnownFaces(): KnownFaces {
   const store = useUserStore();
   const existing = knownFacesByStore.get(store);
   if (existing) {
@@ -136,6 +137,8 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
       owners.clear();
     }
     owners.set(fileId, resolved);
+    const saved = resolved.kind === "user" ? { userId: resolved.userId, name: resolved.name } : { userId: "", name: "" };
+    void database.savePictureOwner(fileId, resolved.kind, saved.userId, saved.name, new Date().toJSON()).catch(logError);
     return resolved;
   }
 

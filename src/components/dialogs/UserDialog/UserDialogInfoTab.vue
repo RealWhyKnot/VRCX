@@ -262,6 +262,7 @@
                   <span class="text-right text-muted-foreground">{{ timeAgo(userDialog.dateFriended) }}</span>
                 </div>
               </TooltipWrapper>
+              <UserDialogHistoryRows :first-met="userDialog.firstMet" :trust-history="userDialog.trustHistory" />
               <TooltipWrapper side="right" :content="timeToText(userDialog.timeSpent, true)" :disabled="!userDialog.timeSpent">
                 <div class="flex justify-between items-start gap-2 text-xs">
                   <span class="text-muted-foreground shrink-0">{{ t("dialog.user.info.time_together") }}</span>
@@ -392,6 +393,7 @@ import { logError } from "../../../stores/notification/errors";
 
 import { copyToClipboard, openExternalLink } from "../../../shared/utils/app-actions";
 import { formatDateFilter } from "../../../coordinators/date-coordinator";
+import UserDialogHistoryRows from "./UserDialogHistoryRows.vue";
 import { getFaviconUrl } from "../../../shared/utils/url-utils";
 import { isFriendOnline } from "../../../shared/utils/friend";
 import { isRealInstance } from "../../../shared/utils/instance";

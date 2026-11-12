@@ -1,6 +1,7 @@
 import { computed, onScopeDispose, ref, watch } from "vue";
 
 import { instanceRequest } from "../../../api/instance";
+import { recordDiscoveredSightings } from "../../../coordinators/instance-sighting-coordinator";
 import {
   DISCOVER_MAX_VIBES,
   DISCOVER_PAGE_SIZE,
@@ -47,6 +48,7 @@ export function useInstanceBrowser() {
       if (ticket !== latest) {
         return;
       }
+      recordDiscoveredSightings(page);
       const known = new Set(offset > 0 ? instances.value.map((instance) => instance.location) : []);
       const fresh = page.filter((instance) => !known.has(instance.location));
       instances.value = offset > 0 ? [...instances.value, ...fresh] : fresh;

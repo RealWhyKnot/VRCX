@@ -13,12 +13,14 @@ sealed partial class DatabaseApi
         CreateActivityTables();
         CreateFriendLogTables();
         CreateNotificationAndProfileTables();
+        CreateSightingTables();
     }
 
     public void CreateGlobalTables()
     {
         CreateGameLogTables();
         CreateCacheAndFavoriteTables();
+        CreatePictureOwnerTable();
         ApplyMigrations();
     }
 
