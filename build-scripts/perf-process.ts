@@ -41,7 +41,8 @@ async function readSamples(name: string): Promise<ProcessSample[]> {
   }
   const parsed: unknown = JSON.parse(text);
   const rows: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-  return rows.filter(isRecord).map((row) => ({
+  const measured = rows.filter(isRecord).filter((row) => typeof row["CPU"] === "number");
+  return measured.map((row) => ({
     pid: numberAt(row, "Id"),
     cpuSeconds: numberAt(row, "CPU"),
     workingSetMb: numberAt(row, "WorkingSet64") / MB,
@@ -143,7 +144,8 @@ async function main() {
   const rounds: { atMs: number; samples: ProcessSample[] }[] = [];
   const endMs = Date.now() + seconds * 1000;
   while (Date.now() < endMs) {
-    rounds.push({ atMs: Date.now(), samples: await readSamples(name) });
+    const samples = await readSamples(name);
+    rounds.push({ atMs: Date.now(), samples });
     await sleep(INTERVAL_MS);
   }
   const totals = summarize(rounds);
