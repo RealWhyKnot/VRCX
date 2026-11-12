@@ -666,7 +666,9 @@
       "group": {
         "header": "Csoport",
         "calendar": "Naptár",
-        "calendar_description": "Csoportesemény-naptár"
+        "calendar_description": "Csoportesemény-naptár",
+        "my_groups": "My Groups",
+        "my_groups_description": "See how active each of your groups is and when you last visited, and leave the ones you don't use"
       },
       "user": {
         "discord_names_description": "VRChat barátaid Discord felhasználónevének megkeresése",
@@ -745,11 +747,32 @@
         "launch": "Launch",
         "invite_me": "Invite me",
         "load_more": "Load more",
-        "load_failed": "Couldn't load instances. Try again in a moment."
+        "load_failed": "Couldn't load instances. Try again in a moment.",
+        "face_look_up": "Find out who this is",
+        "face_open_profile": "Open profile",
+        "face_is_avatar": "That picture is an avatar thumbnail, so it doesn't say who's wearing it.",
+        "face_not_found": "Couldn't work out who this is from the picture."
       },
       "marketplace": {
         "creator_earnings": "Creator Earnings",
         "creator_earnings_description": "See what your marketplace listings have earned"
+      },
+      "my_groups": {
+        "group": "Group",
+        "members": "Members",
+        "notifications": "Notifications",
+        "last_notification": "Last notification",
+        "visits": "Visits",
+        "time_spent": "Time spent",
+        "last_visit": "Last visit",
+        "never": "Never",
+        "leave": "Leave",
+        "owner": "Owner",
+        "refresh": "Refresh",
+        "search_placeholder": "Search groups",
+        "limit_hint": "VRChat lets you join up to {limit} groups.",
+        "history_hint": "Visits and notifications only count what VRCX has recorded on this PC.",
+        "load_failed": "Couldn't load your groups."
       }
     },
     "profile": {
@@ -2355,7 +2378,14 @@
       "zoom_out": "Kicsinyítés",
       "mode_fit": "Váltás illesztési módra",
       "mode_free": "Váltás szabad módra",
-      "reset": "Visszaállítás"
+      "reset": "Visszaállítás",
+      "preview_profile_picture": "Profile picture",
+      "preview_profile_icon": "Profile icon",
+      "preview_list": "In lists",
+      "preview_group_banner": "Group banner",
+      "preview_group_icon": "Group icon",
+      "preview_banner_nameplate": "On nameplates",
+      "preview_banner_group_page": "On the group page"
     },
     "gallery_select": {
       "header": "Kép kiválasztása",
@@ -2718,6 +2748,10 @@
       "subscriber_earnings": "Subscription earnings",
       "subscriber_months": "Subscriber months",
       "load_failed": "Couldn't load earnings. Try again in a moment."
+    },
+    "fullscreen_image": {
+      "find_uploader": "Open the uploader's profile",
+      "uploader_not_found": "Couldn't find who uploaded this picture."
     }
   },
   "confirm": {

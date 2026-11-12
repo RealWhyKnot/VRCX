@@ -69,7 +69,7 @@
               </TooltipWrapper>
             </template>
             <span
-              class="font-bold cursor-pointer flex flex-wrap"
+              class="font-bold cursor-pointer flex flex-wrap wrap-anywhere"
               :title="userDialog.ref.displayName || userDialog.id"
               @click="copyUserDisplayName(userDialog.ref.displayName || userDialog.id)"
               v-text="userDialog.ref.displayName || userDialog.id"

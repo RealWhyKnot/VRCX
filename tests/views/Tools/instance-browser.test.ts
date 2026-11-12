@@ -11,11 +11,23 @@ const mocks = vi.hoisted(() => ({
   routerPush: vi.fn<(to: { name: string }) => Promise<void>>(),
   toastSuccess: vi.fn<(message: string) => void>(),
   logError: vi.fn<(err: unknown) => void>(),
+  toastInfo: vi.fn<(message: string) => void>(),
+  showUserDialog: vi.fn<(userId: string) => void>(),
+  getAvatarImages: vi.fn<(params: { fileId: string }) => Promise<{ json: unknown }>>(),
+  getUser: vi.fn<(params: { userId: string }) => Promise<{ ref: { displayName: string } }>>(),
+  friends: new Map<string, { id: string; ref: Record<string, unknown> }>(),
+  cachedUsers: new Map<string, Record<string, unknown>>(),
 }));
 
 vi.mock("vue-i18n", () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock("vue-router", () => ({ useRouter: () => ({ push: mocks.routerPush }) }));
-vi.mock("vue-sonner", () => ({ toast: { success: mocks.toastSuccess } }));
+vi.mock("vue-sonner", () => ({ toast: { success: mocks.toastSuccess, info: mocks.toastInfo } }));
+vi.mock("../../../src/api/image", () => ({ imageRequest: { getAvatarImages: mocks.getAvatarImages } }));
+vi.mock("../../../src/api/user", () => ({ userRequest: { getUser: mocks.getUser } }));
+vi.mock("../../../src/coordinators/user-coordinator", () => ({ showUserDialog: mocks.showUserDialog }));
+vi.mock("../../../src/shared/utils/user", () => ({ userImage: (user: { userIcon?: string }) => user.userIcon ?? "" }));
+vi.mock("../../../src/stores/friend", () => ({ useFriendStore: () => ({ friends: mocks.friends }) }));
+vi.mock("../../../src/stores/user", () => ({ useUserStore: () => ({ cachedUsers: mocks.cachedUsers }) }));
 vi.mock("../../../src/api/instance", () => ({
   instanceRequest: { discoverInstances: mocks.discoverInstances, getActiveInstances: mocks.getActiveInstances, selfInvite: mocks.selfInvite },
 }));
@@ -57,6 +69,10 @@ function row(id: string, overrides: Record<string, unknown> = {}): Record<string
   };
 }
 
+function icon(id: string): string {
+  return `https://api.vrchat.cloud/api/1/image/file_${id}/1/256`;
+}
+
 async function open() {
   const wrapper = mount(InstanceBrowser, mountOptions);
   await wrapper.get('[data-testid="refresh"]').trigger("click");
@@ -68,6 +84,8 @@ describe("InstanceBrowser.vue", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    mocks.friends.clear();
+    mocks.cachedUsers.clear();
     mocks.discoverInstances.mockResolvedValue({ instances: [row("1"), row("2", { world: { id: "wrld_1", name: "Cinema" } })] });
     mocks.getActiveInstances.mockResolvedValue([row("9")]);
     mocks.selfInvite.mockResolvedValue({});
@@ -132,6 +150,96 @@ describe("InstanceBrowser.vue", () => {
       const classes = [...holder.classes(), ...(holder.element.parentElement?.className.split(" ") ?? [])];
       expect(classes.some((name) => name === "truncate" || name.startsWith("line-clamp-"))).toBe(true);
     }
+  });
+
+  test("shows friends by name first and opens their profile", async () => {
+    mocks.friends.set("usr_f", {
+      id: "usr_f",
+      ref: { id: "usr_f", displayName: "Rin", userIcon: icon("f"), profilePicOverride: "", location: "wrld_1:1~region(eu)" },
+    });
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("x"), null, icon("f")], friendIcons: [icon("f")] })] });
+    const wrapper = await open();
+    const faces = wrapper.findAll('[data-testid="instance-faces"] button');
+    expect(faces.map((face) => face.attributes("data-testid"))).toEqual(["face-known", "face-unknown"]);
+    expect(faces[0]?.attributes("aria-label")).toBe("Rin");
+    await faces[0]?.trigger("click");
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_f");
+    expect(wrapper.get('[data-testid="faces-hidden"]').text()).toBe("+10");
+  });
+
+  test("looks up an unknown face and opens the owner of a profile icon", async () => {
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("click1")] })] });
+    mocks.getAvatarImages.mockResolvedValue({ json: { ownerId: "usr_x", name: "icon", tags: ["icon"] } });
+    mocks.getUser.mockResolvedValue({ ref: { displayName: "Mika" } });
+    const wrapper = await open();
+    await wrapper.get('[data-testid="face-unknown"]').trigger("click");
+    await flushPromises();
+    expect(mocks.getAvatarImages).toHaveBeenCalledWith({ fileId: "file_click1" });
+    expect(mocks.getUser).toHaveBeenCalledWith({ userId: "usr_x" });
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_x");
+    expect(wrapper.get('[data-testid="face-unknown"]').attributes("aria-label")).toBe("Mika");
+  });
+
+  test("names a face after hovering it for a moment, without opening anything", async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("hover1"), icon("hover2")] })] });
+      mocks.getAvatarImages.mockResolvedValue({ json: { ownerId: "usr_h", name: "icon", tags: ["gallery"] } });
+      mocks.getUser.mockResolvedValue({ ref: { displayName: "N".repeat(400) } });
+      const wrapper = await open();
+      const faces = wrapper.findAll('[data-testid="face-unknown"]');
+      await faces[1]?.trigger("pointerenter");
+      await vi.advanceTimersByTimeAsync(200);
+      await faces[1]?.trigger("pointerleave");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mocks.getAvatarImages).not.toHaveBeenCalled();
+      await faces[0]?.trigger("pointerenter");
+      await vi.advanceTimersByTimeAsync(400);
+      await flushPromises();
+      expect(mocks.getAvatarImages.mock.calls).toEqual([[{ fileId: "file_hover1" }]]);
+      const after = wrapper.findAll('[data-testid="face-unknown"]');
+      expect(after[0]?.attributes("aria-label")).toBe("N".repeat(400));
+      expect(after[1]?.attributes("aria-label")).toBe("view.tools.instance_browser.face_look_up");
+      expect(after[0]?.classes()).toEqual(expect.arrayContaining(["size-6", "shrink-0", "overflow-hidden"]));
+      expect(mocks.showUserDialog).not.toHaveBeenCalled();
+      await after[0]?.trigger("pointerenter");
+      await vi.advanceTimersByTimeAsync(400);
+      expect(mocks.getAvatarImages).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("says so when a face is only an avatar thumbnail or the lookup fails", async () => {
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userIcons: [icon("avi1"), icon("gone1")] })] });
+    mocks.getAvatarImages.mockResolvedValueOnce({ json: { ownerId: "usr_a", name: "Avatar - Fox - Image", tags: [] } }).mockRejectedValueOnce(new Error("404"));
+    const wrapper = await open();
+    const faces = wrapper.findAll('[data-testid="face-unknown"]');
+    await faces[0]?.trigger("click");
+    await flushPromises();
+    await faces[1]?.trigger("click");
+    await flushPromises();
+    expect(mocks.toastInfo.mock.calls).toEqual([["view.tools.instance_browser.face_is_avatar"], ["view.tools.instance_browser.face_not_found"]]);
+    expect(wrapper.findAll('[data-testid="face-unknown"]')[0]?.attributes("aria-label")).toBe("view.tools.instance_browser.face_is_avatar");
+    expect(mocks.showUserDialog).not.toHaveBeenCalled();
+  });
+
+  test("keeps a crowded instance to a fixed number of faces that cannot grow the card", async () => {
+    const crowd = Array.from({ length: 300 }, (_, position) => icon(`n${position}`));
+    mocks.discoverInstances.mockResolvedValue({ instances: [row("1", { userCount: 123456789, userIcons: crowd, friendIcons: crowd.slice(0, 50) })] });
+    const wrapper = await open();
+    const strip = wrapper.get('[data-testid="instance-faces"]');
+    expect(strip.findAll("button")).toHaveLength(8);
+    expect(strip.classes()).toEqual(expect.arrayContaining(["h-6", "min-w-0", "overflow-hidden"]));
+    expect(strip.findAll("button").every((face) => face.classes().includes("shrink-0") && face.classes().includes("size-6"))).toBe(true);
+    const rest = wrapper.get('[data-testid="faces-hidden"]');
+    expect(rest.text()).toBe("+123456781");
+    expect(rest.classes()).toEqual(expect.arrayContaining(["truncate", "min-w-0"]));
+  });
+
+  test("shows no face row when the instance lists nobody", async () => {
+    const wrapper = await open();
+    expect(wrapper.find('[data-testid="instance-faces"]').exists()).toBe(false);
   });
 
   test("shows the failure message when loading fails", async () => {

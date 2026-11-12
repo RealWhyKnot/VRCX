@@ -59,6 +59,7 @@ type ActivityBridge = {
   DeleteNotification(rowId: string): Promise<void>;
   UpdateNotificationExpired(id: string, expired: boolean): Promise<void>;
   GetNotificationsV2(maxEntries: number): Promise<string>;
+  GetGroupNotificationStats(): Promise<string>;
   AddNotificationV2(
     id: string,
     createdAt: string | null,

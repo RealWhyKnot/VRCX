@@ -33,6 +33,19 @@
               <Download class="h-4 w-4" />
             </Button>
 
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-8 w-8"
+              data-testid="find-uploader"
+              :disabled="!fileId || isFindingUploader"
+              :aria-label="t('dialog.fullscreen_image.find_uploader')"
+              :title="t('dialog.fullscreen_image.find_uploader')"
+              @click="openUploader"
+            >
+              <UserSearch class="h-4 w-4" />
+            </Button>
+
             <div class="mx-1 h-5 w-px bg-border" />
 
             <Button variant="ghost" size="icon" class="h-8 w-8" :aria-label="t('dialog.image_crop.zoom_out')" @click="zoomOutCenter">
@@ -81,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { Copy, Download, RefreshCcw, RotateCcw, RotateCw, X, ZoomIn, ZoomOut } from "lucide-vue-next";
+import { Copy, Download, RefreshCcw, RotateCcw, RotateCw, UserSearch, X, ZoomIn, ZoomOut } from "lucide-vue-next";
 import { useEventListener } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { DialogContent as RekaDialogContent, DialogOverlay as RekaDialogOverlay, DialogPortal } from "reka-ui";
@@ -95,6 +108,9 @@ import { useGeneralSettingsStore } from "@/stores/settings/general";
 import { useI18n } from "vue-i18n";
 
 import { extractFileId } from "../shared/utils/file-utils";
+import { logError } from "../stores/vrcx-messages";
+import { lookUpPicture } from "../coordinators/picture-owner-coordinator";
+import { showUserDialog } from "../coordinators/user-coordinator";
 import { useGalleryStore } from "../stores/gallery";
 import { webApiService } from "../services/webapi";
 
@@ -119,6 +135,27 @@ const startTx = ref(0);
 const startTy = ref(0);
 
 const imageUrl = computed(() => fullscreenImageDialog.value.imageUrl || "");
+const fileId = computed(() => extractFileId(imageUrl.value));
+const isFindingUploader = ref(false);
+
+async function openUploader() {
+  if (!fileId.value || isFindingUploader.value) return;
+  isFindingUploader.value = true;
+  try {
+    const { uploaderId } = await lookUpPicture(fileId.value);
+    if (uploaderId) {
+      open.value = false;
+      showUserDialog(uploaderId);
+    } else {
+      toast.info(t("dialog.fullscreen_image.uploader_not_found"));
+    }
+  } catch (err) {
+    logError(err);
+    toast.info(t("dialog.fullscreen_image.uploader_not_found"));
+  } finally {
+    isFindingUploader.value = false;
+  }
+}
 
 const open = computed<boolean>({
   get: () => fullscreenImageDialog.value.visible,

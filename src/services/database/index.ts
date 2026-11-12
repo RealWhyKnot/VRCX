@@ -6,6 +6,7 @@ import { friendFavorites } from "./friend-favorites.ts";
 import { friendLogCurrent } from "./friend-log-current.ts";
 import { friendLogHistory } from "./friend-log-history.ts";
 import { gameLog } from "./game-log.ts";
+import { groupStats } from "./group-stats.ts";
 import { memos } from "./memos.ts";
 import { moderation } from "./moderation.ts";
 import { mutualGraph } from "./mutual-graph.ts";
@@ -45,6 +46,7 @@ const database = {
   ...feed,
   ...activityV2,
   ...gameLog,
+  ...groupStats,
   ...notifications,
   ...moderation,
   ...friendLogHistory,

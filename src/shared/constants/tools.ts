@@ -187,6 +187,16 @@ const toolDefinitions = [
     action: { type: "dialog", dialogKey: "group-invites" },
   },
   {
+    key: "my-groups",
+    category: "group",
+    iconKey: "users",
+    navIcon: "ri-group-line",
+    titleKey: "view.tools.group.my_groups",
+    descriptionKey: "view.tools.group.my_groups_description",
+    navEligible: true,
+    action: { type: "route", routeName: "my-groups" },
+  },
+  {
     key: "discord-names",
     category: "user",
     iconKey: "users",

@@ -68,6 +68,12 @@
               @click="showFullscreenImageDialog(userDialog.instance?.ref?.world?.imageUrl ?? '')"
             />
           </div>
+          <InstancePeople
+            v-if="isRealInstance(userDialog.$location.tag)"
+            class="mt-1.5"
+            :location="userDialog.$location.tag ?? ''"
+            :instance="userDialog.instance.ref"
+          />
           <div class="flex flex-wrap items-start flex-1 max-h-[150px] overflow-auto">
             <div
               v-if="userDialog.$location.userId"
@@ -406,6 +412,7 @@ import { queryRequest } from "../../../api/query-request";
 import { userRequest } from "../../../api/user";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
+import InstancePeople from "../../InstancePeople.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 
 import EditNoteAndMemoDialog from "./EditNoteAndMemoDialog.vue";

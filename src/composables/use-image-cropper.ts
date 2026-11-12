@@ -5,7 +5,7 @@ import type { Point, Transform } from "vue-advanced-cropper";
 
 type CropCoordinates = { left: number; top: number; width: number; height: number };
 type CropTransforms = { rotate?: number; flip?: { horizontal?: boolean; vertical?: boolean } };
-type CropperResult = { coordinates?: CropCoordinates; image?: { transforms?: CropTransforms } };
+type CropperResult = { coordinates?: CropCoordinates; image?: { transforms?: CropTransforms }; canvas?: HTMLCanvasElement };
 type CropperHandle = {
   getResult: () => CropperResult | null | undefined;
   setCoordinates: (transform: Transform | Transform[], options?: { autoZoom?: boolean; transitions?: boolean }) => void;
@@ -145,11 +145,17 @@ export function useImageCropper() {
     return cropImage(originalImage.value, previewScale.value, result, originalFile);
   }
 
+  function getPreviewUrl(): string {
+    const canvas = cropperRef.value?.getResult()?.canvas;
+    return canvas && canvas.width > 0 && canvas.height > 0 ? canvas.toDataURL("image/jpeg", 0.8) : "";
+  }
+
   return {
     cropperRef,
     cropperImageSrc,
     resetCropState,
     loadImageForCrop,
     getCroppedBlob,
+    getPreviewUrl,
   };
 }

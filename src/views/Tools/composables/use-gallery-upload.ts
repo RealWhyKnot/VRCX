@@ -3,6 +3,7 @@ import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 import { handleImageUploadInput } from "../../../coordinators/image-upload-coordinator";
 import { readFileAsBase64, withUploadTimeout } from "../../../shared/utils/image-upload";
+import type { UploadPreviewKind } from "../../../shared/utils/upload-previews";
 
 export type ImageUploadPayload = {
   file: File;
@@ -13,6 +14,7 @@ export type ImageUploadPayload = {
 type ImageUploadFlowOptions = {
   inputSelector: string;
   aspectRatio: number;
+  previews?: UploadPreviewKind;
   beforeCrop?: (file: File) => void;
   upload: (payload: ImageUploadPayload) => Promise<void>;
   errorMessage?: string;
@@ -30,6 +32,7 @@ export function useGalleryUpload() {
   const cropDialogTitle = ref("");
   const cropDialogAspectRatio = ref(4 / 3);
   const cropDialogFile = ref<File | null>(null);
+  const cropDialogPreviews = ref<UploadPreviewKind | null>(null);
   const cropDialogUploadHandler = ref<CropUploadHandler | null>(null);
 
   function startUpload() {
@@ -40,7 +43,8 @@ export function useGalleryUpload() {
     pendingUploads.value = Math.max(0, pendingUploads.value - 1);
   }
 
-  function openCropDialog(file: File, title: string, aspectRatio: number, handler: CropUploadHandler) {
+  function openCropDialog(file: File, title: string, aspectRatio: number, previews: UploadPreviewKind | null, handler: CropUploadHandler) {
+    cropDialogPreviews.value = previews;
     cropDialogTitle.value = title;
     cropDialogAspectRatio.value = aspectRatio;
     cropDialogFile.value = file;
@@ -66,7 +70,10 @@ export function useGalleryUpload() {
     }
   }
 
-  function openImageUploadFlow(e: Event, { inputSelector, aspectRatio, beforeCrop, upload, errorMessage = "Failed to upload" }: ImageUploadFlowOptions) {
+  function openImageUploadFlow(
+    e: Event,
+    { inputSelector, aspectRatio, previews, beforeCrop, upload, errorMessage = "Failed to upload" }: ImageUploadFlowOptions
+  ) {
     const { file, clearInput } = handleImageUploadInput(e, {
       inputSelector,
       tooLargeMessage: () => t("message.file.too_large"),
@@ -77,7 +84,7 @@ export function useGalleryUpload() {
     }
     beforeCrop?.(file);
     clearInput();
-    openCropDialog(file, t("dialog.change_content_image.upload"), aspectRatio, async (blob) => {
+    openCropDialog(file, t("dialog.change_content_image.upload"), aspectRatio, previews ?? null, async (blob) => {
       startUpload();
       try {
         await withUploadTimeout(
@@ -106,6 +113,7 @@ export function useGalleryUpload() {
     cropDialogTitle,
     cropDialogAspectRatio,
     cropDialogFile,
+    cropDialogPreviews,
     onCropConfirm,
     openImageUploadFlow,
   };

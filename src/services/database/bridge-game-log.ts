@@ -54,6 +54,7 @@ type GameLogBridge = {
   GetTimeSpentInWorld(worldId: string): Promise<string>;
   GetLastGroupVisit(groupId: string): Promise<string>;
   GetGroupJoinCount(groupId: string): Promise<string>;
+  GetGroupVisitStats(): Promise<string>;
   GetPreviousInstancesByGroupId(groupId: string): Promise<string>;
   GetPreviousInstancesByWorldId(worldId: string): Promise<string>;
   GetGameLogWorldName(worldId: string): Promise<string>;

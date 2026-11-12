@@ -139,7 +139,7 @@
           </div>
         </div>
         <p v-if="hoverTitle" class="text-sm font-medium mb-1">{{ hoverTitle }}</p>
-        <p v-if="notification.message" class="text-xs text-muted-foreground whitespace-pre-line warp-break-words leading-relaxed">
+        <p v-if="notification.message" class="text-xs text-muted-foreground whitespace-pre-line wrap-break-word leading-relaxed">
           {{ notification.message }}
         </p>
       </template>
@@ -160,7 +160,7 @@
         <div v-if="detailText('worldId')" class="text-xs mb-1">
           <Location :location="detailText('worldId')" :hint="detailText('worldName')" :grouphint="detailText('groupName')" link />
         </div>
-        <p v-if="friendMessage" class="text-xs text-muted-foreground warp-break-words leading-relaxed">
+        <p v-if="friendMessage" class="text-xs text-muted-foreground wrap-break-word leading-relaxed">
           {{ friendMessage }}
         </p>
       </template>
@@ -179,7 +179,7 @@
           </div>
         </div>
         <p v-if="notification.title" class="text-sm font-medium mb-1">{{ notification.title }}</p>
-        <p v-if="displayMessage" class="text-xs text-muted-foreground whitespace-pre-line wrap-break-words leading-relaxed">
+        <p v-if="displayMessage" class="text-xs text-muted-foreground whitespace-pre-line wrap-break-word leading-relaxed">
           {{ displayMessage }}
         </p>
       </template>

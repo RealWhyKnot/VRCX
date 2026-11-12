@@ -46,6 +46,7 @@
                 :on-history="() => showPreviousInstancesInfoDialog(room.location ?? '')"
               />
             </div>
+            <InstancePeople class="mt-1.5" :location="room.tag" :instance="room.ref" />
             <div v-if="room.$location.userId || room.users.length" class="flex flex-wrap items-start [margin:8px_0] max-h-[unset]">
               <div
                 v-if="room.$location.userId"
@@ -167,6 +168,7 @@ import { useUserStore } from "../../../stores/user";
 import { useWorldStore } from "../../../stores/world";
 
 import InstanceActionBar from "../../InstanceActionBar.vue";
+import InstancePeople from "../../InstancePeople.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import type { InstanceRoom } from "../../../stores/instance-types";
 import { useWorldMemo } from "./use-world-dialog-info";

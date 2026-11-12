@@ -174,6 +174,7 @@
       :title="cropDialogTitle"
       :aspect-ratio="cropDialogAspectRatio"
       :file="cropDialogFile"
+      :previews="cropDialogPreviews"
       @update:open="cropDialogOpen = $event"
       @confirm="onCropConfirm"
     />
@@ -233,7 +234,7 @@ watch(
 );
 
 const uploads = useGalleryUpload();
-const { isUploading, cropDialogOpen, cropDialogTitle, cropDialogAspectRatio, cropDialogFile, onCropConfirm, openImageUploadFlow } = uploads;
+const { isUploading, cropDialogOpen, cropDialogTitle, cropDialogAspectRatio, cropDialogFile, cropDialogPreviews, onCropConfirm, openImageUploadFlow } = uploads;
 
 const { galleryTable, galleryDialogVisible, VRCPlusIconsTable, stickerTable, printTable, emojiTable, inventoryTable } = storeToRefs(useGalleryStore());
 const { loadGalleryData, refreshGalleryTable, refreshVRCPlusIconsTable, refreshStickerTable, handleStickerAdd, handleGalleryImageAdd } = useGalleryStore();
@@ -276,6 +277,7 @@ function onFileChangeGallery(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#GalleryUploadButton",
     aspectRatio: 4 / 3,
+    previews: "photo",
     upload: async ({ base64Body }) => {
       await uploadGalleryImage(base64Body);
     },
@@ -301,6 +303,7 @@ function onFileChangeVRCPlusIcon(e: Event) {
   openImageUploadFlow(e, {
     inputSelector: "#VRCPlusIconUploadButton",
     aspectRatio: 1 / 1,
+    previews: "icon",
     errorMessage: "Failed to upload VRC+ icon",
     upload: async ({ base64Body }) => {
       await uploadVRCPlusIcon(base64Body);

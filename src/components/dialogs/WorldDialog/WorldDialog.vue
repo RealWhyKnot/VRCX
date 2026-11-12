@@ -27,7 +27,7 @@
             <div class="flex justify-between gap-2">
               <div class="min-w-0 flex-1">
                 <div class="overflow-hidden">
-                  <span class="flex flex-wrap font-bold cursor-pointer" :title="worldDialog.ref.name || worldDialog.id" @click="copyWorldName">
+                  <span class="flex flex-wrap font-bold cursor-pointer wrap-anywhere" :title="worldDialog.ref.name || worldDialog.id" @click="copyWorldName">
                     <Home v-if="currentUser.$homeLocation && currentUser.$homeLocation.worldId === worldDialog.id" class="inline-block" />
                     {{ worldDialog.ref.name || worldDialog.id }}
                   </span>

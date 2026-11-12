@@ -18,6 +18,7 @@
           :on-refresh="() => refreshInstancePlayerCount(room.tag)"
         />
       </div>
+      <InstancePeople :location="room.tag" :instance="room.ref" />
       <div v-if="room.users.length" class="flex flex-wrap items-start max-h-[150px] overflow-auto">
         <div
           v-for="user in room.users"
@@ -207,6 +208,7 @@ import { useGroupCalendarEvents } from "./use-group-calendar-events";
 
 import GroupCalendarEventCard from "../../../views/Tools/components/GroupCalendarEventCard.vue";
 import InstanceActionBar from "../../InstanceActionBar.vue";
+import InstancePeople from "../../InstancePeople.vue";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import type { GroupPostEntry } from "../../../stores/group-types";
 

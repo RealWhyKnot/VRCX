@@ -17,6 +17,9 @@ sealed partial class DatabaseApi
 
     public string GetGroupJoinCount(string groupId) => Rows("SELECT COUNT(DISTINCT location) FROM gamelog_location WHERE location LIKE @groupId", ("@groupId", $"%{groupId}%"));
 
+    public string GetGroupVisitStats() =>
+        Rows("SELECT substr(location, instr(location, '~group(') + 7, 40) AS group_id, COUNT(DISTINCT location), MAX(created_at), SUM(time) FROM gamelog_location WHERE location LIKE '%~group(grp_%' GROUP BY group_id");
+
     public string GetPreviousInstancesByGroupId(string groupId) => Rows("SELECT created_at, location, time, world_name, group_name FROM gamelog_location WHERE location LIKE @groupId ORDER BY id DESC", ("@groupId", $"%{groupId}%"));
 
     public string GetPreviousInstancesByWorldId(string worldId) => Rows("SELECT created_at, location, time, world_name, group_name FROM gamelog_location WHERE world_id = @worldId ORDER BY id DESC", ("@worldId", worldId));

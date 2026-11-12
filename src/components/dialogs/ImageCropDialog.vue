@@ -13,12 +13,13 @@
       </DialogHeader>
 
       <div v-if="cropperImageSrc && autoResize" class="mt-4">
-        <img :src="cropperImageSrc" class="h-100 max-h-full w-full object-contain" />
+        <img :src="cropperImageSrc" :class="[previews ? 'h-80' : 'h-100', 'max-h-full w-full object-contain']" />
+        <UploadPreviews v-if="previews" :kind="previews" :src="cropperImageSrc" />
       </div>
       <div v-else-if="cropperImageSrc" class="mt-4">
         <Cropper
           ref="cropperRef"
-          class="h-100 max-h-full"
+          :class="[previews ? 'h-80' : 'h-100', 'max-h-full']"
           :src="cropperImageSrc"
           :stencil-props="{ aspectRatio, movable: !loading, resizable: !loading }"
           :move-image="!loading"
@@ -139,6 +140,7 @@
             </Button>
           </TooltipWrapper>
         </div>
+        <UploadPreviews v-if="previews && previewSrc" :kind="previews" :src="previewSrc" />
       </div>
 
       <DialogFooter>
@@ -167,7 +169,7 @@ import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogFooter from "@/components/ui/dialog/DialogFooter.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
-import { nextTick, onMounted, ref, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Button from "@/components/ui/button/Button.vue";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { Cropper } from "vue-advanced-cropper";
@@ -177,6 +179,8 @@ import { useI18n } from "vue-i18n";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
+import UploadPreviews from "./UploadPreviews.vue";
+import type { UploadPreviewKind } from "../../shared/utils/upload-previews";
 import { useImageCropper } from "../../composables/use-image-cropper";
 import { configRepository } from "../../services/config";
 import { logFailure } from "../../stores/log-failure";
@@ -196,11 +200,13 @@ const props = withDefaults(
     title?: string;
     aspectRatio?: number;
     file?: File | null;
+    previews?: UploadPreviewKind | null;
   }>(),
   {
     title: "",
     aspectRatio: 4 / 3,
     file: null,
+    previews: null,
   }
 );
 
@@ -221,7 +227,27 @@ const MAX_ZOOM_RATIO = 5;
 const LOG_MIN = Math.log(MIN_ZOOM_RATIO);
 const LOG_MAX = Math.log(MAX_ZOOM_RATIO);
 
-const { cropperRef, cropperImageSrc, resetCropState, loadImageForCrop, getCroppedBlob } = useImageCropper();
+const { cropperRef, cropperImageSrc, resetCropState, loadImageForCrop, getCroppedBlob, getPreviewUrl } = useImageCropper();
+
+const previewSrc = ref("");
+let previewFrame = 0;
+
+function cancelPreview() {
+  if (previewFrame !== 0) {
+    cancelAnimationFrame(previewFrame);
+    previewFrame = 0;
+  }
+}
+
+function schedulePreview() {
+  if (!props.previews || previewFrame !== 0) return;
+  previewFrame = requestAnimationFrame(() => {
+    previewFrame = 0;
+    previewSrc.value = getPreviewUrl();
+  });
+}
+
+onBeforeUnmount(cancelPreview);
 
 const autoResize = ref(false);
 onMounted(async () => {
@@ -249,6 +275,8 @@ watch(
       freeMode.value = false;
       zoomSliderValue.value = [50];
       lastZoomRatio.value = 1;
+      cancelPreview();
+      previewSrc.value = "";
       resetCropState();
     }
   }
@@ -265,6 +293,7 @@ watch(
 );
 
 function onCropperChange(result: CropChangeResult) {
+  schedulePreview();
   if (!result.visibleArea || !result.image) return;
   const ratio = result.image.width / result.visibleArea.width;
   lastZoomRatio.value = ratio;

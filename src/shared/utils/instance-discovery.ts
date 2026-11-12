@@ -25,6 +25,8 @@ export type DiscoveredInstance = {
   capacity: number;
   queueSize: number;
   friendCount: number;
+  friendIconUrls: string[];
+  userIconUrls: string[];
   isFull: boolean;
   region: string;
   accessType: string;
@@ -76,6 +78,34 @@ function count(source: Record<string, unknown>, key: string): number {
 function textList(source: Record<string, unknown>, key: string): string[] {
   const value = source[key];
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+const ICON_KEYS = ["iconUrl", "userIcon", "profilePicOverride", "imageUrl", "url"] as const;
+
+function iconUrl(item: unknown): string {
+  if (typeof item === "string") {
+    return item;
+  }
+  if (!isRecord(item)) {
+    return "";
+  }
+  for (const key of ICON_KEYS) {
+    const value = text(item, key);
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function iconList(source: Record<string, unknown>, key: string): string[] {
+  const value = source[key];
+  return Array.isArray(value) ? value.map(iconUrl).filter((url) => url.startsWith("https://")) : [];
+}
+
+function listLength(source: Record<string, unknown>, key: string): number {
+  const value = source[key];
+  return Array.isArray(value) ? value.length : 0;
 }
 
 export function clampOccupants(value: unknown): number {
@@ -141,7 +171,9 @@ export function toDiscoveredInstance(json: unknown): DiscoveredInstance | undefi
     userCount,
     capacity,
     queueSize: count(json, "queueSize"),
-    friendCount: textList(json, "friendIcons").length,
+    friendCount: listLength(json, "friendIcons"),
+    friendIconUrls: iconList(json, "friendIcons"),
+    userIconUrls: iconList(json, "userIcons"),
     isFull: json["full"] === true || (capacity > 0 && userCount >= capacity),
     region: text(json, "region") || text(json, "photonRegion"),
     accessType: text(json, "accessType") || text(json, "type"),

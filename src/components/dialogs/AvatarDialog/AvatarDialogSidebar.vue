@@ -18,7 +18,7 @@
         <div class="contents">
           <div class="col-start-1 row-start-1 overflow-hidden">
             <span
-              class="flex flex-wrap font-bold cursor-pointer"
+              class="flex flex-wrap font-bold cursor-pointer wrap-anywhere"
               :title="avatarDialog.ref.name || avatarDialog.id"
               @click="copyToClipboard(avatarDialog.ref.name ?? '')"
               v-text="avatarDialog.ref.name || avatarDialog.id"

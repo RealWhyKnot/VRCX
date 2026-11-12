@@ -64,6 +64,16 @@ sealed partial class DatabaseApi
 
     public string GetNotificationsV2(long maxEntries) => Rows($"SELECT * FROM {UserTable("notifications_v2")} ORDER BY created_at DESC LIMIT @maxEntries", ("@maxEntries", maxEntries));
 
+    public string GetGroupNotificationStats() =>
+        Rows($"""
+            SELECT group_id, COUNT(*), MAX(created_at) FROM (
+                SELECT CASE WHEN instr(link, 'grp_') > 0 THEN substr(link, instr(link, 'grp_'), 40) ELSE substr(data, instr(data, '"groupId":"grp_') + 11, 40) END AS group_id, created_at
+                FROM {UserTable("notifications_v2")} WHERE link LIKE '%grp_%' OR data LIKE '%"groupId":"grp_%'
+                UNION ALL
+                SELECT sender_user_id, created_at FROM {UserTable("notifications")} WHERE sender_user_id LIKE 'grp_%'
+            ) WHERE group_id LIKE 'grp_%' GROUP BY group_id
+            """);
+
     public void AddNotificationV2(string id, string? createdAt, string? updatedAt, string? expiresAt, string? type, string? link, string? linkText, string? message, string? title, string? imageLocation, bool isSeen, string? senderUserId, string? senderUsername, string dataJson, string responsesJson, string detailsJson) =>
         _ = Run($"""
             INSERT OR REPLACE INTO {UserTable("notifications_v2")} (id, created_at, updated_at, expires_at, type, link, link_text, message, title, image_url, seen, sender_user_id, sender_username, data, responses, details)

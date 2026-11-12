@@ -148,6 +148,13 @@
                     {{ t("view.tools.instance_browser.friends_here", { count: instance.friendCount }) }}
                   </Badge>
                 </div>
+                <InstanceFaces
+                  :faces="facesFor(instance.location).faces"
+                  :hidden-count="facesFor(instance.location).hiddenCount"
+                  :owners="owners"
+                  @pick="pickFace"
+                  @peek="peekFace"
+                />
                 <ItemDescription v-if="vibeNames(instance.vibeIds)" class="line-clamp-1 text-xs">{{ vibeNames(instance.vibeIds) }}</ItemDescription>
                 <div v-if="instance.ownerName" class="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                   <img v-if="instance.ownerIconUrl" :src="instance.ownerIconUrl" alt="" loading="lazy" class="size-4 shrink-0 rounded-full object-cover" />
@@ -213,11 +220,14 @@ import { instanceRequest } from "@/api/instance";
 import { showWorldDialog } from "@/coordinators/world-coordinator";
 import { accessTypeLocaleKeyMap } from "@/shared/constants/access-type";
 import { DISCOVER_MODES, DISCOVER_PLATFORMS, DISCOVER_REGIONS, type DiscoveredInstance } from "@/shared/utils/instance-discovery";
+import type { InstanceFace } from "@/shared/utils/instance-faces";
 import { parseLocation, translateAccessType } from "@/shared/utils/location-parser";
 import { useInstanceStore } from "@/stores/instance";
 import { useLaunchStore } from "@/stores/launch";
 import { logError } from "@/stores/vrcx-messages";
+import InstanceFaces from "../../components/InstanceFaces.vue";
 import { useInstanceBrowser } from "./composables/use-instance-browser";
+import { useInstanceFaces } from "../../composables/use-instance-faces";
 
 defineOptions({ name: "InstanceBrowserView" });
 
@@ -230,6 +240,16 @@ const { instanceCategories, instanceVibes } = storeToRefs(instanceStore);
 const launchStore = useLaunchStore();
 
 const { filters, source, searchText, visibleInstances, isLoading, hasLoadFailed, hasMore, refresh, loadMore, setVibes, setMinOccupants } = useInstanceBrowser();
+
+const { facesFor, identify, peek, owners } = useInstanceFaces(visibleInstances);
+
+function pickFace(face: InstanceFace) {
+  void identify(face).catch(logError);
+}
+
+function peekFace(face: InstanceFace) {
+  void peek(face).catch(logError);
+}
 
 onActivated(() => {
   void instanceStore.loadInstanceCategoriesAndVibes().catch(logError);

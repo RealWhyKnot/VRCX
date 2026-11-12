@@ -78,6 +78,14 @@ describe("clampOccupants", () => {
 });
 
 describe("toDiscoveredInstance", () => {
+  test("keeps usable icon urls and counts every friend entry", () => {
+    const url = "https://api.vrchat.cloud/api/1/image/file_a/1/256";
+    const result = toDiscoveredInstance(row({ userIcons: [url, null, 7, "javascript:alert(1)"], friendIcons: [url, { iconUrl: url }, { other: 1 }] }));
+    expect(result?.userIconUrls).toEqual([url]);
+    expect(result?.friendIconUrls).toEqual([url, url]);
+    expect(result?.friendCount).toBe(3);
+  });
+
   test("reads the instance and its world", () => {
     expect(toDiscoveredInstance(row({ friendIcons: ["a", "b"], vibeIds: ["v1", 7], queueSize: 3 }))).toMatchObject({
       location: "wrld_1:12345~region(eu)",
