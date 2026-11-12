@@ -140,6 +140,15 @@ export function instanceFaceSource(location: string, instance: InstancePeopleSou
   };
 }
 
-export function withoutFriends(result: InstanceFaces): InstanceFaces {
-  return { faces: result.faces.filter((face) => !face.isFriend), hiddenCount: result.hiddenCount };
+export function buildStrangerFaces(
+  source: FaceSource,
+  friendsHere: readonly KnownUser[],
+  index: ReadonlyMap<string, KnownUser>,
+  limit = MAX_FACES
+): InstanceFaces {
+  const everyone = buildInstanceFaces(source, friendsHere, index, Number.MAX_SAFE_INTEGER).faces;
+  const strangers = everyone.filter((face) => !face.isFriend);
+  const friendCount = everyone.length - strangers.length;
+  const shown = strangers.slice(0, Math.max(0, limit));
+  return { faces: shown, hiddenCount: Math.max(0, Math.max(source.userCount - friendCount, strangers.length) - shown.length) };
 }

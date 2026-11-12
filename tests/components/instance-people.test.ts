@@ -51,6 +51,30 @@ describe("InstancePeople.vue", () => {
     expect(wrapper.get('[data-testid="faces-hidden"]').text()).toBe("+2");
   });
 
+  test("still shows strangers when many friends are in the instance", () => {
+    for (let position = 0; position < 12; position += 1) {
+      const id = `usr_f${position}`;
+      mocks.friends.set(id, {
+        id,
+        ref: { id, displayName: `Friend ${position}`, userIcon: icon(`fr${position}`), profilePicOverride: "", location: LOCATION },
+      });
+    }
+    const wrapper = open({ userCount: 15, userIcons: [icon("fr0"), icon("s1"), icon("s2"), icon("s3")] });
+    expect(wrapper.findAll("button").map((face) => face.attributes("data-testid"))).toEqual(["face-unknown", "face-unknown", "face-unknown"]);
+    expect(wrapper.find('[data-testid="faces-hidden"]').exists()).toBe(false);
+  });
+
+  test("does not ask VRChat again right after a picture lookup failed", async () => {
+    mocks.getAvatarImages.mockRejectedValue(new Error("429"));
+    const wrapper = open({ userCount: 1, userIcons: [icon("failing1")] });
+    await wrapper.get('[data-testid="face-unknown"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="face-unknown"]').trigger("click");
+    await flushPromises();
+    expect(mocks.getAvatarImages).toHaveBeenCalledTimes(1);
+    expect(mocks.toastInfo).toHaveBeenCalledTimes(2);
+  });
+
   test("opens the profile behind a face after looking the picture up", async () => {
     mocks.getAvatarImages.mockResolvedValue({ json: { ownerId: "usr_x", name: "icon", tags: ["icon"] } });
     mocks.getUser.mockResolvedValue({ ref: { displayName: "Mika" } });

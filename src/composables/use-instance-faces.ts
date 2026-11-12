@@ -7,6 +7,7 @@ import { showUserDialog } from "../coordinators/user-coordinator";
 import {
   buildFaceIndex,
   buildInstanceFaces,
+  buildStrangerFaces,
   type FaceOwner,
   type FaceSource,
   type InstanceFace,
@@ -20,6 +21,7 @@ import { logError } from "../stores/vrcx-messages";
 import type { VrcxUser } from "../types/vrcx";
 
 const NO_FACES: InstanceFaces = { faces: [], hiddenCount: 0 };
+const MAX_OWNERS = 2000;
 
 function toKnownUser(user: VrcxUser, isFriend: boolean): KnownUser {
   return {
@@ -94,8 +96,20 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
     return byLocation;
   });
 
+  const strangersByLocation = computed(() => {
+    const byLocation = new Map<string, InstanceFaces>();
+    for (const instance of sources.value) {
+      byLocation.set(instance.location, buildStrangerFaces(instance, friendsByLocation.value.get(instance.location) ?? [], faceIndex.value));
+    }
+    return byLocation;
+  });
+
   function facesFor(location: string): InstanceFaces {
     return facesByLocation.value.get(location) ?? NO_FACES;
+  }
+
+  function strangersFor(location: string): InstanceFaces {
+    return strangersByLocation.value.get(location) ?? NO_FACES;
   }
 
   async function resolveOwner(fileId: string): Promise<FaceOwner | null> {
@@ -118,6 +132,9 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
               return "";
             }),
           };
+    if (owners.size >= MAX_OWNERS) {
+      owners.clear();
+    }
     owners.set(fileId, resolved);
     return resolved;
   }
@@ -148,5 +165,5 @@ export function useInstanceFaces(sources: Ref<FaceSource[]>) {
     }
   }
 
-  return { facesFor, identify, peek, owners };
+  return { facesFor, strangersFor, identify, peek, owners };
 }

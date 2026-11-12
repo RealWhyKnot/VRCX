@@ -7,7 +7,7 @@ import { computed } from "vue";
 
 import InstanceFaces from "./InstanceFaces.vue";
 import { useInstanceFaces } from "../composables/use-instance-faces";
-import { instanceFaceSource, withoutFriends, type InstanceFace, type InstancePeopleSource } from "../shared/utils/instance-faces";
+import { instanceFaceSource, type InstanceFace, type InstancePeopleSource } from "../shared/utils/instance-faces";
 import { logError } from "../stores/vrcx-messages";
 
 defineOptions({ name: "InstancePeople" });
@@ -15,8 +15,8 @@ defineOptions({ name: "InstancePeople" });
 const props = defineProps<{ location: string; instance?: InstancePeopleSource | null }>();
 
 const sources = computed(() => [instanceFaceSource(props.location, props.instance)]);
-const { facesFor, identify, peek, owners } = useInstanceFaces(sources);
-const people = computed(() => withoutFriends(facesFor(props.location)));
+const { strangersFor, identify, peek, owners } = useInstanceFaces(sources);
+const people = computed(() => strangersFor(props.location));
 
 function pickFace(face: InstanceFace) {
   void identify(face).catch(logError);
