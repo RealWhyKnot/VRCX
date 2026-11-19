@@ -21,6 +21,8 @@ import type { useSharedFeedStore } from "../shared-feed";
 import type { useUiStore } from "../ui";
 import type { useUserStore } from "../user";
 import { hasStatus, logError } from "./errors";
+import { isFriendRequestType, loadFriendRequestHistory, recordFriendRequest, restoreFriendRequestRecord } from "./friend-request-history";
+import { type InviteReply, recordInviteReply } from "./invite-reply-history";
 import {
   findLastStoredNotification,
   findStoredNotification,
@@ -91,6 +93,9 @@ export function createNotificationHandlers({
   function handleNotification(args: NotificationArgs) {
     const ref = applyNotification(args.json);
     args.ref = ref;
+    if (isFriendRequestType(ref.type) && ref.senderUserId !== userStore.currentUser.id) {
+      void recordFriendRequest(ref, ref.type === "ignoredFriendRequest" ? "declined" : "").catch(logError);
+    }
     const array = notificationTable.value.data;
     const { length } = array;
     if (ref.seen) {
@@ -145,7 +150,10 @@ export function createNotificationHandlers({
     if (typeof ref === "undefined") {
       return;
     }
-    if (ref.type === "friendRequest" || ref.type === "ignoredFriendRequest" || ref.type.includes(".")) {
+    if (isFriendRequestType(ref.type)) {
+      ref.$isExpired = true;
+      void recordFriendRequest(ref, "declined").catch(logError);
+    } else if (ref.type.includes(".")) {
       removeFromArray(notificationTable.value.data, ref);
     } else {
       ref.$isExpired = true;
@@ -157,6 +165,22 @@ export function createNotificationHandlers({
         notificationId: ref.id,
       },
     });
+  }
+
+  function markFriendRequestAutoDeclined(notificationId: string) {
+    const ref = findLastStoredNotification(notificationTable.value.data, notificationId);
+    if (ref === undefined || !isFriendRequestType(ref.type)) {
+      return;
+    }
+    void recordFriendRequest(ref, "autoDeclined").catch(logError);
+  }
+
+  function markInviteReplied(notificationId: string, reply: InviteReply, location: string, worldName: string) {
+    const ref = findLastStoredNotification(notificationTable.value.data, notificationId);
+    if (ref?.type !== "requestInvite") {
+      return;
+    }
+    void recordInviteReply(ref, reply, location, worldName).catch(logError);
   }
 
   function appendNotificationTableEntry(entry: NotificationEntry) {
@@ -190,6 +214,9 @@ export function createNotificationHandlers({
     }
     ref.$isExpired = true;
     args.ref = ref;
+    if (ref.type === "friendRequest") {
+      void recordFriendRequest(ref, "accepted").catch(logError);
+    }
     handleNotificationExpire({
       ref,
       params: {
@@ -299,8 +326,14 @@ export function createNotificationHandlers({
   function expireFriendRequestNotifications() {
     const array = notificationTable.value.data;
     for (let i = array.length - 1; i >= 0; i--) {
-      if (array[i]?.type === "friendRequest" || array[i]?.type === "ignoredFriendRequest") {
+      const entry = array[i];
+      if (entry === undefined || !isFriendRequestType(entry.type)) {
+        continue;
+      }
+      if (entry.$friendRequestOutcome === undefined) {
         array.splice(i, 1);
+      } else {
+        entry.$isExpired = true;
       }
     }
   }
@@ -387,10 +420,16 @@ export function createNotificationHandlers({
   async function initNotifications() {
     notificationInitStatus.value = false;
     const v2Entries = toStoredNotifications(await database.getNotificationsV2());
-    const legacyEntries = toStoredNotifications(await database.getNotifications());
+    const legacyEntries = toStoredNotifications(await database.getNotifications()).map(restoreFriendRequestRecord);
     const tableData = v2Entries.concat(legacyEntries.filter((n) => !v2Entries.some((t) => t.id === n.id)));
     tableData.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
     tableData.splice(readMaxTableSize(dbVars));
+    const shownIds = new Set(tableData.map((entry) => entry.id));
+    for (const entry of await loadFriendRequestHistory()) {
+      if (!shownIds.has(entry.id)) {
+        tableData.push(entry);
+      }
+    }
     notificationTable.value.data = tableData;
     void refreshNotifications().catch(logError);
   }
@@ -430,6 +469,8 @@ export function createNotificationHandlers({
     handleNotificationHide,
     handleNotificationSee,
     handleNotificationAccept,
+    markFriendRequestAutoDeclined,
+    markInviteReplied,
     testNotification,
     appendNotificationTableEntry,
     setNotificationInitStatus,

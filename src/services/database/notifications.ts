@@ -142,6 +142,33 @@ function mapNotificationV2Row(row: DatabaseRow): NotificationV2Row {
   };
 }
 
+function addNotificationCall(row: NotificationInput) {
+  const id = row.id ?? "";
+  const createdAt = row.created_at ?? "";
+  const type = row.type ?? "";
+  if (!createdAt || !type || !id) {
+    console.error("Notification is missing required field", row);
+    throw new Error("Notification is missing required field");
+  }
+  const detailsImageUrl = row.details?.imageUrl ?? "";
+  return DatabaseApi.AddNotification(
+    id,
+    createdAt,
+    type,
+    row.senderUserId ?? "",
+    row.senderUsername ?? "",
+    row.receiverUserId ?? "",
+    row.message ?? "",
+    row.details?.worldId ?? "",
+    row.details?.worldName ?? "",
+    detailsImageUrl.length > 0 ? detailsImageUrl : (row.imageUrl ?? ""),
+    row.details?.inviteMessage ?? "",
+    row.details?.requestMessage ?? "",
+    row.details?.responseMessage ?? "",
+    row.$isExpired === true
+  );
+}
+
 const notifications = {
   async getNotifications(): Promise<NotificationRow[]> {
     const rows = await sqliteService.rows(DatabaseApi.GetNotifications(dbVars.maxTableSize));
@@ -154,34 +181,12 @@ const notifications = {
   },
 
   addNotificationToDatabase(row: NotificationInput): void {
-    const id = row.id ?? "";
-    const createdAt = row.created_at ?? "";
-    const type = row.type ?? "";
-    if (!createdAt || !type || !id) {
-      console.error("Notification is missing required field", row);
-      throw new Error("Notification is missing required field");
-    }
-    const detailsImageUrl = row.details?.imageUrl ?? "";
-    void sqliteService
-      .run(
-        DatabaseApi.AddNotification(
-          id,
-          createdAt,
-          type,
-          row.senderUserId ?? "",
-          row.senderUsername ?? "",
-          row.receiverUserId ?? "",
-          row.message ?? "",
-          row.details?.worldId ?? "",
-          row.details?.worldName ?? "",
-          detailsImageUrl.length > 0 ? detailsImageUrl : (row.imageUrl ?? ""),
-          row.details?.inviteMessage ?? "",
-          row.details?.requestMessage ?? "",
-          row.details?.responseMessage ?? "",
-          row.$isExpired === true
-        )
-      )
-      .catch(logDatabaseError);
+    void sqliteService.run(addNotificationCall(row)).catch(logDatabaseError);
+  },
+
+  async replaceNotificationInDatabase(row: NotificationInput & { id: string }): Promise<void> {
+    await sqliteService.run(DatabaseApi.DeleteNotification(row.id));
+    await sqliteService.run(addNotificationCall(row));
   },
 
   deleteNotification(rowId: string): void {

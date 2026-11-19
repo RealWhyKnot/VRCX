@@ -10,6 +10,8 @@ import { useFriendStore } from "../stores/friend";
 import type { FriendStatusSource } from "../stores/friend-types";
 import { useModalStore } from "../stores/modal";
 import { useNotificationStore } from "../stores/notification";
+import { isFriendRequestType, recordFriendRequest } from "../stores/notification/friend-request-history";
+import { isStoredNotification } from "../stores/notification/helpers";
 import { useSharedFeedStore } from "../stores/shared-feed";
 import { useUiStore } from "../stores/ui";
 import { useUserStore } from "../stores/user";
@@ -68,22 +70,30 @@ export function getFriendRequest(userId: string) {
   const array = notificationStore.notificationTable.data;
   for (let i = array.length - 1; i >= 0; i--) {
     const entry = array[i];
-    if (entry?.type === "friendRequest" && entry.senderUserId === userId) {
+    if (entry?.type === "friendRequest" && entry.senderUserId === userId && entry.$isExpired !== true) {
       return entry.id;
     }
   }
   return "";
 }
 
-function deleteFriendRequest(userId: string) {
+function markFriendRequestAccepted(userId: string) {
   const notificationStore = useNotificationStore();
   const array = notificationStore.notificationTable.data;
   for (let i = array.length - 1; i >= 0; i--) {
     const entry = array[i];
-    if (entry?.type === "friendRequest" && entry.senderUserId === userId) {
+    if (entry === undefined || !isStoredNotification(entry) || !isFriendRequestType(entry.type) || entry.senderUserId !== userId) {
+      continue;
+    }
+    if (entry.$friendRequestOutcome === undefined) {
       array.splice(i, 1);
       return;
     }
+    if (entry.$friendRequestOutcome === "" || entry.$friendRequestOutcome === "declined") {
+      entry.$isExpired = true;
+      void recordFriendRequest(entry, "accepted").catch(logFriendRelationshipError("Error saving the accepted friend request:"));
+    }
+    return;
   }
 }
 
@@ -148,7 +158,7 @@ export function addFriendship(id: string) {
         friendLog.set(id, friendLogCurrent);
         database.setFriendLogCurrent(friendLogCurrent);
         uiStore.notifyMenu("friend-log");
-        deleteFriendRequest(id);
+        markFriendRequestAccepted(id);
         userRequest
           .getUser({
             userId: id,

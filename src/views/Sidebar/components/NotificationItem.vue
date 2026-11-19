@@ -218,6 +218,7 @@ import { useLocationStore } from "../../../stores/location";
 import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
 import type { NotificationEntry } from "../../../stores/notification/types";
+import { isInviteReply } from "../../../stores/notification/invite-reply-history";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
 import { useInviteChecks } from "../../../composables/use-invite-checks";
@@ -342,13 +343,31 @@ const typeIcon = computed<Component>(() => {
   return Bell;
 });
 
+const recordText = computed(() => {
+  const n = props.notification;
+  if (n.$friendRequestOutcome) {
+    return t(`view.notification.friend_request_outcome.${n.$friendRequestOutcome}`);
+  }
+  const reply = textAt(n.details, "responseMessage");
+  if (n.type === "requestInvite" && isInviteReply(reply)) {
+    return `${t(`view.notification.invite_reply.${reply}`)} ${textAt(n.details, "worldName")}`;
+  }
+  return "";
+});
+
+const responseText = computed(() => {
+  const n = props.notification;
+  return n.$friendRequestOutcome === undefined && !recordText.value ? textAt(n.details, "responseMessage") : "";
+});
+
 const displayMessage = computed(() => {
   const n = props.notification;
   return firstText(
     n.message,
     textAt(n.details, "inviteMessage"),
     textAt(n.details, "requestMessage"),
-    textAt(n.details, "responseMessage"),
+    recordText.value,
+    responseText.value,
     textAt(n.details, "worldName")
   );
 });
@@ -414,7 +433,7 @@ const hoverImageUrl = computed(() => {
 
 const friendMessage = computed(() => {
   const n = props.notification;
-  return firstText(n.message, textAt(n.details, "inviteMessage"), textAt(n.details, "requestMessage"), textAt(n.details, "responseMessage"));
+  return firstText(n.message, textAt(n.details, "inviteMessage"), textAt(n.details, "requestMessage"), recordText.value, responseText.value);
 });
 
 const isSeen = computed(() => {

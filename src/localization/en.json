@@ -479,6 +479,15 @@
         "delete_log": "Delete log",
         "decline_with_message": "Decline with message"
       },
+      "friend_request_outcome": {
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "autoDeclined": "Auto-declined"
+      },
+      "invite_reply": {
+        "invited": "Invited to",
+        "autoInvited": "Auto-invited to"
+      },
       "filters": {
         "requestInvite": "Request Invite",
         "invite": "Invite",

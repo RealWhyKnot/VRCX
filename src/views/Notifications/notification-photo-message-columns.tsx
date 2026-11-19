@@ -5,6 +5,7 @@ import AvatarImage from "../../components/ui/avatar/AvatarImage.vue";
 import Emoji from "../../components/Emoji.vue";
 import Location from "../../components/Location.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
+import { isInviteReply } from "../../stores/notification/invite-reply-history";
 import type { VrcxColumn } from "../FriendList/vrcx-column";
 import { firstNonEmpty, t, textOf } from "./notification-column-helpers";
 import type { NotificationColumnDeps, NotificationRow } from "./notification-column-types";
@@ -71,9 +72,15 @@ export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
     const detailsWorldName = textOf(original.details, "worldName");
     const detailsInviteMessage = textOf(original.details, "inviteMessage");
     const detailsRequestMessage = textOf(original.details, "requestMessage");
-    const detailsResponseMessage = textOf(original.details, "responseMessage");
+    const friendRequestOutcome = original.$friendRequestOutcome;
+    const responseMessage = textOf(original.details, "responseMessage");
+    const inviteReply = original.type === "requestInvite" && isInviteReply(responseMessage) ? responseMessage : undefined;
+    const detailsResponseMessage = friendRequestOutcome === undefined && inviteReply === undefined ? responseMessage : undefined;
     return (
       <div class="w-full min-w-0">
+        {friendRequestOutcome ? (
+          <span class="block w-full min-w-0 truncate text-muted-foreground">{t(`view.notification.friend_request_outcome.${friendRequestOutcome}`)}</span>
+        ) : null}
         {original.type === "invite" && original.details ? (
           <div class="w-full min-w-0">
             <Location
@@ -108,6 +115,14 @@ export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
           <TooltipWrapper content={detailsRequestMessage} delayDuration={500}>
             <span class="block w-full min-w-0 truncate">{detailsRequestMessage}</span>
           </TooltipWrapper>
+        ) : null}
+        {inviteReply ? (
+          <div class="flex w-full min-w-0 items-center gap-1">
+            <span class="shrink-0 text-muted-foreground">{t(`view.notification.invite_reply.${inviteReply}`)}</span>
+            <div class="min-w-0">
+              <Location location={textOf(original.details, "worldId") ?? ""} hint={detailsWorldName ?? ""} link />
+            </div>
+          </div>
         ) : null}
         {!message && detailsResponseMessage ? (
           <TooltipWrapper content={detailsResponseMessage} delayDuration={500}>

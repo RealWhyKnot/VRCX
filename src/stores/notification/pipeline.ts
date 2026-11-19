@@ -13,6 +13,7 @@ import { checkCanInvite } from "../../shared/utils/invite";
 import { parseLocation } from "../../shared/utils/location-parser";
 import { logError } from "./errors";
 import { isStoredNotification } from "./helpers";
+import type { InviteReply } from "./invite-reply-history";
 
 type GeneralSettingsStore = ReturnType<typeof useGeneralSettingsStore>;
 type FavoriteStore = ReturnType<typeof useFavoriteStore>;
@@ -27,10 +28,21 @@ export type PipelineDeps = {
   userStore: UserStore;
   instanceStore: InstanceStore;
   handleNotificationHide: (notificationId: string) => void;
+  markFriendRequestAutoDeclined: (notificationId: string) => void;
+  markInviteReplied: (notificationId: string, reply: InviteReply, location: string, worldName: string) => void;
 };
 
 export function createPipelineHandler(deps: PipelineDeps) {
-  const { generalSettingsStore, favoriteStore, locationStore, userStore, instanceStore, handleNotificationHide } = deps;
+  const {
+    generalSettingsStore,
+    favoriteStore,
+    locationStore,
+    userStore,
+    instanceStore,
+    handleNotificationHide,
+    markFriendRequestAutoDeclined,
+    markInviteReplied,
+  } = deps;
 
   async function handleAutoDeclineFriendRequest(ref: StoredNotificationEntry) {
     const senderUserId = ref.senderUserId;
@@ -52,6 +64,7 @@ export function createPipelineHandler(deps: PipelineDeps) {
     await notificationRequest.hideNotification({
       notificationId: ref.id,
     });
+    markFriendRequestAutoDeclined(ref.id);
     handleNotificationHide(ref.id);
   }
 
@@ -153,6 +166,7 @@ export function createPipelineHandler(deps: PipelineDeps) {
             senderUserId
           )
           .then((_args) => {
+            markInviteReplied(ref.id, "autoInvited", L.tag, args1.ref.name);
             const text = `Auto invite sent to ${ref.senderUsername}`;
             if (AppDebug.errorNoty) {
               toast.dismiss(AppDebug.errorNoty);

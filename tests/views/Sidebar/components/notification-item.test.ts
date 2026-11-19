@@ -291,4 +291,28 @@ describe("NotificationItem.vue", () => {
     wrapper.unmount();
     expect(mocks.notificationStore.queueMarkAsSeen).toHaveBeenCalledWith("noty_1", 2);
   });
+
+  test("shows how a past friend request ended instead of the stored value", () => {
+    const wrapper = mount(NotificationItem, {
+      props: {
+        notification: makeNotification({ type: "ignoredFriendRequest", details: { responseMessage: "autoDeclined" }, $friendRequestOutcome: "autoDeclined" }),
+      },
+    });
+
+    expect(wrapper.text()).toContain("view.notification.friend_request_outcome.autoDeclined");
+    expect(wrapper.text()).not.toMatch(/\bautoDeclined\b/);
+  });
+
+  test("shows where an invite request was answered", () => {
+    const wrapper = mount(NotificationItem, {
+      props: {
+        notification: makeNotification({
+          type: "requestInvite",
+          details: { worldId: "wrld_cat:1", worldName: "The Black Cat", responseMessage: "autoInvited" },
+        }),
+      },
+    });
+
+    expect(wrapper.text()).toContain("view.notification.invite_reply.autoInvited The Black Cat");
+  });
 });

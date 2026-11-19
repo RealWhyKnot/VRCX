@@ -12,6 +12,7 @@ import { queryRequest } from "../../api/query-request";
 import { parseLocation } from "../../shared/utils/location-parser";
 import { hasStatus, logError } from "./errors";
 import { isStoredNotification } from "./helpers";
+import type { InviteReply } from "./invite-reply-history";
 
 type Translate = ReturnType<typeof useI18n>["t"];
 type ModalStore = ReturnType<typeof useModalStore>;
@@ -27,6 +28,7 @@ export type NotificationActionsDeps = {
   handleNotificationAccept: (args: { params: { notificationId: string }; ref?: NotificationEntry }) => void;
   handleNotificationHide: (notificationId: string) => void;
   handleNotificationV2Hide: (notificationId: string) => void;
+  markInviteReplied: (notificationId: string, reply: InviteReply, location: string, worldName: string) => void;
 };
 
 function isConfirmed(result: unknown): boolean {
@@ -34,7 +36,17 @@ function isConfirmed(result: unknown): boolean {
 }
 
 export function createNotificationActions(deps: NotificationActionsDeps) {
-  const { t, modalStore, locationStore, userStore, notificationTable, handleNotificationAccept, handleNotificationHide, handleNotificationV2Hide } = deps;
+  const {
+    t,
+    modalStore,
+    locationStore,
+    userStore,
+    notificationTable,
+    handleNotificationAccept,
+    handleNotificationHide,
+    handleNotificationV2Hide,
+    markInviteReplied,
+  } = deps;
 
   function confirmAction(options: { description: string; title: string }): Promise<boolean> {
     return modalStore.confirm(options).then((result: unknown) => isConfirmed(result));
@@ -125,6 +137,7 @@ export function createNotificationActions(deps: NotificationActionsDeps) {
                 senderUserId
               )
               .then(() => {
+                markInviteReplied(row.id, "invited", L.tag, args.ref.name);
                 toast(t("message.invite.sent"));
                 void notificationRequest
                   .hideNotification({
@@ -166,7 +179,9 @@ export function createNotificationActions(deps: NotificationActionsDeps) {
       notificationTable.value.data.splice(idx, 1);
     }
     if (!isStoredNotification(row)) return;
-    if (row.type !== "friendRequest" && row.type !== "ignoredFriendRequest") {
+    if (row.$friendRequestOutcome !== undefined) {
+      database.deleteNotification(row.id);
+    } else if (row.type !== "friendRequest" && row.type !== "ignoredFriendRequest") {
       if (!row.version || row.version < 2) {
         database.deleteNotification(row.id);
       } else {

@@ -68,7 +68,10 @@ export const createActionColumn = ({
       !original.type.includes("moderation.") &&
       !original.type.includes("instance.") &&
       !original.link?.startsWith("economy.");
-    const canShowDeleteLog = original.type !== "friendRequest" && original.type !== "ignoredFriendRequest";
+    const canShowDeleteLog =
+      original.$friendRequestOutcome === undefined
+        ? original.type !== "friendRequest" && original.type !== "ignoredFriendRequest"
+        : isNotificationExpired(original);
 
     return (
       <div class="flex items-center justify-end gap-2">

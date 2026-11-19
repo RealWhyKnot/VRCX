@@ -133,6 +133,8 @@ export const useNotificationStore = defineStore("Notification", () => {
     handleNotificationHide,
     handleNotificationSee,
     handleNotificationAccept,
+    markFriendRequestAutoDeclined,
+    markInviteReplied,
     testNotification,
     appendNotificationTableEntry,
     setNotificationInitStatus,
@@ -163,6 +165,8 @@ export const useNotificationStore = defineStore("Notification", () => {
     userStore,
     instanceStore,
     handleNotificationHide,
+    markFriendRequestAutoDeclined,
+    markInviteReplied,
   });
 
   const { queueMarkAsSeen, markAllAsSeen } = createSeenQueue({
@@ -191,6 +195,7 @@ export const useNotificationStore = defineStore("Notification", () => {
     handleNotificationAccept,
     handleNotificationHide,
     handleNotificationV2Hide,
+    markInviteReplied,
   });
 
   watch(

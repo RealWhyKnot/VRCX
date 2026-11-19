@@ -3,6 +3,8 @@ import type { Json, TableFilter } from "../../types/vrcx";
 
 export type NotificationJson = Record<string, unknown>;
 
+export type FriendRequestOutcome = "" | "accepted" | "declined" | "autoDeclined";
+
 type NotificationFields = {
   type: string;
   senderUserId?: string | undefined;
@@ -17,6 +19,7 @@ type NotificationFields = {
   expiresAt?: string | undefined;
   version?: number | undefined;
   $isExpired?: boolean | undefined;
+  $friendRequestOutcome?: FriendRequestOutcome | undefined;
   isFriend?: boolean | undefined;
   isFavorite?: boolean | undefined;
   notyName?: string | undefined;
