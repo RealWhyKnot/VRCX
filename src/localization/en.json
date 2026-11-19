@@ -3298,6 +3298,7 @@
     "vrcx_updater": {
       "failed": "Failed to check for update, {message}",
       "failed_install": "Failed to install update",
+      "no_installer": "{release} has no installer for this system",
       "checking_hash": "Checking hash..."
     },
     "api_handler": {

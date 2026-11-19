@@ -21,7 +21,7 @@ import { useVRCXUpdaterStore } from "../../src/stores/vrcx-updater";
 
 const RELEASES = "https://api.github.com/repos/RealWhyKnot/VRCX/releases";
 
-function release(tag: string) {
+function release(tag: string, installerName = `VRCX_${tag.slice(1)}_Setup_x64.exe`, contentType = "application/x-msdownload") {
   return {
     name: `VRCX ${tag}`,
     tag_name: tag,
@@ -30,9 +30,9 @@ function release(tag: string) {
     prerelease: tag.endsWith("-beta"),
     assets: [
       {
-        name: `VRCX_${tag.slice(1)}_Setup_x64.exe`,
+        name: installerName,
         state: "uploaded",
-        content_type: "application/x-msdownload",
+        content_type: contentType,
         browser_download_url: `https://example.invalid/${tag}.exe`,
         digest: "sha256:abc123",
         size: 42,
@@ -128,5 +128,32 @@ describe("checking for updates", () => {
     await store.loadBranchVersions();
     expect(store.VRCXUpdateDialog.releases.map((entry) => entry.tag_name)).toEqual(["v2026.11.14.0", "v2026.11.12.0"]);
     expect(store.VRCXUpdateDialog.release).toBe("VRCX v2026.11.14.0");
+  });
+
+  test("switching a stable build to nightly downloads a beta whose installer GitHub labels as a plain file", async () => {
+    mocks.execute.mockResolvedValue(reply({ message: "Not Found" }, 404));
+    const store = await openStore("VRCX 2026.11.12.0", "Notify");
+    const beta = release("v2026.11.13.0-beta", "VRCX_2026.11.13.0-beta_Setup_x64.exe", "application/octet-stream");
+    mocks.execute.mockResolvedValue(reply([beta]));
+    store.branch = "Nightly";
+    await store.loadBranchVersions();
+    expect(store.VRCXUpdateDialog.release).toBe("VRCX v2026.11.13.0-beta");
+    store.installVRCXUpdate();
+    await vi.waitFor(() => {
+      expect(mocks.downloadUpdate).toHaveBeenCalledWith("https://example.invalid/v2026.11.13.0-beta.exe", "abc123", 42);
+    });
+    expect(mocks.setString).toHaveBeenCalledWith("VRCX_branch", "Nightly");
+    expect(mocks.toast.error).not.toHaveBeenCalled();
+  });
+
+  test("says so when the chosen release has no Windows installer", async () => {
+    mocks.execute.mockResolvedValue(reply({ message: "Not Found" }, 404));
+    const store = await openStore("VRCX 2026.11.12.0", "Notify");
+    mocks.execute.mockResolvedValue(reply([release("v2026.11.13.0-beta", "VRCX_2026.11.13.0-beta.zip", "application/zip")]));
+    store.branch = "Nightly";
+    await store.loadBranchVersions();
+    store.installVRCXUpdate();
+    expect(mocks.toast.error).toHaveBeenCalledWith("message.vrcx_updater.no_installer");
+    expect(mocks.downloadUpdate).not.toHaveBeenCalled();
   });
 });

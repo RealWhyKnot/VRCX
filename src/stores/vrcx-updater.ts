@@ -58,6 +58,8 @@ const branchUrls: Readonly<Record<string, BranchUrls | undefined>> = branches;
 
 const RELEASE_REQUEST_HEADERS = { Accept: "application/vnd.github+json" } as const;
 
+const WINDOWS_INSTALLER_TYPES: ReadonlySet<string> = new Set(["application/x-msdownload", "application/x-msdos-program", "application/octet-stream"]);
+
 function getBranchUrls(name: string): BranchUrls {
   const urls = branchUrls[name];
   if (urls === undefined) {
@@ -263,11 +265,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       if (asset.state !== "uploaded") {
         continue;
       }
-      if (
-        isHostWindows &&
-        (asset.name.endsWith("Setup_x64.exe") || asset.name.endsWith("Setup.exe")) &&
-        (asset.content_type === "application/x-msdownload" || asset.content_type === "application/x-msdos-program")
-      ) {
+      if (isHostWindows && (asset.name.endsWith("Setup_x64.exe") || asset.name.endsWith("Setup.exe")) && WINDOWS_INSTALLER_TYPES.has(asset.content_type)) {
         downloadUrl = asset.browser_download_url;
         if (asset.digest?.startsWith("sha256:")) {
           hashString = asset.digest.replace("sha256:", "");
@@ -457,6 +455,7 @@ export const useVRCXUpdaterStore = defineStore("VRCXUpdater", () => {
       }
       const { downloadUrl, hashString, size } = getAssetOfInterest(release.assets);
       if (!downloadUrl) {
+        toast.error(t("message.vrcx_updater.no_installer", { release: release.tag_name ?? release.name }));
         return;
       }
       const releaseName = release.name;
