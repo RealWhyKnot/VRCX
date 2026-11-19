@@ -10,7 +10,7 @@ import { useUserStore } from "../stores/user";
 import { applyCurrentUser } from "../coordinators/current-user-apply";
 import { runBadgeEventFlow } from "../coordinators/badge-event-coordinator";
 import { applyUser } from "../coordinators/user-profile-apply";
-import { onGroupLeft } from "../coordinators/group-membership-coordinator";
+import { onGroupJoined, onGroupLeft } from "../coordinators/group-membership-coordinator";
 import { applyGroup, handleGroupMember } from "../coordinators/group-coordinator";
 import { handleFriendAdd, handleFriendDelete } from "../coordinators/friend-relationship-coordinator";
 import { parseLocation } from "../shared/utils/location-parser";
@@ -467,11 +467,11 @@ function handlePipeline(args: { json: PipelineMessage }) {
     }
 
     case "group-joined":
-      break;
-
     case "group-left": {
       const groupId = stringField(record, "groupId");
-      if (groupId !== undefined) {
+      if (groupId !== undefined && type === "group-joined") {
+        onGroupJoined(groupId);
+      } else if (groupId !== undefined) {
         onGroupLeft(groupId).catch(logError);
       }
       break;

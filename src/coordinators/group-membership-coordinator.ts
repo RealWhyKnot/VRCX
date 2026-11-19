@@ -104,8 +104,11 @@ export function onGroupJoined(groupId: string) {
     groupRequest
       .getGroup({ groupId, includeRoles: true })
       .then((args) => {
-        applyGroup(args.json);
+        const ref = applyGroup(args.json);
         saveCurrentUserGroups();
+        if (ref.membershipStatus === "member") {
+          groupChange(ref, "Joined group");
+        }
       })
       .catch(logError);
   }
