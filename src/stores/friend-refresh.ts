@@ -77,47 +77,68 @@ export async function bulkRefreshFriends(args: { offline: boolean }): Promise<Fr
 }
 
 export async function refetchBrokenFriends(friendsArray: FriendListEntry[], friends: ReadonlyMap<string, FriendContext>): Promise<FriendListEntry[]> {
-  for (const [i, friend] of friendsArray.entries()) {
-    try {
-      let stateInput: FriendContext["state"] = "offline";
-      if (friend.platform === "web") {
-        stateInput = "active";
-      } else if (friend.platform) {
-        stateInput = "online";
+  let next = 0;
+
+  async function worker() {
+    while (next < friendsArray.length) {
+      const i = next;
+      next += 1;
+      const friend = friendsArray[i];
+      if (!friend) {
+        continue;
       }
-      const ref = friends.get(friend.id);
-      if (ref?.state !== stateInput) {
-        if (AppDebug.debugFriendState) {
-          console.log(`Refetching friend state it does not match ${friend.displayName} from ${ref?.state} to ${stateInput}`, friend);
+      try {
+        let stateInput: FriendContext["state"] = "offline";
+        if (friend.platform === "web") {
+          stateInput = "active";
+        } else if (friend.platform) {
+          stateInput = "online";
         }
-        const args = await userRequest.getUser({
-          userId: friend.id,
-        });
-        friendsArray[i] = args.json;
-      } else if (friend.location === "traveling") {
-        if (AppDebug.debugFriendState) {
-          console.log("Refetching traveling friend", friend.displayName);
+        const ref = friends.get(friend.id);
+        if (ref?.state !== stateInput) {
+          if (AppDebug.debugFriendState) {
+            console.log(`Refetching friend state it does not match ${friend.displayName} from ${ref?.state} to ${stateInput}`, friend);
+          }
+          const args = await userRequest.getUser({
+            userId: friend.id,
+          });
+          friendsArray[i] = args.json;
+        } else if (friend.location === "traveling") {
+          if (AppDebug.debugFriendState) {
+            console.log("Refetching traveling friend", friend.displayName);
+          }
+          const args = await userRequest.getUser({
+            userId: friend.id,
+          });
+          friendsArray[i] = args.json;
         }
-        const args = await userRequest.getUser({
-          userId: friend.id,
-        });
-        friendsArray[i] = args.json;
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
     }
   }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   return friendsArray;
 }
 
 export async function refreshRemainingFriends(friends: FriendListEntry[], currentUserFriendIds: readonly string[]): Promise<FriendListEntry[]> {
   const friendsSet = new Set(friends.map((x) => x.id));
-  for (const userId of currentUserFriendIds) {
-    if (!friendsSet.has(userId)) {
+  const missingIds = currentUserFriendIds.filter((userId) => !friendsSet.has(userId));
+  let next = 0;
+
+  async function worker() {
+    while (next < missingIds.length) {
+      const userId = missingIds[next];
+      next += 1;
+      if (userId === undefined) {
+        continue;
+      }
       try {
         if (!watchState.isLoggedIn) {
           console.error(`User isn't logged in`);
-          return friends;
+          next = missingIds.length;
+          return;
         }
         console.log("Fetching remaining friend", userId);
         const args = await userRequest.getUser({ userId });
@@ -127,5 +148,7 @@ export async function refreshRemainingFriends(friends: FriendListEntry[], curren
       }
     }
   }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   return friends;
 }
