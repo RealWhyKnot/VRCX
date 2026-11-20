@@ -254,6 +254,13 @@ describe("Location.vue", () => {
       expect(wrapper.find(".flags.eu").exists()).toBe(true);
     });
 
+    test("names the region on the flag", () => {
+      const wrapper = mountLocation({
+        location: "wrld_12345:67890~region(jp)",
+      });
+      expect(wrapper.get('[data-testid="region-flag"]').attributes("aria-label")).toBe("Japan");
+    });
+
     test("defaults to us region when no region specified", () => {
       const wrapper = mountLocation({
         location: "wrld_12345:67890",

@@ -47,7 +47,7 @@
             <SelectItem :value="ANY">{{ t("view.tools.instance_browser.any_region") }}</SelectItem>
             <SelectItem v-for="region in DISCOVER_REGIONS" :key="region" :value="region">
               <span :class="['flags', region]" />
-              {{ region.toUpperCase() }}
+              {{ regionName(region, t) }}
             </SelectItem>
           </SelectGroup>
         </SelectContent>
@@ -137,7 +137,7 @@
                   {{ instance.displayName || instance.worldAuthorName }}
                 </ItemDescription>
                 <div class="flex min-w-0 flex-wrap items-center gap-1 text-[11px]">
-                  <span v-if="instance.region" :class="['flags shrink-0', instance.region]" />
+                  <RegionFlag v-if="instance.region" :region="instance.region" class="shrink-0" />
                   <Badge v-if="instance.accessType" variant="outline" class="h-5 px-1.5 text-[11px] leading-none">{{ accessLabel(instance.accessType) }}</Badge>
                   <Badge v-if="categoryName(instance.categoryId)" variant="outline" class="h-5 max-w-full px-1.5 text-[11px] leading-none">
                     <span class="truncate">{{ categoryName(instance.categoryId) }}</span>
@@ -224,6 +224,8 @@ import { instanceRequest } from "@/api/instance";
 import { showWorldDialog } from "@/coordinators/world-coordinator";
 import { accessTypeLocaleKeyMap } from "@/shared/constants/access-type";
 import { DISCOVER_MODES, DISCOVER_PLATFORMS, DISCOVER_REGIONS, type DiscoveredInstance } from "@/shared/utils/instance-discovery";
+import { regionName } from "@/shared/utils/region";
+import RegionFlag from "@/components/RegionFlag.vue";
 import type { InstanceFace } from "@/shared/utils/instance-faces";
 import { parseLocation, translateAccessType } from "@/shared/utils/location-parser";
 import { useInstanceStore } from "@/stores/instance";

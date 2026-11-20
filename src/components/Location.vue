@@ -13,7 +13,7 @@
             </TooltipWrapper>
           </template>
           <template v-else>
-            <div v-if="region" :class="cn('flags shrink-0', region)"></div>
+            <RegionFlag v-if="region" :region="region" class="shrink-0" />
             <TooltipWrapper :content="tooltipContent" :disabled="tooltipDisabled" :delay-duration="300" side="top">
               <div :class="locationClasses" class="inline-flex min-w-0 flex-nowrap items-center overflow-hidden truncate" @click="handleShowWorldDialog">
                 <Spinner v-if="isTraveling" class="mr-1 shrink-0" />
@@ -79,11 +79,11 @@ import { showGroupDialog } from "../coordinators/group-dialog-coordinator";
 import { showWorldDialog } from "../coordinators/world-coordinator";
 import { runNewInstanceSelfInviteFlow } from "../coordinators/invite-coordinator";
 import Spinner from "./ui/spinner/Spinner.vue";
+import RegionFlag from "./RegionFlag.vue";
 import WorldActionMenuItems from "./WorldActionMenuItems.vue";
 import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
 import type { InstanceEntry } from "../stores/instance-types";
 import type { ParsedLocation } from "../types/vrcx";
-import { cn } from "@/lib/utils";
 
 defineOptions({
   name: "LocationText",

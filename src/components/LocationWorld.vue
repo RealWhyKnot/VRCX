@@ -2,7 +2,7 @@
   <div
     :class="cn('flex min-w-0 items-center gap-2 overflow-hidden text-muted-foreground rounded-full border border-muted-foreground/10 py-0.5 px-2', props.class)"
   >
-    <span v-if="region" :class="cn('flags inline-block shrink-0', region)"></span>
+    <RegionFlag v-if="region" :region="region" class="inline-block shrink-0" />
     <span class="min-w-0 flex-1 cursor-pointer truncate text-muted-foreground" :title="`${accessTypeName} ⋅ #${instanceName}`" @click="showLaunchDialog">
       <Unlock v-if="isUnlocked" :class="['inline-block', 'mr-1.25']" />
       <span>{{ accessTypeName }} ⋅ #{{ instanceName }}</span>
@@ -37,6 +37,7 @@ import { accessTypeLocaleKeyMap } from "../shared/constants/access-type";
 import { logFailure } from "../stores/log-failure";
 import type { ParsedLocation } from "../types/vrcx";
 import { cn } from "@/lib/utils";
+import RegionFlag from "./RegionFlag.vue";
 
 const { t } = useI18n();
 const { cachedInstances } = useInstanceStore();
