@@ -1,7 +1,5 @@
 import { isProxy, toRaw } from "vue";
 
-const lookupGetter: unknown = Reflect.get(Object.prototype, "__lookupGetter__");
-
 function isBridgeContainer(value: object): boolean {
   if (Array.isArray(value)) {
     return true;
@@ -23,22 +21,10 @@ function requiresUnwrapping(value: unknown, visited: WeakSet<object>): boolean {
 
   visited.add(value);
   const keys = Object.keys(value);
-  if (Array.isArray(value) && typeof lookupGetter === "function") {
-    for (let index = 0; index < keys.length; index++) {
-      const key = keys[index];
-      if (key === undefined) {
-        continue;
-      }
-      if (lookupGetter.call(value, key) !== undefined) {
-        return true;
-      }
-      const item: unknown = key === String(index) ? value[index] : Reflect.get(value, key);
-      if (item === undefined) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, key);
-        if (!descriptor || !("value" in descriptor)) {
-          return true;
-        }
-      } else if (item !== null && typeof item === "object" && requiresUnwrapping(item, visited)) {
+  if (Array.isArray(value) && keys.length === value.length && keys.at(-1) === String(value.length - 1)) {
+    const items: Iterable<unknown> = Array.prototype.values.call(value);
+    for (const item of items) {
+      if (item !== null && typeof item === "object" && requiresUnwrapping(item, visited)) {
         return true;
       }
     }

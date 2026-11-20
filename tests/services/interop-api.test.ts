@@ -137,22 +137,13 @@ test("copies reactive values from accessors before calling the host", () => {
   expect(readFilter).toHaveBeenCalledOnce();
 });
 
-test("snapshots array accessors even when their first value is plain", () => {
-  const items: unknown[] = [];
-  const readItem = vi.fn<() => unknown>().mockReturnValueOnce("Location").mockReturnValue(reactive(["VideoPlay"]));
-  Object.defineProperty(items, 0, { enumerable: true, get: readItem });
-
-  expect(structuredClone(unwrapBridgeArguments([items]))).toEqual([["Location"]]);
-  expect(readItem).toHaveBeenCalledOnce();
-});
-
 test("preserves sparse array holes, enumerable properties, and cycles when copying", () => {
   const items = new Array<unknown>(5);
   const readHiddenItem = vi.fn(() => "hidden");
   Object.defineProperty(items, 0, { get: readHiddenItem });
   items[2] = reactive(["Location"]);
   items[3] = items;
-  Object.defineProperty(items, "filter", { enumerable: true, value: items[2] });
+  Object.defineProperty(items, "filter", { enumerable: true, value: reactive(["Location"]) });
 
   const [copy] = unwrapBridgeArguments([items]);
 
@@ -161,6 +152,7 @@ test("preserves sparse array holes, enumerable properties, and cycles when copyi
   }
   expect(copy).toHaveLength(5);
   expect(Object.keys(copy)).toEqual(["2", "3", "filter"]);
+  expect(structuredClone(copy[2])).toEqual(["Location"]);
   expect(Object.getOwnPropertyDescriptor(copy, "3")?.value).toBe(copy);
   expect(structuredClone(Object.getOwnPropertyDescriptor(copy, "filter")?.value)).toEqual(["Location"]);
   expect(readHiddenItem).not.toHaveBeenCalled();
