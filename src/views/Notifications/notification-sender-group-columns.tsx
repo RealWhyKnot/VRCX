@@ -1,3 +1,4 @@
+import { notificationName } from "@/shared/utils/notification-message";
 import { showGroupDialog } from "../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../coordinators/user-coordinator";
 import type { VrcxColumn } from "../FriendList/vrcx-column";
@@ -14,11 +15,20 @@ export const createSenderColumn = ({ openNotificationLink }: NotificationColumnD
   header: () => t("table.notification.user"),
   cell: ({ row }) => {
     const original = row.original;
+    const inviter = original.type === "group.invite" ? notificationName(original, "managerUserDisplayName") : undefined;
+    if (inviter) {
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={inviter}>
+          {inviter}
+        </span>
+      );
+    }
+    const senderName = (original.type === "boop" ? notificationName(original, "boopingUserDisplayName") : undefined) ?? original.senderUsername;
     if (original.senderUserId && !isGroupId(original.senderUserId)) {
       return (
         <span class="table-user-text block w-full min-w-0 truncate">
-          <span class="cursor-pointer block w-full min-w-0 truncate" onClick={() => showUserDialog(original.senderUserId)}>
-            {original.senderUsername}
+          <span class="cursor-pointer block w-full min-w-0 truncate" title={senderName} onClick={() => showUserDialog(original.senderUserId)}>
+            {senderName}
           </span>
         </span>
       );
@@ -27,15 +37,23 @@ export const createSenderColumn = ({ openNotificationLink }: NotificationColumnD
     if (original.link?.startsWith("user:")) {
       return (
         <span class="table-user-text block w-full min-w-0 truncate">
-          <span class="cursor-pointer block w-full min-w-0 truncate" onClick={() => openNotificationLink(original.link)}>
-            {firstNonEmpty(original.linkText, original.senderUsername)}
+          <span
+            class="cursor-pointer block w-full min-w-0 truncate"
+            title={firstNonEmpty(original.linkText, senderName)}
+            onClick={() => openNotificationLink(original.link)}
+          >
+            {firstNonEmpty(original.linkText, senderName)}
           </span>
         </span>
       );
     }
 
-    if (original.senderUsername && !isGroupId(original.senderUserId)) {
-      return <span class="table-user-text block w-full min-w-0 truncate">{original.senderUsername}</span>;
+    if (senderName && !isGroupId(original.senderUserId)) {
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={senderName}>
+          {senderName}
+        </span>
+      );
     }
 
     return null;
@@ -59,7 +77,7 @@ export const createGroupColumn = ({ openNotificationLink }: NotificationColumnDe
     if (original.senderUserId && (original.type === "groupChange" || isGroupId(original.senderUserId))) {
       return (
         <span class="table-user-text block w-full min-w-0 truncate">
-          <span class="cursor-pointer block w-full min-w-0 truncate" onClick={() => showGroupDialog(original.senderUserId ?? "")}>
+          <span class="cursor-pointer block w-full min-w-0 truncate" title={label} onClick={() => showGroupDialog(original.senderUserId ?? "")}>
             {label}
           </span>
         </span>
@@ -67,13 +85,21 @@ export const createGroupColumn = ({ openNotificationLink }: NotificationColumnDe
     }
 
     if (original.type === "groupChange" && original.senderUsername) {
-      return <span class="table-user-text block w-full min-w-0 truncate">{original.senderUsername}</span>;
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={original.senderUsername}>
+          {original.senderUsername}
+        </span>
+      );
     }
 
     if (original.link?.startsWith("group:")) {
       return (
         <span class="table-user-text block w-full min-w-0 truncate">
-          <span class="cursor-pointer block w-full min-w-0 truncate" onClick={() => openNotificationLink(original.link)}>
+          <span
+            class="cursor-pointer block w-full min-w-0 truncate"
+            title={firstNonEmpty(dataGroupName, label)}
+            onClick={() => openNotificationLink(original.link)}
+          >
             {firstNonEmpty(dataGroupName, label)}
           </span>
         </span>
@@ -83,7 +109,11 @@ export const createGroupColumn = ({ openNotificationLink }: NotificationColumnDe
     if (original.link?.startsWith("event:")) {
       return (
         <span class="table-user-text block w-full min-w-0 truncate">
-          <span class="cursor-pointer block w-full min-w-0 truncate" onClick={() => openNotificationLink(original.link)}>
+          <span
+            class="cursor-pointer block w-full min-w-0 truncate"
+            title={firstNonEmpty(dataGroupName, original.groupName, label)}
+            onClick={() => openNotificationLink(original.link)}
+          >
             {firstNonEmpty(dataGroupName, original.groupName, label)}
           </span>
         </span>
@@ -91,15 +121,27 @@ export const createGroupColumn = ({ openNotificationLink }: NotificationColumnDe
     }
 
     if (dataGroupName) {
-      return <span class="table-user-text block w-full min-w-0 truncate">{dataGroupName}</span>;
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={dataGroupName}>
+          {dataGroupName}
+        </span>
+      );
     }
 
     if (detailsGroupName) {
-      return <span class="table-user-text block w-full min-w-0 truncate">{detailsGroupName}</span>;
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={detailsGroupName}>
+          {detailsGroupName}
+        </span>
+      );
     }
 
     if (original.groupName) {
-      return <span class="table-user-text block w-full min-w-0 truncate">{original.groupName}</span>;
+      return (
+        <span class="table-user-text block w-full min-w-0 truncate" title={original.groupName}>
+          {original.groupName}
+        </span>
+      );
     }
 
     return null;

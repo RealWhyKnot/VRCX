@@ -20,7 +20,8 @@
       "refresh": "更新",
       "cancel": "キャンセル",
       "copy": "コピー",
-      "open_link": "リンクを開く"
+      "open_link": "リンクを開く",
+      "retry": "Retry"
     },
     "sort_by": "並び替え:",
     "time_units": {
@@ -505,7 +506,8 @@
             "gift": "ギフトの受け取り"
           },
           "alert": "エコノミーの通知"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -759,6 +761,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1604,6 +1619,14 @@
         "header": "ノートとメモを編集",
         "cancel": "キャンセル",
         "confirm": "保存"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1706,7 +1729,9 @@
           "Poor": "Poor",
           "VeryPoor": "Very Poor",
           "None": "None"
-        }
+        },
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(パブリック)",
@@ -1762,6 +1787,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group": {
@@ -1828,7 +1865,8 @@
         "role_permissions": "権限:",
         "last_visited": "最後に訪問した日時",
         "past_events": "過去のイベント",
-        "upcoming_events": "今後のイベント"
+        "upcoming_events": "今後のイベント",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "投稿",
@@ -2450,7 +2488,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "注目のイベント"
+      "featured_events": "注目のイベント",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "グループメンバーを管理",
@@ -2547,6 +2588,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -2975,7 +3021,11 @@
     "blocked": "にブロックされました",
     "unblocked": "によるブロックが解除されました",
     "muted": "にミュートされました",
-    "unmuted": "によるミュートが解除されました"
+    "unmuted": "によるミュートが解除されました",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "VRChat の障害情報"
@@ -3284,6 +3334,7 @@
     "clocks_label": "時計",
     "clocks_none": "なし",
     "timezone": "タイムゾーン",
-    "now_playing": "再生中"
+    "now_playing": "再生中",
+    "api_trouble": "VRChat API requests failing"
   }
 }

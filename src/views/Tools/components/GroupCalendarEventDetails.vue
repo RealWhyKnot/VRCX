@@ -1,48 +1,48 @@
 <template>
   <div class="flex items-baseline justify-between gap-3 text-xs">
-    <div class="text-[13px] font-semibold">{{ event.title }}</div>
+    <div class="min-w-0 truncate text-[13px] font-semibold" :title="event.title">{{ event.title }}</div>
     <div class="whitespace-nowrap">
       {{ relativeTime ? formatRelativeTimeRange(event.startsAt, event.endsAt) : formatTimeRange(event.startsAt, event.endsAt) }}
     </div>
   </div>
   <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-sm:col-span-2">
       <Button variant="outline" size="sm" @click="openCalendarEvent(event)">
         <Calendar />
         {{ t("dialog.group_calendar.event_card.export_to_calendar") }}
       </Button>
     </div>
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-sm:col-span-2">
       <Button variant="outline" size="sm" @click="downloadEventIcs(event)">
         <Download />
         {{ t("dialog.group_calendar.event_card.download_ics") }}
       </Button>
     </div>
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.category") }}
       </div>
       <div class="font-medium">{{ capitalizeFirst(event.category) }}</div>
     </div>
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.interested_user") }}
       </div>
       <div class="font-medium">{{ event.interestedUserCount }}</div>
     </div>
-    <div v-if="friendsInterested !== undefined" class="flex min-w-0 flex-col gap-1">
+    <div v-if="friendsInterested !== undefined" class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.interested_friends") }}
       </div>
       <div class="font-medium">{{ friendsInterested }}</div>
     </div>
-    <div v-if="linkedInstances !== undefined" class="flex min-w-0 flex-col gap-1">
+    <div v-if="linkedInstances !== undefined" class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.linked_instances") }}
       </div>
       <div class="font-medium">{{ linkedInstances }}</div>
     </div>
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.close_time") }}
       </div>
@@ -50,7 +50,7 @@
         {{ event.closeInstanceAfterEndMinutes + " min" }}
       </div>
     </div>
-    <div class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-w-0 flex-col gap-1 max-[380px]:col-span-2">
       <div>
         {{ t("dialog.group_calendar.event_card.created") }}
       </div>
@@ -62,7 +62,7 @@
       <div>
         {{ t("dialog.group_calendar.event_card.description") }}
       </div>
-      <div class="whitespace-pre-wrap break-words font-normal leading-snug">
+      <div class="whitespace-pre-wrap wrap-anywhere font-normal leading-snug max-w-[80ch]">
         {{ event.description }}
       </div>
     </div>

@@ -216,7 +216,8 @@
         },
         "badge": {
           "earned": "Получен значёк"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -334,6 +335,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -739,6 +753,14 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -832,7 +854,9 @@
         "content_gore": "Жестокость",
         "content_violence": "Насилие",
         "content_adult": "Для взрослых",
-        "content_sex": "Сексуальные"
+        "content_sex": "Сексуальные",
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Публичный)",
@@ -878,6 +902,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group": {
@@ -938,7 +974,8 @@
         "role_updated_at": "Обновлена:",
         "role_created_at": "Создана:",
         "role_permissions": "Права доступа:",
-        "last_visited": "Последний визит"
+        "last_visited": "Последний визит",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "Объявления",
@@ -1439,7 +1476,10 @@
         "description": "Описание",
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
-      }
+      },
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "Модерация участников группы",
@@ -1528,6 +1568,11 @@
       "preview_group_icon": "Group icon",
       "preview_banner_nameplate": "On nameplates",
       "preview_banner_group_page": "On the group page"
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -1947,6 +1992,20 @@
         "invalid_json_response": "Неверный JSON-ответ",
         "403_404_bailing_request": "Отмена запроса из-за недавних ошибок 404/403"
       }
+    }
+  },
+  "notifications": {
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
+  },
+  "status_bar": {
+    "api_trouble": "VRChat API requests failing"
+  },
+  "common": {
+    "actions": {
+      "retry": "Retry"
     }
   }
 }

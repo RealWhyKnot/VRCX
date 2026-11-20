@@ -138,6 +138,7 @@
       <pre v-else class="text-xs font-[inherit] text-muted-foreground">—</pre>
     </div>
 
+    <GroupNextEvent v-if="groupDialog.visible && groupDialog.id" :group-id="groupDialog.id" />
     <div v-if="upcomingCalenderEvents.length" class="rounded-xl bg-(--profile-card) p-3">
       <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
         {{ t("dialog.group.info.upcoming_events") }}
@@ -206,6 +207,7 @@ import { useGroupStore } from "../../../stores/group";
 import { useLocationStore } from "../../../stores/location";
 import { useGroupCalendarEvents } from "./use-group-calendar-events";
 
+import GroupNextEvent from "./GroupNextEvent.vue";
 import GroupCalendarEventCard from "../../../views/Tools/components/GroupCalendarEventCard.vue";
 import InstanceActionBar from "../../InstanceActionBar.vue";
 import InstancePeople from "../../InstancePeople.vue";

@@ -246,6 +246,24 @@ describe("NotificationItem.vue", () => {
     expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_123");
   });
 
+  test("puts the group inviter in the sender row and preserves the invite message", () => {
+    const wrapper = mount(NotificationItem, {
+      props: {
+        notification: makeNotification({
+          type: "group.invite",
+          senderUserId: "grp_club",
+          title: "World Builders",
+          data: { managerUserDisplayName: "Rowan" },
+          message: "Join our group.",
+        }),
+      },
+    });
+    expect(wrapper.get('span[title="Rowan"]').text()).toBe("Rowan");
+    expect(wrapper.get('[title="Join our group."]').text()).toBe("Join our group.");
+    expect(wrapper.text()).not.toContain("Invited by Rowan");
+    wrapper.unmount();
+  });
+
   test("clicking accept icon calls acceptFriendRequestNotification", async () => {
     const wrapper = mount(NotificationItem, {
       props: {

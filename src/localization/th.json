@@ -333,7 +333,8 @@
             "gift": "ได้รับของขวัญ"
           },
           "alert": "แจ้งเตือนเศรษฐกิจ"
-        }
+        },
+        "votetokick": "Vote to kick"
       },
       "actions": {
         "accept": "ยอมรับ",
@@ -594,6 +595,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1442,6 +1456,14 @@
         "header": "แก้ไขโน้ตและบันทึกข้อความ",
         "cancel": "ยกเลิก",
         "confirm": "ยืนยัน"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1544,7 +1566,9 @@
           "Poor": "แย่",
           "VeryPoor": "แย่มาก",
           "None": "ไม่มี"
-        }
+        },
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "สาธารณะ",
@@ -1600,6 +1624,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group": {
@@ -1664,7 +1700,8 @@
         "role_permissions": "สิทธิ์:",
         "last_visited": "เข้าชมล่าสุด",
         "past_events": "กิจกรรมที่ผ่านมา",
-        "upcoming_events": "กิจกรรมที่กำลังจะมาถึง"
+        "upcoming_events": "กิจกรรมที่กำลังจะมาถึง",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "โพสต์",
@@ -2350,7 +2387,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "กิจกรรมแนะนำ"
+      "featured_events": "กิจกรรมแนะนำ",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "จัดการสมาชิกกลุ่ม",
@@ -2373,6 +2413,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -2989,7 +3034,8 @@
       "refresh": "รีเฟรช",
       "cancel": "ยกเลิก",
       "copy": "คัดลอก",
-      "open_link": "เปิดลิงก์"
+      "open_link": "เปิดลิงก์",
+      "retry": "Retry"
     },
     "sort_by": "เรียงโดย",
     "time_units": {
@@ -3143,7 +3189,11 @@
     "blocked": "ได้บล็อกคุณ",
     "unblocked": "ได้ปลดบล็อกคุณ",
     "muted": "ได้ปิดเสียงคุณ",
-    "unmuted": "ได้เปิดเสียงคุณ"
+    "unmuted": "ได้เปิดเสียงคุณ",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "สถานะ VRChat"
@@ -3245,6 +3295,7 @@
     "clocks_label": "นาฬิกา",
     "clocks_none": "ไม่มี",
     "timezone": "เขตเวลา",
-    "now_playing": "กำลังเล่นอยู่"
+    "now_playing": "กำลังเล่นอยู่",
+    "api_trouble": "VRChat API requests failing"
   }
 }

@@ -11,7 +11,7 @@ export function requestJson<T>(endpoint: string, options: RequestOptions): Promi
   });
 }
 
-export function requestAck<T>(endpoint: string, options: RequestOptions): Promise<T | undefined> {
+export function requestAck<T>(endpoint: string, options: Parameters<typeof request>[1]): Promise<T | undefined> {
   const isResponseObject = (value: unknown): value is T => typeof value === "object" && value !== null;
   return request(endpoint, options).then((response) => (isResponseObject(response) ? response : undefined));
 }

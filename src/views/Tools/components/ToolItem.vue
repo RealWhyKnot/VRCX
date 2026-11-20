@@ -22,7 +22,7 @@ defineProps<{
         <ItemTitle class="flex-1">{{ title }}</ItemTitle>
         <slot name="actions" />
       </div>
-      <ItemDescription>{{ description }}</ItemDescription>
+      <ItemDescription v-if="description" :title="description">{{ description }}</ItemDescription>
     </ItemContent>
   </Item>
 </template>

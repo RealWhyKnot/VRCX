@@ -1,10 +1,12 @@
 import type {
   BoopRequest,
+  CalendarEvent,
   File,
   FileAnalysis,
   GetStore,
   InfoPush,
   Instance,
+  LimitedInstance,
   Store,
   Success,
   UpdateUserBadgeRequest,
@@ -16,7 +18,23 @@ import { queryClient } from "../queries/client";
 import { queryKeys } from "../queries/keys";
 import { request } from "../services/request";
 import { useUserStore } from "../stores/user";
+import { fetchOnDemand } from "./on-demand";
 import { requestJson, requestAck } from "./request-json";
+
+export type InfoPushContent =
+  | { responseType: "instance"; results: Json<LimitedInstance>[]; nextCursor?: unknown }
+  | { responseType: "calendarEntry"; results: Json<CalendarEvent>[]; nextCursor?: string | null };
+
+function isInfoPushContent(value: unknown): value is InfoPushContent {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "responseType" in value &&
+    (value.responseType === "instance" || value.responseType === "calendarEntry") &&
+    "results" in value &&
+    Array.isArray(value.results)
+  );
+}
 
 function getCurrentUserId() {
   return useUserStore().currentUser.id;
@@ -193,6 +211,17 @@ const miscRequest = {
         params,
       };
       return args;
+    });
+  },
+
+  getInfoPushContent(entryId: string, nextCursor?: string): Promise<InfoPushContent> {
+    return fetchOnDemand(["info-push-content", entryId, nextCursor], async () => {
+      const response = await request(`infoPush/${encodeURIComponent(entryId)}/content`, {
+        method: "GET",
+        params: nextCursor ? { nextCursor } : undefined,
+      });
+      if (!isInfoPushContent(response)) throw new Error("Invalid info push content");
+      return response;
     });
   },
 };

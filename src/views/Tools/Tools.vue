@@ -12,13 +12,13 @@
             </span>
           </div>
 
-          <div v-show="!categoryCollapsed[category.key]" class="grid grid-cols-2 gap-4 ml-4">
+          <div v-show="!categoryCollapsed[category.key]" class="ml-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <ToolItem
               v-for="tool in category.tools"
               :key="tool.key"
               :icon="tool.navIcon"
               :title="t(tool.titleKey)"
-              :description="t(tool.descriptionKey)"
+              :description="tool.descriptionKey ? t(tool.descriptionKey) : ''"
               @click="triggerTool(tool)"
             >
               <template #actions>

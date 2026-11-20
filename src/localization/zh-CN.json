@@ -24,7 +24,8 @@
       "refresh": "刷新",
       "cancel": "取消",
       "copy": "复制",
-      "open_link": "打开链接"
+      "open_link": "打开链接",
+      "retry": "Retry"
     },
     "sort_by": "排序方式：",
     "time_units": {
@@ -517,7 +518,8 @@
         },
         "twitchdrop": {
           "fulfilled": "Twitch Drop 已发放"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -771,6 +773,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1639,6 +1654,14 @@
         "header": "编辑线上备注和本地备注",
         "cancel": "取消",
         "confirm": "确定"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1743,7 +1766,9 @@
           "Poor": "高负载",
           "VeryPoor": "极高负载",
           "None": "无"
-        }
+        },
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "（公开）",
@@ -1799,6 +1824,18 @@
       },
       "json": {
         "header": "原始 JSON 信息"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group_edit": {
@@ -1991,7 +2028,8 @@
         "upcoming_events": "即将到来的活动",
         "member_info": "成员信息",
         "visibility": "可见性",
-        "short_code": "群组代码"
+        "short_code": "群组代码",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "帖子",
@@ -2646,7 +2684,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "精选活动"
+      "featured_events": "精选活动",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "管理群组成员",
@@ -2752,6 +2793,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -3185,7 +3231,11 @@
     "blocked": "屏蔽了你",
     "unblocked": "取消了对你的屏蔽",
     "muted": "屏蔽了你的语音",
-    "unmuted": "取消了对你的语音屏蔽"
+    "unmuted": "取消了对你的语音屏蔽",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "VRChat 状态"
@@ -3494,6 +3544,7 @@
     "clocks_label": "时钟",
     "clocks_none": "无",
     "timezone": "时区",
-    "now_playing": "正在游玩"
+    "now_playing": "正在游玩",
+    "api_trouble": "VRChat API requests failing"
   }
 }

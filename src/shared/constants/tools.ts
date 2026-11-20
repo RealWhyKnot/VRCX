@@ -288,6 +288,16 @@ const toolDefinitions = [
     action: { type: "route", routeName: "instance-browser" },
   },
   {
+    key: "jams",
+    category: "social",
+    iconKey: "flag",
+    navIcon: "ri-flag-line",
+    titleKey: "view.tools.jams.title",
+    descriptionKey: "view.tools.jams.description",
+    navEligible: true,
+    action: { type: "route", routeName: "jams" },
+  },
+  {
     key: "instance-log",
     category: "social",
     iconKey: "history",

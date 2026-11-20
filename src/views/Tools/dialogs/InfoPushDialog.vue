@@ -1,22 +1,27 @@
 <template>
   <Dialog :open="isInfoPushDialogVisible" @update:open="(open) => !open && closeDialog()">
-    <DialogContent class="sm:max-w-3xl">
+    <DialogContent
+      class="grid-cols-[minmax(0,1fr)] grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden sm:max-w-3xl"
+      @open-auto-focus.prevent="dialogHeading?.focus({ preventScroll: true })"
+    >
       <DialogHeader>
-        <DialogTitle>{{ t("dialog.info_push.header") }}</DialogTitle>
+        <DialogTitle as-child
+          ><h2 ref="dialogHeading" tabindex="-1" class="outline-none">{{ t("dialog.info_push.header") }}</h2></DialogTitle
+        >
       </DialogHeader>
 
-      <div class="flex items-center gap-2">
-        <ToggleGroup type="single" variant="outline" size="sm" :model-value="activeCategory" @update:model-value="selectCategory">
+      <div class="flex min-w-0 flex-wrap items-center gap-2">
+        <ToggleGroup class="min-w-0 flex-wrap" type="single" variant="outline" size="sm" :model-value="activeCategory" @update:model-value="selectCategory">
           <ToggleGroupItem v-for="category in categories" :key="category.name" :value="category.name">
             {{ getCategoryLabel(category.name) }} ({{ category.count }})
           </ToggleGroupItem>
         </ToggleGroup>
-        <Button size="sm" variant="outline" class="ml-auto" :disabled="isLoading" @click="loadInfoPush">
+        <Button size="sm" variant="outline" class="ml-auto" :aria-label="t('common.actions.refresh')" :disabled="isLoading" @click="loadInfoPush">
           <RefreshCw class="size-4" :class="{ 'animate-spin': isLoading }" />
         </Button>
       </div>
 
-      <div ref="listRef" class="max-h-[60vh] overflow-y-auto">
+      <div ref="listRef" class="min-h-0 min-w-0 max-h-[60vh] overflow-y-auto">
         <DataTableEmpty v-if="!filteredInfoPushes.length && !isLoading" type="nodata" />
         <div v-else-if="BANNER_CATEGORIES.includes(activeCategory)" class="space-y-4">
           <div v-for="item in filteredInfoPushes" :id="`info-push-${item.id}`" :key="item.id">
@@ -41,7 +46,7 @@
         </div>
         <template v-else>
           <div v-for="item in filteredInfoPushes" :id="`info-push-${item.id}`" :key="item.id" class="border-b py-2 last:border-b-0">
-            <div class="flex cursor-pointer gap-3" @click="toggleInSet(expandedIds, item.id)">
+            <div class="flex min-w-0 gap-3">
               <img
                 v-if="getImageUrl(item)"
                 :src="getImageUrl(item)"
@@ -50,9 +55,17 @@
                 @click.stop="showFullscreenImageDialog(getImageUrl(item))"
               />
               <div class="min-w-0 flex-1 text-sm">
-                <div class="flex items-center gap-2">
-                  <ChevronRight class="size-4 flex-none text-muted-foreground transition-transform" :class="{ 'rotate-90': expandedIds.has(item.id) }" />
-                  <span class="truncate font-medium" v-text="getName(item)"></span>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    class="flex min-h-6 min-w-0 flex-1 basis-32 cursor-pointer items-center gap-2 text-left"
+                    :aria-expanded="expandedIds.has(item.id)"
+                    :title="getName(item)"
+                    @click="toggleInSet(expandedIds, item.id)"
+                  >
+                    <ChevronRight class="size-4 flex-none text-muted-foreground transition-transform" :class="{ 'rotate-90': expandedIds.has(item.id) }" />
+                    <span class="truncate font-medium" v-text="getName(item)"></span>
+                  </button>
                   <Badge v-if="getStatus(item)" variant="destructive" class="flex-none">
                     {{ t(`dialog.info_push.${getStatus(item)}`) }}
                   </Badge>
@@ -62,8 +75,9 @@
                 </div>
                 <div
                   v-if="getDescription(item)"
-                  class="text-xs text-muted-foreground"
-                  :class="{ 'line-clamp-2': !expandedIds.has(item.id) }"
+                  class="text-xs text-muted-foreground wrap-anywhere"
+                  :class="{ 'line-clamp-2': !expandedIds.has(item.id) || isContentShelf(item), 'h-8': isContentShelf(item) }"
+                  :title="getDescription(item)"
                   v-text="getDescription(item)"
                 ></div>
                 <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -89,7 +103,8 @@
               </div>
             </div>
 
-            <div v-if="expandedIds.has(item.id)" class="mt-3 space-y-3 pl-7 text-sm">
+            <div v-if="expandedIds.has(item.id)" class="mt-3 min-w-0 space-y-3 pl-7 text-sm">
+              <InfoPushContentPanel v-if="isContentShelf(item)" :key="item.id" :entry-id="item.id" />
               <div v-if="getArticleBlocks(item).length" class="space-y-2">
                 <template v-for="(block, index) in getArticleBlocks(item)" :key="index">
                   <img
@@ -103,7 +118,7 @@
                     <Video class="size-4" />
                     {{ t("dialog.info_push.open_video") }}
                   </Button>
-                  <p v-else class="whitespace-pre-line" :class="{ 'text-base font-semibold': block.type === 'heading' }" v-text="block.value"></p>
+                  <p v-else class="wrap-anywhere whitespace-pre-line" :class="{ 'text-base font-semibold': block.type === 'heading' }" v-text="block.value"></p>
                 </template>
               </div>
 
@@ -148,6 +163,7 @@ import ToggleGroup from "@/components/ui/toggle-group/ToggleGroup.vue";
 import ToggleGroupItem from "@/components/ui/toggle-group/ToggleGroupItem.vue";
 import { useI18n } from "vue-i18n";
 import type { InfoPush } from "vrchat";
+import InfoPushContentPanel from "../components/InfoPushContentPanel.vue";
 
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 
@@ -160,7 +176,9 @@ import { logError } from "../../../stores/vrcx-messages";
 
 const BANNER_CATEGORIES = ["quick-menu-banner", "loading-screen-banners"];
 const DEFAULT_CATEGORY = "help-article";
-const CATEGORY_ORDER: readonly string[] = [DEFAULT_CATEGORY, ...BANNER_CATEGORIES];
+const SHELF_CATEGORY = "content-shelf";
+const NOTICE_CATEGORIES: readonly string[] = [DEFAULT_CATEGORY, ...BANNER_CATEGORIES];
+const CATEGORY_ORDER = [...NOTICE_CATEGORIES, SHELF_CATEGORY];
 
 type InfoPushItem = Json<InfoPush>;
 type InfoPushLink = { command: string; target: string; name: string };
@@ -180,6 +198,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const dialogHeading = ref<HTMLHeadingElement | null>(null);
 const { t } = useI18n();
 const { showFullscreenImageDialog } = useGalleryStore();
 
@@ -211,7 +230,8 @@ watch(
     if (isVisible) {
       void loadInfoPush().catch(logError);
     }
-  }
+  },
+  { immediate: true }
 );
 
 function closeDialog() {
@@ -231,9 +251,11 @@ async function loadInfoPush() {
   try {
     const { json } = await miscRequest.getInfoPush({
       require: "user-all",
-      include: ["help-article", "quick-menu-banner", "loading-screen-banners"],
+      include: [...NOTICE_CATEGORIES, "user-all"],
     });
-    infoPushes.value = json.toSorted((a, b) => getSortDate(b) - getSortDate(a));
+    infoPushes.value = json
+      .filter((item) => isContentShelf(item) || item.tags.some((tag) => NOTICE_CATEGORIES.includes(tag)))
+      .toSorted((a, b) => getSortDate(b) - getSortDate(a));
     if (!categories.value.some((category) => category.name === activeCategory.value)) {
       activeCategory.value = categories.value[0]?.name ?? DEFAULT_CATEGORY;
     }
@@ -272,7 +294,12 @@ function firstFilled(...values: (string | null | undefined)[]): string {
   return values.find((value): value is string => Boolean(value)) ?? "";
 }
 
+function isContentShelf(item: InfoPushItem): boolean {
+  return item.type === "ContentShelf" || Boolean(item.data.contentSource);
+}
+
 function getCategory(item: InfoPushItem): string {
+  if (isContentShelf(item)) return SHELF_CATEGORY;
   return item.tags.find((tag) => CATEGORY_ORDER.includes(tag)) ?? "other";
 }
 

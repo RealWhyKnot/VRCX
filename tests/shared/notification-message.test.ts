@@ -14,6 +14,35 @@ describe("getNotificationMessage", () => {
     expect(getNotificationMessage({ type: "unknown" }, "")).toBeNull();
   });
 
+  test("uses the v2 boop name before the legacy sender", () => {
+    expect(getNotificationMessage({ type: "boop", senderUsername: "Old name", data: { boopingUserDisplayName: "New name" }, message: "Boop!" }, "")).toEqual({
+      title: "New name",
+      body: "Boop!",
+    });
+  });
+
+  test.each([
+    ["group.invite", "managerUserDisplayName", "Invited by Alice."],
+    ["group.transfer", "ownerUserDisplayName", "Transfer from Alice."],
+    ["group.informative", "transferTargetDisplayName", "Transfer to Alice."],
+  ])("names the person in %s and keeps the fallback", (type, field, attribution) => {
+    expect(getNotificationMessage({ type, data: { [field]: "Alice" }, message: "Group message" }, "")?.body).toBe(`${attribution} Group message`);
+    expect(getNotificationMessage({ type, message: "Group message" }, "")?.body).toBe("Group message");
+  });
+
+  test("formats both participants in a legacy vote-to-kick record", () => {
+    const vote = {
+      type: "votetokick",
+      senderUserId: "usr_first",
+      senderUsername: "Alice",
+      details: { initiatorUserId: "usr_first", userToKickId: "usr_second" },
+    };
+    expect(getNotificationMessage(vote, undefined, undefined, (id) => (id === "usr_second" ? "Bob" : undefined))?.body).toBe(
+      "Alice started a vote to kick Bob."
+    );
+    expect(getNotificationMessage(vote, undefined)?.body).toBe("Alice started a vote to kick usr_second.");
+  });
+
   test("OnPlayerJoined", () => {
     const result = getNotificationMessage({ type: "OnPlayerJoined", displayName: "Alice" }, "");
     expect(result).toEqual({ title: "Alice", body: "has joined" });

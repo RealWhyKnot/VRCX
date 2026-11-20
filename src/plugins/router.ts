@@ -121,6 +121,12 @@ const routes: RouteRecordRaw[] = [
       },
       { path: "tools", name: "tools", component: Tools },
       {
+        path: "tools/jams",
+        name: "jams",
+        component: () => import("./../views/Tools/Jams.vue"),
+        meta: { navKeys: ["tool-jams", "tools"] },
+      },
+      {
         path: "tools/gallery",
         name: "gallery",
         component: Gallery,

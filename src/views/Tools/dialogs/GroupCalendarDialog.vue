@@ -1,20 +1,37 @@
 <template>
   <Dialog :open="visible" @update:open="(open) => (open ? null : closeDialog())">
-    <DialogContent class="x-dialog sm:max-w-[50vw] h-[70vh] overflow-hidden">
+    <DialogContent
+      class="x-dialog sm:max-w-[50vw] h-[70vh] overflow-hidden"
+      :class="{
+        'discovery-dialog grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] [@media(max-height:480px)]:h-[calc(100dvh-1rem)] [@media(max-height:480px)]:max-h-[calc(100dvh-1rem)] [@media(max-height:480px)]:gap-2 [@media(max-height:480px)]:p-3':
+          isDiscovering,
+      }"
+      @open-auto-focus.prevent="dialogHeading?.focus({ preventScroll: true })"
+    >
       <DialogHeader>
-        <div class="dialog-title-container">
-          <DialogTitle>{{ t("dialog.group_calendar.header") }}</DialogTitle>
+        <div class="dialog-title-container min-w-0">
+          <DialogTitle as-child>
+            <h2 ref="dialogHeading" tabindex="-1" class="min-w-0 truncate outline-none" :title="t('dialog.group_calendar.header')">
+              {{ t("dialog.group_calendar.header") }}
+            </h2>
+          </DialogTitle>
         </div>
-        <div class="featured-switch">
+        <div v-if="!isDiscovering" class="featured-switch">
           <span class="featured-switch-text">{{ t("dialog.group_calendar.featured_events") }}</span>
           <Switch v-model="showFeaturedEvents" class="mr-2" @update:model-value="toggleFeaturedEvents" />
-          <Button size="sm" variant="outline" class="view-toggle-btn" @click="toggleViewMode">
+          <Button size="sm" variant="outline" class="view-toggle-btn mr-2" @click="toggleViewMode">
             {{ viewMode === "timeline" ? t("dialog.group_calendar.list_view") : t("dialog.group_calendar.calendar_view") }}
+          </Button>
+          <Button size="sm" variant="outline" class="view-toggle-btn" :aria-pressed="false" @click="toggleDiscovery">
+            {{ t("dialog.group_calendar.discover") }}
           </Button>
         </div>
       </DialogHeader>
-      <div class="top-content">
-        <div v-if="viewMode === 'timeline'" key="timeline" class="timeline-view">
+      <div class="top-content" :class="{ 'discovery-content': isDiscovering }">
+        <GroupCalendarDiscovery v-if="visible && isDiscovering">
+          <Button size="sm" variant="outline" :aria-pressed="true" @click="toggleDiscovery">{{ t("dialog.group_calendar.discover") }}</Button>
+        </GroupCalendarDiscovery>
+        <div v-else-if="viewMode === 'timeline'" key="timeline" class="timeline-view">
           <div class="timeline-container">
             <div v-if="groupedTimelineEvents.length" class="timeline-list">
               <div v-for="(timeGroup, key) of groupedTimelineEvents" :key="key" class="timeline-group">
@@ -89,7 +106,7 @@ import Dialog from "@/components/ui/dialog/Dialog.vue";
 import DialogContent from "@/components/ui/dialog/DialogContent.vue";
 import DialogHeader from "@/components/ui/dialog/DialogHeader.vue";
 import DialogTitle from "@/components/ui/dialog/DialogTitle.vue";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "@/components/ui/button/Button.vue";
 import { ChevronDown } from "lucide-vue-next";
@@ -104,6 +121,7 @@ import { useGroupStore } from "../../../stores/group";
 import { logError } from "../../../stores/vrcx-messages";
 import { showGroupDialog } from "@/coordinators/group-dialog-coordinator";
 
+import GroupCalendarDiscovery from "../components/GroupCalendarDiscovery.vue";
 import GroupCalendarEventCard from "../components/GroupCalendarEventCard.vue";
 import GroupCalendarMonth from "../components/GroupCalendarMonth.vue";
 import { configRepository } from "../../../services/config";
@@ -113,6 +131,7 @@ import { CALENDAR_SEARCH_MAX_LENGTH, mergeSearchGroups, useCalendarSearch } from
 const groupStore = useGroupStore();
 const { groupEventRevision } = storeToRefs(groupStore);
 
+const dialogHeading = ref<HTMLHeadingElement | null>(null);
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -123,6 +142,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const isDiscovering = ref(false);
 const selectedDay = ref(new Date());
 const viewMode = ref<"timeline" | "grid">("timeline");
 const searchQuery = ref("");
@@ -161,6 +181,12 @@ onMounted(() => {
     .catch(logError);
 });
 
+async function toggleDiscovery() {
+  isDiscovering.value = !isDiscovering.value;
+  await nextTick();
+  dialogHeading.value?.focus({ preventScroll: true });
+}
+
 function toggleFeaturedEvents() {
   void configRepository.setBool("VRCX_groupCalendarShowFeaturedEvents", showFeaturedEvents.value).catch(logError);
   void updateCalenderData().catch(logError);
@@ -170,6 +196,7 @@ watch(
   () => props.visible,
   (isVisible) => {
     if (isVisible) {
+      isDiscovering.value = false;
       selectedDay.value = new Date();
       void updateCalenderData().catch(logError);
     }
@@ -350,6 +377,12 @@ function closeDialog() {
   overflow: hidden;
 }
 
+.top-content.discovery-content {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+
 .timeline-container {
   min-width: 200px;
   padding-left: 4px;
@@ -416,6 +449,9 @@ function closeDialog() {
   justify-content: flex-end;
   align-items: center;
   margin-top: 8px;
+
+  flex-wrap: wrap;
+  row-gap: 8px;
 
   .featured-switch-text {
     font-size: 0.8125rem;

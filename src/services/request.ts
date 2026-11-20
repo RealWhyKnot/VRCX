@@ -3,6 +3,7 @@ import { toast } from "vue-sonner";
 import { useAuthStore } from "../stores/auth";
 import { useModalStore } from "../stores/modal";
 import { useNotificationStore } from "../stores/notification";
+import { recordVrcApiStatus } from "../stores/vrc-api-status";
 import { useUpdateLoopStore } from "../stores/update-loop";
 import { getCurrentUser } from "../coordinators/user-coordinator";
 import { AppDebug, isApiLogSuppressed, logWebRequest } from "./app-config.ts";
@@ -120,7 +121,7 @@ export function parseResponse(response: ApiResponse): ParsedApiResponse {
   }
 }
 
-export function request(endpoint: string, options: RequestOptions): Promise<unknown> {
+export function request(endpoint: string, options: RequestOptions & { isNotFoundEmpty?: boolean }): Promise<unknown> {
   const authStore = useAuthStore();
   const modalStore = useModalStore();
   const notificationStore = useNotificationStore();
@@ -154,6 +155,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
       (response) => isRateLimitedResponse(parseResponse(response))
     )
     .catch((err: unknown) => {
+      recordVrcApiStatus(0);
       $throw(0, err, endpoint);
     })
     .then((response) => {
@@ -161,6 +163,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
         throw new Error(`API request blocked while logged out: ${endpoint}`);
       }
       const parsed = parseResponse(response);
+      recordVrcApiStatus(parsed.status);
       if (isRateLimitedResponse(parsed)) {
         requestLimiter.reportRateLimited(group);
       } else {
@@ -186,6 +189,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
         authStore.handleLogoutEvent().catch(logError);
         $throw(403, apiErrorField(parsed.data, "message") ?? "", endpoint);
       }
+      if (options.isNotFoundEmpty && parsed.status === 404) return parsed;
       if (parsed.hasApiError) {
         if (parsed.status === 401) {
           if (apiErrorField(parsed.data, "message") === '"Missing Credentials"') {
@@ -219,6 +223,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
       return parsed;
     })
     .then(({ data, status }) => {
+      if (options.isNotFoundEmpty && status === 404) return null;
       if (status === 200) {
         if (!data) {
           return data;

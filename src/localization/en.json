@@ -24,7 +24,8 @@
       "refresh": "Refresh",
       "cancel": "Cancel",
       "copy": "Copy",
-      "open_link": "Open Link"
+      "open_link": "Open Link",
+      "retry": "Retry"
     },
     "sort_by": "Sort by:",
     "time_units": {
@@ -542,7 +543,8 @@
         },
         "twitchdrop": {
           "fulfilled": "Twitch Drop Fulfilled"
-        }
+        },
+        "votetokick": "Vote to Kick"
       }
     },
     "friend_list": {
@@ -855,6 +857,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search",
         "load_failed": "Couldn't load this list."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1762,6 +1777,14 @@
         "header": "Edit Note And Memo",
         "cancel": "Cancel",
         "confirm": "Confirm"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1873,7 +1896,9 @@
           "Poor": "Poor",
           "VeryPoor": "Very Poor",
           "None": "None"
-        }
+        },
+        "scan_failed": "Scan Failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Public)",
@@ -1935,6 +1960,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} Stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned Meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone Colliders",
+        "physbone_transforms": "PhysBone Transforms",
+        "texture_memory": "Texture Memory"
       }
     },
     "group_edit": {
@@ -2131,7 +2168,8 @@
         "upcoming_events": "Upcoming Events",
         "member_info": "Member Info",
         "visibility": "Visibility",
-        "short_code": "Short Code"
+        "short_code": "Short Code",
+        "next_event": "Next Event"
       },
       "posts": {
         "header": "Posts",
@@ -2852,7 +2890,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "Featured Events"
+      "featured_events": "Featured Events",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "Moderate Group Member",
@@ -2897,7 +2938,8 @@
       "categories": {
         "help-article": "Help Articles",
         "quick-menu-banner": "Quick Menu Banners",
-        "loading-screen-banners": "Loading Screens"
+        "loading-screen-banners": "Loading Screens",
+        "content-shelf": "Content"
       },
       "end_date": "Ends",
       "open_link": "Open link",
@@ -3488,7 +3530,11 @@
     "blocked": "has blocked you",
     "unblocked": "has unblocked you",
     "muted": "has muted you",
-    "unmuted": "has unmuted you"
+    "unmuted": "has unmuted you",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "VRChat Status"
@@ -3798,6 +3844,7 @@
     "clocks_label": "Clocks",
     "clocks_none": "None",
     "timezone": "Timezone",
-    "now_playing": "Now Playing"
+    "now_playing": "Now Playing",
+    "api_trouble": "VRChat API requests failing"
   }
 }

@@ -3,7 +3,7 @@ import { getNotificationMessage, toNotificationText } from "../../shared/utils/n
 import type { useAdvancedSettingsStore } from "../settings/advanced";
 import type { useNotificationsSettingsStore } from "../settings/notifications";
 import { logFailure } from "../log-failure";
-import type { NotificationRecord } from "../../types/notification.ts";
+import type { NotificationWithData } from "../../shared/utils/notification-message";
 import type { NotyEntry } from "./types";
 
 type OverlayNoty = NotyEntry & {
@@ -11,7 +11,7 @@ type OverlayNoty = NotyEntry & {
   imageUrl?: string;
 };
 
-export function asNotificationRecord(noty: OverlayNoty): NotificationRecord {
+export function asNotificationRecord(noty: OverlayNoty): NotificationWithData {
   return {
     ...noty,
     displayName: noty.displayName ?? undefined,
@@ -23,7 +23,6 @@ export function asNotificationRecord(noty: OverlayNoty): NotificationRecord {
     title: noty.title ?? undefined,
     message: noty.message ?? undefined,
     notyName: noty.notyName ?? undefined,
-    data: typeof noty.data === "string" ? noty.data : undefined,
   };
 }
 

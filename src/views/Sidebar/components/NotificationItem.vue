@@ -12,7 +12,8 @@
         </ItemMedia>
         <ItemContent class="min-w-0">
           <ItemTitle class="min-w-0 w-full">
-            <span class="truncate cursor-pointer" @click.stop="openSender">{{ senderName }}</span>
+            <span v-if="groupInviter" class="min-w-0 flex-1 truncate" :title="groupInviter">{{ groupInviter }}</span>
+            <span v-else class="min-w-0 flex-1 truncate cursor-pointer" :title="senderName" @click.stop="openSender">{{ senderName }}</span>
             <Badge variant="secondary" class="shrink-0 text-muted-foreground text-[10px]">
               {{ typeLabel }}
             </Badge>
@@ -27,7 +28,7 @@
           >
             <Location :location="notification.location" :hint="textAt(notification, 'worldName')" :grouphint="textAt(notification, 'groupName')" link />
           </ItemDescription>
-          <ItemDescription v-if="displayMessage" class="text-xs select-none truncate">
+          <ItemDescription v-if="displayMessage" :title="displayMessage" class="block line-clamp-none truncate text-nowrap text-xs select-none">
             {{ displayMessage }}
           </ItemDescription>
         </ItemContent>
@@ -43,7 +44,7 @@
               <TooltipWrapper v-if="notification.type === 'friendRequest'" side="top" :content="t('view.notification.actions.accept')">
                 <button
                   type="button"
-                  class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                  class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                   :ariaLabel="t('view.notification.actions.accept')"
                   @click.stop="notificationStore.acceptFriendRequestNotification(notification)"
                 >
@@ -54,7 +55,7 @@
               <TooltipWrapper v-if="notification.type === 'invite'" side="top" :content="t('view.notification.actions.decline_with_message')">
                 <button
                   type="button"
-                  class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                  class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                   :ariaLabel="t('view.notification.actions.decline_with_message')"
                   @click.stop="$emit('show-invite-response', notification)"
                 >
@@ -66,7 +67,7 @@
                 <TooltipWrapper v-if="canInvite" side="top" :content="t('view.notification.actions.invite')">
                   <button
                     type="button"
-                    class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                    class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                     :ariaLabel="t('view.notification.actions.invite')"
                     @click.stop="notificationStore.acceptRequestInvite(notification)"
                   >
@@ -76,7 +77,7 @@
                 <TooltipWrapper side="top" :content="t('view.notification.actions.decline_with_message')">
                   <button
                     type="button"
-                    class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                    class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                     :ariaLabel="t('view.notification.actions.decline_with_message')"
                     @click.stop="$emit('show-invite-request-response', notification)"
                   >
@@ -89,7 +90,7 @@
                 <TooltipWrapper v-for="response in responses" :key="`${response.text}:${response.type}`" side="top" :content="response.text">
                   <button
                     type="button"
-                    class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                    class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
                     :ariaLabel="response.text"
                     @click.stop="handleResponse(response)"
                   >
@@ -101,7 +102,7 @@
               <TooltipWrapper v-if="canDecline" side="top" :content="t('view.notification.actions.decline')">
                 <button
                   type="button"
-                  class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
+                  class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
                   :ariaLabel="t('view.notification.actions.decline')"
                   @click.stop="notificationStore.hideNotificationPrompt(notification)"
                 >
@@ -113,7 +114,7 @@
             <TooltipWrapper v-if="canDeleteLog" side="top" :content="t('view.notification.actions.delete_log')">
               <button
                 type="button"
-                class="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
+                class="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-muted cursor-pointer"
                 :ariaLabel="t('view.notification.actions.delete_log')"
                 @click.stop="notificationStore.deleteNotificationLogPrompt(notification)"
               >
@@ -124,7 +125,13 @@
         </div>
       </Item>
     </HoverCardTrigger>
-    <HoverCardContent side="left" :side-offset="8" class="w-100 p-3">
+    <HoverCardContent
+      side="left"
+      :side-offset="8"
+      :collision-padding="8"
+      prioritize-position
+      class="w-100 max-w-[calc(100vw-1rem)] max-h-[var(--reka-hover-card-content-available-height)] overflow-auto p-3"
+    >
       <template v-if="isGroupType">
         <div class="flex items-center gap-2 mb-2">
           <Avatar class="size-8 shrink-0 rounded">
@@ -134,13 +141,13 @@
             </AvatarFallback>
           </Avatar>
           <div class="min-w-0">
-            <p class="text-sm font-medium truncate">{{ groupDisplayName }}</p>
+            <p class="text-sm font-medium truncate" :title="groupDisplayName">{{ groupDisplayName }}</p>
             <p class="text-xs text-muted-foreground">{{ typeLabel }}</p>
           </div>
         </div>
-        <p v-if="hoverTitle" class="text-sm font-medium mb-1">{{ hoverTitle }}</p>
-        <p v-if="notification.message" class="text-xs text-muted-foreground whitespace-pre-line wrap-break-word leading-relaxed">
-          {{ notification.message }}
+        <p v-if="hoverTitle" class="text-sm font-medium mb-1 wrap-anywhere">{{ hoverTitle }}</p>
+        <p v-if="displayMessage" class="text-xs text-muted-foreground whitespace-pre-line wrap-break-word leading-relaxed">
+          {{ displayMessage }}
         </p>
       </template>
 
@@ -153,7 +160,7 @@
             </AvatarFallback>
           </Avatar>
           <div class="min-w-0">
-            <p class="text-sm font-medium truncate">{{ senderName }}</p>
+            <p class="text-sm font-medium truncate" :title="senderName">{{ senderName }}</p>
             <p class="text-xs text-muted-foreground">{{ typeLabel }}</p>
           </div>
         </div>
@@ -218,6 +225,7 @@ import { useLocationStore } from "../../../stores/location";
 import { useNotificationStore } from "../../../stores/notification";
 import { useUserStore } from "../../../stores/user";
 import type { NotificationEntry } from "../../../stores/notification/types";
+import { getNotificationMessage, hasNamedNotification, notificationName } from "@/shared/utils/notification-message";
 import { isInviteReply } from "../../../stores/notification/invite-reply-history";
 import { showGroupDialog } from "../../../coordinators/group-dialog-coordinator";
 import { showUserDialog } from "../../../coordinators/user-coordinator";
@@ -297,9 +305,20 @@ const responses = computed<NotificationResponseItem[]>(() => {
   }));
 });
 
+const groupInviter = computed(() => (props.notification.type === "group.invite" ? notificationName(props.notification, "managerUserDisplayName") : undefined));
+
 const senderName = computed(() => {
   const n = props.notification;
-  return firstText(n.title, n.senderUsername, textAt(n.data, "groupName"), textAt(n, "groupName"), textAt(n.details, "groupName"));
+  const boopSender = n.type === "boop" ? notificationName(n, "boopingUserDisplayName") : undefined;
+  return firstText(
+    groupInviter.value,
+    boopSender,
+    n.title,
+    n.senderUsername,
+    textAt(n.data, "groupName"),
+    textAt(n, "groupName"),
+    textAt(n.details, "groupName")
+  );
 });
 
 const avatarUrl = computed(() => {
@@ -362,8 +381,12 @@ const responseText = computed(() => {
 
 const displayMessage = computed(() => {
   const n = props.notification;
+  const message =
+    !groupInviter.value && hasNamedNotification(n.type)
+      ? getNotificationMessage(n, undefined, undefined, (id) => userStore.cachedUsers.get(id)?.displayName)?.body
+      : n.message;
   return firstText(
-    n.message,
+    message,
     textAt(n.details, "inviteMessage"),
     textAt(n.details, "requestMessage"),
     recordText.value,

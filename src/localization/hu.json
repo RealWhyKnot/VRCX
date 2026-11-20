@@ -24,7 +24,8 @@
       "refresh": "Frissítés",
       "cancel": "Mégse",
       "copy": "Másolás",
-      "open_link": "Link megnyitása"
+      "open_link": "Link megnyitása",
+      "retry": "Retry"
     },
     "sort_by": "Rendezés:",
     "time_units": {
@@ -517,7 +518,8 @@
         },
         "twitchdrop": {
           "fulfilled": "Twitch Drop teljesítve"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -771,6 +773,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1639,6 +1654,14 @@
         "header": "Megjegyzés és memó szerkesztése",
         "cancel": "Mégse",
         "confirm": "Megerősítés"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1743,7 +1766,9 @@
           "Poor": "Gyenge",
           "VeryPoor": "Nagyon gyenge",
           "None": "Nincs"
-        }
+        },
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(nyilvános)",
@@ -1799,6 +1824,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group_edit": {
@@ -1989,7 +2026,8 @@
         "upcoming_events": "Közelgő események",
         "member_info": "Tag infó",
         "visibility": "Láthatóság",
-        "short_code": "Rövid kód"
+        "short_code": "Rövid kód",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "Bejegyzések",
@@ -2644,7 +2682,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "Kiemelt események"
+      "featured_events": "Kiemelt események",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "Csoporttag moderálása",
@@ -2750,6 +2791,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -3183,7 +3229,11 @@
     "blocked": "letiltott téged",
     "unblocked": "feloldotta a tiltásodat",
     "muted": "elnémított téged",
-    "unmuted": "feloldotta a némításodat"
+    "unmuted": "feloldotta a némításodat",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "VRChat állapot"
@@ -3492,6 +3542,7 @@
     "clocks_label": "Órák",
     "clocks_none": "Nincs",
     "timezone": "Időzóna",
-    "now_playing": "Most játszik"
+    "now_playing": "Most játszik",
+    "api_trouble": "VRChat API requests failing"
   }
 }

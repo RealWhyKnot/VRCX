@@ -3,12 +3,12 @@
     <PopoverTrigger as-child>
       <Card
         class="event-card x-hover-card p-0 gap-0 hover:bg-accent hover:shadow-sm"
-        :class="cardClass"
+        :class="[cardClass, { 'compact-event-card': isCompact }]"
         @mouseenter="openEventPopover"
         @mouseleave="scheduleCloseEventPopover"
       >
-        <img v-if="!bannerError" :src="bannerUrl" class="banner" @click="showFullscreenImageDialog(bannerUrl)" @error="bannerError = true" />
-        <div v-else class="banner flex items-center justify-center bg-muted">
+        <img v-if="!isCompact && !bannerError" :src="bannerUrl" class="banner" @click="showFullscreenImageDialog(bannerUrl)" @error="bannerError = true" />
+        <div v-else-if="!isCompact" class="banner flex items-center justify-center bg-muted">
           <Image class="size-6 text-muted-foreground" />
         </div>
         <div class="event-content">
@@ -16,7 +16,7 @@
             <div v-if="showGroupName" class="event-group-name" @click="onGroupClick">
               {{ groupName }}
             </div>
-            <div class="event-title-content" @click="onGroupClick">
+            <div class="event-title-content truncate" :title="event.title" @click="onGroupClick">
               <TooltipWrapper v-if="event.seriesId" :content="t('dialog.group_calendar.event_card.repeating_event_tooltip')">
                 <Repeat class="size-4! inline" />
               </TooltipWrapper>
@@ -46,7 +46,15 @@
         </div>
       </Card>
     </PopoverTrigger>
-    <PopoverContent side="right" align="start" class="w-125 p-3" @mouseenter="openEventPopover" @mouseleave="scheduleCloseEventPopover">
+    <PopoverContent
+      :side="isCompact ? 'bottom' : 'right'"
+      align="start"
+      :prioritize-position="isCompact"
+      :collision-padding="8"
+      class="w-125 max-w-[calc(100vw-1rem)] max-h-[var(--reka-popover-content-available-height)] overflow-auto p-3"
+      @mouseenter="openEventPopover"
+      @mouseleave="scheduleCloseEventPopover"
+    >
       <GroupCalendarEventDetails :event="event" />
     </PopoverContent>
   </Popover>
@@ -88,11 +96,13 @@ const props = withDefaults(
     event: CalendarEventEntry;
     groupRef?: VrcxGroup | null | undefined;
     mode: "timeline" | "grid";
+    isCompact?: boolean | undefined;
     isFollowing?: boolean | undefined;
     cardClass?: string | Record<string, boolean> | undefined;
   }>(),
   {
     groupRef: null,
+    isCompact: false,
     isFollowing: false,
     cardClass: "",
   }
@@ -194,6 +204,24 @@ const scheduleCloseEventPopover = () => {
   overflow: visible;
   border-radius: var(--radius-lg);
   width: 100%;
+}
+
+.event-card.compact-event-card {
+  padding: 8px;
+}
+
+.event-card.compact-event-card .event-title {
+  margin-bottom: 4px;
+}
+
+.event-card.compact-event-card .event-info {
+  flex-wrap: wrap;
+  column-gap: 8px;
+}
+
+.event-card.compact-event-card .badges {
+  position: static;
+  align-self: flex-end;
 }
 
 .event-card.grouped-card {

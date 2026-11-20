@@ -8,10 +8,12 @@ import type {
   ProductPurchase,
   ProductPurchaseHistory,
   StoreShelf,
+  UserSubscription,
 } from "vrchat";
 import type { Json, MarketplaceAvatarSearchParams } from "../types/vrcx";
 import { useUserStore } from "../stores/user";
 import { request } from "../services/request";
+import { fetchOnDemand } from "./on-demand";
 import { requestJson } from "./request-json";
 
 type MarketplaceAvatarSearchResponse = {
@@ -90,6 +92,10 @@ const marketplaceRequest = {
       };
       return args;
     });
+  },
+
+  getCurrentSubscriptions(userId: string): Promise<Json<UserSubscription>[]> {
+    return fetchOnDemand(["subscription", userId], () => requestJson<Json<UserSubscription>[]>("auth/user/subscription", { method: "GET" }));
   },
 
   getEconomySubscriptions(params: { subscriberId: string; n?: number; offset?: number }) {

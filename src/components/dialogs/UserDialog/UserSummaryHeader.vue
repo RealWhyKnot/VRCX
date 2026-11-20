@@ -265,8 +265,9 @@
         </TooltipWrapper>
       </div>
 
-      <div v-if="currentUser.id === userDialog.id" class="border-t border-muted-foreground/20 flex flex-col gap-1.5">
-        <div class="flex justify-between items-center text-xs cursor-pointer hover:text-foreground mt-1.5" @click="toggleAvatarCopying">
+      <div v-if="currentUser.id === userDialog.id" class="border-t border-muted-foreground/20 flex flex-col gap-1.5 pt-1.5">
+        <UserSubscriptionStatus v-if="userDialog.visible && currentUser.id" :user-id="currentUser.id" :is-supporter="currentUser.$isVRCPlus" />
+        <div class="flex justify-between items-center text-xs cursor-pointer hover:text-foreground" @click="toggleAvatarCopying">
           <span class="text-muted-foreground">{{ t("dialog.user.info.avatar_cloning") }}</span>
           <span class="text-muted-foreground">{{
             currentUser.allowAvatarCopying ? t("dialog.user.info.avatar_cloning_allow") : t("dialog.user.info.avatar_cloning_deny")
@@ -422,6 +423,7 @@ import Popover from "../../ui/popover/Popover.vue";
 import PopoverContent from "../../ui/popover/PopoverContent.vue";
 import PopoverTrigger from "../../ui/popover/PopoverTrigger.vue";
 import { useGalleryStore } from "../../../stores/gallery";
+import UserSubscriptionStatus from "./UserSubscriptionStatus.vue";
 import { useUserStore } from "../../../stores/user";
 import Badge from "../../ui/badge/Badge.vue";
 import Checkbox from "../../ui/checkbox/Checkbox.vue";

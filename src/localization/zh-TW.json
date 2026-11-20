@@ -24,7 +24,8 @@
       "refresh": "重新整理",
       "cancel": "取消",
       "copy": "複製",
-      "open_link": "開啟連結"
+      "open_link": "開啟連結",
+      "retry": "Retry"
     },
     "sort_by": "排序方式：",
     "time_units": {
@@ -513,7 +514,8 @@
         },
         "twitchdrop": {
           "fulfilled": "Twitch Drop 已發放"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -759,6 +761,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1605,6 +1620,14 @@
         "header": "編輯備註與備忘",
         "cancel": "取消",
         "confirm": "確認"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1707,7 +1730,9 @@
           "Poor": "Poor",
           "VeryPoor": "Very Poor",
           "None": "無"
-        }
+        },
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "（公開）",
@@ -1763,6 +1788,18 @@
       },
       "json": {
         "header": "原始資料"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group_edit": {
@@ -1950,7 +1987,8 @@
         "upcoming_events": "即將到來的活動",
         "member_info": "成員資訊",
         "visibility": "能見度",
-        "short_code": "群組代碼"
+        "short_code": "群組代碼",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "貼文",
@@ -2576,7 +2614,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "精選活動"
+      "featured_events": "精選活動",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "管理群組成員",
@@ -2673,6 +2714,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -3103,7 +3149,11 @@
     "blocked": "已封鎖你",
     "unblocked": "已解除對你的封鎖",
     "muted": "已將你靜音",
-    "unmuted": "已解除對你的靜音"
+    "unmuted": "已解除對你的靜音",
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   },
   "status": {
     "title": "VRChat 狀態"
@@ -3411,6 +3461,7 @@
     "clock": "時鐘",
     "clocks_label": "時鐘",
     "clocks_none": "無",
-    "timezone": "時區"
+    "timezone": "時區",
+    "api_trouble": "VRChat API requests failing"
   }
 }

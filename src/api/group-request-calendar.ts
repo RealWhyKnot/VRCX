@@ -1,7 +1,10 @@
 import type { Json } from "../types/vrcx";
+import { fetchOnDemand } from "./on-demand";
 import { requestAck, requestJson } from "./request-json";
 import type {
   CalendarEvent,
+  CalendarEventDiscovery,
+  CalendarEventDiscoveryScope,
   CreateGroupRequest,
   FollowCalendarEventRequest,
   GetCalendarEvents,
@@ -73,6 +76,22 @@ export const groupCalendarRequest = {
       method: "GET",
       params,
     });
+  },
+
+  discoverGroupCalendars(scope: Exclude<CalendarEventDiscoveryScope, "all">, nextCursor?: string): Promise<Json<CalendarEventDiscovery>> {
+    return fetchOnDemand(["calendar-discover", scope, nextCursor], () =>
+      requestJson<Json<CalendarEventDiscovery>>("calendar/discover", {
+        method: "GET",
+        params: nextCursor ? { nextCursor, n: 12 } : { scope, n: 12 },
+      })
+    );
+  },
+
+  getNextGroupCalendarEvent(groupId: string): Promise<Json<CalendarEvent> | null> {
+    return fetchOnDemand(
+      ["calendar-next", groupId],
+      async () => (await requestAck<Json<CalendarEvent>>(`calendar/${encodeURIComponent(groupId)}/next`, { method: "GET", isNotFoundEmpty: true })) ?? null
+    );
   },
 
   followGroupEvent(params: { groupId: string; eventId: string } & FollowCalendarEventRequest): Promise<{

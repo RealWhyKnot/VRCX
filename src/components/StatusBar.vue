@@ -82,12 +82,12 @@
 
             <HoverCard v-if="visibility.servers" v-model:open="serversHoverOpen">
               <HoverCardTrigger as-child>
-                <TooltipWrapper v-if="!vrcStatusStore.hasIssue" :content="t('status_bar.servers_ok')" side="top">
+                <TooltipWrapper v-if="!vrcStatusStore.hasIssue" :content="t(hasVrcApiTrouble ? 'status_bar.api_trouble' : 'status_bar.servers_ok')" side="top">
                   <div
                     class="flex items-center gap-1 px-2 h-[22px] whitespace-nowrap border-r border-border cursor-pointer hover:bg-accent"
                     @click="vrcStatusStore.openStatusPage()"
                   >
-                    <span class="inline-block size-2 rounded-full shrink-0 bg-status-online" />
+                    <span class="inline-block size-2 rounded-full shrink-0" :class="hasVrcApiTrouble ? 'bg-status-askme' : 'bg-status-online'" />
                     <span class="text-foreground text-[11px]">{{ t("status_bar.servers") }}</span>
                   </div>
                 </TooltipWrapper>
@@ -108,6 +108,7 @@
                 <p class="text-[11px] text-muted-foreground m-0 leading-[1.4]">
                   {{ vrcStatusStore.statusText }}
                 </p>
+                <p v-if="hasVrcApiTrouble" class="mt-1 text-[11px] text-muted-foreground">{{ t("status_bar.api_trouble") }}</p>
               </HoverCardContent>
             </HoverCard>
 
@@ -257,6 +258,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasVrcApiTrouble } from "@/stores/vrc-api-status";
 import { isLinuxHost } from "@/shared/constants/platform";
 import ContextMenu from "@/components/ui/context-menu/ContextMenu.vue";
 import ContextMenuCheckboxItem from "@/components/ui/context-menu/ContextMenuCheckboxItem.vue";

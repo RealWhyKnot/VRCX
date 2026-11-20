@@ -15,7 +15,8 @@
       "delete": "Excluir",
       "remove": "Remover",
       "reset": "Redefinir",
-      "view_details": "Ver Detalhes"
+      "view_details": "Ver Detalhes",
+      "retry": "Retry"
     },
     "time_units": {
       "y": "a",
@@ -467,7 +468,8 @@
             "gift": "Presente Recebido"
           },
           "alert": "Alerta de Economia"
-        }
+        },
+        "votetokick": "Vote to Kick"
       }
     },
     "friend_list": {
@@ -701,6 +703,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1518,6 +1533,14 @@
         "header": "Editar Nota e Memo",
         "cancel": "Cancelar",
         "confirm": "Confirmar"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1612,7 +1635,9 @@
         "content_gore": "Gore",
         "content_violence": "Violência",
         "content_adult": "Adulto",
-        "content_sex": "Sexual"
+        "content_sex": "Sexual",
+        "scan_failed": "Scan Failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Público)",
@@ -1668,6 +1693,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} Stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned Meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone Colliders",
+        "physbone_transforms": "PhysBone Transforms",
+        "texture_memory": "Texture Memory"
       }
     },
     "group": {
@@ -1730,7 +1767,8 @@
         "role_permissions": "Permissões:",
         "last_visited": "Última Visita",
         "past_events": "Eventos Passados",
-        "upcoming_events": "Próximos Eventos"
+        "upcoming_events": "Próximos Eventos",
+        "next_event": "Next Event"
       },
       "posts": {
         "header": "Postagens",
@@ -2330,7 +2368,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "Eventos em Destaque"
+      "featured_events": "Eventos em Destaque",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "Moderar Membro do Grupo",
@@ -2427,6 +2468,11 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -3086,6 +3132,13 @@
     "clock": "Relógio",
     "clocks_label": "Relógios",
     "clocks_none": "Nenhum",
-    "timezone": "Fuso Horário"
+    "timezone": "Fuso Horário",
+    "api_trouble": "VRChat API requests failing"
+  },
+  "notifications": {
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
   }
 }

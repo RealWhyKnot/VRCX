@@ -133,7 +133,10 @@
     "notification": {
       "filter_placeholder": "Lọc",
       "search_placeholder": "Tìm kiếm",
-      "refresh_tooltip": "Làm mới"
+      "refresh_tooltip": "Làm mới",
+      "filters": {
+        "votetokick": "Vote to kick"
+      }
     },
     "friend_list": {
       "bulk_unfriend": "Chế độ xóa bạn bè hàng loạt",
@@ -205,6 +208,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -645,6 +661,14 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -732,7 +756,9 @@
         "content_gore": "Gore",
         "content_violence": "Violence",
         "content_adult": "Adult",
-        "content_sex": "Sexual"
+        "content_sex": "Sexual",
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Public)",
@@ -774,6 +800,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group": {
@@ -830,7 +868,8 @@
         "role_updated_at": "Cập nhật lúc:",
         "role_created_at": "Tạo lúc:",
         "role_permissions": "Quyền:",
-        "last_visited": "Lần truy cập cuối"
+        "last_visited": "Lần truy cập cuối",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "Posts",
@@ -1328,7 +1367,10 @@
       "event_card": {
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
-      }
+      },
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "creator_earnings": {
       "header": "Creator Earnings",
@@ -1355,6 +1397,11 @@
       "preview_group_icon": "Group icon",
       "preview_banner_nameplate": "On nameplates",
       "preview_banner_group_page": "On the group page"
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "prompt": {
@@ -1641,6 +1688,20 @@
     "user": {
       "instance_warn_done": "Warned {name}",
       "instance_kick_done": "Kicked {name} from the instance"
+    }
+  },
+  "notifications": {
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
+  },
+  "status_bar": {
+    "api_trouble": "VRChat API requests failing"
+  },
+  "common": {
+    "actions": {
+      "retry": "Retry"
     }
   }
 }

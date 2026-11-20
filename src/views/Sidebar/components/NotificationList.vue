@@ -28,7 +28,7 @@
         </template>
       </div>
 
-      <div v-if="!allRows.length" class="flex items-center justify-center p-8 text-sm text-muted-foreground">
+      <div v-if="!allRows.length" class="flex items-center justify-center p-8 text-center text-sm text-balance text-muted-foreground">
         {{ t("side_panel.notification_center.no_new_notifications") }}
       </div>
 

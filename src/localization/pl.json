@@ -264,7 +264,8 @@
         },
         "badge": {
           "earned": "Zdobyta odznaka"
-        }
+        },
+        "votetokick": "Vote to kick"
       }
     },
     "friend_list": {
@@ -425,6 +426,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -1004,6 +1018,14 @@
           "last_active": "Ostatnia aktywność",
           "friend_order": "Kolejność znajomych"
         }
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -1098,7 +1120,9 @@
         "content_gore": "Drastyczne",
         "content_violence": "Przemoc",
         "content_adult": "Dla dorosłych",
-        "content_sex": "Erotyczne"
+        "content_sex": "Erotyczne",
+        "scan_failed": "Scan failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Publiczny)",
@@ -1144,6 +1168,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone colliders",
+        "physbone_transforms": "PhysBone transforms",
+        "texture_memory": "Texture memory"
       }
     },
     "group": {
@@ -1206,7 +1242,8 @@
         "role_permissions": "Uprawnienia:",
         "last_visited": "Ostatnia wizyta",
         "past_events": "Poprzednie wydarzenia",
-        "upcoming_events": "Nadchodzące wydarzenia"
+        "upcoming_events": "Nadchodzące wydarzenia",
+        "next_event": "Next event"
       },
       "posts": {
         "header": "Posty",
@@ -1742,7 +1779,10 @@
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
       },
-      "featured_events": "Wyróżnione wydarzenia"
+      "featured_events": "Wyróżnione wydarzenia",
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "moderate_group": {
       "header": "Moderuj członków grupy",
@@ -1832,6 +1872,11 @@
       "preview_group_icon": "Group icon",
       "preview_banner_nameplate": "On nameplates",
       "preview_banner_group_page": "On the group page"
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -2253,6 +2298,20 @@
         "403_404_bailing_request": "Bailing request due to recent 404/403",
         "unavailable": "Usługa może być niedostępna z powodu problemów wewnętrznych VRChat"
       }
+    }
+  },
+  "notifications": {
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
+  },
+  "status_bar": {
+    "api_trouble": "VRChat API requests failing"
+  },
+  "common": {
+    "actions": {
+      "retry": "Retry"
     }
   }
 }

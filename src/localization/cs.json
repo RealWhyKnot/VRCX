@@ -140,7 +140,10 @@
     "notification": {
       "filter_placeholder": "Filtrovat",
       "search_placeholder": "Vyhledat",
-      "refresh_tooltip": "Obnovit"
+      "refresh_tooltip": "Obnovit",
+      "filters": {
+        "votetokick": "Vote to kick"
+      }
     },
     "friend_list": {
       "bulk_unfriend": "Hromadné odebrání přátel",
@@ -212,6 +215,19 @@
         "refresh": "Refresh",
         "search_placeholder": "Search groups",
         "load_failed": "Couldn't load your groups."
+      },
+      "jams": {
+        "title": "Jams",
+        "world": "World",
+        "avatar": "Avatar",
+        "state": "State",
+        "opens": "Opens",
+        "closes": "Closes",
+        "open": "Open",
+        "closed": "Closed",
+        "submission": "Submission",
+        "submitted": "Submitted",
+        "description": "World and avatar jam submissions"
       }
     },
     "profile": {
@@ -710,6 +726,14 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "subscription": {
+        "label": "VRC+",
+        "active": "Active",
+        "inactive": "Inactive",
+        "expires": "Expires",
+        "expired": "Expired",
+        "renews": "Renews"
       }
     },
     "world": {
@@ -802,7 +826,9 @@
         "content_gore": "Gore",
         "content_violence": "Violence",
         "content_adult": "Adult",
-        "content_sex": "Sexual"
+        "content_sex": "Sexual",
+        "scan_failed": "Scan Failed",
+        "unscanned": "Unscanned"
       },
       "labels": {
         "public": "(Public)",
@@ -842,6 +868,18 @@
       },
       "json": {
         "header": "JSON"
+      },
+      "analysis": {
+        "title": "{platform} Stats",
+        "polygons": "Polygons",
+        "materials": "Materials",
+        "bones": "Bones",
+        "meshes": "Meshes",
+        "skinned_meshes": "Skinned Meshes",
+        "physbones": "PhysBones",
+        "physbone_colliders": "PhysBone Colliders",
+        "physbone_transforms": "PhysBone Transforms",
+        "texture_memory": "Texture Memory"
       }
     },
     "group": {
@@ -901,7 +939,8 @@
         "role_updated_at": "Updated At:",
         "role_created_at": "Created At:",
         "role_permissions": "Permissions:",
-        "last_visited": "Last Visited"
+        "last_visited": "Last Visited",
+        "next_event": "Next Event"
       },
       "posts": {
         "header": "Posts",
@@ -1411,7 +1450,10 @@
       "event_card": {
         "interested_friends": "Friends Interested",
         "linked_instances": "Linked Instances"
-      }
+      },
+      "discover": "Discover",
+      "live": "Live",
+      "upcoming": "Upcoming"
     },
     "creator_earnings": {
       "header": "Creator Earnings",
@@ -1438,6 +1480,11 @@
       "preview_group_icon": "Group icon",
       "preview_banner_nameplate": "On nameplates",
       "preview_banner_group_page": "On the group page"
+    },
+    "info_push": {
+      "categories": {
+        "content-shelf": "Content"
+      }
     }
   },
   "confirm": {
@@ -1843,6 +1890,20 @@
         "invalid_json_response": "Invalid JSON response",
         "403_404_bailing_request": "Bailing request due to recent 404/403"
       }
+    }
+  },
+  "notifications": {
+    "group_transfer_target": "Transfer to {name}.",
+    "group_invited_by": "Invited by {name}.",
+    "group_transfer_by": "Transfer from {name}.",
+    "vote_to_kick": "{initiator} started a vote to kick {target}."
+  },
+  "status_bar": {
+    "api_trouble": "VRChat API requests failing"
+  },
+  "common": {
+    "actions": {
+      "retry": "Retry"
     }
   }
 }

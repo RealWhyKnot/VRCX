@@ -9,10 +9,14 @@
     <TooltipWrapper v-if="avatarDialog.isPC" side="top" content="PC">
       <Badge class="text-platform-pc border-platform-pc! mr-1.5 mt-1.5" variant="outline"
         ><Monitor class="h-4 w-4 text-platform-pc" />
-        <span v-if="performanceLabel('pc')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{ performanceLabel("pc") }}</span>
-        <span v-if="fileSizeOf('standalonewindows')" class="x-grey text-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
-          fileSizeOf("standalonewindows")
+        <span v-if="performanceLabel('pc')" class="text-platform-pc dark:text-foreground border-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5">{{
+          performanceLabel("pc")
         }}</span>
+        <span
+          v-if="fileSizeOf('standalonewindows')"
+          class="text-platform-pc dark:text-foreground border-platform-pc border-l-[0.8px] border-solid ml-1.5 pl-1.5"
+          >{{ fileSizeOf("standalonewindows") }}</span
+        >
       </Badge>
     </TooltipWrapper>
     <TooltipWrapper v-if="avatarDialog.isQuest" side="top" content="Android">
@@ -53,6 +57,18 @@
       >{{ t("dialog.avatar.tags.impostor") }}
       <span v-if="avatarDialog.imposterVersion" class="x-grey border-l-[0.8px] border-solid ml-1.5 pl-1.5 pb-px">v{{ avatarDialog.imposterVersion }}</span>
     </Badge>
+    <Badge
+      v-for="scan in scanWarnings"
+      :key="scan.platform"
+      :title="scan.label"
+      :aria-label="scan.label"
+      :variant="scan.status === 'failed' ? 'destructive' : 'outline'"
+      class="mr-1.5 mt-1.5 max-w-full"
+    >
+      <component :is="scan.icon" v-if="scan.icon" class="size-4 shrink-0" aria-hidden="true" />
+      <span v-else-if="scan.platform" class="min-w-0 truncate">{{ scan.platform }}</span>
+      <span class="shrink-0">{{ scan.text }}</span>
+    </Badge>
     <Badge v-if="avatarDialog.ref.unityPackageUrl" class="mr-1.5 mt-1.5" variant="outline">
       {{ t("dialog.avatar.tags.future_proofing") }}
     </Badge>
@@ -74,6 +90,7 @@
 <script setup lang="ts">
 import { Apple, Monitor, Smartphone } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import Badge from "../../ui/badge/Badge.vue";
 import { useAvatarStore } from "../../../stores/avatar";
@@ -81,6 +98,30 @@ import { openFolderGeneric } from "../../../shared/utils/app-actions";
 
 const { avatarDialog } = storeToRefs(useAvatarStore());
 const { t } = useI18n();
+
+const platformIcons = new Map([
+  ["standalonewindows", Monitor],
+  ["android", Smartphone],
+  ["ios", Apple],
+]);
+
+const scanWarnings = computed(() => {
+  const warnings = new Map<string, "failed" | "unscanned">();
+  for (const pkg of avatarDialog.value.ref.unityPackages ?? []) {
+    const status = pkg.scanStatus;
+    if (status !== "failed" && status !== "unscanned") continue;
+    const platform = pkg.platform ?? "";
+    if (warnings.get(platform) !== "failed") warnings.set(platform, status);
+  }
+  return Array.from(warnings)
+    .slice(0, 6)
+    .map(([platform, status]) => {
+      const icon = platformIcons.get(platform);
+      const name = icon ? t(`view.tools.instance_browser.platform_${platform}`) : platform;
+      const text = t(status === "failed" ? "dialog.avatar.tags.scan_failed" : "dialog.avatar.tags.unscanned");
+      return { platform, status, icon, text, label: name ? `${name} · ${text}` : text };
+    });
+});
 
 function fileSizeOf(platform: string): string | undefined {
   const analysis = avatarDialog.value.fileAnalysis[platform];

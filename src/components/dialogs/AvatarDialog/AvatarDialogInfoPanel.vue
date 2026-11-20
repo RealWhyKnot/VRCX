@@ -10,6 +10,7 @@
         </span>
       </div>
     </div>
+    <AvatarAnalysisCard v-for="analysis in analyses" :key="analysis.platform" :platform="analysis.platform" :analysis="analysis.data" />
     <AvatarDialogGallery v-if="avatarDialog.galleryImages.length || isAvatarOwner" />
     <div v-if="avatarDialog.ref.publishedListings?.length" class="my-2 text-xs rounded-xl bg-(--profile-card) p-3">
       <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
@@ -45,10 +46,11 @@
       </div>
     </div>
     <div class="my-2 text-xs rounded-xl bg-(--profile-card) p-3">
-      <div class="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
+      <label :for="memoId" class="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 pb-2 border-b border-border">
         {{ t("dialog.world.info.memo") }}
-      </div>
+      </label>
       <InputGroupTextareaField
+        :id="memoId"
         v-model="memo"
         class="text-xs"
         :rows="1"
@@ -62,12 +64,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, useId } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { toast } from "vue-sonner";
 import Button from "@/components/ui/button/Button.vue";
 import InputGroupTextareaField from "@/components/ui/input-group/InputGroupTextareaField.vue";
+import AvatarAnalysisCard from "./AvatarAnalysisCard.vue";
 import AvatarDialogGallery from "./AvatarDialogGallery.vue";
 import { marketplaceRequest } from "../../../api/marketplace";
 import { useAvatarStore } from "../../../stores/avatar";
@@ -80,6 +83,7 @@ import { AppDebug } from "@/services/app-config";
 import type { Avatar } from "vrchat";
 import type { Json } from "../../../types/vrcx";
 
+const memoId = useId();
 const memo = defineModel<string>("memo", { required: true });
 defineEmits<{ memoChange: [] }>();
 
@@ -90,6 +94,8 @@ const { currentUser, currentUserCredits, ownedListingIds, ownedProductIds } = st
 const { showFullscreenImageDialog } = useGalleryStore();
 const modalStore = useModalStore();
 const { t } = useI18n();
+
+const analyses = computed(() => Object.entries(avatarDialog.value.fileAnalysis).map(([platform, data]) => ({ platform, data })));
 
 const isAvatarOwner = computed(() => avatarDialog.value.ref.authorId === currentUser.value.id);
 

@@ -2,6 +2,30 @@ import { displayLocation } from "./location-parser";
 import { i18n } from "../../plugins/i18n";
 import type { NotificationMessage, NotificationRecord } from "../../types/notification.ts";
 
+import { parseNotificationDetails } from "./notification-transforms";
+
+export type NotificationWithData = Omit<NotificationRecord, "data" | "details"> & {
+  data?: unknown;
+  details?: (Record<string, unknown> & { worldId?: string; worldName?: string }) | undefined;
+};
+
+export function hasNamedNotification(type: string) {
+  return type === "boop" || type === "group.informative" || type === "group.invite" || type === "group.transfer" || type === "votetokick";
+}
+
+export function notificationName(noty: NotificationWithData, key: string): string | undefined {
+  const value = parseNotificationDetails(noty.data)[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function namedGroupBody(noty: NotificationWithData, key: string, translation: string): string | undefined {
+  const name = notificationName(noty, key);
+  const body = noty.message;
+  if (!name || body?.includes(name) || noty.title?.includes(name)) return body;
+  const attribution = i18n.global.t(translation, { name });
+  return body ? `${attribution} ${body}` : attribution;
+}
+
 function pick(value: string | undefined, fallback: string | undefined): string | undefined {
   if (!value) {
     return fallback;
@@ -9,7 +33,12 @@ function pick(value: string | undefined, fallback: string | undefined): string |
   return value;
 }
 
-export function getNotificationMessage(noty: NotificationRecord, message: string | undefined, displayNameOverride?: string): NotificationMessage | null {
+export function getNotificationMessage(
+  noty: NotificationWithData,
+  message: string | undefined,
+  displayNameOverride?: string,
+  resolveDisplayName?: (id: string) => string | undefined
+): NotificationMessage | null {
   const name = pick(displayNameOverride, noty.displayName);
   const sender = pick(displayNameOverride, noty.senderUsername);
   const t = i18n.global.t;
@@ -102,7 +131,16 @@ export function getNotificationMessage(noty: NotificationRecord, message: string
         }),
       };
     case "boop":
-      return { title: sender, body: noty.message };
+      return { title: pick(displayNameOverride, notificationName(noty, "boopingUserDisplayName") ?? sender), body: noty.message };
+    case "votetokick": {
+      const { initiatorUserId, userToKickId } = noty.details ?? {};
+      if (typeof initiatorUserId !== "string" || !initiatorUserId || typeof userToKickId !== "string" || !userToKickId) {
+        return { title: noty.title, body: noty.message };
+      }
+      const initiator = resolveDisplayName?.(initiatorUserId) ?? (initiatorUserId === noty.senderUserId ? sender : undefined) ?? initiatorUserId;
+      const target = resolveDisplayName?.(userToKickId) ?? userToKickId;
+      return { title: noty.title, body: t("notifications.vote_to_kick", { initiator, target }) };
+    }
     case "groupChange":
       return { title: sender, body: noty.message };
     case "group.announcement":
@@ -123,12 +161,12 @@ export function getNotificationMessage(noty: NotificationRecord, message: string
     case "group.informative":
       return {
         title: pick(noty.title, t("notifications.group_informative_title")),
-        body: noty.message,
+        body: namedGroupBody(noty, "transferTargetDisplayName", "notifications.group_transfer_target"),
       };
     case "group.invite":
       return {
         title: pick(noty.title, t("notifications.group_invite_title")),
-        body: noty.message,
+        body: namedGroupBody(noty, "managerUserDisplayName", "notifications.group_invited_by"),
       };
     case "group.joinRequest":
       return {
@@ -138,7 +176,7 @@ export function getNotificationMessage(noty: NotificationRecord, message: string
     case "group.transfer":
       return {
         title: pick(noty.title, t("notifications.group_transfer_request_title")),
-        body: noty.message,
+        body: namedGroupBody(noty, "ownerUserDisplayName", "notifications.group_transfer_by"),
       };
     case "group.queueReady":
       return {
@@ -171,7 +209,7 @@ export function getNotificationMessage(noty: NotificationRecord, message: string
         body: t("notifications.chat_message", { message: noty.text }),
       };
     case "Event":
-      return { title: "Event", body: noty.data };
+      return { title: "Event", body: typeof noty.data === "string" ? noty.data : undefined };
     case "External":
       return { title: "External", body: noty.message };
     case "VideoPlay":
@@ -245,6 +283,6 @@ export function toNotificationText(title: string | undefined, body: string | und
   return title ? `${title} ${String(body)}` : body;
 }
 
-export function getUserIdFromNoty(noty: NotificationRecord): string {
+export function getUserIdFromNoty(noty: NotificationWithData): string {
   return [noty.userId, noty.senderUserId, noty.sourceUserId].find((id) => id) ?? "";
 }

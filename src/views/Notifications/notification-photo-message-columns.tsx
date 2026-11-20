@@ -5,6 +5,8 @@ import AvatarImage from "../../components/ui/avatar/AvatarImage.vue";
 import Emoji from "../../components/Emoji.vue";
 import Location from "../../components/Location.vue";
 import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
+import { getNotificationMessage, hasNamedNotification } from "@/shared/utils/notification-message";
+import { useUserStore } from "@/stores/user";
 import { isInviteReply } from "../../stores/notification/invite-reply-history";
 import type { VrcxColumn } from "../FriendList/vrcx-column";
 import { firstNonEmpty, t, textOf } from "./notification-column-helpers";
@@ -56,6 +58,9 @@ export const createPhotoColumn = ({ showFullscreenImageDialog, getSmallThumbnail
   },
 });
 
+const messageTooltipClass =
+  "max-w-[min(30rem,calc(100vw-1rem))] max-h-[min(20rem,calc(var(--reka-tooltip-content-available-height)-0.5rem))] overflow-auto wrap-anywhere";
+
 export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
   id: "message",
   header: () => t("table.notification.message"),
@@ -68,7 +73,11 @@ export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
   minSize: 100,
   cell: ({ row }) => {
     const original = row.original;
-    const { message, title } = original;
+    const { title } = original;
+    const message =
+      original.type !== "group.invite" && hasNamedNotification(original.type)
+        ? getNotificationMessage(original, undefined, undefined, (id) => useUserStore().cachedUsers.get(id)?.displayName)?.body
+        : original.message;
     const detailsWorldName = textOf(original.details, "worldName");
     const detailsInviteMessage = textOf(original.details, "inviteMessage");
     const detailsRequestMessage = textOf(original.details, "requestMessage");
@@ -92,17 +101,17 @@ export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
           </div>
         ) : null}
         {message && title ? (
-          <TooltipWrapper content={`${title}, ${message}`} delayDuration={500}>
+          <TooltipWrapper content={`${title}, ${message}`} align="end" contentClass={messageTooltipClass} delayDuration={500}>
             <span class="block w-full min-w-0 truncate">{`${title}, ${message}`}</span>
           </TooltipWrapper>
         ) : null}
         {!message && title ? (
-          <TooltipWrapper content={title} delayDuration={500}>
+          <TooltipWrapper content={title} align="end" contentClass={messageTooltipClass} delayDuration={500}>
             <span class="block w-full min-w-0 truncate">{title}</span>
           </TooltipWrapper>
         ) : null}
         {message && !title && message !== `This is a generated invite to ${detailsWorldName}` ? (
-          <TooltipWrapper content={message} delayDuration={500}>
+          <TooltipWrapper content={message} align="end" contentClass={messageTooltipClass} delayDuration={500}>
             <span class="block w-full min-w-0 truncate">{message}</span>
           </TooltipWrapper>
         ) : null}
