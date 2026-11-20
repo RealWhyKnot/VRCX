@@ -37,6 +37,7 @@ export type MeRow = {
 export type SizedRow = {
   type: string;
   paddingBottom?: number | null | undefined;
+  headerPadding?: string | number | null | undefined;
 };
 
 type ToggleRowOptions = {
@@ -93,22 +94,41 @@ export function buildInstanceHeaderRow(location: string | undefined, count: numb
     key,
     location,
     count,
-    paddingBottom: 4,
+    paddingBottom: 0,
   };
+}
+
+const HEADER_TEXT_HEIGHT = 16;
+const DEFAULT_HEADER_PADDING = "1rem 0 0.5rem";
+
+function toPixels(token: string): number {
+  const value = Number(token.replace(/(px|rem)$/, ""));
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return token.endsWith("rem") ? value * 16 : value;
+}
+
+function verticalPadding(padding: string | number | null | undefined): number {
+  if (typeof padding === "number") {
+    return 0;
+  }
+  const tokens = (padding ?? DEFAULT_HEADER_PADDING).trim().split(/\s+/);
+  const top = tokens[0] ?? "0";
+  const bottom = tokens[2] ?? top;
+  return toPixels(top) + toPixels(bottom);
 }
 
 export function estimateRowSize(row: SizedRow | null | undefined): number {
   if (!row) {
-    return 44;
+    return 48;
   }
+  const extra = row.paddingBottom ?? 0;
   if (row.type === "toggle-header") {
-    return 28 + (row.paddingBottom ?? 0);
-  }
-  if (row.type === "vip-subheader") {
-    return 24 + (row.paddingBottom ?? 0);
+    return HEADER_TEXT_HEIGHT + verticalPadding(row.headerPadding) + extra;
   }
   if (row.type === "instance-header") {
-    return 26 + (row.paddingBottom ?? 0);
+    return 28 + extra;
   }
-  return 52 + (row.paddingBottom ?? 0);
+  return 48 + extra;
 }

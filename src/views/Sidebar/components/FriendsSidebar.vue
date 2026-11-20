@@ -1,7 +1,7 @@
 <template>
   <div class="relative h-full">
     <div ref="scrollViewportRef" class="h-full w-full overflow-auto overflow-x-hidden">
-      <div class="px-1.5 py-2.5">
+      <div class="px-1.5 py-2">
         <div v-if="virtualRows.length" class="relative w-full box-border h-[var(--virtual-height)]" :style="virtualContainerStyle">
           <template v-for="item in virtualItems" :key="String(item.virtualItem.key)">
             <div
@@ -13,9 +13,14 @@
             >
               <template v-if="item.row.type === 'toggle-header'">
                 <div
-                  class="flex cursor-pointer items-center text-xs [padding:var(--header-padding,1rem_0_0.375rem)]"
+                  class="flex cursor-pointer items-center text-xs [padding:var(--header-padding,1rem_0_0.5rem)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  role="button"
+                  tabindex="0"
+                  :aria-expanded="item.row.isExpanded"
                   :style="item.row.headerPadding ? { '--header-padding': item.row.headerPadding } : undefined"
                   @click="item.row.onClick && item.row.onClick()"
+                  @keydown.enter.self="item.row.onClick && item.row.onClick()"
+                  @keydown.space.self.prevent="item.row.onClick && item.row.onClick()"
                 >
                   <ChevronDown class="transition-transform duration-200 ease-in-out" :class="{ '-rotate-90': !item.row.isExpanded }" />
                   <span class="ml-1.5">
@@ -29,8 +34,12 @@
                 <ContextMenu>
                   <ContextMenuTrigger as-child>
                     <div
-                      class="friend-row box-border flex items-center p-1.5 text-[13px] cursor-pointer hover:bg-muted/50 hover:rounded-lg"
+                      class="friend-row box-border flex items-center rounded-lg p-1.5 text-[13px] cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                      role="button"
+                      tabindex="0"
                       @click="showUserDialog(currentUser.id)"
+                      @keydown.enter.self="showUserDialog(currentUser.id)"
+                      @keydown.space.self.prevent="showUserDialog(currentUser.id)"
                     >
                       <div class="relative inline-block flex-none size-9 mr-2.5" :class="userStatusClass(currentUser)">
                         <Avatar class="size-full rounded-full">
@@ -122,7 +131,7 @@
               </template>
 
               <template v-else-if="item.row.type === 'instance-header'">
-                <div class="mb-1 flex items-center">
+                <div class="mt-2 mb-1 flex items-center">
                   <Location class="inline text-xs" :location="item.row.location ?? ''" />
                   <span class="text-xs ml-1.5">{{ `(${item.row.count})` }}</span>
                 </div>
@@ -378,7 +387,7 @@ function buildFavoriteRows(rows: SidebarRow[]) {
               label: groupName,
               count: group.length,
               isExpanded,
-              headerPadding: "4px 0 4px 4px",
+              headerPadding: "8px 0 8px 8px",
               onClick: () => {
                 if (collapsedFavGroups.has(groupKey)) {
                   collapsedFavGroups.delete(groupKey);
@@ -390,12 +399,8 @@ function buildFavoriteRows(rows: SidebarRow[]) {
           );
         }
         if (isExpanded) {
-          group.forEach((friend, idx) => {
-            rows.push(
-              buildFriendRow(friend, `vip:${groupKey}:${friend.id}`, {
-                paddingBottom: idx === group.length - 1 ? 10 : undefined,
-              })
-            );
+          group.forEach((friend) => {
+            rows.push(buildFriendRow(friend, `vip:${groupKey}:${friend.id}`));
           });
         }
       });
@@ -416,7 +421,6 @@ function buildSameInstanceRows(rows: SidebarRow[]) {
         count: friendsInSameInstance.value.length,
         isExpanded: !isSidebarGroupByInstanceCollapsed.value,
         onClick: toggleSwitchGroupByInstanceCollapsed,
-        paddingBottom: 4,
       })
     );
 
@@ -425,14 +429,8 @@ function buildSameInstanceRows(rows: SidebarRow[]) {
         if (!friendArr.length) return;
         const groupKey = friendArr[0]?.ref?.$location.tag ?? `group-${groupIndex}`;
         rows.push(buildInstanceHeaderRow(getFriendsLocations(friendArr, lastLocation.value), friendArr.length, `instance:${groupKey}`));
-        friendArr.forEach((friend, idx) => {
-          rows.push(
-            buildFriendRow(friend, `instance:${groupKey}:${friend.id}`, {
-              isGroupByInstance: true,
-              paddingBottom: idx === friendArr.length - 1 ? 5 : undefined,
-              itemStyle: idx === friendArr.length - 1 ? { marginBottom: "6px" } : undefined,
-            })
-          );
+        friendArr.forEach((friend) => {
+          rows.push(buildFriendRow(friend, `instance:${groupKey}:${friend.id}`, { isGroupByInstance: true }));
         });
       });
     }
@@ -447,7 +445,7 @@ const virtualRows = computed(() => {
       key: "me-header",
       label: t("side_panel.me"),
       isExpanded: isFriendsGroupMe.value,
-      headerPadding: "0 0 5px",
+      headerPadding: "0 0 8px",
       onClick: toggleFriendsGroupMe,
     })
   );

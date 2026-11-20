@@ -82,39 +82,41 @@ describe("buildInstanceHeaderRow", () => {
       key: "inst:wrld_123",
       location: "wrld_123:456~private",
       count: 3,
-      paddingBottom: 4,
+      paddingBottom: 0,
     });
   });
 
-  test("always has paddingBottom of 4", () => {
+  test("always has paddingBottom of 0", () => {
     const row = buildInstanceHeaderRow("loc", 1, "k");
-    expect(row.paddingBottom).toBe(4);
+    expect(row.paddingBottom).toBe(0);
   });
 });
 
 describe("estimateRowSize", () => {
-  test("returns 44 for null/undefined", () => {
-    expect(estimateRowSize(null)).toBe(44);
-    expect(estimateRowSize(undefined)).toBe(44);
+  test("returns 48 for null/undefined", () => {
+    expect(estimateRowSize(null)).toBe(48);
+    expect(estimateRowSize(undefined)).toBe(48);
   });
 
-  test("returns 28 + paddingBottom for toggle-header", () => {
-    expect(estimateRowSize({ type: "toggle-header" })).toBe(28);
-    expect(estimateRowSize({ type: "toggle-header", paddingBottom: 8 })).toBe(36);
+  test("uses the default 16px top and 8px bottom padding for a plain toggle-header", () => {
+    expect(estimateRowSize({ type: "toggle-header" })).toBe(40);
+    expect(estimateRowSize({ type: "toggle-header", paddingBottom: 8 })).toBe(48);
   });
 
-  test("returns 24 + paddingBottom for vip-subheader", () => {
-    expect(estimateRowSize({ type: "vip-subheader" })).toBe(24);
-    expect(estimateRowSize({ type: "vip-subheader", paddingBottom: 4 })).toBe(28);
+  test("reads top and bottom from a custom headerPadding", () => {
+    expect(estimateRowSize({ type: "toggle-header", headerPadding: "0 0 8px" })).toBe(24);
+    expect(estimateRowSize({ type: "toggle-header", headerPadding: "8px 0 8px 8px" })).toBe(32);
+    expect(estimateRowSize({ type: "toggle-header", headerPadding: "1rem" })).toBe(48);
+    expect(estimateRowSize({ type: "toggle-header", headerPadding: 4 })).toBe(16);
   });
 
-  test("returns 26 + paddingBottom for instance-header", () => {
-    expect(estimateRowSize({ type: "instance-header" })).toBe(26);
-    expect(estimateRowSize({ type: "instance-header", paddingBottom: 4 })).toBe(30);
+  test("returns 28 + paddingBottom for instance-header", () => {
+    expect(estimateRowSize({ type: "instance-header" })).toBe(28);
+    expect(estimateRowSize({ type: "instance-header", paddingBottom: 4 })).toBe(32);
   });
 
-  test("returns 52 + paddingBottom for any other type (friend-item)", () => {
-    expect(estimateRowSize({ type: "friend-item" })).toBe(52);
-    expect(estimateRowSize({ type: "friend-item", paddingBottom: 6 })).toBe(58);
+  test("returns 48 + paddingBottom for any other type (friend-item)", () => {
+    expect(estimateRowSize({ type: "friend-item" })).toBe(48);
+    expect(estimateRowSize({ type: "friend-item", paddingBottom: 6 })).toBe(54);
   });
 });

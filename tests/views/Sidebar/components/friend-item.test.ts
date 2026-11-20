@@ -12,7 +12,14 @@ const mocks = vi.hoisted(() => ({
     isRefreshFriendsLoading: false,
     allFavoriteFriendIds: new Set(),
   },
-  userStore: {},
+  userStore: {
+    currentUser: {
+      id: "usr_me",
+      presence: { platform: "" },
+      onlineFriends: [],
+      activeFriends: [],
+    },
+  },
   showUserDialog: vi.fn<(userId: string) => void>(),
   confirmDeleteFriend: vi.fn<(friendId: string) => void>(),
 }));
@@ -79,6 +86,18 @@ vi.mock("@/components/ui/button/Button.vue", () => ({
   default: {
     emits: ["click"],
     template: '<button data-testid="delete-button" @click="$emit(\'click\', $event)"><slot /></button>',
+  },
+}));
+
+vi.mock("@/components/ui/tooltip/TooltipWrapper.vue", () => ({
+  default: {
+    template: "<div><slot /></div>",
+  },
+}));
+
+vi.mock("@/components/IconFrame.vue", () => ({
+  default: {
+    template: "<div><slot /></div>",
   },
 }));
 
@@ -165,6 +184,42 @@ describe("FriendItem.vue", () => {
     const button = wrapper.get('[data-testid="delete-button"]');
     await button.trigger("click");
     expect(mocks.confirmDeleteFriend).toHaveBeenCalledWith("usr_orphan");
+    expect(mocks.showUserDialog).not.toHaveBeenCalled();
+  });
+
+  test("is reachable by keyboard and opens the user dialog on Enter", async () => {
+    const wrapper = mountItem(makeFriend());
+
+    expect(wrapper.attributes("role")).toBe("button");
+    expect(wrapper.attributes("tabindex")).toBe("0");
+    await wrapper.trigger("keydown", { key: "Enter" });
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_1");
+  });
+
+  test("opens the user dialog on Space", () => {
+    const wrapper = mountItem(makeFriend());
+
+    const event = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+    const root: unknown = wrapper.element;
+    if (!(root instanceof HTMLElement)) {
+      throw new Error("root is not an element");
+    }
+    root.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_1");
+  });
+
+  test("orphan row is not a nested button", () => {
+    const wrapper = mountItem(makeFriend({ id: "usr_orphan", ref: undefined }));
+
+    expect(wrapper.attributes("role")).toBeUndefined();
+    expect(wrapper.attributes("tabindex")).toBeUndefined();
+  });
+
+  test("does not open the user dialog when Enter is pressed inside the delete button", async () => {
+    const wrapper = mountItem(makeFriend({ id: "usr_orphan", ref: undefined }));
+
+    await wrapper.get('[data-testid="delete-button"]').trigger("keydown", { key: "Enter" });
     expect(mocks.showUserDialog).not.toHaveBeenCalled();
   });
 });

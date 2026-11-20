@@ -1,7 +1,11 @@
 <template>
   <div
-    class="relative isolate box-border flex items-center overflow-hidden rounded-lg p-1.5 text-[13px] cursor-pointer hover:bg-muted/50"
+    class="relative isolate box-border flex items-center overflow-hidden rounded-lg p-1.5 text-[13px] cursor-pointer transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+    :role="friend.ref ? 'button' : undefined"
+    :tabindex="friend.ref ? 0 : undefined"
     @click="showUserDialog(friend.id)"
+    @keydown.enter.self="showUserDialog(friend.id)"
+    @keydown.space.self.prevent="showUserDialog(friend.id)"
   >
     <template v-if="friend.ref">
       <div class="relative inline-block flex-none size-9 mr-2.5" :class="friendStatusClass">
@@ -42,9 +46,11 @@
     </template>
     <template v-else-if="!friend.ref && !isRefreshFriendsLoading">
       <span>{{ friend.name || friend.id }}</span>
-      <Button size="sm" variant="ghost" class="mr-1 w-6 h-6 text-xs" :aria-label="t('common.actions.delete')" @click.stop="confirmDeleteFriend(friend.id)"
-        ><Trash2 class="h-4 w-4" />
-      </Button>
+      <TooltipWrapper :content="t('common.actions.delete')" side="left">
+        <Button size="sm" variant="ghost" class="mr-1 w-6 h-6 text-xs" :aria-label="t('common.actions.delete')" @click.stop="confirmDeleteFriend(friend.id)"
+          ><Trash2 class="h-4 w-4" />
+        </Button>
+      </TooltipWrapper>
     </template>
   </div>
 </template>
@@ -56,6 +62,7 @@ import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
 import { Trash2, User } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
