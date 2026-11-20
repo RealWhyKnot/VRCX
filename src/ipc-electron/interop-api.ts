@@ -1,3 +1,5 @@
+import { unwrapBridgeArguments } from "../shared/utils/bridge-arguments.ts";
+
 type BridgeMethods = Record<string, (...args: unknown[]) => Promise<unknown>>;
 
 class InteropApi {
@@ -29,7 +31,7 @@ class InteropApi {
   }
 
   callMethod(className: string, methodName: string, ...args: unknown[]): Promise<unknown> {
-    return interopApi.callDotNetMethod(className, methodName, args);
+    return interopApi.callDotNetMethod(className, methodName, unwrapBridgeArguments(args));
   }
 }
 
