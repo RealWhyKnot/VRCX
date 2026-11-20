@@ -8,11 +8,39 @@ namespace VRCX;
 
 internal partial class AppApiCef
 {
+    private readonly Lock _vrcLaunchArgumentsLock = new();
+    private readonly Dictionary<int, string> _runningVrcLaunchArguments = [];
+    private string _exitedVrcLaunchArguments = string.Empty;
+
+    public override string GetVRChatLaunchArguments()
+    {
+        lock (_vrcLaunchArgumentsLock)
+        {
+            return _exitedVrcLaunchArguments;
+        }
+    }
+
     internal override void OnProcessStateChanged(MonitoredProcess monitoredProcess)
     {
         if (!monitoredProcess.HasName("VRChat") && !monitoredProcess.HasName("vrserver"))
         {
             return;
+        }
+
+        if (monitoredProcess.HasName("VRChat") && monitoredProcess.ProcessId is int processId)
+        {
+            lock (_vrcLaunchArgumentsLock)
+            {
+                if (monitoredProcess.IsRunning)
+                {
+                    _runningVrcLaunchArguments[processId] = VrcLaunchArguments.Capture(processId);
+                }
+                else
+                {
+                    _runningVrcLaunchArguments.Remove(processId, out string? arguments);
+                    _exitedVrcLaunchArguments = arguments ?? string.Empty;
+                }
+            }
         }
 
         CheckGameRunning();
@@ -75,7 +103,7 @@ internal partial class AppApiCef
                     WorkingDirectory = path,
                     FileName = $"{path}\\steam.exe",
                     UseShellExecute = false,
-                    Arguments = $"-applaunch 438100 {arguments}",
+                    Arguments = $"-applaunch 438100 {SteamLaunchOptions.RemoveFrom(path, arguments)}",
                 })?.Dispose();
                 return true;
             }

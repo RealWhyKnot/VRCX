@@ -146,6 +146,8 @@ partial class AppApi
 
     public virtual bool VrcClosedGracefully() => LogWatcher.Instance.VrcClosedGracefully;
 
+    public virtual string GetVRChatLaunchArguments() => string.Empty;
+
     public IDictionary<string, int> GetColourBulk(object[] userIds)
     {
         var output = new Dictionary<string, int>(StringComparer.Ordinal);

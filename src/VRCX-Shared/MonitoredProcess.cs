@@ -8,6 +8,7 @@ internal sealed class MonitoredProcess
     {
         Process = process;
         ProcessName = process.ProcessName;
+        ProcessId = process.Id;
 
         if (!WinApi.HasProcessExited(process.Id))
         {
@@ -22,6 +23,7 @@ internal sealed class MonitoredProcess
     }
 
     public Process? Process { get; private set; }
+    public int? ProcessId { get; private set; }
     public string ProcessName { get; private set; }
     public bool IsRunning { get; private set; }
 
@@ -38,6 +40,7 @@ internal sealed class MonitoredProcess
     {
         Process = process;
         ProcessName = process.ProcessName;
+        ProcessId = process.Id;
         IsRunning = true;
     }
 }

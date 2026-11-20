@@ -13,6 +13,27 @@ internal static partial class WinApi
     ];
 
     private const int ProcessQueryLimitedInformation = 0x1000;
+    private const int ProcessCommandLineInformation = 60;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct UnicodeString
+    {
+        public ushort Length;
+        public ushort MaximumLength;
+        public IntPtr Buffer;
+    }
+
+    [LibraryImport("ntdll.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial int NtQueryInformationProcess(IntPtr processHandle, int informationClass, IntPtr information, int length, out int returnLength);
+
+    [LibraryImport("shell32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial IntPtr CommandLineToArgvW(string commandLine, out int argumentCount);
+
+    [LibraryImport("kernel32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static partial IntPtr LocalFree(IntPtr memory);
 
     [LibraryImport("kernel32.dll", SetLastError = false)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
@@ -65,6 +86,73 @@ internal static partial class WinApi
         }
 
         return exited;
+    }
+
+    internal static string[]? GetProcessArguments(int processId)
+    {
+        IntPtr process = OpenProcess(ProcessQueryLimitedInformation, bInheritHandle: false, processId);
+        if (process == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        IntPtr buffer = IntPtr.Zero;
+        try
+        {
+            NtQueryInformationProcess(process, ProcessCommandLineInformation, IntPtr.Zero, 0, out int length);
+            int headerSize = Marshal.SizeOf<UnicodeString>();
+            if (length < headerSize)
+            {
+                return null;
+            }
+
+            buffer = Marshal.AllocHGlobal(length);
+            if (NtQueryInformationProcess(process, ProcessCommandLineInformation, buffer, length, out _) != 0)
+            {
+                return null;
+            }
+
+            UnicodeString commandLine = Marshal.PtrToStructure<UnicodeString>(buffer);
+            long offset = commandLine.Buffer.ToInt64() - buffer.ToInt64();
+            return commandLine.Length == 0 || commandLine.Length % sizeof(char) != 0 ||
+                offset < headerSize || offset > length - commandLine.Length
+                ? null
+                : SplitCommandLine(Marshal.PtrToStringUni(commandLine.Buffer, commandLine.Length / sizeof(char)));
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+            CloseHandle(process);
+        }
+    }
+
+    private static string[]? SplitCommandLine(string commandLine)
+    {
+        if (string.IsNullOrWhiteSpace(commandLine))
+        {
+            return null;
+        }
+
+        IntPtr argv = CommandLineToArgvW(commandLine, out int count);
+        if (argv == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        try
+        {
+            string[] arguments = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                arguments[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(argv, i * IntPtr.Size)) ?? string.Empty;
+            }
+
+            return arguments;
+        }
+        finally
+        {
+            LocalFree(argv);
+        }
     }
 
     [SupportedOSPlatform("windows")]

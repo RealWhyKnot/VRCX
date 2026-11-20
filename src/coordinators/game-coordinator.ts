@@ -1,7 +1,6 @@
 import { toast } from "vue-sonner";
 
 import { deleteVRChatCache as _deleteVRChatCache } from "./cache-coordinator";
-import { isRealInstance } from "../shared/utils/instance";
 import { database } from "../services/database";
 import { useAdvancedSettingsStore } from "../stores/settings/advanced";
 import { useAvatarStore } from "../stores/avatar";
@@ -25,6 +24,7 @@ import { configRepository } from "../services/config";
 import * as workerTimers from "worker-timers";
 
 type CacheTarget = Parameters<typeof _deleteVRChatCache>[0];
+const crashRelaunchLocationPattern = /^wrld_[\w-]+:[\w.-]+(?:~[A-Za-z]\w*(?:\([\w.-]+\))?)*(?![\s\S])/;
 
 export async function runGameRunningChangedFlow(isGameRunning: boolean): Promise<void> {
   const userStore = useUserStore();
@@ -142,8 +142,8 @@ export function runCheckIfGameCrashedFlow(): void {
   }
   const { location } = locationStore.lastLocation;
   AppApi.VrcClosedGracefully()
-    .then((isClosedGracefully) => {
-      if (isClosedGracefully || !isRealInstance(location)) {
+    .then(async (isClosedGracefully) => {
+      if (isClosedGracefully || !crashRelaunchLocationPattern.test(location)) {
         return;
       }
 
@@ -157,14 +157,23 @@ export function runCheckIfGameCrashedFlow(): void {
       if (gameStore.isGameNoVR) {
         restartDelay = 2000;
       }
+      const previousArguments = await getLastLaunchArguments();
       workerTimers.setTimeout(() => {
-        runRestartCrashedGameFlow(location).catch(logError);
+        runRestartCrashedGameFlow(location, previousArguments).catch(logError);
       }, restartDelay);
     })
     .catch(logError);
 }
 
-async function runRestartCrashedGameFlow(location: string): Promise<void> {
+export async function getLastLaunchArguments(): Promise<string> {
+  try {
+    return (await AppApi.GetVRChatLaunchArguments()) || "";
+  } catch {
+    return "";
+  }
+}
+
+async function runRestartCrashedGameFlow(location: string, previousArguments: string): Promise<void> {
   const gameStore = useGameStore();
   const notificationStore = useNotificationStore();
   const gameLogStore = useGameLogStore();
@@ -187,7 +196,7 @@ async function runRestartCrashedGameFlow(location: string): Promise<void> {
   if (persistedEntry) {
     gameLogStore.addGameLog(persistedEntry);
   }
-  launchStore.launchGame(location, "", gameStore.isGameNoVR === true).catch(logError);
+  await launchStore.launchGame(location, "", gameStore.isGameNoVR === true, previousArguments);
 }
 
 export async function runCheckVRChatDebugLoggingFlow(): Promise<void> {

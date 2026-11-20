@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import * as workerTimers from "worker-timers";
 
 const mocks = vi.hoisted(() => ({
   userStore: {
@@ -11,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   },
   gameStore: {
     isGameNoVR: false,
+    state: { lastCrashedTime: null },
+    setLastCrashedTime: vi.fn(),
     setLastSession: vi.fn(),
     setIsGameRunning: vi.fn(),
     isGameRunning: false,
@@ -27,6 +30,12 @@ const mocks = vi.hoisted(() => ({
   gameLogStore: {
     clearNowPlaying: vi.fn(),
     resetNowPlayingProducers: vi.fn(),
+  },
+  launchStore: {
+    launchGame: vi.fn().mockResolvedValue(undefined),
+  },
+  locationStore: {
+    lastLocation: { location: "", playerList: { size: 0 } },
   },
   vrStore: {
     updateVRLastLocation: vi.fn(),
@@ -51,9 +60,6 @@ vi.mock("vue-sonner", () => ({
 
 vi.mock("../../src/coordinators/cache-coordinator", () => ({
   deleteVRChatCache: vi.fn(),
-}));
-vi.mock("../../src/shared/utils/instance", () => ({
-  isRealInstance: vi.fn(() => false),
 }));
 
 vi.mock("../../src/services/database", () => ({
@@ -93,13 +99,11 @@ vi.mock("../../src/stores/instance", () => ({
 }));
 
 vi.mock("../../src/stores/launch", () => ({
-  useLaunchStore: () => ({}),
+  useLaunchStore: () => mocks.launchStore,
 }));
 
 vi.mock("../../src/stores/location", () => ({
-  useLocationStore: () => ({
-    lastLocation: { location: "", playerList: { size: 0 } },
-  }),
+  useLocationStore: () => mocks.locationStore,
 }));
 
 vi.mock("../../src/coordinators/location-coordinator", () => ({
@@ -138,7 +142,33 @@ vi.mock("worker-timers", () => ({
   setTimeout: vi.fn(),
 }));
 
-import { runGameRunningChangedFlow } from "../../src/coordinators/game-coordinator";
+import { getLastLaunchArguments, runCheckIfGameCrashedFlow, runGameRunningChangedFlow } from "../../src/coordinators/game-coordinator";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("getLastLaunchArguments", () => {
+  test("returns the arguments of the exited VRChat process", async () => {
+    const args = "--profile=2 --no-vr --enable-debug-gui";
+    vi.stubGlobal("AppApi", { GetVRChatLaunchArguments: vi.fn().mockResolvedValue(args) });
+
+    expect(await getLastLaunchArguments()).toBe(args);
+  });
+
+  test("returns an empty string when there are no arguments", async () => {
+    vi.stubGlobal("AppApi", { GetVRChatLaunchArguments: vi.fn().mockResolvedValue("") });
+
+    expect(await getLastLaunchArguments()).toBe("");
+  });
+
+  test("returns an empty string when the bridge call fails", async () => {
+    vi.stubGlobal("AppApi", { GetVRChatLaunchArguments: vi.fn().mockRejectedValue(new Error("bridge")) });
+
+    expect(await getLastLaunchArguments()).toBe("");
+  });
+});
 
 describe("runGameRunningChangedFlow", () => {
   beforeEach(() => {
@@ -168,5 +198,76 @@ describe("runGameRunningChangedFlow", () => {
     expect(mocks.gameLogStore.resetNowPlayingProducers).toHaveBeenCalledOnce();
     expect(mocks.configRepository.setString).not.toHaveBeenCalledWith("VRCX_lastGameSessionMs", expect.any(String));
     expect(mocks.configRepository.setString).not.toHaveBeenCalledWith("VRCX_lastGameOfflineAt", expect.any(String));
+  });
+});
+
+describe("runCheckIfGameCrashedFlow", () => {
+  const location = "wrld_123:456~region(us)";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.advancedSettingsStore.relaunchVRChatAfterCrash = true;
+    mocks.gameStore.isGameNoVR = true;
+    mocks.locationStore.lastLocation.location = location;
+  });
+
+  afterEach(() => {
+    mocks.advancedSettingsStore.relaunchVRChatAfterCrash = false;
+    vi.useRealTimers();
+  });
+
+  test.each([
+    location,
+    "wrld_123-456:instance_1.2~group(grp_123-456)~groupAccessType(plus)~ageGate~region(eu)",
+    "wrld_123:456~private(usr_123-456)~canRequestInvite~nonce(abc-123)~strict",
+  ])("reads the arguments before relaunching into %s", async (validLocation) => {
+    const getArguments = vi.fn().mockResolvedValue("--profile=2 --no-vr");
+    vi.stubGlobal("AppApi", {
+      VrcClosedGracefully: vi.fn().mockResolvedValue(false),
+      GetVRChatLaunchArguments: getArguments,
+      FocusWindow: vi.fn().mockResolvedValue(undefined),
+    });
+
+    mocks.locationStore.lastLocation.location = validLocation;
+
+    runCheckIfGameCrashedFlow();
+
+    const setTimeout = vi.mocked(workerTimers.setTimeout);
+    await vi.waitFor(() => expect(setTimeout).toHaveBeenCalledWith(expect.any(Function), 2000));
+    expect(getArguments).toHaveBeenCalledOnce();
+    getArguments.mockResolvedValue("--profile=3");
+    setTimeout.mock.calls[0]?.[0]();
+
+    await vi.waitFor(() => expect(mocks.launchStore.launchGame).toHaveBeenCalledWith(validLocation, "", true, "--profile=2 --no-vr"));
+  });
+
+  test.each([
+    `${location} --profile=0`,
+    `${location}"`,
+    `${location}&shortName=other`,
+    `${location}%20--profile=0`,
+    `${location}^option`,
+    `${location}\n`,
+    "wrld_123:456~region(us",
+    "wrld_123",
+    "local:456",
+  ])("rejects an invalid log-derived location %j", async (invalidLocation) => {
+    vi.useFakeTimers();
+    const closure = Promise.withResolvers<boolean>();
+    const closedGracefully = vi.fn().mockReturnValue(closure.promise);
+    const getArguments = vi.fn().mockResolvedValue("");
+    vi.stubGlobal("AppApi", {
+      VrcClosedGracefully: closedGracefully,
+      GetVRChatLaunchArguments: getArguments,
+    });
+    mocks.locationStore.lastLocation.location = invalidLocation;
+
+    runCheckIfGameCrashedFlow();
+    expect(closedGracefully).toHaveBeenCalledOnce();
+    closure.resolve(false);
+    await vi.runAllTimersAsync();
+
+    expect(getArguments).not.toHaveBeenCalled();
+    expect(workerTimers.setTimeout).not.toHaveBeenCalled();
   });
 });

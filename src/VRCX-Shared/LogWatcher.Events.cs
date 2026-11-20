@@ -337,7 +337,9 @@ sealed partial class LogWatcher
     private bool ParseDesktopMode(FileInfo fileInfo, string line, int offset)
     {
 
-        if (string.Compare(line, offset, "VR Disabled", 0, 11, StringComparison.Ordinal) != 0)
+        ReadOnlySpan<char> message = line.AsSpan(offset);
+        if (!message.StartsWith("VR Disabled", StringComparison.Ordinal) &&
+            !message.StartsWith("Initializing XR Failed.", StringComparison.Ordinal))
         {
             return false;
         }

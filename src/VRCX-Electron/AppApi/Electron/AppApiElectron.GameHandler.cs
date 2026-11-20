@@ -72,12 +72,13 @@ public partial class AppApiElectron
 
     public override bool StartGame(string arguments)
     {
+        string steamArguments = SteamLaunchOptions.RemoveFrom(SteamPath, arguments);
         try
         {
             Process.Start(new ProcessStartInfo
             {
                 FileName = "steam",
-                Arguments = $"-applaunch 438100 {arguments}",
+                Arguments = $"-applaunch 438100 {steamArguments}",
                 UseShellExecute = false,
             })?.Dispose();
             return true;
@@ -106,7 +107,7 @@ public partial class AppApiElectron
             Process.Start(new ProcessStartInfo
             {
                 FileName = steamExecutable,
-                Arguments = $"-applaunch 438100 {arguments}",
+                Arguments = $"-applaunch 438100 {steamArguments}",
                 UseShellExecute = false,
             })?.Dispose();
 

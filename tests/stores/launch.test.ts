@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { ref } from "vue";
 import type * as VueI18n from "vue-i18n";
 import type * as VueRouter from "vue-router";
 
 import en from "../../src/localization/en.json";
+
+const getConfigString = vi.hoisted(() => vi.fn().mockResolvedValue(""));
 
 vi.mock("../../src/views/Feed/Feed.vue", () => ({
   default: { template: "<div />" },
@@ -46,7 +48,7 @@ vi.mock("../../src/services/database", () => ({
 vi.mock("../../src/services/config", () => ({
   configRepository: {
     init: vi.fn(),
-    getString: vi.fn().mockResolvedValue(""),
+    getString: getConfigString,
     setString: vi.fn(),
     getBool: vi.fn((_key: string, defaultValue: unknown) => defaultValue ?? false),
     setBool: vi.fn(),
@@ -108,6 +110,50 @@ describe("useLaunchStore", () => {
     setActivePinia(createPinia());
     store = useLaunchStore();
     vi.clearAllMocks();
+  });
+
+  describe("launchGame", () => {
+    const location = "wrld_123:456~region(us)";
+    const launchUrl = `vrchat://launch?ref=vrcx.app&id=${location}`;
+    const startGame = vi.fn().mockResolvedValue(true);
+    const log = vi.fn<typeof console.log>();
+
+    beforeEach(() => {
+      mockGetInstanceShortName.mockResolvedValueOnce({});
+      vi.stubGlobal("AppApi", { StartGame: startGame });
+      vi.spyOn(console, "log").mockImplementation(log);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    test("reuses captured options without adding a second desktop flag or logging the options", async () => {
+      const args = '--profile=2 --no-vr "--label=hello world"';
+
+      await store.launchGame(location, "", true, args);
+
+      expect(startGame).toHaveBeenCalledWith(`${launchUrl} ${args}`);
+      expect(getConfigString).not.toHaveBeenCalledWith("launchArguments");
+      expect(log).toHaveBeenCalledExactlyOnceWith("Launch Game", launchUrl, true);
+    });
+
+    test("adds the desktop flag when it only appears inside another argument", async () => {
+      const args = '"--label=use --no-vr here"';
+
+      await store.launchGame(location, "", true, args);
+
+      expect(startGame).toHaveBeenCalledWith(`${launchUrl} ${args} --no-vr`);
+    });
+
+    test("uses configured arguments when capture is empty", async () => {
+      getConfigString.mockResolvedValueOnce("--profile=3");
+
+      await store.launchGame(location, "", true, "");
+
+      expect(startGame).toHaveBeenCalledWith(`${launchUrl} --profile=3 --no-vr`);
+    });
   });
 
   describe("showLaunchDialog", () => {

@@ -119,15 +119,16 @@ export const useLaunchStore = defineStore("Launch", () => {
     }, 1000);
   }
 
-  async function launchGame(location: string, shortName: string | null | undefined, isDesktopMode: boolean) {
+  async function launchGame(location: string, shortName: string | null | undefined, isDesktopMode: boolean, previousArguments = "") {
     const launchUrl = await getLaunchUrl(location, shortName);
     const args = [launchUrl];
-    const launchArguments = await configRepository.getString("launchArguments");
+    const launchArguments = previousArguments || (await configRepository.getString("launchArguments"));
     const vrcLaunchPathOverride = await configRepository.getString("vrcLaunchPathOverride");
     if (launchArguments) {
       args.push(launchArguments);
     }
-    if (isDesktopMode) {
+    const hasNoVr = launchArguments?.match(/(?:"(?:[^"\\]|\\.)*"|[^\s"])+/g)?.some((arg) => arg === "--no-vr" || arg === '"--no-vr"');
+    if (isDesktopMode && !hasNoVr) {
       args.push("--no-vr");
     }
     try {
@@ -150,7 +151,7 @@ export const useLaunchStore = defineStore("Launch", () => {
       console.error(e);
       toast.error(`Failed to launch VRChat: ${e instanceof Error ? e.message : String(e)}`);
     }
-    console.log("Launch Game", args.join(" "), isDesktopMode);
+    console.log("Launch Game", previousArguments ? launchUrl : args.join(" "), isDesktopMode);
   }
 
   return {

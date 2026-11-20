@@ -7,8 +7,15 @@ namespace VRCX;
 
 internal sealed class ProcessMonitor : IDisposable
 {
+    private const string VrchatProcessName = "VRChat";
+    private const int PollIdle = 0;
+    private const int PollActive = 1;
+    private const int PollStopped = 2;
     private readonly Dictionary<string, MonitoredProcess> _monitoredProcesses = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<int, MonitoredProcess> _vrchatProcesses = [];
     private readonly Timer _monitorProcessTimer;
+    private volatile bool _isVrchatRunning;
+    private int _pollState;
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
     static ProcessMonitor()
@@ -16,8 +23,7 @@ internal sealed class ProcessMonitor : IDisposable
         Instance = new ProcessMonitor();
         if (Program.AppApiInstance is { } appApi)
         {
-            Instance.ProcessStarted += (_, e) => appApi.OnProcessStateChanged(e.MonitoredProcess);
-            Instance.ProcessExited += (_, e) => appApi.OnProcessStateChanged(e.MonitoredProcess);
+            Instance.ProcessStateChanged += (_, e) => appApi.OnProcessStateChanged(e.MonitoredProcess);
         }
     }
 
@@ -36,9 +42,10 @@ internal sealed class ProcessMonitor : IDisposable
 
     public event EventHandler<MonitoredProcessEventArgs>? ProcessExited;
 
+    private event EventHandler<MonitoredProcessEventArgs>? ProcessStateChanged;
+
     public void Init()
     {
-        AddProcess("vrchat");
         AddProcess("vrserver");
         _monitorProcessTimer.Start();
     }
@@ -46,10 +53,84 @@ internal sealed class ProcessMonitor : IDisposable
     public void Exit()
     {
         _monitorProcessTimer.Stop();
-        _monitoredProcesses.Values.ToList().ForEach(x => x.ProcessExited());
+        if (Interlocked.Exchange(ref _pollState, PollStopped) == PollIdle)
+        {
+            ClearMonitoredProcesses();
+        }
+    }
+
+    private void ClearMonitoredProcesses()
+    {
+        _monitoredProcesses.Values.ToList().ForEach(process => process.ProcessExited());
+        _vrchatProcesses.Values.ToList().ForEach(process => process.ProcessExited());
+        _vrchatProcesses.Clear();
+        _isVrchatRunning = false;
     }
 
     private void MonitorProcessTimer_Elapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (Interlocked.CompareExchange(ref _pollState, PollActive, PollIdle) != PollIdle)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_monitorProcessTimer.Enabled)
+            {
+                PollOtherProcesses();
+                PollVrchatProcesses();
+            }
+        }
+        finally
+        {
+            if (Interlocked.CompareExchange(ref _pollState, PollIdle, PollActive) == PollStopped)
+            {
+                ClearMonitoredProcesses();
+            }
+        }
+    }
+
+    private void PollVrchatProcesses()
+    {
+        Process[] processes = Process.GetProcessesByName(VrchatProcessName);
+        HashSet<int> processIds = [.. processes.Select(process => process.Id)];
+        foreach ((int processId, MonitoredProcess monitoredProcess) in _vrchatProcesses.ToArray())
+        {
+            if (processIds.Contains(processId) && !WinApi.HasProcessExited(processId))
+            {
+                continue;
+            }
+
+            _vrchatProcesses.Remove(processId);
+            _isVrchatRunning = _vrchatProcesses.Count > 0;
+            ReportProcessExited(monitoredProcess, !_isVrchatRunning);
+        }
+
+        foreach (Process process in processes)
+        {
+            int processId = process.Id;
+            if (_vrchatProcesses.ContainsKey(processId))
+            {
+                process.Dispose();
+                continue;
+            }
+
+            var monitoredProcess = new MonitoredProcess(process);
+            if (!monitoredProcess.IsRunning)
+            {
+                monitoredProcess.ProcessExited();
+                continue;
+            }
+
+            bool didGameStart = _vrchatProcesses.Count == 0;
+            _vrchatProcesses.Add(processId, monitoredProcess);
+            _isVrchatRunning = true;
+            ReportProcessStarted(monitoredProcess, didGameStart);
+        }
+    }
+
+    private void PollOtherProcesses()
     {
         var processesNeedingUpdate = new List<MonitoredProcess>();
 
@@ -61,9 +142,7 @@ internal sealed class ProcessMonitor : IDisposable
             {
                 if (monitoredProcess.Process == null || WinApi.HasProcessExited(monitoredProcess.Process.Id))
                 {
-                    monitoredProcess.ProcessExited();
-                    ProcessExited?.Invoke(this, new MonitoredProcessEventArgs(monitoredProcess));
-                    Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {monitoredProcess.Process?.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null"}) exited.");
+                    ReportProcessExited(monitoredProcess);
                 }
             }
             else
@@ -88,31 +167,52 @@ internal sealed class ProcessMonitor : IDisposable
             }
 
             monitoredProcess.ProcessStarted(process);
-            ProcessStarted?.Invoke(this, new MonitoredProcessEventArgs(monitoredProcess));
-            Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {process.Id}) started.");
+            ReportProcessStarted(monitoredProcess);
         }
+    }
+
+    private void ReportProcessStarted(MonitoredProcess monitoredProcess, bool notifySubscribers = true)
+    {
+        var args = new MonitoredProcessEventArgs(monitoredProcess);
+        ProcessStateChanged?.Invoke(this, args);
+        if (notifySubscribers)
+        {
+            ProcessStarted?.Invoke(this, args);
+        }
+
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {monitoredProcess.ProcessId}) started.");
+    }
+
+    private void ReportProcessExited(MonitoredProcess monitoredProcess, bool notifySubscribers = true)
+    {
+        monitoredProcess.ProcessExited();
+        var args = new MonitoredProcessEventArgs(monitoredProcess);
+        ProcessStateChanged?.Invoke(this, args);
+        if (notifySubscribers)
+        {
+            ProcessExited?.Invoke(this, args);
+        }
+
+        Logger.Info(System.Globalization.CultureInfo.InvariantCulture, $"Monitored process {monitoredProcess.ProcessName} (PID: {monitoredProcess.ProcessId}) exited.");
     }
 
     public bool IsProcessRunning(string processName, bool ensureCheck = false)
     {
-        if (!_monitoredProcesses.TryGetValue(processName, out MonitoredProcess? process))
+        return string.Equals(processName, VrchatProcessName, StringComparison.OrdinalIgnoreCase)
+            ? _isVrchatRunning || (ensureCheck && HasProcess(processName))
+            : _monitoredProcesses.TryGetValue(processName, out MonitoredProcess? process) &&
+                (ensureCheck && process.Process == null ? HasProcess(processName) : process.IsRunning);
+    }
+
+    private static bool HasProcess(string processName)
+    {
+        Process[] processes = Process.GetProcessesByName(processName);
+        foreach (Process process in processes)
         {
-            return false;
+            process.Dispose();
         }
 
-        if (ensureCheck && process.Process == null)
-        {
-            Process[] processes = Process.GetProcessesByName(processName);
-            bool isProcessRunning = processes.Length > 0;
-            foreach (Process proc in processes)
-            {
-                proc.Dispose();
-            }
-
-            return isProcessRunning;
-        }
-
-        return process.IsRunning;
+        return processes.Length > 0;
     }
 
     public void AddProcess(Process process)
