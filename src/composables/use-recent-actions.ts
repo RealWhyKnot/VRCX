@@ -1,4 +1,5 @@
 import { useLocalStorage } from "@vueuse/core";
+import * as workerTimers from "worker-timers";
 
 import { useGeneralSettingsStore } from "../stores/settings/general";
 
@@ -14,10 +15,32 @@ const TRACKED_ACTIONS = new Set([
   "Request Invite Message",
 ]);
 
+const RECENT_ACTIONS_PURGE_MS = 30000;
+let recentActionsPurgeTimer: number | null = null;
+
+function purgeExpiredRecentActions(): void {
+  const cooldownMs = useGeneralSettingsStore().recentActionCooldownMinutes * 60 * 1000;
+  const now = Date.now();
+  for (const key of Object.keys(recentActions.value)) {
+    const ts = recentActions.value[key];
+    if (!ts || now - ts >= cooldownMs) {
+      Reflect.deleteProperty(recentActions.value, key);
+    }
+  }
+}
+
+function ensureRecentActionsPurge(): void {
+  if (recentActionsPurgeTimer !== null) {
+    return;
+  }
+  recentActionsPurgeTimer = workerTimers.setInterval(purgeExpiredRecentActions, RECENT_ACTIONS_PURGE_MS);
+}
+
 export function recordRecentAction(userId: string, actionType: string): void {
   if (!TRACKED_ACTIONS.has(actionType)) {
     return;
   }
+  ensureRecentActionsPurge();
   recentActions.value[`${userId}:${actionType}`] = Date.now();
 }
 
@@ -26,6 +49,7 @@ export function isActionRecent(userId: string, actionType: string): boolean {
   if (!generalSettings.recentActionCooldownEnabled) {
     return false;
   }
+  ensureRecentActionsPurge();
   const key = `${userId}:${actionType}`;
   const ts = recentActions.value[key];
   if (!ts) {

@@ -44,6 +44,8 @@ function parseJsonStringArray(text: string): string[] {
   return parsed;
 }
 
+const PHOTON_EVENT_TABLE_LIMIT = 2000;
+
 export const usePhotonStore = defineStore("Photon", () => {
   const vrStore = useVrStore();
   const userStore = useUserStore();
@@ -372,6 +374,9 @@ export const usePhotonStore = defineStore("Photon", () => {
       ...input,
     };
     photonEventTable.value.data.unshift(feed);
+    if (photonEventTable.value.data.length > PHOTON_EVENT_TABLE_LIMIT) {
+      photonEventTable.value.data.length = PHOTON_EVENT_TABLE_LIMIT;
+    }
     if (photonEventTableTypeOverlayFilter.value.length > 0 && !photonEventTableTypeOverlayFilter.value.includes(feed.type)) {
       return;
     }

@@ -38,6 +38,20 @@ export type RequestError = Error & { status: number; endpoint: string | undefine
 const pendingGetRequests = new Map<string, PendingGetRequest>();
 export const failedGetRequests = new Map<string, number>();
 
+const FAILED_GET_BLOCK_MS = 900000;
+const FAILED_GET_PRUNE_SIZE = 200;
+
+export function rememberFailedGetRequest(endpoint: string, now = Date.now()) {
+  if (failedGetRequests.size >= FAILED_GET_PRUNE_SIZE) {
+    for (const [key, failedAt] of failedGetRequests) {
+      if (failedAt < now - FAILED_GET_BLOCK_MS) {
+        failedGetRequests.delete(key);
+      }
+    }
+  }
+  failedGetRequests.set(endpoint, now);
+}
+
 const t = i18n.global.t;
 
 function isObjectLike(value: unknown): value is Record<string, unknown> {
@@ -118,7 +132,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
   if (init.method === "GET") {
     const lastRun = failedGetRequests.get(endpoint);
     if (lastRun !== undefined) {
-      if (lastRun >= Date.now() - 900000) {
+      if (lastRun >= Date.now() - FAILED_GET_BLOCK_MS) {
         $throw(-1, t("api.error.message.403_404_bailing_request"), endpoint);
       }
       failedGetRequests.delete(endpoint);
@@ -239,7 +253,7 @@ export function request(endpoint: string, options: RequestOptions): Promise<unkn
         return null;
       }
       if (init.method === "GET" && (status === 404 || status === 403) && !endpoint.startsWith("auth/user")) {
-        failedGetRequests.set(endpoint, Date.now());
+        rememberFailedGetRequest(endpoint);
       }
       if (init.method === "GET" && status === 404 && endpoint.startsWith("users/") && endpoint.split("/").length - 1 === 1) {
         $throw(404, apiErrorField(data, "message") ?? "", endpoint);

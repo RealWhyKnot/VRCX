@@ -4,7 +4,35 @@ vi.mock("../../src/plugins/router.ts", () => ({
   initRouter: vi.fn(),
 }));
 
-import { buildRequestInit, parseResponse, processBulk, shouldIgnoreError } from "../../src/services/request.ts";
+import { buildRequestInit, failedGetRequests, parseResponse, processBulk, rememberFailedGetRequest, shouldIgnoreError } from "../../src/services/request.ts";
+
+describe("rememberFailedGetRequest", () => {
+  test("drops expired entries once the map is large and keeps fresh ones", () => {
+    failedGetRequests.clear();
+    const now = 10_000_000;
+    for (let i = 0; i < 200; i++) {
+      failedGetRequests.set(`old/${String(i)}`, now - 900001);
+    }
+    failedGetRequests.set("fresh/1", now - 1000);
+
+    rememberFailedGetRequest("new/1", now);
+
+    expect([...failedGetRequests.keys()].sort()).toEqual(["fresh/1", "new/1"]);
+    failedGetRequests.clear();
+  });
+
+  test("leaves a small map alone", () => {
+    failedGetRequests.clear();
+    const now = 10_000_000;
+    failedGetRequests.set("old/1", now - 900001);
+
+    rememberFailedGetRequest("new/1", now);
+
+    expect(failedGetRequests.has("old/1")).toBe(true);
+    expect(failedGetRequests.get("new/1")).toBe(now);
+    failedGetRequests.clear();
+  });
+});
 
 function pageAt<T>(pages: T[], index: number): T {
   const page = pages[index];
