@@ -49,13 +49,14 @@
   --secondary: oklch(97% 0 0deg);
   --secondary-foreground: oklch(20.5% 0 0deg);
   --muted: oklch(97% 0 0deg);
-  --muted-foreground: oklch(55.6% 0 0deg);
+  --muted-foreground: oklch(54.5% 0 0deg);
   --accent: oklch(97% 0 0deg);
   --accent-foreground: oklch(20.5% 0 0deg);
   --destructive: oklch(57.7% 0.245 27.325deg);
+  --destructive-foreground: oklch(57.7% 0.245 27.325deg);
   --border: oklch(92.2% 0 0deg);
-  --input: oklch(92.2% 0 0deg);
-  --ring: oklch(70.8% 0 0deg);
+  --input: oklch(65% 0 0deg);
+  --ring: oklch(55% 0 0deg);
   --chart-1: oklch(64.6% 0.222 41.116deg);
   --chart-2: oklch(60% 0.118 184.704deg);
   --chart-3: oklch(39.8% 0.07 227.392deg);
@@ -101,7 +102,7 @@
   --dark-accent-foreground: oklch(98.5% 0 0deg);
   --dark-destructive: oklch(70.4% 0.191 22.216deg);
   --dark-border: oklch(100% 0 0deg / 10%);
-  --dark-input: oklch(100% 0 0deg / 15%);
+  --dark-input: oklch(100% 0 0deg / 35%);
   --dark-ring: oklch(55.6% 0 0deg);
   --dark-chart-1: oklch(48.8% 0.243 264.376deg);
   --dark-chart-2: oklch(69.6% 0.17 162.48deg);
@@ -135,6 +136,7 @@
   --accent: var(--dark-accent);
   --accent-foreground: var(--dark-accent-foreground);
   --destructive: var(--dark-destructive);
+  --destructive-foreground: var(--dark-destructive);
   --border: var(--dark-border);
   --input: var(--dark-input);
   --ring: var(--dark-ring);
@@ -256,7 +258,7 @@ html {
     }
 
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: var(--input) transparent;
   }
 }
 
@@ -277,7 +279,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--border);
+  background-color: var(--input);
   border: 2px solid transparent;
   background-clip: content-box;
 }

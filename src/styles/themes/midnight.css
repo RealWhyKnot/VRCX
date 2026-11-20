@@ -16,8 +16,8 @@
   --destructive: oklch(39.6% 0.141 25.723deg);
   --destructive-foreground: oklch(63.7% 0.237 25.331deg);
   --border: oklch(26.9% 0 0deg);
-  --input: oklch(26.9% 0 0deg);
-  --ring: oklch(43.9% 0 0deg);
+  --input: oklch(100% 0 0deg / 35%);
+  --ring: oklch(55.6% 0 0deg);
   --chart-1: oklch(48.8% 0.243 264.376deg);
   --chart-2: oklch(69.6% 0.17 162.48deg);
   --chart-3: oklch(76.9% 0.188 70.08deg);
@@ -46,7 +46,7 @@
   --primary-foreground: oklch(98.6% 0.031 120.757deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(40.5% 0.101 131.063deg);
+  --ring: oklch(55% 0.101 131.063deg);
 }
 
 :root[data-theme="midnight"][data-theme-color="orange"] {
@@ -54,7 +54,7 @@
   --primary-foreground: oklch(98% 0.016 73.684deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(40.8% 0.123 38.172deg);
+  --ring: oklch(55% 0.123 38.172deg);
 }
 
 :root[data-theme="midnight"][data-theme-color="red"] {
@@ -62,7 +62,7 @@
   --primary-foreground: oklch(97.1% 0.013 17.38deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(39.6% 0.141 25.723deg);
+  --ring: oklch(55% 0.141 25.723deg);
 }
 
 :root[data-theme="midnight"][data-theme-color="rose"] {
@@ -70,7 +70,7 @@
   --primary-foreground: oklch(96.9% 0.015 12.422deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(41% 0.159 10.272deg);
+  --ring: oklch(55% 0.159 10.272deg);
 }
 
 :root[data-theme="midnight"][data-theme-color="violet"] {
@@ -78,7 +78,7 @@
   --primary-foreground: oklch(96.9% 0.016 293.756deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(38% 0.189 293.745deg);
+  --ring: oklch(55% 0.189 293.745deg);
 }
 
 :root[data-theme="midnight"][data-theme-color="yellow"] {
@@ -86,5 +86,5 @@
   --primary-foreground: oklch(95.7% 0.015 106.799deg);
   --accent: oklch(27.4% 0.006 286.033deg);
   --accent-foreground: oklch(98.5% 0 0deg);
-  --ring: oklch(42.1% 0.095 57.708deg);
+  --ring: oklch(55% 0.095 57.708deg);
 }
