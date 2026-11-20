@@ -3,7 +3,6 @@ import { toast } from "vue-sonner";
 import { i18n } from "../plugins/i18n";
 
 import { groupRequest } from "../api/group";
-import { instanceRequest } from "../api/instance";
 import { queryRequest } from "../api/query-request";
 import { database } from "../services/database";
 import { FILTER_EVERYONE } from "../shared/constants/group";
@@ -363,13 +362,6 @@ export function getGroupDialogGroup(groupId: string, existingRef?: VrcxGroup) {
               })
               .then((worldArgs) => {
                 json.world = worldArgs.ref;
-              })
-              .catch(logError);
-
-            instanceRequest
-              .getInstance({
-                worldId: json.worldId,
-                instanceId: json.instanceId,
               })
               .catch(logError);
           }

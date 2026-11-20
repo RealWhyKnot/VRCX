@@ -392,17 +392,22 @@ export const useInstanceStore = defineStore("Instance", () => {
     ref.$location = parseLocation(ref.location);
     const entry = ref;
     if (ref.world.id) {
-      void queryRequest
-        .fetch("world.location", {
-          worldId: ref.world.id,
-        })
-        .then((args) => {
-          entry.world = args.ref;
-          return args;
-        })
-        .catch((error: unknown) => {
-          console.error("Error fetching world location:", error);
-        });
+      const cachedWorld = worldStore.cachedWorlds.get(ref.world.id);
+      if (typeof cachedWorld === "undefined") {
+        void queryRequest
+          .fetch("world.location", {
+            worldId: ref.world.id,
+          })
+          .then((args) => {
+            entry.world = args.ref;
+            return args;
+          })
+          .catch((error: unknown) => {
+            console.error("Error fetching world location:", error);
+          });
+      } else {
+        entry.world = cachedWorld;
+      }
     }
     if (ref.world.name) {
       ref.world.name = replaceBioSymbols(ref.world.name);

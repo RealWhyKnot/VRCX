@@ -7,7 +7,6 @@ import { createDefaultWorldRef, type WorldPatch } from "../shared/utils/world-tr
 import { evictMapCache } from "../shared/utils/cache-utils";
 import { getAvailablePlatforms } from "../shared/utils/platform-utils";
 import { getBundleDateSize } from "./cache-coordinator";
-import { isRealInstance } from "../shared/utils/instance";
 import { parseLocation } from "../shared/utils/location-parser";
 import { sanitizeEntityJson } from "../shared/utils/entity-transforms";
 import { getWorldMemo } from "./memo-coordinator";
@@ -30,10 +29,6 @@ import { useWorldStore } from "../stores/world";
 type WorldDialogOptions = {
   forceRefresh?: boolean;
 };
-
-function hasInstanceId(value: unknown): value is { instanceId: string } {
-  return typeof value === "object" && value !== null && "instanceId" in value && typeof value.instanceId === "string";
-}
 
 function displayLabel(name: string | undefined, id: string): string {
   if (name) {
@@ -165,23 +160,6 @@ export function showWorldDialog(tag: string, shortName: string | null = null, op
       }
       D.ref = ref;
       uiStore.setDialogCrumbLabel("world", D.id, displayLabel(D.ref.name, D.id));
-      if (ref.slimInstances) {
-        for (const instance of ref.slimInstances) {
-          if (!hasInstanceId(instance)) {
-            continue;
-          }
-          const { instanceId } = instance;
-          const tag = `${D.id}:${instanceId}`;
-          if (isRealInstance(tag)) {
-            instanceRequest
-              .getInstance({
-                worldId: D.id,
-                instanceId,
-              })
-              .catch(logFailure("Failed to load instance for world dialog:"));
-          }
-        }
-      }
       D.visible = true;
       D.loading = false;
       D.isFavorite = Boolean(favoriteStore.getCachedFavoritesByObjectId(D.id));
@@ -266,16 +244,6 @@ export function applyWorld(json: WorldPatch & { id: string }) {
     worldDialog.avatarScalingDisabled = ref.tags.includes("feature_avatar_scaling_disabled");
     worldDialog.focusViewDisabled = ref.tags.includes("feature_focus_view_disabled");
     instanceStore.applyWorldDialogInstances();
-    for (const room of worldDialog.rooms) {
-      if (isRealInstance(room.tag)) {
-        instanceRequest
-          .getInstance({
-            worldId: worldDialog.id,
-            instanceId: room.id,
-          })
-          .catch(logFailure("Failed to load instance for world dialog:"));
-      }
-    }
     if (Object.keys(worldDialog.fileAnalysis).length === 0) {
       getBundleDateSize(ref).catch(logFailure("Failed to read world bundle size:"));
     }

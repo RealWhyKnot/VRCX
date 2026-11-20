@@ -2,11 +2,11 @@ import type { GroupDialogView, GroupInstanceInput, InstanceRoom, RoomLocation, W
 import { compareByDisplayName, compareById, compareByLocationAt } from "../shared/utils/compare";
 import { debounce } from "../shared/utils/common";
 import { parseLocation } from "../shared/utils/location-parser";
-import { isRealInstance } from "../shared/utils/instance";
 import { instanceRequest } from "../api/instance";
 import { userRequest } from "../api/user";
 import { isSlimInstance } from "./instance-type-guards";
 import { newEmptyRoom, userCountOf } from "./instance-room-records";
+import { createStaleInstanceRefresher } from "./instance-stale-refresh";
 import type { useLocationStore } from "./location";
 import type { useWorldStore } from "./world";
 import type { useAppearanceSettingsStore } from "./settings/appearance";
@@ -28,6 +28,7 @@ export type CreateInstanceDialogApplyDeps = {
 
 export function createInstanceDialogApply(deps: CreateInstanceDialogApplyDeps) {
   const { locationStore, worldStore, appearanceSettingsStore, groupStore, userStore, cachedInstances, cachedUserOf, friendRefs } = deps;
+  const refreshStaleInstance = createStaleInstanceRefresher((params) => instanceRequest.getInstance(params));
 
   function applyWorldDialogInstances() {
     debounce(applyWorldDialogInstancesDebounced, 100)();
@@ -161,6 +162,7 @@ export function createInstanceDialogApply(deps: CreateInstanceDialogApplyDeps) {
       if (typeof ref !== "undefined") {
         Object.assign(room.ref, ref);
       }
+      refreshStaleInstance(room.tag, ref?.$fetchedAt, D.id, room.id);
     }
     rooms.sort(function (a, b) {
       if (b.location === D.$location.tag || b.location === lastLocation$?.tag) {
@@ -290,16 +292,8 @@ export function createInstanceDialogApply(deps: CreateInstanceDialogApplyDeps) {
       const ref = cachedInstances.get(room.tag);
       if (typeof ref !== "undefined") {
         Object.assign(room.ref, ref);
-      } else if (isRealInstance(room.tag)) {
-        void instanceRequest
-          .getInstance({
-            worldId: room.$location.worldId ?? "",
-            instanceId: room.$location.instanceId ?? "",
-          })
-          .catch((error: unknown) => {
-            console.error("Error fetching instance for room:", error);
-          });
       }
+      refreshStaleInstance(room.tag, ref?.$fetchedAt, room.$location.worldId ?? "", room.$location.instanceId ?? "");
     }
     rooms.sort(function (a, b) {
       if (b.location === currentLocation) {
