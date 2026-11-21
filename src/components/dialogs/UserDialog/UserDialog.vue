@@ -1,11 +1,11 @@
 <template>
-  <div class="user-dialog-scrollbars flex-1 min-h-0 min-w-0 flex flex-row" :style="{ '--user-dialog-scrollbar-thumb': scrollbarThumbColor }">
+  <div class="user-dialog-scrollbars flex-1 min-h-0 min-w-0 flex flex-col sm:flex-row" :style="{ '--user-dialog-scrollbar-thumb': scrollbarThumbColor }">
     <DialogHeader class="sr-only">
       <DialogTitle>{{ userDialog.ref?.displayName || userDialog.id || t("dialog.user.info.header") }}</DialogTitle>
       <DialogDescription>{{ getUserStateText(userDialog.ref || {}) }}</DialogDescription>
     </DialogHeader>
 
-    <div class="flex-none w-77 overflow-y-auto">
+    <div class="flex-none w-full max-h-20 overflow-y-auto sm:max-h-none sm:w-77">
       <UserSummaryHeader
         :get-user-state-text="getUserStateText"
         :copy-user-display-name="copyUserDisplayName"
@@ -15,7 +15,7 @@
       />
     </div>
 
-    <div class="flex-1 min-w-0 flex flex-col min-h-0 pl-2">
+    <div class="flex-1 min-w-0 flex flex-col min-h-0 pt-2 sm:pt-0 sm:pl-2">
       <TabsUnderline
         v-model="userDialog.activeTab"
         :items="userDialogTabs"
@@ -50,7 +50,13 @@
         </template>
 
         <template #Activity>
-          <UserDialogActivityTab ref="activityTabRef" />
+          <UserDialogHistoryTab
+            :user-id="userDialog.id"
+            :is-active="userDialog.visible && userDialog.activeTab === 'Activity'"
+            :is-friend="userDialog.isFriend"
+          >
+            <UserDialogActivityTab ref="activityTabRef" />
+          </UserDialogHistoryTab>
         </template>
 
         <template #JSON>
@@ -111,6 +117,7 @@ import { getFriendRequest, handleFriendDelete } from "../../../coordinators/frie
 
 import DialogJsonTab from "../DialogJsonTab.vue";
 import SendInviteDialog from "../InviteDialog/SendInviteDialog.vue";
+import UserDialogHistoryTab from "./UserDialogHistoryTab.vue";
 import UserDialogActivityTab from "./UserDialogActivityTab.vue";
 import UserDialogAvatarsTab from "./UserDialogAvatarsTab.vue";
 import UserDialogFavoriteWorldsTab from "./UserDialogFavoriteWorldsTab.vue";
@@ -147,14 +154,13 @@ const userDialogTabs = computed(() => {
     { value: "Worlds", label: t("dialog.user.worlds.header") },
     { value: "favorite-worlds", label: t("dialog.user.favorite_worlds.header") },
     { value: "Avatars", label: t("dialog.user.avatars.header") },
+    { value: "Activity", label: t("dialog.user.activity.header") },
     { value: "JSON", label: t("dialog.user.json.header") },
   ];
   if (userDialog.value.id !== currentUser.value.id && !currentUser.value.hasSharedConnectionsOptOut) {
     tabs.splice(1, 0, { value: "mutual", label: t("dialog.user.mutual_friends.header") });
   }
 
-  const jsonIdx = tabs.findIndex((tab) => tab.value === "JSON");
-  tabs.splice(jsonIdx, 0, { value: "Activity", label: t("dialog.user.activity.header") });
   return tabs;
 });
 const infoTabRef = ref<InstanceType<typeof UserDialogInfoTab> | null>(null);

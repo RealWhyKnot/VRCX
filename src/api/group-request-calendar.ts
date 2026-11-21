@@ -79,18 +79,27 @@ export const groupCalendarRequest = {
   },
 
   discoverGroupCalendars(scope: Exclude<CalendarEventDiscoveryScope, "all">, nextCursor?: string): Promise<Json<CalendarEventDiscovery>> {
-    return fetchOnDemand(["calendar-discover", scope, nextCursor], () =>
-      requestJson<Json<CalendarEventDiscovery>>("calendar/discover", {
-        method: "GET",
-        params: nextCursor ? { nextCursor, n: 12 } : { scope, n: 12 },
-      })
+    return fetchOnDemand(
+      ["calendar-discover", scope, nextCursor],
+      () =>
+        requestJson<Json<CalendarEventDiscovery>>("calendar/discover", {
+          method: "GET",
+          params: nextCursor ? { nextCursor, n: 12 } : { scope, n: 12 },
+        }),
+      scope === "live" ? 2 * 60_000 : 5 * 60_000
     );
   },
 
   getNextGroupCalendarEvent(groupId: string): Promise<Json<CalendarEvent> | null> {
     return fetchOnDemand(
       ["calendar-next", groupId],
-      async () => (await requestAck<Json<CalendarEvent>>(`calendar/${encodeURIComponent(groupId)}/next`, { method: "GET", isNotFoundEmpty: true })) ?? null
+      async () => (await requestAck<Json<CalendarEvent>>(`calendar/${encodeURIComponent(groupId)}/next`, { method: "GET", isNotFoundEmpty: true })) ?? null,
+      ({ state }) => {
+        const maxAge = 10 * 60_000;
+        if (!state.data) return maxAge;
+        const startsAt = Date.parse(state.data.startsAt);
+        return Number.isFinite(startsAt) ? Math.max(0, Math.min(maxAge, startsAt - state.dataUpdatedAt)) : 0;
+      }
     );
   },
 

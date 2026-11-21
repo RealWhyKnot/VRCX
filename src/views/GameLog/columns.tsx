@@ -1,3 +1,5 @@
+import BadgeEventLabel from "@/components/history/BadgeEventLabel.vue";
+import { parseBadgeSentence } from "@/components/history/badge-history";
 import Location from "../../components/Location.vue";
 import Badge from "../../components/ui/badge/Badge.vue";
 import Button from "../../components/ui/button/Button.vue";
@@ -170,9 +172,13 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }: GameLo
           return (
             <ContextMenu>
               <ContextMenuTrigger asChild>
-                <TooltipWrapper content={original.data ?? ""} side="bottom">
-                  <span class="block w-full min-w-0 truncate">{original.data}</span>
-                </TooltipWrapper>
+                {original.data && parseBadgeSentence(original.data) ? (
+                  <BadgeEventLabel message={original.data} at={original.created_at} />
+                ) : (
+                  <TooltipWrapper content={original.data ?? ""} side="bottom">
+                    <span class="block w-full min-w-0 truncate">{original.data}</span>
+                  </TooltipWrapper>
+                )}
               </ContextMenuTrigger>
               <ContextMenuContent>
                 <ContextMenuItem onClick={() => copyToClipboard(original.data ?? "")}>

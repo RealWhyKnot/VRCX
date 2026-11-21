@@ -15,7 +15,12 @@
           <template v-else>
             <RegionFlag v-if="region" :region="region" class="shrink-0" />
             <TooltipWrapper :content="tooltipContent" :disabled="tooltipDisabled" :delay-duration="300" side="top">
-              <div :class="locationClasses" class="inline-flex min-w-0 flex-nowrap items-center overflow-hidden truncate" @click="handleShowWorldDialog">
+              <div
+                :title="hasFullTextTooltip ? fullText : undefined"
+                :class="locationClasses"
+                class="inline-flex min-w-0 flex-nowrap items-center overflow-hidden truncate"
+                @click="handleShowWorldDialog"
+              >
                 <Spinner v-if="isTraveling" class="mr-1 shrink-0" />
                 <span class="min-w-0 flex-1 truncate">
                   <span>{{ text }}</span>
@@ -70,6 +75,7 @@ import { copyToClipboard } from "../shared/utils/app-actions";
 import { formatDateFilter } from "../coordinators/date-coordinator";
 import { parseLocation, resolveRegion, translateAccessType } from "../shared/utils/location-parser";
 import { useAppearanceSettingsStore } from "../stores/settings/appearance";
+import { useGroupStore } from "../stores/group";
 import { useInstanceStore } from "../stores/instance";
 import { useInviteStore } from "../stores/invite";
 import { useSearchStore } from "../stores/search";
@@ -113,6 +119,8 @@ const props = withDefaults(
     disableTooltip?: boolean;
     isOpenPreviousInstanceInfoDialog?: boolean;
     enableContextMenu?: boolean;
+    canFetchNames?: boolean;
+    hasFullTextTooltip?: boolean;
   }>(),
   {
     location: undefined,
@@ -124,6 +132,8 @@ const props = withDefaults(
     disableTooltip: false,
     isOpenPreviousInstanceInfoDialog: false,
     enableContextMenu: false,
+    canFetchNames: true,
+    hasFullTextTooltip: false,
   }
 );
 
@@ -146,6 +156,11 @@ const locationClasses = computed(() => [
     "cursor-pointer": isLocationLink.value,
   },
 ]);
+const fullText = computed(() =>
+  [text.value, showInstanceIdInLocation.value && instanceName.value ? `· #${instanceName.value}` : "", groupName.value ? `(${groupName.value})` : ""]
+    .filter(Boolean)
+    .join(" ")
+);
 const tooltipContent = computed(() => `${t("dialog.new_instance.instance_id")}: #${instanceName.value}`);
 const tooltipDisabled = computed(() => props.disableTooltip || !instanceName.value || showInstanceIdInLocation.value);
 
@@ -239,6 +254,10 @@ function updateGroupName(parsed: ParsedLocation, instanceId: string | undefined)
     return;
   }
   groupName.value = parsed.groupId;
+  if (!props.canFetchNames) {
+    groupName.value = useGroupStore().cachedGroups.get(parsed.groupId)?.name ?? parsed.groupId;
+    return;
+  }
   void getGroupName(instanceId)
     .then((name) => {
       if (!isDisposed && name && currentInstanceId() === parsed.tag) {
@@ -268,7 +287,7 @@ function setText(parsed: ParsedLocation) {
     t,
   });
 
-  if (parsed.worldId && typeof cachedRef === "undefined") {
+  if (props.canFetchNames && parsed.worldId && typeof cachedRef === "undefined") {
     void getWorldName(parsed.worldId)
       .then((name) => {
         if (!isDisposed && name && currentInstanceId() === parsed.tag) {

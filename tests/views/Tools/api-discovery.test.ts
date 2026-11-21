@@ -1,7 +1,10 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { defineComponent, h, KeepAlive } from "vue";
 import { i18n } from "@/plugins/i18n";
+import { groupCalendarRequest } from "@/api/group-request-calendar";
+import { jamRequest } from "@/api/jam";
+import { miscRequest } from "@/api/misc";
 import { queryClient } from "@/queries/client";
 import GroupCalendarDiscovery from "@/views/Tools/components/GroupCalendarDiscovery.vue";
 import InfoPushDialog from "@/views/Tools/dialogs/InfoPushDialog.vue";
@@ -42,6 +45,8 @@ beforeEach(() => {
   queryClient.clear();
   vi.resetAllMocks();
 });
+
+afterEach(() => vi.useRealTimers());
 
 test("pages through submissions and opens their existing dialogs without hydrating rows", async () => {
   mocks.request.mockResolvedValueOnce([jam]).mockResolvedValueOnce(
@@ -145,4 +150,26 @@ test("waits for shelf expansion and reuses the loaded result after collapse", as
   expect(wrapper.text()).toContain("10/20");
   expect(mocks.request).toHaveBeenCalledTimes(2);
   wrapper.unmount();
+});
+
+test.each([
+  { name: "Live", minutes: 2, open: () => groupCalendarRequest.discoverGroupCalendars("live"), result: { results: [] } },
+  { name: "Upcoming", minutes: 5, open: () => groupCalendarRequest.discoverGroupCalendars("upcoming"), result: { results: [] } },
+  { name: "Jams", minutes: 15, open: () => jamRequest.getJams("world"), result: [] },
+  { name: "Submissions", minutes: 15, open: () => jamRequest.getSubmissions("jam_a"), result: [] },
+  { name: "Info Push", minutes: 5, open: () => miscRequest.getInfoPushContent("ips_a"), result: { responseType: "instance", results: [] } },
+])("refreshes $name only on demand after $minutes minutes", async ({ open, minutes, result }) => {
+  vi.useFakeTimers();
+  mocks.request.mockResolvedValue(result);
+  await open();
+  vi.advanceTimersByTime(minutes * 60_000 - 1);
+  await open();
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(1);
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+  await Promise.all([open(), open()]);
+  expect(mocks.request).toHaveBeenCalledTimes(2);
+  vi.advanceTimersByTime(30 * 60_000);
+  expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  expect(mocks.request).toHaveBeenCalledTimes(2);
 });

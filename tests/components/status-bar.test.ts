@@ -3,6 +3,7 @@ import { createI18n } from "vue-i18n";
 import { createTestingPinia } from "@pinia/testing";
 import { mount } from "@vue/test-utils";
 import { ref } from "vue";
+import { recordVrcApiStatus } from "@/stores/vrc-api-status";
 
 import StatusBar from "../../src/components/StatusBar.vue";
 import en from "../../src/localization/en.json";
@@ -74,7 +75,7 @@ vi.mock("../../src/plugins/router", () => ({
     beforeEach: vi.fn(),
     push: vi.fn(),
     replace: vi.fn(),
-    currentRoute: ref({ path: "/", name: "", meta: {} }),
+    currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
     isReady: vi.fn().mockResolvedValue(true),
   },
   initRouter: vi.fn(),
@@ -86,7 +87,7 @@ vi.mock("vue-router", async (importOriginal) => {
     useRouter: vi.fn(() => ({
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
     })),
   };
 });
@@ -220,6 +221,25 @@ describe("StatusBar.vue - Servers indicator", () => {
     const serversDots = wrapper.findAll(".bg-status-online");
     expect(serversDots.length).toBeGreaterThan(0);
     expect(wrapper.find(".bg-status-askme").exists()).toBe(false);
+  });
+
+  test("returns the Servers dot to green after a minute without another API failure", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountStatusBar();
+    try {
+      for (const status of [500, 502, 0]) recordVrcApiStatus(status);
+      await wrapper.vm.$nextTick();
+      const servers = wrapper.get(".bg-status-askme").element.parentElement;
+      expect(servers?.textContent).toContain("Servers");
+      vi.advanceTimersByTime(60_000);
+      await wrapper.vm.$nextTick();
+      expect(servers?.querySelector(".bg-status-online")).toBeTruthy();
+      expect(servers?.querySelector(".bg-status-askme")).toBeNull();
+    } finally {
+      wrapper.unmount();
+      recordVrcApiStatus(200);
+      vi.useRealTimers();
+    }
   });
 
   test("shows Servers indicator with yellow dot when there is an issue", () => {

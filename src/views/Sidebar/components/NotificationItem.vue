@@ -28,7 +28,14 @@
           >
             <Location :location="notification.location" :hint="textAt(notification, 'worldName')" :grouphint="textAt(notification, 'groupName')" link />
           </ItemDescription>
-          <ItemDescription v-if="displayMessage" :title="displayMessage" class="block line-clamp-none truncate text-nowrap text-xs select-none">
+          <BadgeEventLabel
+            v-if="notification.type === 'badge.earned'"
+            :data="notification.data"
+            :image-url="notification.imageUrl"
+            :message="displayMessage || typeLabel"
+            class="text-xs text-muted-foreground"
+          />
+          <ItemDescription v-else-if="displayMessage" :title="displayMessage" class="block line-clamp-none truncate text-nowrap text-xs select-none">
             {{ displayMessage }}
           </ItemDescription>
         </ItemContent>
@@ -198,6 +205,7 @@
 </template>
 
 <script setup lang="ts">
+import BadgeEventLabel from "@/components/history/BadgeEventLabel.vue";
 import { Ban, Bell, BellOff, CalendarDays, Check, Link, Mail, MessageCircle, Reply, Send, Tag, Trash2, UserPlus, Users, X } from "lucide-vue-next";
 import Item from "@/components/ui/item/Item.vue";
 import ItemContent from "@/components/ui/item/ItemContent.vue";

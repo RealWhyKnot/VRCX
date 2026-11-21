@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { ref } from "vue";
 import { i18n } from "@/plugins/i18n";
 import { queryClient } from "@/queries/client";
@@ -25,6 +25,8 @@ beforeEach(() => {
   queryClient.clear();
   mocks.request.mockReset();
 });
+
+afterEach(() => vi.useRealTimers());
 
 test("reports valid analysis, including zero, and contains oversized numbers", () => {
   const wrapper = mount(AvatarAnalysisCard, {
@@ -78,12 +80,54 @@ test("loads the next event per open group and caches a group with no event", asy
   wrapper.unmount();
 });
 
-test("shows the active VRC+ expiry and reuses it on reopen", async () => {
+test("refreshes a cached event at its start only when the group is opened again", async () => {
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+  vi.setSystemTime(new Date("2026-11-20T10:00:00Z"));
+  const props = { groupId: "grp_timed" };
+  const first = { id: "first", title: "First dance", startsAt: "2026-11-20T10:01:00Z" };
+  const second = { id: "second", title: "Second dance", startsAt: "2026-11-20T11:00:00Z" };
+  mocks.request.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+  const initial = mount(GroupNextEvent, { props, global });
+  await flushPromises();
+  expect(initial.text()).toContain(first.title);
+  initial.unmount();
+  vi.advanceTimersByTime(59_999);
+  const early = mount(GroupNextEvent, { props, global });
+  await flushPromises();
+  expect(early.text()).toContain(first.title);
+  vi.advanceTimersByTime(1);
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+  early.unmount();
+  const reopened = mount(GroupNextEvent, { props, global });
+  await flushPromises();
+  expect(reopened.text()).toContain(second.title);
+  expect(mocks.request).toHaveBeenCalledTimes(2);
+  reopened.unmount();
+});
+
+test("rechecks an empty group on open after ten minutes and never retries a started result in the same open", async () => {
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+  const props = { groupId: "grp_empty" };
+  mocks.request.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "old", startsAt: "2000-01-01" });
+  const initial = mount(GroupNextEvent, { props, global });
+  await flushPromises();
+  vi.advanceTimersByTime(10 * 60_000);
+  expect(mocks.request).toHaveBeenCalledTimes(1);
+  initial.unmount();
+  const reopened = mount(GroupNextEvent, { props, global });
+  await flushPromises();
+  expect(reopened.text()).toBe("");
+  expect(mocks.request).toHaveBeenCalledTimes(2);
+  reopened.unmount();
+});
+
+test("refreshes VRC+ once on each own-profile open", async () => {
   mocks.request.mockResolvedValueOnce([
     { id: "other-product", active: true, expires: "2099-12-31" },
     { id: "vrchatplus-monthly", active: false, expires: "2099-11-12" },
     { id: "vrchatplus-yearly", active: true, expires: "2099-09-01" },
   ]);
+  mocks.request.mockResolvedValueOnce([{ id: "vrchatplus-monthly", active: false, expires: "2099-11-12" }]);
   const props = { userId: "usr_self", isSupporter: false };
   const wrapper = mount(UserSubscriptionStatus, { props, global });
   await flushPromises();
@@ -93,7 +137,10 @@ test("shows the active VRC+ expiry and reuses it on reopen", async () => {
   const reopened = mount(UserSubscriptionStatus, { props, global });
   await flushPromises();
   expect(reopened.text()).toContain("Expires");
-  expect(mocks.request).toHaveBeenCalledExactlyOnceWith("auth/user/subscription", { method: "GET" });
+  expect(reopened.text()).toContain("Inactive");
+  expect(reopened.get("time").attributes("datetime")).toBe("2099-11-12");
+  expect(mocks.request).toHaveBeenCalledTimes(2);
+  expect(mocks.request).toHaveBeenLastCalledWith("auth/user/subscription", { method: "GET" });
   reopened.unmount();
 });
 

@@ -215,14 +215,18 @@ const miscRequest = {
   },
 
   getInfoPushContent(entryId: string, nextCursor?: string): Promise<InfoPushContent> {
-    return fetchOnDemand(["info-push-content", entryId, nextCursor], async () => {
-      const response = await request(`infoPush/${encodeURIComponent(entryId)}/content`, {
-        method: "GET",
-        params: nextCursor ? { nextCursor } : undefined,
-      });
-      if (!isInfoPushContent(response)) throw new Error("Invalid info push content");
-      return response;
-    });
+    return fetchOnDemand(
+      ["info-push-content", entryId, nextCursor],
+      async () => {
+        const response = await request(`infoPush/${encodeURIComponent(entryId)}/content`, {
+          method: "GET",
+          params: nextCursor ? { nextCursor } : undefined,
+        });
+        if (!isInfoPushContent(response)) throw new Error("Invalid info push content");
+        return response;
+      },
+      5 * 60_000
+    );
   },
 };
 

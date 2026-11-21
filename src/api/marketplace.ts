@@ -95,7 +95,7 @@ const marketplaceRequest = {
   },
 
   getCurrentSubscriptions(userId: string): Promise<Json<UserSubscription>[]> {
-    return fetchOnDemand(["subscription", userId], () => requestJson<Json<UserSubscription>[]>("auth/user/subscription", { method: "GET" }));
+    return fetchOnDemand(["subscription", userId], () => requestJson<Json<UserSubscription>[]>("auth/user/subscription", { method: "GET" }), 0);
   },
 
   getEconomySubscriptions(params: { subscriberId: string; n?: number; offset?: number }) {

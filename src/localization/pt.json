@@ -2473,6 +2473,13 @@
       "categories": {
         "content-shelf": "Content"
       }
+    },
+    "retained_history": {
+      "profile": "Profile",
+      "favorites": "Favorite History",
+      "cleared": "Cleared",
+      "added": "Added {name}",
+      "removed": "Removed {name}"
     }
   },
   "confirm": {

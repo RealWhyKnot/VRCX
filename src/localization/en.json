@@ -3086,6 +3086,13 @@
     "fullscreen_image": {
       "find_uploader": "Open the uploader's profile",
       "uploader_not_found": "Couldn't find who uploaded this picture."
+    },
+    "retained_history": {
+      "profile": "Profile",
+      "favorites": "Favorite History",
+      "cleared": "Cleared",
+      "added": "Added {name}",
+      "removed": "Removed {name}"
     }
   },
   "confirm": {

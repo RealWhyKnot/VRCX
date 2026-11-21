@@ -76,6 +76,7 @@
             />
           </li>
           <DropdownMenuSeparator />
+          <DropdownMenuItem @select="isHistoryOpen = true">{{ t("dialog.retained_history.favorites") }}</DropdownMenuItem>
           <DropdownMenuItem @click="$emit('import')">
             {{ t("view.favorite.import") }}
           </DropdownMenuItem>
@@ -85,10 +86,13 @@
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+    <FavoriteHistoryDialog v-if="isHistoryOpen" @close="isHistoryOpen = false" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { onDeactivated, ref } from "vue";
+import FavoriteHistoryDialog from "../dialogs/FavoriteHistoryDialog.vue";
 import Select from "@/components/ui/select/Select.vue";
 import SelectContent from "@/components/ui/select/SelectContent.vue";
 import SelectGroup from "@/components/ui/select/SelectGroup.vue";
@@ -107,6 +111,11 @@ import Button from "@/components/ui/button/Button.vue";
 import InputGroupSearch from "@/components/ui/input-group/InputGroupSearch.vue";
 import Slider from "@/components/ui/slider/Slider.vue";
 import { useI18n } from "vue-i18n";
+
+const isHistoryOpen = ref(false);
+onDeactivated(() => {
+  isHistoryOpen.value = false;
+});
 
 type FavoritesToolbarSlider = {
   min: number;

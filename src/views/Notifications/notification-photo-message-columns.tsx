@@ -1,3 +1,4 @@
+import BadgeEventLabel from "@/components/history/BadgeEventLabel.vue";
 import { Image } from "lucide-vue-next";
 import Avatar from "../../components/ui/avatar/Avatar.vue";
 import AvatarFallback from "../../components/ui/avatar/AvatarFallback.vue";
@@ -74,6 +75,14 @@ export const createMessageColumn = (): VrcxColumn<NotificationRow> => ({
   cell: ({ row }) => {
     const original = row.original;
     const { title } = original;
+    if (original.type === "badge.earned")
+      return (
+        <BadgeEventLabel
+          data={original.data}
+          imageUrl={original.imageUrl}
+          message={firstNonEmpty(original.message, title) ?? t("view.notification.filters.badge.earned")}
+        />
+      );
     const message =
       original.type !== "group.invite" && hasNamedNotification(original.type)
         ? getNotificationMessage(original, undefined, undefined, (id) => useUserStore().cachedUsers.get(id)?.displayName)?.body
