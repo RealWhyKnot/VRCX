@@ -51,6 +51,7 @@ type UserUpdate = OptionalWithUndefined<Omit<Json<User>, "last_activity" | "last
 };
 
 export function applyPublicProfile(json: Json<PublicProfile> & { id: string }) {
+  database.observeRetainedProfile(json);
   const { cachedProfiles } = useUserStore();
   const cachedRef = cachedProfiles.get(json.id);
   let ref: Json<PublicProfile>;
@@ -147,6 +148,7 @@ export function applyUser(json: UserUpdate) {
   let previousDisplayName: string | undefined;
   let hasPropChanged = false;
   let changedProps = Object.fromEntries(new Map<string, true | [unknown, unknown]>());
+  database.observeRetainedProfile(json);
   sanitizeUserJson(json, getRobotUrl());
   if (typeof cachedRef === "undefined") {
     ref = reactive(createDefaultUserRef(json));
@@ -185,7 +187,7 @@ export function applyUser(json: UserUpdate) {
   } else {
     ref = cachedRef;
     if (json.state !== "online") {
-      void runUpdateFriendFlow(ref.id, json.state).catch(logError);
+      void runUpdateFriendFlow(ref.id, json.state, { platform: json.platform }).catch(logError);
     }
     previousDisplayName = ref.displayName;
     const { hasPropChanged: _hasPropChanged, changedProps: _changedProps } = diffObjectProps(ref, json, arraysMatch);
@@ -260,7 +262,7 @@ export function applyUser(json: UserUpdate) {
     instanceStore.getCurrentInstanceUserList();
   }
   if (ref.state === "online") {
-    void runUpdateFriendFlow(ref.id, ref.state).catch(logError);
+    void runUpdateFriendFlow(ref.id, ref.state, { platform: json.platform }).catch(logError);
   }
   void applyFavorite("friend", ref.id).catch(logError);
   userOnFriend(ref);

@@ -149,7 +149,7 @@ describe("feed inserts", () => {
     expect(api.AddFeedAvatar).toHaveBeenCalledWith("t", "usr_1", "Alice", "usr_2", "Avatar", "a", "b", "c", "d");
   });
 
-  test("addOnlineOfflineToDatabase passes the online or offline type through", async () => {
+  test("addOnlineOfflineToDatabase passes the type and platform through", async () => {
     await feed.addOnlineOfflineToDatabase({
       created_at: "t",
       userId: "usr_1",
@@ -159,8 +159,9 @@ describe("feed inserts", () => {
       worldName: "World",
       time: 60,
       groupName: null,
+      platform: "android",
     });
-    expect(api.AddFeedOnlineOffline).toHaveBeenCalledWith("t", "usr_1", "Alice", "Offline", "wrld_1:123", "World", 60, null);
+    expect(api.AddFeedOnlineOffline).toHaveBeenCalledWith("t", "usr_1", "Alice", "Offline", "wrld_1:123", "World", 60, null, "android");
   });
 
   test("purgeAvatarFeedData deletes older rows when a cutoff is given", async () => {
@@ -274,6 +275,7 @@ describe("feed search and lookup", () => {
         [6, "World"],
         [8, 60],
         [9, null],
+        [24, "android"],
       ]),
     ]);
 
@@ -337,6 +339,7 @@ describe("feed search and lookup", () => {
         worldName: "World",
         time: 60,
         groupName: null,
+        platform: "android",
       },
     ]);
   });

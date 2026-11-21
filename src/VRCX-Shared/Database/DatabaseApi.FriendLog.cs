@@ -18,6 +18,11 @@ sealed partial class DatabaseApi
 
     public string GetFriendLogHistory() => Rows($"SELECT * FROM {UserTable("friend_log_history")}");
 
+    public string GetFriendLogHistoryPage(long limit, long? beforeId) =>
+        beforeId is null
+            ? Rows($"SELECT * FROM {UserTable("friend_log_history")} ORDER BY id DESC LIMIT @limit", ("@limit", limit))
+            : Rows($"SELECT * FROM {UserTable("friend_log_history")} WHERE id < @beforeId ORDER BY id DESC LIMIT @limit", ("@beforeId", beforeId), ("@limit", limit));
+
     public void AddFriendLogHistory(string createdAt, string type, string userId, string? displayName, string? previousDisplayName, string? trustLevel, string? previousTrustLevel, long? friendNumber) => _ = Run($"INSERT OR IGNORE INTO {UserTable("friend_log_history")} (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, @user_id, @display_name, @previous_display_name, @trust_level, @previous_trust_level, @friend_number)", ("@created_at", createdAt), ("@type", type), ("@user_id", userId), ("@display_name", displayName), ("@previous_display_name", previousDisplayName), ("@trust_level", trustLevel), ("@previous_trust_level", previousTrustLevel), ("@friend_number", friendNumber));
 
     public void AddFriendLogHistoryArray(string?[] createdAt, string?[] type, string?[] userId, string?[] displayName, string?[] previousDisplayName, string?[] trustLevel, string?[] previousTrustLevel, string?[] friendNumber) => WriteRows($"INSERT OR IGNORE INTO {UserTable("friend_log_history")}", FriendLogHistoryColumns, [createdAt, type, userId, displayName, previousDisplayName, trustLevel, previousTrustLevel, friendNumber], FriendLogHistoryChunkRows);

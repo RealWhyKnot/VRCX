@@ -16,6 +16,7 @@ type GameLogBridge = {
     userId: string | null,
     time: number | null
   ): Promise<number>;
+  AddGamelogJoinLeaveBulk(entries: string): Promise<string>;
   AddGamelogPortalSpawn(
     createdAt: string | null,
     displayName: string | null,
@@ -69,12 +70,7 @@ type GameLogBridge = {
   GetRecentGameLogResourceLoad(dateOffset: string, limit: number): Promise<string>;
   GetRecentGameLogEvents(dateOffset: string, limit: number): Promise<string>;
   GetRecentGameLogExternal(dateOffset: string, limit: number): Promise<string>;
-  GetLatestGameLogLocationCreatedAt(): Promise<string>;
-  GetLatestGameLogJoinLeaveCreatedAt(): Promise<string>;
-  GetLatestGameLogPortalSpawnCreatedAt(): Promise<string>;
-  GetLatestGameLogEventCreatedAt(): Promise<string>;
-  GetLatestGameLogVideoPlayCreatedAt(): Promise<string>;
-  GetLatestGameLogResourceLoadCreatedAt(): Promise<string>;
+  GetLatestGameLogCreatedAts(): Promise<string>;
   LookupGameLog(filters: string[], vipIds: string[], maxEntries: number): Promise<string>;
   SearchGameLog(search: string, filters: string[], vipIds: string[], userId: string, maxEntries: number): Promise<string>;
   GetLastOnlineSessionBefore(fromDate: string): Promise<string>;

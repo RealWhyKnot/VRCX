@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>LINUX</DefineConstants>
+    <RootNamespace>VRCX</RootNamespace>
+    <NoWarn>$(NoWarn);CA1515</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite" Version="2.0.4" />
+    <PackageReference Include="SourceGear.sqlite3" Version="3.53.4" />
+    <PackageReference Include="NLog" Version="6.2.2" />
+    <Compile Include="../../../src/VRCX-Shared/Database/*.cs" />
+    <Compile Include="../../../src/VRCX-Shared/SQLiteDatabase.cs" />
+    <Compile Include="../../../src/VRCX-Shared/SQLiteConnectionFactory.cs" />
+  </ItemGroup>
+</Project>

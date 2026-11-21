@@ -125,17 +125,17 @@ sealed partial class DatabaseApi
         """, ("@userId", userId));
 
     public void ReplaceActivitySessions(string userId, string[] startAt, string[] endAt, string[] isOpenTail, string[] sourceRevision) =>
-        RunInWriteTransaction(() =>
+        Store.ExecuteTransaction(() =>
         {
             _ = Run($"DELETE FROM {UserTable("activity_sessions_v2")} WHERE user_id = @userId", ("@userId", userId));
             InsertActivitySessionRows(userId, startAt, endAt, isOpenTail, sourceRevision);
         });
 
     public void AppendActivitySessions(string userId, string[] startAt, string[] endAt, string[] isOpenTail, string[] sourceRevision) =>
-        RunInWriteTransaction(() => InsertActivitySessionRows(userId, startAt, endAt, isOpenTail, sourceRevision));
+        Store.ExecuteTransaction(() => InsertActivitySessionRows(userId, startAt, endAt, isOpenTail, sourceRevision));
 
     public void AppendActivitySessionsFrom(string userId, long replaceFromStartAt, string[] startAt, string[] endAt, string[] isOpenTail, string[] sourceRevision) =>
-        RunInWriteTransaction(() =>
+        Store.ExecuteTransaction(() =>
         {
             _ = Run($"""
                 DELETE FROM {UserTable("activity_sessions_v2")}
@@ -194,25 +194,6 @@ sealed partial class DatabaseApi
         InsertValueRows($"INSERT OR REPLACE INTO {UserTable("activity_sessions_v2")} (user_id, start_at, end_at, is_open_tail, source_revision) VALUES", rows);
     }
 
-    private void RunInWriteTransaction(Action work)
-    {
-        BeginTransaction();
-        bool isCommitted = false;
-        try
-        {
-            work();
-            CommitTransaction();
-            isCommitted = true;
-        }
-        finally
-        {
-            if (!isCommitted)
-            {
-                _ = Run("ROLLBACK");
-            }
-        }
-    }
-
     private void InsertValueRows(string statementStart, List<object?[]> rows)
     {
         for (int chunkStart = 0; chunkStart < rows.Count; chunkStart += ValueRowChunkSize)
@@ -240,7 +221,7 @@ sealed partial class DatabaseApi
         string.Join(", ", Enumerable.Range(0, count).Select(index => $"@{prefix}{index.ToString(CultureInfo.InvariantCulture)}"));
 
     public string GetFriendGatherings(string since) => Rows($"""
-        WITH stays AS (
+        WITH stays AS MATERIALIZED (
             SELECT previous_location AS location, user_id, display_name, unixepoch(created_at) * 1000 - time AS started, unixepoch(created_at) * 1000 AS ended
             FROM {UserTable("feed_gps")}
             WHERE created_at > @since AND time > 0 AND previous_location LIKE 'wrld_%:%'
@@ -263,8 +244,8 @@ sealed partial class DatabaseApi
         )
         SELECT stays.location, named.world_name, named.group_name, stays.user_id, stays.display_name, stays.started, stays.ended
         FROM stays
-        JOIN shared ON shared.location = stays.location
         LEFT JOIN named ON named.location = stays.location
+        WHERE stays.location IN (SELECT location FROM shared)
         ORDER BY stays.started DESC
         """, ("@since", since));
 

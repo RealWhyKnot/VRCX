@@ -15,6 +15,14 @@ sealed partial class DatabaseApi
 
     public long AddGamelogJoinLeave(string? createdAt, string? type, string? displayName, string? location, string? userId, double? time) => Insert("INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time) VALUES (@created_at, @type, @display_name, @location, @user_id, @time)", ("@created_at", createdAt), ("@type", type), ("@display_name", displayName), ("@location", location), ("@user_id", userId), ("@time", time));
 
+    public string AddGamelogJoinLeaveBulk(string entries) => WriteRowsJson("""
+        INSERT OR IGNORE INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time)
+        SELECT value ->> 0, value ->> 1, value ->> 2, value ->> 3, value ->> 4, value ->> 5
+        FROM json_each(@entries)
+        ORDER BY key
+        RETURNING id, created_at, type, display_name, location, user_id, time
+        """, ("@entries", entries));
+
     public long AddGamelogPortalSpawn(string? createdAt, string? displayName, string? location, string? userId, string? instanceId, string? worldName) => Insert("INSERT OR IGNORE INTO gamelog_portal_spawn (created_at, display_name, location, user_id, instance_id, world_name) VALUES (@created_at, @display_name, @location, @user_id, @instance_id, @world_name)", ("@created_at", createdAt), ("@display_name", displayName), ("@location", location), ("@user_id", userId), ("@instance_id", instanceId), ("@world_name", worldName));
 
     public long AddGamelogVideoPlay(string? createdAt, string? videoLink, string? videoName, string? videoId, string? location, string? displayName, string? userId) => Insert("INSERT OR IGNORE INTO gamelog_video_play (created_at, video_url, video_name, video_id, location, display_name, user_id) VALUES (@created_at, @video_url, @video_name, @video_id, @location, @display_name, @user_id)", ("@created_at", createdAt), ("@video_url", videoLink), ("@video_name", videoName), ("@video_id", videoId), ("@location", location), ("@display_name", displayName), ("@user_id", userId));

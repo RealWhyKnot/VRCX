@@ -56,9 +56,9 @@ sealed partial class DatabaseApi
             ("@previous_current_avatar_image_url", previousCurrentAvatarImageLink),
             ("@previous_current_avatar_thumbnail_image_url", previousCurrentAvatarThumbnailImageLink));
 
-    public long AddFeedOnlineOffline(string createdAt, string userId, string displayName, string type, string? location, string? worldName, long? time, string? groupName) =>
+    public long AddFeedOnlineOffline(string createdAt, string userId, string displayName, string type, string? location, string? worldName, long? time, string? groupName, string? platform) =>
         Insert(
-            $"INSERT OR IGNORE INTO {UserTable("feed_online_offline")} (created_at, user_id, display_name, type, location, world_name, time, group_name) VALUES (@created_at, @user_id, @display_name, @type, @location, @world_name, @time, @group_name)",
+            $"INSERT OR IGNORE INTO {UserTable("feed_online_offline")} (created_at, user_id, display_name, type, location, world_name, time, group_name, platform) VALUES (@created_at, @user_id, @display_name, @type, @location, @world_name, @time, @group_name, @platform)",
             ("@created_at", createdAt),
             ("@user_id", userId),
             ("@display_name", displayName),
@@ -66,7 +66,8 @@ sealed partial class DatabaseApi
             ("@location", location),
             ("@world_name", worldName),
             ("@time", time),
-            ("@group_name", groupName));
+            ("@group_name", groupName),
+            ("@platform", platform));
 
     public void DeleteAvatarFeedOlderThan(string cutoff) => _ = Run($"DELETE FROM {UserTable("feed_avatar")} WHERE created_at < @cutoff", ("@cutoff", cutoff));
 

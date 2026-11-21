@@ -1,3 +1,4 @@
+import { scheduleRetainedPrune } from "./retained-events.ts";
 import { cellNumber, cellText } from "./cells.ts";
 
 import { sqliteService, type DatabaseRow } from "../sqlite.ts";
@@ -128,23 +129,30 @@ const avatarFavorites = {
     void sqliteService.run(DatabaseApi.ClearAvatarHistory()).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  addAvatarToFavorites(avatarId: string, groupName: string): void {
+  addAvatarToFavorites(avatarId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
     void sqliteService
-      .run(DatabaseApi.AddAvatarToFavorites(avatarId, groupName, new Date().toJSON()))
+      .run(DatabaseApi.AddAvatarToFavorites(avatarId, groupName, new Date().toJSON(), name ?? null))
       .catch(logDatabaseError)
       .catch(logDatabaseError);
   },
 
   renameAvatarFavoriteGroup(newGroupName: string, groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.RenameAvatarFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
   deleteAvatarFavoriteGroup(groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.DeleteAvatarFavoriteGroup(groupName)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
-  removeAvatarFromFavorites(avatarId: string, groupName: string): void {
-    void sqliteService.run(DatabaseApi.RemoveAvatarFromFavorites(avatarId, groupName)).catch(logDatabaseError).catch(logDatabaseError);
+  removeAvatarFromFavorites(avatarId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
+    void sqliteService
+      .run(DatabaseApi.RemoveAvatarFromFavorites(avatarId, groupName, name ?? null))
+      .catch(logDatabaseError)
+      .catch(logDatabaseError);
   },
 
   async getAvatarFavorites(): Promise<{ created_at: string | null; avatarId: string | null; groupName: string | null }[]> {

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -20,12 +21,16 @@ type Result = {
 
 type Failure = { method: string; file: string; reason: string };
 
-const SOURCE_DIR = join(import.meta.dirname, "..", "src", "VRCX-Shared", "Database");
+const ROOT = join(import.meta.dirname, "..");
+const SOURCE_PATH = "src/VRCX-Shared/Database";
+const SOURCE_DIR = join(ROOT, SOURCE_PATH);
 const RUNS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const USER_TABLE = /\{UserTable\("([a-z0-9_]+)"\)\}/gu;
 const LOCAL_TABLE = /string (\w+) = UserTable\("([a-z0-9_]+)"\);/gu;
-const METHOD = /public string (\w+)\(/gu;
+const METHOD = /(?:public|private) (?:static )?(?:string|long|int|void|bool) (\w+)\(/gu;
+const STRING_CONSTANT = /private const string (\w+)\s*=\s*(?=\$?")/gu;
+const INTERPOLATION = /\{(\w+)\}/gu;
 const PARAMETER = /@\w+/gu;
 const USER_PREFIX = /usr[0-9a-f]{32}/gu;
 
@@ -75,16 +80,49 @@ function methodBefore(source: string, position: number): string {
   return name;
 }
 
-function extractStatements(prefix: string): { statements: Statement[]; dynamic: Failure[] } {
+export function extractStatements(prefix: string, sourceDir = SOURCE_DIR) {
+  const files = readdirSync(sourceDir).filter((name) => name.endsWith(".cs"));
+  return extractSql(
+    prefix,
+    files.map((file) => ({ file, source: readFileSync(join(sourceDir, file), "utf8") }))
+  );
+}
+
+export function extractHeadStatements(prefix: string) {
+  const git = (args: string[]) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  const revision = git(["rev-parse", "HEAD"]).trim();
+  const files = git(["ls-tree", "--name-only", `${revision}:${SOURCE_PATH}`])
+    .split("\n")
+    .filter((name) => name.endsWith(".cs"));
+  return extractSql(
+    prefix,
+    files.map((file) => ({ file, source: git(["show", `${revision}:${SOURCE_PATH}/${file}`]) }))
+  );
+}
+
+function extractSql(prefix: string, sources: { file: string; source: string }[]) {
   const statements: Statement[] = [];
+  const writes: Statement[] = [];
   const dynamic: Failure[] = [];
-  for (const file of readdirSync(SOURCE_DIR).filter((name) => name.endsWith(".cs"))) {
-    const source = readFileSync(join(SOURCE_DIR, file), "utf8");
+  for (const { file, source } of sources) {
+    const constants = new Map<string, string>();
+    for (const match of source.matchAll(STRING_CONSTANT)) {
+      const value = readLiteral(source, match.index + match[0].length);
+      if (value !== undefined && match[1] !== undefined) {
+        constants.set(
+          match[1],
+          value.replaceAll(INTERPOLATION, (whole: string, name: string) => constants.get(name) ?? whole)
+        );
+      }
+    }
     const locals = new Map<string, string>();
     for (const match of source.matchAll(LOCAL_TABLE)) {
       locals.set(match[1] ?? "", match[2] ?? "");
     }
-    for (const match of source.matchAll(/\bRows\(/gu)) {
+    for (const match of source.matchAll(/\b(Rows|WriteRowsJson|Insert|Run)\(/gu)) {
+      if (/^private (?:string|int|long) $/u.test(source.slice(source.lastIndexOf("\n", match.index) + 1, match.index).trimStart())) {
+        continue;
+      }
       const literal = readLiteral(source, match.index + match[0].length);
       const method = methodBefore(source, match.index);
       if (literal === undefined) {
@@ -93,18 +131,19 @@ function extractStatements(prefix: string): { statements: Statement[]; dynamic: 
       }
       const sql = literal
         .replaceAll(USER_TABLE, (_, suffix: string) => `${prefix}_${suffix}`)
-        .replaceAll(/\{(\w+)\}/gu, (whole: string, name: string) => {
+        .replaceAll(INTERPOLATION, (whole: string, name: string) => {
           const suffix = locals.get(name);
-          return suffix === undefined ? whole : `${prefix}_${suffix}`;
+          return suffix === undefined ? (constants.get(name) ?? whole) : `${prefix}_${suffix}`;
         });
       if (sql.includes("{")) {
         dynamic.push({ method, file, reason: "SQL has a part filled in at run time" });
       } else {
-        statements.push({ file, method, sql: sql.replaceAll(/\s+/gu, " ").trim() });
+        const target = /^\s*(?:SELECT|WITH)\b/iu.test(sql) && match[1] === "Rows" ? statements : writes;
+        target.push({ file, method, sql: sql.trim() });
       }
     }
   }
-  return { statements, dynamic };
+  return { statements, writes, dynamic };
 }
 
 function firstText(db: DatabaseSync, sql: string): string {
@@ -117,7 +156,7 @@ function firstText(db: DatabaseSync, sql: string): string {
   }
 }
 
-function mainPrefix(db: DatabaseSync): string {
+export function mainPrefix(db: DatabaseSync): string {
   let best = "";
   let bestRows = -1;
   for (const row of db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%\\_feed\\_gps' ESCAPE '\\'").all()) {
@@ -131,6 +170,15 @@ function mainPrefix(db: DatabaseSync): string {
   return best;
 }
 
+export function sampleFor(db: DatabaseSync, prefix: string): Sample {
+  return {
+    userId: firstText(db, `SELECT user_id FROM "${prefix}_feed_online_offline" ORDER BY id DESC LIMIT 1`),
+    location: firstText(db, "SELECT location FROM gamelog_location ORDER BY id DESC LIMIT 1"),
+    worldId: firstText(db, "SELECT world_id FROM gamelog_location ORDER BY id DESC LIMIT 1"),
+    avatarId: firstText(db, "SELECT id FROM cache_avatar LIMIT 1"),
+  };
+}
+
 function bindingFor(name: string, sample: Sample, now: number): string | number {
   const key = name.toLowerCase();
   if (key.includes("half")) {
@@ -138,6 +186,12 @@ function bindingFor(name: string, sample: Sample, now: number): string | number 
   }
   if (key.includes("days")) {
     return "-30 days";
+  }
+  if (key === "minplaces") {
+    return 3;
+  }
+  if (key === "selfid") {
+    return sample.userId;
   }
   if (key.includes("limit")) {
     return 500;
@@ -169,10 +223,13 @@ function bindingFor(name: string, sample: Sample, now: number): string | number 
   return "";
 }
 
-function measure(db: DatabaseSync, statement: Statement, sample: Sample): Result {
-  const now = Date.now();
-  const names = [...new Set(statement.sql.match(PARAMETER) ?? [])];
-  const bindings = Object.fromEntries(names.map((name) => [name, bindingFor(name.slice(1), sample, now)]));
+export function bindingsFor(sql: string, sample: Sample, now: number): Record<string, string | number> {
+  const names = [...new Set(sql.match(PARAMETER) ?? [])];
+  return Object.fromEntries(names.map((name) => [name, bindingFor(name.slice(1), sample, now)]));
+}
+
+function measure(db: DatabaseSync, statement: Statement, sample: Sample, now: number): Result {
+  const bindings = bindingsFor(statement.sql, sample, now);
   const plan = db
     .prepare(`EXPLAIN QUERY PLAN ${statement.sql}`)
     .all(bindings)
@@ -219,24 +276,24 @@ function main(): void {
     return;
   }
   const db = new DatabaseSync(path, { readOnly: true });
+  if (process.env["VRCX_PERF_LEGACY_PRAGMAS"] !== "1") {
+    db.exec("PRAGMA temp_store=MEMORY; PRAGMA cache_size=-32768");
+  }
   const prefix = mainPrefix(db);
   if (prefix === "") {
     console.error("No account tables found in this database.");
     process.exitCode = 1;
     return;
   }
-  const sample: Sample = {
-    userId: firstText(db, `SELECT user_id FROM "${prefix}_feed_online_offline" ORDER BY id DESC LIMIT 1`),
-    location: firstText(db, "SELECT location FROM gamelog_location ORDER BY id DESC LIMIT 1"),
-    worldId: firstText(db, "SELECT world_id FROM gamelog_location ORDER BY id DESC LIMIT 1"),
-    avatarId: firstText(db, "SELECT id FROM cache_avatar LIMIT 1"),
-  };
-  const { statements, dynamic } = extractStatements(prefix);
+  const sample = sampleFor(db, prefix);
+  const { statements, writes, dynamic } = extractStatements(prefix, process.env["VRCX_PERF_SOURCE_DIR"]);
+  const fixedDate = process.env["VRCX_PERF_NOW"];
+  const now = fixedDate === undefined ? Date.now() : Date.parse(fixedDate);
   const results: Result[] = [];
-  const failures: Failure[] = [...dynamic];
+  const failures: Failure[] = [...dynamic, ...writes.map(({ method, file }) => ({ method, file, reason: "Write or maintenance statement" }))];
   for (const statement of statements) {
     try {
-      results.push(measure(db, statement, sample));
+      results.push(measure(db, statement, sample, now));
     } catch (err) {
       failures.push({ method: statement.method, file: statement.file, reason: err instanceof Error ? err.message : String(err) });
     }
@@ -267,4 +324,6 @@ function main(): void {
   }
 }
 
-main();
+if (import.meta.main) {
+  main();
+}

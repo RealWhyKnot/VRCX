@@ -23,11 +23,13 @@ type PresenceFeedEntry = {
   worldName: string;
   groupName: string;
   time: number | null;
+  platform?: string | null;
 };
 
 type PresenceClock = {
   now?: () => number;
   nowIso?: () => string;
+  platform?: string | undefined;
 };
 
 async function publishPresenceFeed(feed: PresenceFeedEntry): Promise<void> {
@@ -47,7 +49,7 @@ export async function runUpdateFriendDelayedCheckFlow(
   newState: FriendState | "",
   location: string,
   locationAt: number,
-  { now = Date.now, nowIso = () => new Date().toJSON() }: PresenceClock = {}
+  { now = Date.now, nowIso = () => new Date().toJSON(), platform }: PresenceClock = {}
 ): Promise<void> {
   const friendStore = useFriendStore();
   const { friends, localFavoriteFriends } = friendStore;
@@ -65,6 +67,8 @@ export async function runUpdateFriendDelayedCheckFlow(
   }
   const isVIP = localFavoriteFriends.has(id);
   const ref = ctx.ref;
+  const receivedPlatform = platform ?? ref?.platform;
+  const platformField = receivedPlatform ? { platform: receivedPlatform } : {};
   if (ctx.state !== newState && ref !== undefined) {
     if ((newState === "offline" || newState === "active") && ctx.state === "online") {
       ref.$online_for = 0;
@@ -78,6 +82,7 @@ export async function runUpdateFriendDelayedCheckFlow(
       const worldName = await getWorldName(location);
       const groupName = await getGroupName(location);
       await publishPresenceFeed({
+        ...platformField,
         created_at: nowIso(),
         type: "Offline",
         userId: ref.id,
@@ -97,6 +102,7 @@ export async function runUpdateFriendDelayedCheckFlow(
       const worldName = await getWorldName(location);
       const groupName = await getGroupName(location);
       await publishPresenceFeed({
+        ...platformField,
         created_at: nowIso(),
         type: "Online",
         userId: id,
@@ -126,7 +132,7 @@ export async function runUpdateFriendDelayedCheckFlow(
 export async function runUpdateFriendFlow(
   id: string,
   stateInput?: FriendState,
-  { now = Date.now, nowIso = () => new Date().toJSON() }: PresenceClock = {}
+  { now = Date.now, nowIso = () => new Date().toJSON(), platform }: PresenceClock = {}
 ): Promise<void> {
   const friendStore = useFriendStore();
   const userStore = useUserStore();
@@ -194,7 +200,7 @@ export async function runUpdateFriendFlow(
       syncFriendSearchIndex(ctx);
     }
     if (!watchState.isFriendsLoaded) {
-      await runUpdateFriendDelayedCheckFlow(ctx, stateInput, location, locationAt, { now, nowIso });
+      await runUpdateFriendDelayedCheckFlow(ctx, stateInput, location, locationAt, { now, nowIso, platform });
       return;
     }
 
@@ -222,7 +228,7 @@ export async function runUpdateFriendFlow(
   if (typeof ref !== "undefined") {
     ctx.name = ref.displayName;
     syncFriendSearchIndex(ctx);
-    await runUpdateFriendDelayedCheckFlow(ctx, ref.state, location, locationAt, { now, nowIso });
+    await runUpdateFriendDelayedCheckFlow(ctx, ref.state, location, locationAt, { now, nowIso, platform });
   } else {
     friendStore.reindexSortedFriend(ctx);
   }

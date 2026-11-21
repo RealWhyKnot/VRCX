@@ -35,6 +35,14 @@ sealed partial class DatabaseApi
         }
     }
 
+    private void EnsureFeedPlatformColumn(string table)
+    {
+        if (Store.Execute("SELECT 1 FROM pragma_table_info(@table) WHERE name = 'platform'", ToArguments([("@table", table)])).Length == 0)
+        {
+            _ = Run($"ALTER TABLE {table} ADD COLUMN platform TEXT");
+        }
+    }
+
     private string[] TableNames(string sql) => [.. Store.Execute(sql).Select(row => Convert.ToString(row[0], CultureInfo.InvariantCulture) ?? string.Empty)];
 
     private void RunAll(IEnumerable<string> statements, string? expectedMessage)

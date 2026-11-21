@@ -134,16 +134,8 @@ async function getGamelogDatabase(): Promise<GameLogRow[]> {
 async function getLastDateGameLogDatabase(): Promise<string> {
   const date = new Date().toJSON();
   const dateOffset = new Date(Date.now() - MS_PER_DAY).toJSON();
-  const latestRows = await Promise.all([
-    sqliteService.rows(DatabaseApi.GetLatestGameLogLocationCreatedAt()),
-    sqliteService.rows(DatabaseApi.GetLatestGameLogJoinLeaveCreatedAt()),
-    sqliteService.rows(DatabaseApi.GetLatestGameLogPortalSpawnCreatedAt()),
-    sqliteService.rows(DatabaseApi.GetLatestGameLogEventCreatedAt()),
-    sqliteService.rows(DatabaseApi.GetLatestGameLogVideoPlayCreatedAt()),
-    sqliteService.rows(DatabaseApi.GetLatestGameLogResourceLoadCreatedAt()),
-  ]);
+  const latestRows = await sqliteService.rows(DatabaseApi.GetLatestGameLogCreatedAts());
   const createdAts = latestRows
-    .flat()
     .map((row) => cellText(row[0]))
     .filter((createdAt): createdAt is string => createdAt !== null)
     .sort();

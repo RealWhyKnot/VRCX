@@ -60,6 +60,7 @@ type FeedOnlineOfflineEntry = {
   worldName: string | null;
   time: number | null;
   groupName: string | null;
+  platform?: string | null;
 };
 
 type FeedRowBase = {
@@ -110,6 +111,7 @@ type FeedOnlineOfflineRow = FeedRowBase & {
   worldName: string | null;
   time: number | null;
   groupName: string | null;
+  platform?: string | null;
 };
 
 type FeedRow = FeedGpsRow | FeedStatusRow | FeedBioRow | FeedAvatarRow | FeedOnlineOfflineRow;
@@ -180,6 +182,7 @@ function mapFeedRow(dbRow: DatabaseRow): FeedRow {
       };
     case "Online":
     case "Offline":
+      const platform = cellText(dbRow[24]);
       return {
         ...base,
         type,
@@ -187,6 +190,7 @@ function mapFeedRow(dbRow: DatabaseRow): FeedRow {
         worldName: cellText(dbRow[6]),
         time: cellNumber(dbRow[8]),
         groupName: cellText(dbRow[9]),
+        ...(platform === null ? {} : { platform }),
       };
     case null:
     default:
@@ -280,7 +284,8 @@ async function addOnlineOfflineToDatabase(entry: FeedOnlineOfflineEntry) {
       entry.location,
       entry.worldName,
       entry.time,
-      entry.groupName
+      entry.groupName,
+      entry.platform ?? null
     ),
     entry
   );

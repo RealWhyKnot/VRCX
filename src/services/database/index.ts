@@ -8,6 +8,7 @@ import { friendLogHistory } from "./friend-log-history.ts";
 import { gameLog } from "./game-log.ts";
 import { groupStats } from "./group-stats.ts";
 import { peoplePatterns } from "./people-patterns.ts";
+import { retainedEvents } from "./retained-events.ts";
 import { sightings } from "./sightings.ts";
 import { memos } from "./memos.ts";
 import { moderation } from "./moderation.ts";
@@ -40,10 +41,6 @@ if (hot) {
   hot.data.dbVars = dbVars;
 }
 
-function logDatabaseError(error: unknown): void {
-  console.error(error);
-}
-
 const database = {
   ...feed,
   ...activityV2,
@@ -51,6 +48,7 @@ const database = {
   ...groupStats,
   ...peoplePatterns,
   ...sightings,
+  ...retainedEvents,
   ...notifications,
   ...moderation,
   ...friendLogHistory,
@@ -94,21 +92,12 @@ const database = {
   },
 
   async initUserTables(userId: string) {
-    await sqliteService.run(DatabaseApi.SetUser(userId));
+    await sqliteService.run(DatabaseApi.InitializeAccount(userId));
     dbVars.userId = userId;
-    await sqliteService.run(DatabaseApi.CreateUserTables());
   },
 
   async initTables() {
     await sqliteService.run(DatabaseApi.CreateGlobalTables());
-  },
-
-  begin() {
-    void sqliteService.run(DatabaseApi.BeginTransaction()).catch(logDatabaseError);
-  },
-
-  commit() {
-    void sqliteService.run(DatabaseApi.CommitTransaction()).catch(logDatabaseError);
   },
 
   async vacuum() {

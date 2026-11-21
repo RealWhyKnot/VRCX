@@ -44,6 +44,25 @@ export async function runBadgeEventFlow(type: BadgeEventType, record: PipelineRe
     type: "Event",
     data: message,
   };
+  const { currentUser } = useUserStore();
+  const suppliedBadge = field(record, "badge");
+  const badgeId = (isRecord(suppliedBadge) ? stringField(suppliedBadge, "badgeId") : undefined) ?? stringField(record, "badgeId");
+  if (badgeId) {
+    const owned = currentUser.badges.find((badge) => badge.badgeId === badgeId);
+    const badge = isRecord(suppliedBadge) ? suppliedBadge : record;
+    database.queueRetainedEvent({
+      kind: "badge",
+      subject: currentUser.id,
+      createdAt: entry.created_at,
+      data: {
+        action: type === "user-badge-assigned" ? "add" : "remove",
+        badgeId,
+        name: stringField(badge, "badgeName") ?? owned?.badgeName,
+        description: stringField(badge, "badgeDescription") ?? owned?.badgeDescription,
+        imageUrl: stringField(badge, "badgeImageUrl") ?? owned?.badgeImageUrl,
+      },
+    });
+  }
   useNotificationStore().queueGameLogNoty(entry);
   const persistedEntry = await database.addGamelogEventToDatabase(entry);
   if (persistedEntry) {

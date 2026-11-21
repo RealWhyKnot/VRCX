@@ -1,3 +1,4 @@
+import { scheduleRetainedPrune } from "./retained-events.ts";
 import { cellNumber, cellText } from "./cells.ts";
 
 import { sqliteService, type DatabaseRow } from "../sqlite.ts";
@@ -72,20 +73,24 @@ const worldFavorites = {
       .catch(logDatabaseError);
   },
 
-  addWorldToFavorites(worldId: string, groupName: string): void {
-    void sqliteService.run(DatabaseApi.AddWorldToFavorites(worldId, groupName, new Date().toJSON())).catch(logDatabaseError);
+  addWorldToFavorites(worldId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
+    void sqliteService.run(DatabaseApi.AddWorldToFavorites(worldId, groupName, new Date().toJSON(), name ?? null)).catch(logDatabaseError);
   },
 
   renameWorldFavoriteGroup(newGroupName: string, groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.RenameWorldFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError);
   },
 
   deleteWorldFavoriteGroup(groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.DeleteWorldFavoriteGroup(groupName)).catch(logDatabaseError);
   },
 
-  removeWorldFromFavorites(worldId: string, groupName: string): void {
-    void sqliteService.run(DatabaseApi.RemoveWorldFromFavorites(worldId, groupName)).catch(logDatabaseError);
+  removeWorldFromFavorites(worldId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
+    void sqliteService.run(DatabaseApi.RemoveWorldFromFavorites(worldId, groupName, name ?? null)).catch(logDatabaseError);
   },
 
   async getWorldFavorites(): Promise<{ created_at: string | null; worldId: string | null; groupName: string | null }[]> {

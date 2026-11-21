@@ -36,7 +36,7 @@ export function addLocalAvatarFavorite(avatarId: string, group: string) {
   localAvatarFavorites[group] ??= [];
   requireLocalFavoriteGroup(localAvatarFavorites, group).unshift(ref);
   database.addAvatarToCache(ref);
-  database.addAvatarToFavorites(avatarId, group);
+  database.addAvatarToFavorites(avatarId, group, ref.name);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === avatarId) {
     favoriteStore.updateFavoriteDialog(avatarId);
   }
@@ -78,7 +78,7 @@ export function removeLocalAvatarFavorite(avatarId: string, group: string) {
       database.removeAvatarFromCache(avatarId);
     }
   }
-  database.removeAvatarFromFavorites(avatarId, group);
+  database.removeAvatarFromFavorites(avatarId, group, avatarStore.cachedAvatars.get(avatarId)?.name);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === avatarId) {
     favoriteStore.updateFavoriteDialog(avatarId);
   }

@@ -35,7 +35,7 @@ sealed partial class DatabaseApi
         }
     }
 
-    public string GetOnPlayerLeftRowsWithTime() => Rows("SELECT location, time, id FROM gamelog_join_leave WHERE type = 'OnPlayerLeft' AND time > 0");
+    public string GetOnPlayerLeftRowsWithTime() => Rows("SELECT location, time, id FROM gamelog_join_leave NOT INDEXED WHERE type = 'OnPlayerLeft' AND time > 0");
 
     public void ResetLeaveTimes(string[] ids)
     {

@@ -323,7 +323,30 @@ export async function addGameLogEntry(gameLog: GameLogEvent, location: string): 
         break;
       }
       let avatarName = gameLogStore.state.lastLocationAvatarList.get(gameLog.displayName);
-      if (photonStore.photonLoggingEnabled || avatarName === gameLog.avatarName) {
+      if (avatarName === gameLog.avatarName) {
+        break;
+      }
+      let avatarUserId = resolvedUserId;
+      if (!avatarUserId && photonStore.photonLoggingEnabled) {
+        for (const player of photonStore.photonLobby.values()) {
+          if (player?.displayName === gameLog.displayName && player.id) {
+            if (avatarUserId && avatarUserId !== player.id) {
+              avatarUserId = "";
+              break;
+            }
+            avatarUserId = player.id;
+          }
+        }
+      }
+      if (avatarUserId !== userStore.currentUser.id && gameLog.avatarName) {
+        database.queueRetainedEvent({
+          kind: "avatar",
+          subject: avatarUserId || `display:${gameLog.displayName}`,
+          createdAt: gameLog.dt,
+          data: { avatarName: gameLog.avatarName, displayName: gameLog.displayName, location, source: "game-log" },
+        });
+      }
+      if (photonStore.photonLoggingEnabled) {
         break;
       }
       if (!avatarName) {

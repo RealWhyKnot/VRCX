@@ -1,3 +1,4 @@
+import { scheduleRetainedPrune } from "./retained-events.ts";
 import { cellText } from "./cells.ts";
 
 import { sqliteService } from "../sqlite.ts";
@@ -7,19 +8,23 @@ function logDatabaseError(error: unknown): void {
 }
 
 const friendFavorites = {
-  addFriendToLocalFavorites(userId: string, groupName: string): void {
-    void sqliteService.run(DatabaseApi.AddFriendToLocalFavorites(userId, groupName, new Date().toJSON())).catch(logDatabaseError);
+  addFriendToLocalFavorites(userId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
+    void sqliteService.run(DatabaseApi.AddFriendToLocalFavorites(userId, groupName, new Date().toJSON(), name ?? null)).catch(logDatabaseError);
   },
 
-  removeFriendFromLocalFavorites(userId: string, groupName: string): void {
-    void sqliteService.run(DatabaseApi.RemoveFriendFromLocalFavorites(userId, groupName)).catch(logDatabaseError);
+  removeFriendFromLocalFavorites(userId: string, groupName: string, name?: string): void {
+    scheduleRetainedPrune();
+    void sqliteService.run(DatabaseApi.RemoveFriendFromLocalFavorites(userId, groupName, name ?? null)).catch(logDatabaseError);
   },
 
   renameFriendFavoriteGroup(newGroupName: string, groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.RenameFriendFavoriteGroup(newGroupName, groupName)).catch(logDatabaseError);
   },
 
   deleteFriendFavoriteGroup(groupName: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.DeleteFriendFavoriteGroup(groupName)).catch(logDatabaseError);
   },
 

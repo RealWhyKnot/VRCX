@@ -60,31 +60,44 @@ sealed partial class DatabaseApi
     public string GetPreviousDisplayNamesByUserId(string userId) => Rows("SELECT created_at, display_name FROM gamelog_join_leave WHERE user_id = @userId ORDER BY id DESC", ("@userId", userId));
 
     public string GetPreviousInstancesByUserId(string? userId, string? displayName) => Rows("""
-        WITH grouped_locations AS (
+        WITH matching_entries AS MATERIALIZED (
+            SELECT id, created_at, location, time, type
+            FROM gamelog_join_leave
+            WHERE user_id = @userId OR display_name = @displayName
+        ), grouped_locations AS (
             SELECT DISTINCT location, world_name, group_name
             FROM gamelog_location
+            WHERE location IN (SELECT location FROM matching_entries)
         )
-        SELECT gamelog_join_leave.created_at, strftime('%s', gamelog_join_leave.created_at) * 1000 created_at_ts, gamelog_join_leave.location, gamelog_join_leave.time, grouped_locations.world_name, grouped_locations.group_name, gamelog_join_leave.id, gamelog_join_leave.type
-        FROM gamelog_join_leave
-        INNER JOIN grouped_locations ON gamelog_join_leave.location = grouped_locations.location
-        WHERE user_id = @userId OR display_name = @displayName
-        ORDER BY gamelog_join_leave.id ASC
+        SELECT g.created_at, strftime('%s', g.created_at) * 1000 created_at_ts, g.location, g.time, l.world_name, l.group_name, g.id, g.type
+        FROM matching_entries g
+        INNER JOIN grouped_locations l ON g.location = l.location
+        ORDER BY g.id
         """, ("@userId", userId), ("@displayName", displayName));
 
     public string GetJoinLeaveDatesByUserId(string userId) => Rows("SELECT created_at FROM gamelog_join_leave WHERE user_id = @userId", ("@userId", userId));
 
     public string GetRecentInstanceJoinsByUserId(string userId, string since) => Rows("SELECT created_at, location FROM gamelog_join_leave WHERE user_id = @userId AND created_at > @created_at ORDER BY created_at DESC", ("@userId", userId), ("@created_at", since));
 
-    public string GetInstanceActivityRows(string startDate, string endDate) => Rows("""
-        SELECT
-            *
-        FROM
-            gamelog_join_leave
-        WHERE type = 'OnPlayerLeft'
-            AND (
-                strftime('%Y-%m-%dT%H:%M:%SZ', created_at, '-' || (time * 1.0 / 1000) || ' seconds') BETWEEN @utc_start_date AND @utc_end_date
-                OR created_at BETWEEN @utc_start_date AND @utc_end_date
-            );
+    private const string InstanceActivityStart = "strftime('%Y-%m-%dT%H:%M:%SZ', created_at, '-' || (time * 1.0 / 1000) || ' seconds')";
+    private const string InstanceActivityStartKey = $"CASE WHEN lower(substr(CAST(created_at AS TEXT), 1, 10)) IN ('now', 'subsec', 'subsecond') THEN '' ELSE {InstanceActivityStart} END";
+
+    public string GetInstanceActivityRows(string startDate, string endDate) => Rows($"""
+        WITH matching AS (
+            SELECT id FROM gamelog_join_leave WHERE type = 'OnPlayerLeft'
+                AND created_at BETWEEN @utc_start_date AND @utc_end_date
+            UNION
+            SELECT id FROM gamelog_join_leave WHERE type = 'OnPlayerLeft'
+                AND ({InstanceActivityStartKey}) BETWEEN @utc_start_date AND @utc_end_date
+            UNION
+            SELECT id FROM gamelog_join_leave WHERE type = 'OnPlayerLeft'
+                AND ({InstanceActivityStartKey}) = ''
+        )
+        SELECT g.*
+        FROM matching JOIN gamelog_join_leave g USING (id)
+        WHERE created_at BETWEEN @utc_start_date AND @utc_end_date
+            OR {InstanceActivityStart} BETWEEN @utc_start_date AND @utc_end_date
+        ORDER BY g.id
         """, ("@utc_start_date", startDate), ("@utc_end_date", endDate));
 
     public string GetRepeatEncounters(string selfId, long minPlaces, long limit) => Rows($"""

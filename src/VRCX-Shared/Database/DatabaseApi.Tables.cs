@@ -7,22 +7,50 @@ internal
 #endif
 sealed partial class DatabaseApi
 {
+    private const long AccountSchemaVersion = 3;
+
+    public void InitializeAccount(string userId) => Store.ExecuteExclusive(() =>
+    {
+        SetUser(userId);
+        CreateUserTables();
+    });
+
     public void CreateUserTables()
     {
-        CreateFeedTables();
-        CreateActivityTables();
-        CreateFriendLogTables();
-        CreateNotificationAndProfileTables();
-        CreateSightingTables();
+        Store.ExecuteExclusive(() =>
+        {
+            string account = _userPrefix;
+            if (Store.Execute("SELECT 1 FROM account_schema WHERE account = @account AND version >= @version",
+                ToArguments([("@account", account), ("@version", AccountSchemaVersion)])).Length == 0)
+            {
+                Store.ExecuteTransaction(() =>
+                {
+                    CreateFeedTables();
+                    CreateActivityTables();
+                    CreateFriendLogTables();
+                    CreateNotificationAndProfileTables();
+                    CreateSightingTables();
+                    _ = Run("INSERT OR REPLACE INTO account_schema (account, version) VALUES (@account, @version)",
+                        ("@account", account), ("@version", AccountSchemaVersion));
+                });
+            }
+
+            PruneInstanceSightings(KeptSightings);
+        });
     }
 
-    public void CreateGlobalTables()
+    public void CreateGlobalTables() => Store.ExecuteExclusive(() =>
     {
+        if (ReadSchemaVersion() >= MigrationSteps.Length)
+        {
+            return;
+        }
+
         CreateGameLogTables();
         CreateCacheAndFavoriteTables();
         CreatePictureOwnerTable();
         ApplyMigrations();
-    }
+    });
 
     public void VacuumDatabase() => _ = Run("VACUUM");
 
@@ -39,7 +67,9 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE TABLE IF NOT EXISTS {feedStatus} (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, status TEXT, status_description TEXT, previous_status TEXT, previous_status_description TEXT)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {feedBio} (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, bio TEXT, previous_bio TEXT, bio_links TEXT, previous_bio_links TEXT)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {feedAvatar} (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, owner_id TEXT, avatar_name TEXT, current_avatar_image_url TEXT, current_avatar_thumbnail_image_url TEXT, previous_current_avatar_image_url TEXT, previous_current_avatar_thumbnail_image_url TEXT)");
-        _ = Run($"CREATE TABLE IF NOT EXISTS {feedOnlineOffline} (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, type TEXT, location TEXT, world_name TEXT, time INTEGER, group_name TEXT)");
+        _ = Run($"CREATE TABLE IF NOT EXISTS {feedOnlineOffline} (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, type TEXT, location TEXT, world_name TEXT, time INTEGER, group_name TEXT, platform TEXT)");
+        EnsureFeedPlatformColumn(feedOnlineOffline);
+        _ = Run($"CREATE INDEX IF NOT EXISTS {feedOnlineOffline}_platform_idx ON {feedOnlineOffline} (user_id, id DESC) WHERE platform IS NOT NULL");
         _ = Run($"CREATE INDEX IF NOT EXISTS {feedOnlineOffline}_user_created_idx ON {feedOnlineOffline} (user_id, created_at)");
         string[] perFriendFeeds = [feedGps, feedStatus, feedBio, feedAvatar];
         foreach (string table in perFriendFeeds)
@@ -80,6 +110,7 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE TABLE IF NOT EXISTS {UserTable("notifications")} (id TEXT PRIMARY KEY, created_at TEXT, type TEXT, sender_user_id TEXT, sender_username TEXT, receiver_user_id TEXT, message TEXT, world_id TEXT, world_name TEXT, image_url TEXT, invite_message TEXT, request_message TEXT, response_message TEXT, expired INTEGER)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {UserTable("notifications_v2")} (id TEXT PRIMARY KEY, created_at TEXT, updated_at TEXT, expires_at TEXT, type TEXT, link TEXT, link_text TEXT, message TEXT, title TEXT, image_url TEXT, seen INTEGER, sender_user_id TEXT, sender_username TEXT, data TEXT, responses TEXT, details TEXT)");
         _ = Run($"CREATE INDEX IF NOT EXISTS {UserTable("notifications_v2")}_created_idx ON {UserTable("notifications_v2")} (created_at)");
+        CreateNotificationPerformanceIndexes();
         _ = Run($"CREATE TABLE IF NOT EXISTS {UserTable("moderation")} (user_id TEXT PRIMARY KEY, updated_at TEXT, display_name TEXT, block INTEGER, mute INTEGER)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {UserTable("avatar_history")} (avatar_id TEXT PRIMARY KEY, created_at TEXT, time INTEGER)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {UserTable("notes")} (user_id TEXT PRIMARY KEY, display_name TEXT, note TEXT, created_at TEXT)");

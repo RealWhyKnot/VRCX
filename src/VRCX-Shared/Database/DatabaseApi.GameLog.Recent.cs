@@ -21,15 +21,12 @@ sealed partial class DatabaseApi
 
     public string GetRecentGameLogExternal(string dateOffset, long limit) => Rows("SELECT * FROM gamelog_external WHERE created_at >= date(@dateOffset) ORDER BY id DESC LIMIT @limit", ("@dateOffset", dateOffset), ("@limit", limit));
 
-    public string GetLatestGameLogLocationCreatedAt() => Rows("SELECT created_at FROM gamelog_location ORDER BY id DESC LIMIT 1");
-
-    public string GetLatestGameLogJoinLeaveCreatedAt() => Rows("SELECT created_at FROM gamelog_join_leave ORDER BY id DESC LIMIT 1");
-
-    public string GetLatestGameLogPortalSpawnCreatedAt() => Rows("SELECT created_at FROM gamelog_portal_spawn ORDER BY id DESC LIMIT 1");
-
-    public string GetLatestGameLogEventCreatedAt() => Rows("SELECT created_at FROM gamelog_event ORDER BY id DESC LIMIT 1");
-
-    public string GetLatestGameLogVideoPlayCreatedAt() => Rows("SELECT created_at FROM gamelog_video_play ORDER BY id DESC LIMIT 1");
-
-    public string GetLatestGameLogResourceLoadCreatedAt() => Rows("SELECT created_at FROM gamelog_resource_load ORDER BY id DESC LIMIT 1");
+    public string GetLatestGameLogCreatedAts() => Rows("""
+        SELECT created_at FROM (SELECT created_at FROM gamelog_location ORDER BY id DESC LIMIT 1)
+        UNION ALL SELECT created_at FROM (SELECT created_at FROM gamelog_join_leave ORDER BY id DESC LIMIT 1)
+        UNION ALL SELECT created_at FROM (SELECT created_at FROM gamelog_portal_spawn ORDER BY id DESC LIMIT 1)
+        UNION ALL SELECT created_at FROM (SELECT created_at FROM gamelog_event ORDER BY id DESC LIMIT 1)
+        UNION ALL SELECT created_at FROM (SELECT created_at FROM gamelog_video_play ORDER BY id DESC LIMIT 1)
+        UNION ALL SELECT created_at FROM (SELECT created_at FROM gamelog_resource_load ORDER BY id DESC LIMIT 1)
+        """);
 }

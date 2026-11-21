@@ -19,12 +19,30 @@ sealed partial class DatabaseApi
             "DELETE FROM favorite_friend WHERE id NOT IN (SELECT MIN(id) FROM favorite_friend GROUP BY user_id, group_name)",
             "CREATE UNIQUE INDEX IF NOT EXISTS favorite_friend_item_group_idx ON favorite_friend (user_id, group_name)",
         ],
+        [
+            $"CREATE INDEX IF NOT EXISTS idx_gamelog_jl_activity_start ON gamelog_join_leave (({InstanceActivityStartKey})) WHERE type = 'OnPlayerLeft'",
+            "CREATE INDEX IF NOT EXISTS idx_gamelog_jl_repeat_encounters ON gamelog_join_leave (user_id, created_at, id, location, time, display_name) WHERE type = 'OnPlayerLeft' AND user_id != ''",
+        ],
+        [
+            "CREATE TABLE IF NOT EXISTS account_schema (account TEXT PRIMARY KEY, version INTEGER NOT NULL) WITHOUT ROWID",
+        ],
+        [
+            "CREATE TABLE IF NOT EXISTS retained_event (id INTEGER PRIMARY KEY, account TEXT NOT NULL, kind TEXT NOT NULL, subject TEXT NOT NULL, detail TEXT NOT NULL, created_at TEXT NOT NULL, data TEXT NOT NULL)",
+            "CREATE INDEX IF NOT EXISTS retained_event_subject_idx ON retained_event (account, kind, subject, id DESC)",
+            "CREATE INDEX IF NOT EXISTS retained_event_stream_idx ON retained_event (account, kind, id DESC)",
+            "CREATE INDEX IF NOT EXISTS retained_event_retention_idx ON retained_event (kind, id DESC)",
+            "CREATE TABLE IF NOT EXISTS retained_favorite_origin (account TEXT NOT NULL, kind TEXT NOT NULL, item_id TEXT NOT NULL, group_name TEXT NOT NULL, created_at TEXT, name TEXT, active INTEGER NOT NULL, touched_at TEXT NOT NULL, PRIMARY KEY (account, kind, item_id, group_name)) WITHOUT ROWID",
+            "CREATE INDEX IF NOT EXISTS retained_favorite_inactive_idx ON retained_favorite_origin (touched_at) WHERE active = 0",
+            "CREATE TABLE IF NOT EXISTS retained_favorite_snapshot (account TEXT PRIMARY KEY, touched_at TEXT NOT NULL) WITHOUT ROWID",
+        ],
     ];
+
+    private long ReadSchemaVersion() => Convert.ToInt64(Store.Execute("PRAGMA user_version")[0][0], CultureInfo.InvariantCulture);
 
     private void ApplyMigrations()
     {
         _ = Run("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)");
-        long version = Convert.ToInt64(Store.Execute("PRAGMA user_version")[0][0], CultureInfo.InvariantCulture);
+        long version = ReadSchemaVersion();
         if (version >= MigrationSteps.Length)
         {
             return;

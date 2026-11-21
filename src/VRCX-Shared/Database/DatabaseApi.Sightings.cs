@@ -16,7 +16,7 @@ sealed partial class DatabaseApi
             throw new ArgumentException("The sighting people columns must have the same length.", nameof(userIds));
         }
 
-        RunInWriteTransaction(() =>
+        Store.ExecuteTransaction(() =>
         {
             long sightingId = Insert(
                 $"INSERT INTO {UserTable("instance_sightings")} (created_at, location, world_id, world_name, creator_id, creator_name, user_count, capacity) VALUES (@created_at, @location, @world_id, @world_name, @creator_id, @creator_name, @user_count, @capacity)",
@@ -107,21 +107,39 @@ sealed partial class DatabaseApi
     {
         string sightings = UserTable("instance_sightings");
         string people = UserTable("instance_sighting_people");
-        RunInWriteTransaction(() =>
+        if (FindSightingPruneBoundary(sightings, keep) is null)
         {
-            string oldest = $"(SELECT id FROM {sightings} ORDER BY id DESC LIMIT 1 OFFSET @keep)";
-            _ = Run($"DELETE FROM {people} WHERE sighting_id <= {oldest}", ("@keep", keep));
-            _ = Run($"DELETE FROM {sightings} WHERE id <= {oldest}", ("@keep", keep));
+            return;
+        }
+
+        Store.ExecuteTransaction(() =>
+        {
+            if (FindSightingPruneBoundary(sightings, keep) is not long oldest)
+            {
+                return;
+            }
+
+            _ = Run($"DELETE FROM {people} WHERE sighting_id <= @oldest", ("@oldest", oldest));
+            _ = Run($"DELETE FROM {sightings} WHERE id <= @oldest", ("@oldest", oldest));
         });
+    }
+
+    private long? FindSightingPruneBoundary(string sightings, long keep)
+    {
+        object[][] rows = Store.Execute($"""
+            SELECT (SELECT id FROM {sightings} ORDER BY id DESC LIMIT 1 OFFSET @keep)
+            WHERE (SELECT MAX(id) FROM {sightings}) - (SELECT MIN(id) FROM {sightings}) >= @keep
+            """, ToArguments([("@keep", keep)]));
+        return rows.Length > 0 && rows[0][0] is long oldest ? oldest : null;
     }
 
     public string GetUnresolvedSightingPictures(string retryFailedBefore, long limit) => Rows($"""
         SELECT p.file_id
         FROM {UserTable("instance_sighting_people")} p
         WHERE p.file_id != '' AND p.user_id = ''
-            AND NOT EXISTS (
-                SELECT 1 FROM picture_owners o
-                WHERE o.file_id = p.file_id AND (o.kind != 'failed' OR o.resolved_at >= @retry_failed_before))
+            AND p.file_id NOT IN (
+                SELECT file_id FROM picture_owners
+                WHERE file_id IS NOT NULL AND (kind != 'failed' OR resolved_at >= @retry_failed_before))
         GROUP BY p.file_id
         ORDER BY MAX(p.sighting_id) DESC
         LIMIT @limit
@@ -152,7 +170,6 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE TABLE IF NOT EXISTS {people} (sighting_id INTEGER NOT NULL, user_id TEXT NOT NULL DEFAULT '', file_id TEXT NOT NULL DEFAULT '', display_name TEXT NOT NULL DEFAULT '', is_friend INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (sighting_id, user_id, file_id)) WITHOUT ROWID");
         _ = Run($"CREATE INDEX IF NOT EXISTS {people}_user_idx ON {people} (user_id)");
         _ = Run($"CREATE INDEX IF NOT EXISTS {people}_file_idx ON {people} (file_id)");
-        PruneInstanceSightings(KeptSightings);
     }
 
     private void CreatePictureOwnerTable()

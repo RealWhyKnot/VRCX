@@ -1,3 +1,4 @@
+import { scheduleRetainedPrune } from "./retained-events.ts";
 import { cellText } from "./cells.ts";
 
 import { sqliteService } from "../sqlite.ts";
@@ -8,10 +9,12 @@ function logDatabaseError(error: unknown): void {
 
 const printFavorites = {
   addPrintToFavorites(printId: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.AddPrintToFavorites(printId, new Date().toJSON())).catch(logDatabaseError);
   },
 
   removePrintFromFavorites(printId: string): void {
+    scheduleRetainedPrune();
     void sqliteService.run(DatabaseApi.RemovePrintFromFavorites(printId)).catch(logDatabaseError);
   },
 

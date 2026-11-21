@@ -4,11 +4,13 @@ import { useAppearanceSettingsStore } from "../stores/settings/appearance";
 import { useFriendStore } from "../stores/friend";
 import { useGeneralSettingsStore } from "../stores/settings/general";
 import { useUserStore } from "../stores/user";
+import { useAvatarStore } from "../stores/avatar";
 import { useWorldStore } from "../stores/world";
 import { applyWorld, toWorldInput } from "./world-coordinator";
 import { favoriteRequest } from "../api/favorite";
 import { queryRequest } from "../api/query-request";
-import { database } from "../services/database";
+import type { RemoteFavoriteObservation } from "../services/database/retained-events";
+import { database, dbVars } from "../services/database";
 import { i18n } from "../plugins/i18n";
 import { processBulk } from "../services/request";
 import { watchState } from "../services/watch-state";
@@ -35,6 +37,33 @@ export function handleFavoriteWorldList(args: FavoriteWorldPage) {
   }
 }
 
+type FavoritePage = Awaited<ReturnType<typeof favoriteRequest.getFavorites>>["json"];
+
+function queueRemoteFavoriteSnapshot(account: string, createdAt: string, pages: FavoritePage[]) {
+  setTimeout(() => {
+    if (!watchState.isLoggedIn || dbVars.userId !== account) {
+      return;
+    }
+    const { friends } = useFriendStore();
+    const { cachedWorlds } = useWorldStore();
+    const { cachedAvatars } = useAvatarStore();
+    const observed = new Map<string, RemoteFavoriteObservation>();
+    for (const page of pages) {
+      for (const { favoriteId: itemId, type, tags } of page) {
+        if (typeof itemId !== "string" || typeof type !== "string") {
+          continue;
+        }
+        const name = type === "friend" ? friends.get(itemId)?.name : type === "avatar" ? cachedAvatars.get(itemId)?.name : cachedWorlds.get(itemId)?.name;
+        const groups = Array.isArray(tags) ? tags.filter((group) => typeof group === "string") : [];
+        for (const group of groups.length > 0 ? groups : [""]) {
+          observed.set(JSON.stringify([type, itemId, group]), { type, itemId, group, name });
+        }
+      }
+    }
+    database.queueRetainedEvent({ kind: "remote-favorites", subject: account, createdAt, data: [...observed.values()] }, account);
+  }, 0);
+}
+
 export function refreshFavorites() {
   const favoriteStore = useFavoriteStore();
   const friendStore = useFriendStore();
@@ -52,6 +81,8 @@ export function refreshFavorites() {
       });
     })
     .catch(logFavoriteError);
+  const account = dbVars.userId;
+  const observedPages: FavoritePage[] = [];
   const newFavoriteSortOrder: string[] = [];
   const sortOrder: string[] = favoriteStore.favoritesSortOrder;
   processBulk({
@@ -62,6 +93,7 @@ export function refreshFavorites() {
       offset: 0,
     },
     handle(args: Awaited<ReturnType<typeof favoriteRequest.getFavorites>>) {
+      observedPages.push(args.json);
       for (const json of args.json) {
         newFavoriteSortOrder.push(json.favoriteId);
         handleFavorite({
@@ -72,6 +104,7 @@ export function refreshFavorites() {
     },
     done(isOk: boolean) {
       if (isOk) {
+        queueRemoteFavoriteSnapshot(account, new Date().toJSON(), observedPages);
         for (const id of sortOrder) {
           if (!newFavoriteSortOrder.includes(id)) {
             const fav = readFavoriteCachedRef(favoriteStore.cachedFavoritesByObjectId.get(id));
@@ -108,7 +141,7 @@ export function addLocalWorldFavorite(worldId: string, group: string) {
 
   requireLocalFavoriteGroup(localWorldFavorites, group).unshift(ref);
   database.addWorldToCache(ref);
-  database.addWorldToFavorites(worldId, group);
+  database.addWorldToFavorites(worldId, group, ref.name);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === worldId) {
     favoriteStore.updateFavoriteDialog(worldId);
   }
@@ -147,7 +180,7 @@ export function removeLocalWorldFavorite(worldId: string, group: string) {
   if (!isWorldInFavorites) {
     database.removeWorldFromCache(worldId);
   }
-  database.removeWorldFromFavorites(worldId, group);
+  database.removeWorldFromFavorites(worldId, group, worldStore.cachedWorlds.get(worldId)?.name);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === worldId) {
     favoriteStore.updateFavoriteDialog(worldId);
   }
@@ -241,7 +274,7 @@ export function addLocalFriendFavorite(userId: string, group: string) {
   }
   localFriendFavorites[group] ??= [];
   requireLocalFavoriteGroup(localFriendFavorites, group).unshift(userId);
-  database.addFriendToLocalFavorites(userId, group);
+  database.addFriendToLocalFavorites(userId, group, userStore.cachedUsers.get(userId)?.displayName);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === userId) {
     favoriteStore.updateFavoriteDialog(userId);
   }
@@ -265,7 +298,7 @@ export function removeLocalFriendFavorite(userId: string, group: string) {
       favoriteGroup.splice(idx, 1);
     }
   }
-  database.removeFriendFromLocalFavorites(userId, group);
+  database.removeFriendFromLocalFavorites(userId, group, userStore.cachedUsers.get(userId)?.displayName);
   if (favoriteStore.favoriteDialog.visible && favoriteStore.favoriteDialog.objectId === userId) {
     favoriteStore.updateFavoriteDialog(userId);
   }

@@ -15,25 +15,24 @@ sealed partial class DatabaseApi
 
     private SQLiteDatabase Store => field ??= SQLiteDatabase.Instance;
 
-    public void SetUser(string userId)
+    public void SetUser(string userId) => Store.ExecuteExclusive(() => SetUserPrefix(userId));
+
+    private void SetUserPrefix(string userId) => _userPrefix = AccountPrefix(userId);
+
+    private static string AccountPrefix(string userId)
     {
         ArgumentNullException.ThrowIfNull(userId);
         string prefix = userId.Replace("-", string.Empty, StringComparison.Ordinal).Replace("_", string.Empty, StringComparison.Ordinal);
-        if (!UserPrefixPattern().IsMatch(prefix))
-        {
-            throw new ArgumentException("The user id contains characters that cannot be used in a table name.", nameof(userId));
-        }
-
-        _userPrefix = char.IsAsciiDigit(prefix[0]) ? $"_{prefix}" : prefix;
+        return !UserPrefixPattern().IsMatch(prefix)
+            ? throw new ArgumentException("The user id contains characters that cannot be used in a table name.", nameof(userId))
+            : char.IsAsciiDigit(prefix[0]) ? $"_{prefix}" : prefix;
     }
-
-    public void BeginTransaction() => _ = Store.ExecuteNonQuery("BEGIN");
-
-    public void CommitTransaction() => _ = Store.ExecuteNonQuery("COMMIT");
 
     private string UserTable(string suffix) => _userPrefix.Length == 0 ? throw new InvalidOperationException("No user has been set for the database.") : $"{_userPrefix}_{suffix}";
 
     private string Rows(string sql, params (string Name, object? Value)[] args) => Store.ExecuteJson(sql, ToArguments(args));
+
+    private string WriteRowsJson(string sql, params (string Name, object? Value)[] args) => Store.ExecuteWriteJson(sql, ToArguments(args));
 
     private int Run(string sql, params (string Name, object? Value)[] args) => Store.ExecuteNonQuery(sql, ToArguments(args));
 

@@ -6,14 +6,24 @@ import type { TablesBridge } from "./bridge-tables.ts";
 
 type CoreBridge = {
   SetUser(userId: string): Promise<void>;
-  BeginTransaction(): Promise<void>;
-  CommitTransaction(): Promise<void>;
+  InitializeAccount(userId: string): Promise<void>;
   CreateConfigTable(): Promise<void>;
   GetConfigValue(key: string): Promise<string>;
   SetConfigValue(key: string, value: string): Promise<void>;
   RemoveConfigValue(key: string): Promise<void>;
 };
 
-type DatabaseBridge = CoreBridge & ActivityBridge & EntitiesBridge & FeedBridge & GameLogBridge & TablesBridge;
+type RetainedEventBridge = {
+  AppendRetainedEvents(userId: string, payload: string): Promise<void>;
+  PruneRetainedEvents(): Promise<void>;
+  GetPlayerAvatarHistory(userId: string, beforeId: number | null, limit: number): Promise<string>;
+  GetFriendPlatformHistory(userId: string, beforeId: number | null, limit: number): Promise<string>;
+  GetRetainedProfileBaselines(userId: string, subjects: string): Promise<string>;
+  GetProfileHistory(userId: string, beforeId: number | null, limit: number): Promise<string>;
+  GetFavoriteHistory(beforeId: number | null, limit: number): Promise<string>;
+  GetBadgeHistory(beforeId: number | null, limit: number): Promise<string>;
+};
+
+type DatabaseBridge = CoreBridge & ActivityBridge & EntitiesBridge & FeedBridge & GameLogBridge & TablesBridge & RetainedEventBridge;
 
 export type { DatabaseBridge };

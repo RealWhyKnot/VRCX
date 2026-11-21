@@ -25,7 +25,7 @@ sealed partial class DatabaseApi
 
     public string GetLocationTableSize() => Rows("SELECT COUNT(*) FROM gamelog_location");
 
-    public string GetJoinLeaveTableSize() => Rows("SELECT COUNT(*) FROM gamelog_join_leave");
+    public string GetJoinLeaveTableSize() => Rows("SELECT COUNT(1) FROM gamelog_join_leave INDEXED BY idx_gamelog_jl_display_created");
 
     public string GetPortalSpawnTableSize() => Rows("SELECT COUNT(*) FROM gamelog_portal_spawn");
 

@@ -71,6 +71,11 @@ const friendLogHistory = {
     return rows.map(toFriendLogHistoryEntry).reverse();
   },
 
+  async getFriendLogHistoryPage(limit: number, beforeId: number | null = null): Promise<FriendLogHistoryEntry[]> {
+    const rows = await sqliteService.rows(DatabaseApi.GetFriendLogHistoryPage(limit, beforeId));
+    return rows.map(toFriendLogHistoryEntry);
+  },
+
   addFriendLogHistory(entry: FriendLogHistoryInput): void {
     void sqliteService
       .run(

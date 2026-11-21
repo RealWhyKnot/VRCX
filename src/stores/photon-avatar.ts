@@ -1,15 +1,16 @@
 import type { Ref } from "vue";
 
 import { checkVRChatCache } from "../coordinators/cache-coordinator";
+import { database } from "../services/database";
 import { getGroupName } from "../shared/utils/group";
 import { replaceBioSymbols } from "../shared/utils/base/string";
 import { applyAvatar } from "../coordinators/avatar-coordinator";
-import type { PhotonAvatar, PhotonId, PhotonUserInfo } from "./photon-types";
+import type { PhotonAvatar, PhotonEventEntry, PhotonId, PhotonJointime, PhotonUserInfo } from "./photon-types";
 import { isCacheHit } from "./photon-guards";
 import { logPhotonError } from "./photon-errors";
 import type { useGameLogStore } from "./gameLog";
 import type { useNotificationStore } from "./notification";
-import type { PhotonJointime, PhotonEventEntry } from "./photon-types";
+import { useLocationStore } from "./location";
 
 export type CreatePhotonAvatarDeps = {
   gameLogStore: ReturnType<typeof useGameLogStore>;
@@ -32,6 +33,24 @@ export function createPhotonAvatar(deps: CreatePhotonAvatarDeps) {
       return;
     }
     const oldAvatarId = photonLobbyAvatars.value.get(user.id);
+    if (avatar.id && oldAvatarId !== avatar.id && photonId !== photonLobbyCurrentUser.value) {
+      database.queueRetainedEvent({
+        kind: "avatar",
+        subject: user.id,
+        createdAt: gameLogDate,
+        data: {
+          avatarName: replaceBioSymbols(avatar.name),
+          displayName: user.displayName,
+          avatarId: avatar.id,
+          authorId: avatar.authorId,
+          releaseStatus: avatar.releaseStatus,
+          imageUrl: avatar.imageUrl,
+          thumbnailImageUrl: avatar.thumbnailImageUrl,
+          location: useLocationStore().lastLocation.location,
+          source: "photon",
+        },
+      });
+    }
     if (oldAvatarId && oldAvatarId !== avatar.id && photonId !== photonLobbyCurrentUser.value) {
       avatar.name = replaceBioSymbols(avatar.name);
       avatar.description = replaceBioSymbols(avatar.description);

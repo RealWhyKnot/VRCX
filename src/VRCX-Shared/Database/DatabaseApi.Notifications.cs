@@ -9,6 +9,20 @@ internal
 #endif
 sealed partial class DatabaseApi
 {
+    private const string GroupNotificationId = """CASE WHEN instr(link, 'grp_') > 0 THEN substr(link, instr(link, 'grp_'), 40) ELSE substr(data, instr(data, '"groupId":"grp_') + 11, 40) END""";
+    private const string GroupNotificationFilter = """link LIKE '%grp_%' OR data LIKE '%"groupId":"grp_%'""";
+    private const string LegacyGroupNotificationFilter = "sender_user_id LIKE 'grp_%'";
+
+    private void CreateNotificationPerformanceIndexes()
+    {
+        string legacy = UserTable("notifications");
+        string current = UserTable("notifications_v2");
+        _ = Run($"CREATE INDEX IF NOT EXISTS {legacy}_created_idx ON {legacy} (created_at DESC)");
+        _ = Run($"CREATE INDEX IF NOT EXISTS {legacy}_type_created_idx ON {legacy} (type, created_at DESC)");
+        _ = Run($"CREATE INDEX IF NOT EXISTS {current}_group_notice_idx ON {current} (({GroupNotificationId}), created_at) WHERE {GroupNotificationFilter}");
+        _ = Run($"CREATE INDEX IF NOT EXISTS {legacy}_group_notice_idx ON {legacy} (sender_user_id, created_at) WHERE {LegacyGroupNotificationFilter}");
+    }
+
     public string GetNotifications(long maxEntries) => Rows($"SELECT * FROM {UserTable("notifications")} ORDER BY created_at DESC LIMIT @maxEntries", ("@maxEntries", maxEntries));
 
     public string LookupNotifications(string search, string[] filters, string[] vipList, long maxEntries)
@@ -31,7 +45,7 @@ sealed partial class DatabaseApi
         string sql = $"""
             SELECT * FROM {UserTable("notifications")}
             WHERE (sender_username LIKE @search OR message LIKE @search OR world_name LIKE @search) {vipQuery} {filterQuery}
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, rowid
             LIMIT @maxEntries
             """;
         return Rows(sql, [.. args]);
@@ -64,15 +78,18 @@ sealed partial class DatabaseApi
 
     public string GetNotificationsV2(long maxEntries) => Rows($"SELECT * FROM {UserTable("notifications_v2")} ORDER BY created_at DESC LIMIT @maxEntries", ("@maxEntries", maxEntries));
 
-    public string GetGroupNotificationStats() =>
-        Rows($"""
+    public string GetGroupNotificationStats()
+    {
+        string current = UserTable("notifications_v2");
+        return Rows($"""
             SELECT group_id, COUNT(*), MAX(created_at) FROM (
-                SELECT CASE WHEN instr(link, 'grp_') > 0 THEN substr(link, instr(link, 'grp_'), 40) ELSE substr(data, instr(data, '"groupId":"grp_') + 11, 40) END AS group_id, created_at
-                FROM {UserTable("notifications_v2")} WHERE link LIKE '%grp_%' OR data LIKE '%"groupId":"grp_%'
+                SELECT {GroupNotificationId} AS group_id, created_at
+                FROM {current} INDEXED BY {current}_group_notice_idx WHERE {GroupNotificationFilter}
                 UNION ALL
-                SELECT sender_user_id, created_at FROM {UserTable("notifications")} WHERE sender_user_id LIKE 'grp_%'
+                SELECT sender_user_id, created_at FROM {UserTable("notifications")} WHERE {LegacyGroupNotificationFilter}
             ) WHERE group_id LIKE 'grp_%' GROUP BY group_id
             """);
+    }
 
     public void AddNotificationV2(string id, string? createdAt, string? updatedAt, string? expiresAt, string? type, string? link, string? linkText, string? message, string? title, string? imageLocation, bool isSeen, string? senderUserId, string? senderUsername, string dataJson, string responsesJson, string detailsJson) =>
         _ = Run($"""

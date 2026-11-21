@@ -31,7 +31,7 @@ sealed partial class DatabaseApi
             throw new ArgumentException("The mutual graph edge columns must have the same length.", nameof(edgeMutualIds));
         }
 
-        RunInWriteTransaction(() =>
+        Store.ExecuteTransaction(() =>
         {
             string metaTable = UserTable("mutual_graph_meta");
             _ = Run($"DELETE FROM {UserTable("mutual_graph_links")} WHERE friend_id NOT IN (SELECT friend_id FROM {metaTable} WHERE opted_out = 1)");

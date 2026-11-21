@@ -21,7 +21,7 @@ sealed class SQLiteDatabase : IDisposable
 
     public SQLiteDatabase()
     {
-        _connectionLock = new ReaderWriterLockSlim();
+        _connectionLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
     }
 
     internal string DataSource { get; private set; } = string.Empty;
@@ -99,6 +99,19 @@ sealed class SQLiteDatabase : IDisposable
         return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
+    internal string ExecuteWriteJson(string sql, IReadOnlyDictionary<string, object?>? args = null)
+    {
+        _connectionLock.EnterWriteLock();
+        try
+        {
+            return ExecuteJson(sql, args);
+        }
+        finally
+        {
+            _connectionLock.ExitWriteLock();
+        }
+    }
+
     internal object[][] Execute(string sql, IReadOnlyDictionary<string, object?>? args = null)
     {
         _connectionLock.EnterReadLock();
@@ -140,19 +153,27 @@ sealed class SQLiteDatabase : IDisposable
         }
     }
 
-    internal void ExecuteTransaction(IReadOnlyList<string> statements)
+    internal void ExecuteTransaction(IReadOnlyList<string> statements) => ExecuteTransaction(() =>
+    {
+        foreach (string sql in statements)
+        {
+            _ = ExecuteNonQuery(sql);
+        }
+    });
+
+    internal void ExecuteTransaction(Action work) => ExecuteExclusive(() =>
+    {
+        using SQLiteTransaction transaction = Connection.BeginTransaction();
+        work();
+        transaction.Commit();
+    });
+
+    internal void ExecuteExclusive(Action work)
     {
         _connectionLock.EnterWriteLock();
         try
         {
-            using SQLiteTransaction transaction = Connection.BeginTransaction();
-            foreach (string sql in statements)
-            {
-                using SQLiteCommand command = CreateCommand(sql, args: null);
-                _ = command.ExecuteNonQuery();
-            }
-
-            transaction.Commit();
+            work();
         }
         finally
         {

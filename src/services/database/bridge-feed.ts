@@ -46,7 +46,8 @@ type FeedBridge = {
     location: string | null,
     worldName: string | null,
     time: number | null,
-    groupName: string | null
+    groupName: string | null,
+    platform: string | null
   ): Promise<number>;
   DeleteAvatarFeedOlderThan(cutoff: string): Promise<void>;
   DeleteAllAvatarFeed(): Promise<void>;

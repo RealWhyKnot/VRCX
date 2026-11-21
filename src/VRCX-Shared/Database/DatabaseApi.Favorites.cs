@@ -23,13 +23,13 @@ sealed partial class DatabaseApi
 
     public void ClearAvatarHistory() => _ = Run($"DELETE FROM {UserTable("avatar_history")}");
 
-    public void AddAvatarToFavorites(string avatarId, string groupName, string createdAt) => _ = Run("INSERT OR REPLACE INTO favorite_avatar (avatar_id, group_name, created_at) VALUES (@avatar_id, @group_name, @created_at)", ("@avatar_id", avatarId), ("@group_name", groupName), ("@created_at", createdAt));
+    public void AddAvatarToFavorites(string avatarId, string groupName, string createdAt, string? name) => ChangeLocalFavorite("avatar", "favorite_avatar", "avatar_id", avatarId, groupName, name, createdAt, add: true);
 
-    public void RenameAvatarFavoriteGroup(string newGroupName, string groupName) => _ = Run("UPDATE OR REPLACE favorite_avatar SET group_name = @new_group_name WHERE group_name = @group_name", ("@new_group_name", newGroupName), ("@group_name", groupName));
+    public void RenameAvatarFavoriteGroup(string newGroupName, string groupName) => ChangeLocalFavoriteGroup("avatar", "favorite_avatar", "avatar_id", groupName, newGroupName);
 
-    public void DeleteAvatarFavoriteGroup(string groupName) => _ = Run("DELETE FROM favorite_avatar WHERE group_name = @group_name", ("@group_name", groupName));
+    public void DeleteAvatarFavoriteGroup(string groupName) => ChangeLocalFavoriteGroup("avatar", "favorite_avatar", "avatar_id", groupName, newGroup: null);
 
-    public void RemoveAvatarFromFavorites(string avatarId, string groupName) => _ = Run("DELETE FROM favorite_avatar WHERE avatar_id = @avatar_id AND group_name = @group_name", ("@avatar_id", avatarId), ("@group_name", groupName));
+    public void RemoveAvatarFromFavorites(string avatarId, string groupName, string? name) => ChangeLocalFavorite("avatar", "favorite_avatar", "avatar_id", avatarId, groupName, name, createdAt: null, add: false);
 
     public string GetAvatarFavorites() => Rows("SELECT * FROM favorite_avatar");
 
@@ -39,13 +39,13 @@ sealed partial class DatabaseApi
 
     public void AddWorldToCache(string id, string addedAt, string? authorId, string? authorName, string? createdAt, string? description, string? imageLink, string? name, string? releaseStatus, string? thumbnailImageLink, string? updatedAt, long? version) => _ = Run("INSERT OR REPLACE INTO cache_world (id, added_at, author_id, author_name, created_at, description, image_url, name, release_status, thumbnail_image_url, updated_at, version) VALUES (@id, @added_at, @author_id, @author_name, @created_at, @description, @image_url, @name, @release_status, @thumbnail_image_url, @updated_at, @version)", ("@id", id), ("@added_at", addedAt), ("@author_id", authorId), ("@author_name", authorName), ("@created_at", createdAt), ("@description", description), ("@image_url", imageLink), ("@name", name), ("@release_status", releaseStatus), ("@thumbnail_image_url", thumbnailImageLink), ("@updated_at", updatedAt), ("@version", version));
 
-    public void AddWorldToFavorites(string worldId, string groupName, string createdAt) => _ = Run("INSERT OR REPLACE INTO favorite_world (world_id, group_name, created_at) VALUES (@world_id, @group_name, @created_at)", ("@world_id", worldId), ("@group_name", groupName), ("@created_at", createdAt));
+    public void AddWorldToFavorites(string worldId, string groupName, string createdAt, string? name) => ChangeLocalFavorite("world", "favorite_world", "world_id", worldId, groupName, name, createdAt, add: true);
 
-    public void RenameWorldFavoriteGroup(string newGroupName, string groupName) => _ = Run("UPDATE OR REPLACE favorite_world SET group_name = @new_group_name WHERE group_name = @group_name", ("@new_group_name", newGroupName), ("@group_name", groupName));
+    public void RenameWorldFavoriteGroup(string newGroupName, string groupName) => ChangeLocalFavoriteGroup("world", "favorite_world", "world_id", groupName, newGroupName);
 
-    public void DeleteWorldFavoriteGroup(string groupName) => _ = Run("DELETE FROM favorite_world WHERE group_name = @group_name", ("@group_name", groupName));
+    public void DeleteWorldFavoriteGroup(string groupName) => ChangeLocalFavoriteGroup("world", "favorite_world", "world_id", groupName, newGroup: null);
 
-    public void RemoveWorldFromFavorites(string worldId, string groupName) => _ = Run("DELETE FROM favorite_world WHERE world_id = @world_id AND group_name = @group_name", ("@world_id", worldId), ("@group_name", groupName));
+    public void RemoveWorldFromFavorites(string worldId, string groupName, string? name) => ChangeLocalFavorite("world", "favorite_world", "world_id", worldId, groupName, name, createdAt: null, add: false);
 
     public string GetWorldFavorites() => Rows("SELECT * FROM favorite_world");
 
@@ -55,19 +55,19 @@ sealed partial class DatabaseApi
 
     public string GetCachedWorldById(string id) => Rows("SELECT * FROM cache_world WHERE id = @id", ("@id", id));
 
-    public void AddFriendToLocalFavorites(string userId, string groupName, string createdAt) => _ = Run("INSERT OR REPLACE INTO favorite_friend (user_id, group_name, created_at) VALUES (@user_id, @group_name, @created_at)", ("@user_id", userId), ("@group_name", groupName), ("@created_at", createdAt));
+    public void AddFriendToLocalFavorites(string userId, string groupName, string createdAt, string? name) => ChangeLocalFavorite("friend", "favorite_friend", "user_id", userId, groupName, name, createdAt, add: true);
 
-    public void RemoveFriendFromLocalFavorites(string userId, string groupName) => _ = Run("DELETE FROM favorite_friend WHERE user_id = @user_id AND group_name = @group_name", ("@user_id", userId), ("@group_name", groupName));
+    public void RemoveFriendFromLocalFavorites(string userId, string groupName, string? name) => ChangeLocalFavorite("friend", "favorite_friend", "user_id", userId, groupName, name, createdAt: null, add: false);
 
-    public void RenameFriendFavoriteGroup(string newGroupName, string groupName) => _ = Run("UPDATE OR REPLACE favorite_friend SET group_name = @new_group_name WHERE group_name = @group_name", ("@new_group_name", newGroupName), ("@group_name", groupName));
+    public void RenameFriendFavoriteGroup(string newGroupName, string groupName) => ChangeLocalFavoriteGroup("friend", "favorite_friend", "user_id", groupName, newGroupName);
 
-    public void DeleteFriendFavoriteGroup(string groupName) => _ = Run("DELETE FROM favorite_friend WHERE group_name = @group_name", ("@group_name", groupName));
+    public void DeleteFriendFavoriteGroup(string groupName) => ChangeLocalFavoriteGroup("friend", "favorite_friend", "user_id", groupName, newGroup: null);
 
     public string GetFriendFavorites() => Rows("SELECT * FROM favorite_friend");
 
-    public void AddPrintToFavorites(string printId, string createdAt) => _ = Run("INSERT OR REPLACE INTO favorite_print (print_id, created_at) VALUES (@print_id, @created_at)", ("@print_id", printId), ("@created_at", createdAt));
+    public void AddPrintToFavorites(string printId, string createdAt) => ChangeLocalFavorite("print", "favorite_print", "print_id", printId, "", name: null, createdAt, add: true);
 
-    public void RemovePrintFromFavorites(string printId) => _ = Run("DELETE FROM favorite_print WHERE print_id = @print_id", ("@print_id", printId));
+    public void RemovePrintFromFavorites(string printId) => ChangeLocalFavorite("print", "favorite_print", "print_id", printId, "", name: null, createdAt: null, add: false);
 
     public string GetPrintFavorites() => Rows("SELECT * FROM favorite_print");
 }

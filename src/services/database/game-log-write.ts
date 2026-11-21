@@ -1,3 +1,5 @@
+import { cellNumber } from "./cells.ts";
+
 import { sqliteService } from "../sqlite.ts";
 
 type GameLogLocationEntry = {
@@ -109,8 +111,29 @@ async function addGamelogJoinLeaveBulk(inputData: GameLogJoinLeaveEntry[]) {
   if (inputData.length === 0) {
     return [];
   }
-  const entries = await Promise.all(inputData.map((entry) => addGamelogJoinLeaveToDatabase(entry)));
-  return entries.filter((entry) => entry !== undefined);
+  const values = inputData.map((entry) => [entry.created_at, entry.type, entry.displayName, entry.location, entry.userId, entry.time]);
+  const rows = await sqliteService.rows(DatabaseApi.AddGamelogJoinLeaveBulk(JSON.stringify(values)));
+  const inserted = new Map<string, number[]>();
+  for (const [id, ...fields] of rows) {
+    const rowId = cellNumber(id);
+    if (rowId === null || rowId === 0) {
+      continue;
+    }
+    const key = JSON.stringify(fields);
+    const ids = inserted.get(key);
+    if (ids === undefined) {
+      inserted.set(key, [rowId]);
+    } else {
+      ids.push(rowId);
+    }
+  }
+  for (const ids of inserted.values()) {
+    ids.sort((a, b) => b - a);
+  }
+  return inputData.flatMap((entry, index) => {
+    const rowId = inserted.get(JSON.stringify(values[index]))?.pop();
+    return rowId === undefined ? [] : [{ ...entry, rowId }];
+  });
 }
 
 function addGamelogPortalSpawnToDatabase(entry: GameLogPortalSpawnEntry) {

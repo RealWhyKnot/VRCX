@@ -34,10 +34,10 @@ type EntitiesBridge = {
   GetAvatarHistory(currentUserId: string, limit: number): Promise<string>;
   GetCachedAvatarById(id: string): Promise<string>;
   ClearAvatarHistory(): Promise<void>;
-  AddAvatarToFavorites(avatarId: string, groupName: string, createdAt: string): Promise<void>;
+  AddAvatarToFavorites(avatarId: string, groupName: string, createdAt: string, name: string | null): Promise<void>;
   RenameAvatarFavoriteGroup(newGroupName: string, groupName: string): Promise<void>;
   DeleteAvatarFavoriteGroup(groupName: string): Promise<void>;
-  RemoveAvatarFromFavorites(avatarId: string, groupName: string): Promise<void>;
+  RemoveAvatarFromFavorites(avatarId: string, groupName: string, name: string | null): Promise<void>;
   GetAvatarFavorites(): Promise<string>;
   RemoveAvatarFromCache(avatarId: string): Promise<void>;
   GetAvatarCache(): Promise<string>;
@@ -56,17 +56,17 @@ type EntitiesBridge = {
     updatedAt: string | null,
     version: number | null
   ): Promise<void>;
-  AddWorldToFavorites(worldId: string, groupName: string, createdAt: string): Promise<void>;
+  AddWorldToFavorites(worldId: string, groupName: string, createdAt: string, name: string | null): Promise<void>;
   RenameWorldFavoriteGroup(newGroupName: string, groupName: string): Promise<void>;
   DeleteWorldFavoriteGroup(groupName: string): Promise<void>;
-  RemoveWorldFromFavorites(worldId: string, groupName: string): Promise<void>;
+  RemoveWorldFromFavorites(worldId: string, groupName: string, name: string | null): Promise<void>;
   GetWorldFavorites(): Promise<string>;
   RemoveWorldFromCache(worldId: string): Promise<void>;
   GetWorldCache(): Promise<string>;
   GetCachedWorldById(id: string): Promise<string>;
 
-  AddFriendToLocalFavorites(userId: string, groupName: string, createdAt: string): Promise<void>;
-  RemoveFriendFromLocalFavorites(userId: string, groupName: string): Promise<void>;
+  AddFriendToLocalFavorites(userId: string, groupName: string, createdAt: string, name: string | null): Promise<void>;
+  RemoveFriendFromLocalFavorites(userId: string, groupName: string, name: string | null): Promise<void>;
   RenameFriendFavoriteGroup(newGroupName: string, groupName: string): Promise<void>;
   DeleteFriendFavoriteGroup(groupName: string): Promise<void>;
   GetFriendFavorites(): Promise<string>;
@@ -76,6 +76,7 @@ type EntitiesBridge = {
   GetPrintFavorites(): Promise<string>;
 
   GetFriendLogHistory(): Promise<string>;
+  GetFriendLogHistoryPage(limit: number, beforeId: number | null): Promise<string>;
   AddFriendLogHistory(
     createdAt: string,
     type: string,
