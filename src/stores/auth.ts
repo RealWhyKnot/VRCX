@@ -119,9 +119,11 @@ export const useAuthStore = defineStore("Auth", () => {
     updateStoredUser,
   });
 
+  let activityBuildVersion = 0;
   watch(
     [() => watchState.isLoggedIn, () => userStore.currentUser],
     ([isLoggedIn, currentUser]) => {
+      activityBuildVersion += 1;
       twoFactorAuthDialogVisible.value = false;
       if (isLoggedIn) {
         loginNetworkHint.reset();
@@ -138,13 +140,24 @@ export const useAuthStore = defineStore("Auth", () => {
   );
 
   watch([() => loginForm.value.username, () => loginForm.value.password], loginNetworkHint.reset);
-
   watch(
     () => watchState.isFriendsLoaded,
     (isFriendsLoaded) => {
       if (isFriendsLoaded) {
         initWebsocket()?.catch(logFailure("Opening the websocket failed:"));
         AppApi.IPCAnnounceStart().catch(logFailure("Announcing IPC start failed:"));
+        const account = userStore.currentUser.id;
+        const version = activityBuildVersion;
+        const build = () => {
+          if (version === activityBuildVersion && watchState.isLoggedIn && watchState.isFriendsLoaded && userStore.currentUser.id === account) {
+            void activityStore.startFullCacheBuild(account).catch(logFailure("Building the activity cache failed:"));
+          }
+        };
+        if (typeof requestIdleCallback === "function") {
+          requestIdleCallback(build, { timeout: 2000 });
+        } else {
+          setTimeout(build, 0);
+        }
       }
     },
     { flush: "sync" }
@@ -534,8 +547,6 @@ export const useAuthStore = defineStore("Auth", () => {
     advancedSettingsStore.runAvatarAutoCleanup(userStore.currentUser.id).catch(logFailure("Avatar auto cleanup failed:"));
     watchState.isLoggedIn = true;
     AppApi.CheckGameRunning().catch(logFailure("Checking the game state failed:"));
-
-    activityStore.startFullCacheBuild(userStore.currentUser.id).catch(logFailure("Building the activity cache failed:"));
   }
 
   function setCachedConfig(value: CachedConfig) {

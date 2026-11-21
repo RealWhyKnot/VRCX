@@ -21,6 +21,7 @@ function createBridge() {
     GetAvatarTimeSpent: vi.fn(() => Promise.resolve("[]")),
     GetAllAvatarTimeSpent: vi.fn(() => Promise.resolve("[]")),
     GetCachedAvatarById: vi.fn(() => Promise.resolve("[]")),
+    GetAvatarCacheForIds: vi.fn(() => Promise.resolve("[]")),
   };
 }
 
@@ -39,6 +40,15 @@ describe("avatarFavorites", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  test("skips an empty favorite cache request and binds the requested IDs in one call", async () => {
+    expect(await avatarFavorites.getAvatarCacheForIds([])).toEqual([]);
+    expect(bridge.GetAvatarCacheForIds).not.toHaveBeenCalled();
+    mocks.rows.mockResolvedValueOnce([["avtr_one"]]);
+    const result = await avatarFavorites.getAvatarCacheForIds(["avtr_one", "avtr_two"]);
+    expect(bridge.GetAvatarCacheForIds).toHaveBeenCalledExactlyOnceWith('["avtr_one","avtr_two"]');
+    expect(result.map((row) => row.id)).toEqual(["avtr_one"]);
   });
 
   test("avatar history maps the joined cache columns and sends the current user and limit", async () => {

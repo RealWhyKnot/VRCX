@@ -146,15 +146,14 @@ export async function getLocalAvatarFavorites() {
   const localGroups = new Set<string>();
   const localFavorites = createGroupRecord<LocalFavoriteEntry>();
 
-  const avatarCache = await database.getAvatarCache();
-  for (const row of avatarCache) {
-    if (row.id === null || avatarStore.cachedAvatars.has(row.id)) {
-      continue;
+  const favorites = await database.getAvatarFavorites();
+  const missing = new Set(favorites.flatMap((row) => (row.avatarId !== null && !avatarStore.cachedAvatars.has(row.avatarId) ? [row.avatarId] : [])));
+  for (const row of await database.getAvatarCacheForIds(Array.from(missing))) {
+    if (row.id !== null && !avatarStore.cachedAvatars.has(row.id)) {
+      applyAvatar(toAvatarInput(row, row.id));
     }
-    applyAvatar(toAvatarInput(row, row.id));
   }
 
-  const favorites = await database.getAvatarFavorites();
   for (const row of favorites) {
     if (row.groupName === null || row.avatarId === null) {
       continue;

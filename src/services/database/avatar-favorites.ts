@@ -168,6 +168,14 @@ const avatarFavorites = {
     void sqliteService.run(DatabaseApi.RemoveAvatarFromCache(avatarId)).catch(logDatabaseError).catch(logDatabaseError);
   },
 
+  async getAvatarCacheForIds(ids: string[]) {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await sqliteService.rows(DatabaseApi.GetAvatarCacheForIds(JSON.stringify(ids)));
+    return rows.map(toCachedAvatar);
+  },
+
   async getAvatarCache(): Promise<CachedAvatar[]> {
     const rows = await sqliteService.rows(DatabaseApi.GetAvatarCache());
     return rows.map(toCachedAvatar);

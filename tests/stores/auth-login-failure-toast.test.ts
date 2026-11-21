@@ -87,6 +87,7 @@ const mocks = vi.hoisted(() => ({
     encrypt: vi.fn<AnyFn>(),
     decrypt: vi.fn<AnyFn>(),
   },
+  startFullCacheBuild: vi.fn<AnyFn>().mockResolvedValue(undefined),
   notyShow: vi.fn<AnyFn>(),
   appDebug: {
     endpointDomain: "",
@@ -198,6 +199,8 @@ vi.mock("../../src/stores/update-loop", () => ({
 vi.mock("../../src/stores/user", () => ({
   useUserStore: () => mocks.userStore,
 }));
+
+vi.mock("../../src/stores/activity", () => ({ useActivityStore: () => ({ startFullCacheBuild: mocks.startFullCacheBuild }) }));
 
 vi.mock("../../src/stores/vrcx", () => ({
   useVrcxStore: () => mocks.vrcxStore,
@@ -477,5 +480,27 @@ describe("useAuthStore login failure toast policy", () => {
 
     expect(mocks.toast.dismiss).toHaveBeenCalledWith("login-network-issue-toast");
     expect(mocks.toast.warning).toHaveBeenCalledTimes(1);
+  });
+
+  test("waits for friends and idle before building the activity cache", async () => {
+    mocks.startFullCacheBuild.mockClear();
+    let runIdle: IdleRequestCallback | undefined;
+    vi.stubGlobal("requestIdleCallback", (callback: IdleRequestCallback) => {
+      runIdle = callback;
+      return 1;
+    });
+    mocks.initWebsocket.mockResolvedValue(undefined);
+    appApi.IPCAnnounceStart.mockResolvedValue(undefined);
+    await createAuthStore();
+    mockWatchState.isLoggedIn = true;
+    await nextTick();
+    expect(runIdle).toBeUndefined();
+    expect(mocks.startFullCacheBuild).not.toHaveBeenCalled();
+    mockWatchState.isFriendsLoaded = true;
+    await nextTick();
+    expect(runIdle).toBeDefined();
+    expect(mocks.startFullCacheBuild).not.toHaveBeenCalled();
+    runIdle?.({ didTimeout: false, timeRemaining: () => 50 });
+    expect(mocks.startFullCacheBuild).toHaveBeenCalledWith("usr_me");
   });
 });

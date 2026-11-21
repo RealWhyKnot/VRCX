@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createPinia, setActivePinia } from "pinia";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createPinia, setActivePinia, getActivePinia, disposePinia } from "pinia";
+import { watchState } from "../../src/services/watch-state";
 import type { NotificationEntry } from "../../src/stores/notification/types";
 
 const { hideNotificationMock, dbMocks } = vi.hoisted(() => ({
@@ -10,6 +11,10 @@ const { hideNotificationMock, dbMocks } = vi.hoisted(() => ({
     lookupNotificationDatabase: vi.fn((_search: string, _filters: string[], _vipList: string[], _maxEntries: number): Promise<unknown[]> =>
       Promise.resolve([])
     ),
+    getNotificationHistoryState: vi.fn<(ids: string[]) => Promise<{ id: string; friendRequestOutcome: string | null }[]>>(() =>
+      Promise.resolve([{ id: "previously_seen_id", friendRequestOutcome: null }])
+    ),
+    activeNotifications: vi.fn((): Promise<{ json: unknown[] }> => Promise.resolve({ json: [] })),
     getNotifications: vi.fn((): Promise<unknown[]> => Promise.resolve([])),
     getNotificationsV2: vi.fn((): Promise<unknown[]> => Promise.resolve([])),
   },
@@ -25,6 +30,7 @@ vi.mock("../../src/services/database", () => ({
     replaceNotificationInDatabase: dbMocks.replaceNotificationInDatabase,
     lookupNotificationDatabase: dbMocks.lookupNotificationDatabase,
     getNotifications: dbMocks.getNotifications,
+    getNotificationHistoryState: dbMocks.getNotificationHistoryState,
     getNotificationsV2: dbMocks.getNotificationsV2,
   },
   dbVars: {
@@ -43,7 +49,7 @@ vi.mock("../../src/api/instance", () => ({
 vi.mock("../../src/api/notification", () => ({
   notificationRequest: {
     hideNotification: hideNotificationMock,
-    getNotifications: vi.fn(() => Promise.resolve({ json: [] })),
+    getNotifications: dbMocks.activeNotifications,
     getNotificationsV2: vi.fn(() => Promise.resolve({ json: [] })),
     getHiddenFriendRequests: vi.fn(() => Promise.resolve({ json: [] })),
   },
@@ -93,7 +99,7 @@ vi.mock("../../src/stores/ui", () => ({
     removeNotify: vi.fn(),
   }),
 }));
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 vi.mock("vue-router", () => ({
   useRouter: () => ({
     currentRoute: ref({
@@ -116,6 +122,17 @@ const { database, dbVars } = await import("../../src/services/database");
 
 const { useNotificationStore } = await import("../../src/stores/notification");
 const { useGeneralSettingsStore } = await import("../../src/stores/settings/general");
+
+beforeEach(() => {
+  watchState.isLoggedIn = false;
+  watchState.isFriendsLoaded = false;
+});
+
+afterEach(() => {
+  const pinia = getActivePinia();
+  if (pinia) disposePinia(pinia);
+  vi.unstubAllGlobals();
+});
 
 describe("notification store - auto decline friend requests", () => {
   let notificationStore: ReturnType<typeof useNotificationStore>;
@@ -341,7 +358,7 @@ describe("notification store - friend request history", () => {
     ]);
 
     try {
-      await notificationStore.initNotifications();
+      await notificationStore.loadNotificationHistory();
     } finally {
       dbVars.maxTableSize = savedMaxTableSize;
     }
@@ -352,6 +369,88 @@ describe("notification store - friend request history", () => {
     expect(findRow("frq_old")?.$friendRequestOutcome).toBe("autoDeclined");
     expect(findRow("frq_old")?.$isExpired).toBe(true);
     expect(findRow("frq_recent")?.$friendRequestOutcome).toBe("");
+  });
+
+  it("starts live notifications without reading display history", async () => {
+    dbMocks.activeNotifications.mockResolvedValueOnce({
+      json: [
+        {
+          id: "live_start",
+          type: "invite",
+          senderUserId: "usr_sender",
+          senderUsername: "Sender",
+          created_at: "2026-11-20T01:00:00Z",
+          details: {},
+          seen: false,
+        },
+      ],
+    });
+    await notificationStore.initNotifications();
+    expect(dbMocks.getNotifications).not.toHaveBeenCalled();
+    expect(dbMocks.getNotificationsV2).not.toHaveBeenCalled();
+    expect(dbMocks.lookupNotificationDatabase).not.toHaveBeenCalled();
+
+    expect(notificationStore.unseenNotifications).toContain("live_start");
+    expect(notificationStore.notificationTable.data.some((entry) => entry.id === "live_start")).toBe(true);
+  });
+
+  it("prefetches display history after friends and idle, then reuses it on open", async () => {
+    const callbacks: IdleRequestCallback[] = [];
+    vi.stubGlobal(
+      "requestIdleCallback",
+      vi.fn((callback: IdleRequestCallback) => callbacks.push(callback))
+    );
+    vi.stubGlobal("cancelIdleCallback", vi.fn());
+    dbMocks.getNotificationsV2.mockResolvedValueOnce([]);
+    dbMocks.getNotifications.mockResolvedValueOnce([]);
+    dbMocks.lookupNotificationDatabase.mockResolvedValueOnce([]);
+    watchState.isLoggedIn = true;
+    await nextTick();
+    expect(callbacks).toHaveLength(0);
+    expect(dbMocks.getNotificationsV2).not.toHaveBeenCalled();
+    watchState.isFriendsLoaded = true;
+    await nextTick();
+    expect(dbMocks.getNotificationsV2).not.toHaveBeenCalled();
+    callbacks[0]?.({ didTimeout: false, timeRemaining: () => 50 });
+    await notificationStore.loadNotificationHistory();
+    await notificationStore.loadNotificationHistory();
+    expect(dbMocks.getNotificationsV2).toHaveBeenCalledTimes(1);
+    expect(dbMocks.getNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves saved friend request outcomes before display history is opened", async () => {
+    dbMocks.getNotificationHistoryState.mockResolvedValueOnce([{ id: "known_request", friendRequestOutcome: "autoDeclined" }]);
+    dbMocks.activeNotifications.mockResolvedValueOnce({
+      json: [{ ...friendRequest("known_request", "2026-11-20T01:00:00Z"), type: "ignoredFriendRequest" }],
+    });
+    await notificationStore.initNotifications();
+    expect(dbMocks.getNotificationHistoryState).toHaveBeenCalledWith(["known_request"]);
+    await Promise.resolve();
+    expect(findRow("known_request")?.$friendRequestOutcome).toBe("autoDeclined");
+    expect(dbMocks.replaceNotificationInDatabase).not.toHaveBeenCalled();
+    expect(dbMocks.getNotifications).not.toHaveBeenCalled();
+  });
+
+  it("merges delayed history with live updates and coalesces concurrent opens", async () => {
+    const { promise, resolve } = Promise.withResolvers<unknown[]>();
+    dbMocks.getNotificationsV2.mockReturnValueOnce(promise);
+    const first = notificationStore.loadNotificationHistory();
+    const second = notificationStore.loadNotificationHistory();
+    expect(notificationStore.isNotificationsLoading).toBe(true);
+    expect(dbMocks.getNotificationsV2).toHaveBeenCalledTimes(1);
+    notificationStore.handleNotificationV2({
+      json: { id: "live_merge", type: "group.announcement", createdAt: "2026-11-20T01:00:00Z", seen: false, data: {}, details: {} },
+    });
+    notificationStore.handleNotificationSee("live_merge");
+    resolve([{ id: "live_merge", type: "group.announcement", created_at: "2026-11-19T01:00:00Z", seen: false, details: {} }]);
+    await Promise.all([first, second]);
+    expect(notificationStore.isNotificationsLoading).toBe(false);
+    const entries = notificationStore.notificationTable.data.filter((entry) => entry.id === "live_merge");
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.seen).toBe(true);
+    expect(notificationStore.unseenNotifications).not.toContain("live_merge");
+    await notificationStore.loadNotificationHistory();
+    expect(dbMocks.getNotificationsV2).toHaveBeenCalledTimes(1);
   });
 
   it("keeps saved friend requests when notifications refresh", async () => {

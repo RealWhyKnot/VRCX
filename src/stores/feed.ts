@@ -1,5 +1,7 @@
-import { ref, shallowRef, watch } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { defineStore } from "pinia";
+import { useRouter } from "vue-router";
+import { useDashboardStore } from "./dashboard";
 
 import { database } from "../services/database";
 import type { FeedRow } from "../services/database/feed";
@@ -7,6 +9,7 @@ import { logFailure } from "./log-failure";
 import { useFriendStore } from "./friend";
 import { useVrcxStore } from "./vrcx";
 import { watchState } from "../services/watch-state";
+import { prefetchAfterFriendsLoaded } from "../services/friends-idle";
 
 import { configRepository } from "../services/config";
 
@@ -67,6 +70,20 @@ function feedSearch(row: FeedRow, search: string): boolean {
 export const useFeedStore = defineStore("Feed", () => {
   const friendStore = useFriendStore();
   const vrcxStore = useVrcxStore();
+  const dashboardStore = useDashboardStore();
+  const router = useRouter();
+  let lookupVersion = 0;
+  let liveVersion = 0;
+  let loadedQuery: string | null = null;
+  let pendingLookup: { key: string; promise: Promise<void> } | null = null;
+  const isFeedVisible = computed(() => {
+    const route = router.currentRoute.value;
+    const id = route.params["id"];
+    return (
+      route.name === "feed" ||
+      (route.name === "dashboard" && typeof id === "string" && !!(dashboardStore.getDashboard(id, "feed") ?? dashboardStore.getDashboard(id, "widget:feed")))
+    );
+  });
 
   const feedTableData = shallowRef<FeedRow[]>([]);
   const feedTable = ref<FeedTableState>({
@@ -81,21 +98,10 @@ export const useFeedStore = defineStore("Feed", () => {
   });
 
   watch(
-    () => watchState.isLoggedIn,
-    (isLoggedIn) => {
-      feedTableData.value = [];
-      if (isLoggedIn) {
-        initFeedTable().catch(logFailure("Failed to load feed table:"));
-      }
-    },
-    { flush: "sync" }
-  );
-
-  watch(
     () => watchState.isFavoritesLoaded,
     (isFavoritesLoaded) => {
-      if (isFavoritesLoaded && feedTable.value.vip) {
-        feedTableLookup().catch(logFailure("Failed to look up feed table:"));
+      if (isFavoritesLoaded && feedTable.value.vip && (isFeedVisible.value || loadedQuery !== null)) {
+        initFeedTable().catch(logFailure("Failed to look up feed table:"));
       }
     }
   );
@@ -106,31 +112,89 @@ export const useFeedStore = defineStore("Feed", () => {
     feedTable.value.vip = await configRepository.getBool("VRCX_feedTableVIPFilter", false);
   }
 
-  init().catch(logFailure("Failed to load feed table filters:"));
+  const filtersReady = init().catch(logFailure("Failed to load feed table filters:"));
+
+  watch(
+    () => watchState.isLoggedIn,
+    () => {
+      lookupVersion += 1;
+      loadedQuery = null;
+      pendingLookup = null;
+      feedTableData.value = [];
+      feedTable.value.loading = false;
+    },
+    { flush: "sync", immediate: true }
+  );
+
+  watch(
+    [() => watchState.isLoggedIn, isFeedVisible],
+    ([isLoggedIn, isVisible]) => {
+      if (isLoggedIn && isVisible) {
+        initFeedTable().catch(logFailure("Failed to load feed table:"));
+      }
+    },
+    { immediate: true }
+  );
+
+  prefetchAfterFriendsLoaded(initFeedTable, logFailure("Failed to load feed table:"));
 
   async function feedTableLookup() {
     await configRepository.setString("VRCX_feedTableFilters", JSON.stringify(feedTable.value.filter));
     await configRepository.setBool("VRCX_feedTableVIPFilter", feedTable.value.vip);
-    feedTable.value.loading = true;
-    try {
-      let vipList: string[] = [];
-      if (feedTable.value.vip) {
-        vipList = Array.from(friendStore.localFavoriteFriends.values());
-      }
-      const search = feedTable.value.search.trim();
-      const { dateFrom, dateTo } = feedTable.value;
-      const rows =
-        search || dateFrom || dateTo
-          ? await database.searchFeedDatabase(search, feedTable.value.filter, vipList, vrcxStore.searchLimit, dateFrom, dateTo)
-          : await database.lookupFeedDatabase(feedTable.value.filter, vipList);
-      feedTableData.value = [];
-      feedTableData.value = [...feedTableData.value, ...rows];
-    } finally {
-      feedTable.value.loading = false;
+    if (!isFeedVisible.value || !watchState.isLoggedIn) {
+      return;
     }
+    await readFeedTable(true);
+  }
+
+  async function readFeedTable(shouldRefresh: boolean) {
+    await filtersReady;
+    if (!watchState.isLoggedIn) return;
+    const filters = [...feedTable.value.filter];
+    const vipList = feedTable.value.vip ? Array.from(friendStore.localFavoriteFriends.values()) : [];
+    const search = feedTable.value.search.trim();
+    const { dateFrom, dateTo } = feedTable.value;
+    const key = JSON.stringify([filters, feedTable.value.vip, vipList, search, dateFrom, dateTo, vrcxStore.searchLimit]);
+    if (pendingLookup?.key === key) return pendingLookup.promise;
+    if (!shouldRefresh && loadedQuery === key) return;
+    const version = ++lookupVersion;
+    const beforeLive = liveVersion;
+    feedTable.value.loading = true;
+    const promise = Promise.resolve()
+      .then(async () => {
+        if (version !== lookupVersion) return;
+        const rows =
+          search || dateFrom || dateTo
+            ? await database.searchFeedDatabase(search, filters, vipList, vrcxStore.searchLimit, dateFrom, dateTo)
+            : await database.lookupFeedDatabase(filters, vipList);
+        if (version === lookupVersion) {
+          if (liveVersion !== beforeLive) {
+            const live = feedTableData.value;
+            const keys = new Set(live.map((row) => `${row.type}:${row.rowId}`));
+            feedTableData.value = [...live, ...rows.filter((row) => !keys.has(`${row.type}:${row.rowId}`))]
+              .sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)) || (right.rowId ?? 0) - (left.rowId ?? 0))
+              .slice(0, vrcxStore.maxTableSize);
+          } else {
+            feedTableData.value = rows;
+          }
+          loadedQuery = key;
+        }
+      })
+      .finally(() => {
+        if (version === lookupVersion) {
+          pendingLookup = null;
+          feedTable.value.loading = false;
+        }
+      });
+    pendingLookup = { key, promise };
+    await promise;
   }
 
   function addFeedEntry(feed: FeedRow) {
+    if (!watchState.isLoggedIn || (!isFeedVisible.value && loadedQuery === null && pendingLookup === null)) {
+      return;
+    }
+    liveVersion += 1;
     if (feedTable.value.filter.length > 0 && !feedTable.value.filter.includes(feed.type)) {
       return;
     }
@@ -158,9 +222,7 @@ export const useFeedStore = defineStore("Feed", () => {
   }
 
   async function initFeedTable() {
-    feedTable.value.loading = true;
-    await feedTableLookup();
-    feedTable.value.loading = false;
+    await readFeedTable(false);
   }
 
   return {

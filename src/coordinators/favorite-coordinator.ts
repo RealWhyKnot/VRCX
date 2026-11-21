@@ -7,6 +7,7 @@ import { useUserStore } from "../stores/user";
 import { useAvatarStore } from "../stores/avatar";
 import { useWorldStore } from "../stores/world";
 import { applyWorld, toWorldInput } from "./world-coordinator";
+import { applyAvatar, toAvatarInput } from "./avatar-coordinator";
 import { favoriteRequest } from "../api/favorite";
 import { queryRequest } from "../api/query-request";
 import type { RemoteFavoriteObservation } from "../services/database/retained-events";
@@ -38,6 +39,24 @@ export function handleFavoriteWorldList(args: FavoriteWorldPage) {
 }
 
 type FavoritePage = Awaited<ReturnType<typeof favoriteRequest.getFavorites>>["json"];
+
+async function restoreFavoriteCache(items: FavoritePage): Promise<void> {
+  const avatarStore = useAvatarStore();
+  const worldStore = useWorldStore();
+  const avatarIds = new Set(items.filter((item) => item.type === "avatar" && !avatarStore.cachedAvatars.has(item.favoriteId)).map((item) => item.favoriteId));
+  const worldIds = new Set(items.filter((item) => item.type === "world" && !worldStore.cachedWorlds.has(item.favoriteId)).map((item) => item.favoriteId));
+  const [avatars, worlds] = await Promise.all([database.getAvatarCacheForIds(Array.from(avatarIds)), database.getWorldCacheForIds(Array.from(worldIds))]);
+  for (const avatar of avatars) {
+    if (avatar.id !== null && !avatarStore.cachedAvatars.has(avatar.id)) {
+      applyAvatar(toAvatarInput(avatar, avatar.id));
+    }
+  }
+  for (const world of worlds) {
+    if (world.id !== null && !worldStore.cachedWorlds.has(world.id)) {
+      applyWorld(toWorldInput(world, world.id));
+    }
+  }
+}
 
 function queueRemoteFavoriteSnapshot(account: string, createdAt: string, pages: FavoritePage[]) {
   setTimeout(() => {
@@ -86,7 +105,11 @@ export function refreshFavorites() {
   const newFavoriteSortOrder: string[] = [];
   const sortOrder: string[] = favoriteStore.favoritesSortOrder;
   processBulk({
-    fn: (params: FavoritePageParams) => favoriteRequest.getFavorites(params),
+    async fn(params: FavoritePageParams) {
+      const result = await favoriteRequest.getFavorites(params);
+      await restoreFavoriteCache(result.json);
+      return result;
+    },
     N: -1,
     params: {
       n: 300,
@@ -198,15 +221,14 @@ export async function getLocalWorldFavorites() {
   const localGroups = new Set<string>();
   const localFavorites = createGroupRecord<LocalFavoriteEntry>();
 
-  const worldCache = await database.getWorldCache();
-  for (const row of worldCache) {
-    if (row.id === null || worldStore.cachedWorlds.has(row.id)) {
-      continue;
+  const favorites = await database.getWorldFavorites();
+  const missing = new Set(favorites.flatMap((row) => (row.worldId !== null && !worldStore.cachedWorlds.has(row.worldId) ? [row.worldId] : [])));
+  for (const row of await database.getWorldCacheForIds(Array.from(missing))) {
+    if (row.id !== null && !worldStore.cachedWorlds.has(row.id)) {
+      applyWorld(toWorldInput(row, row.id));
     }
-    applyWorld(toWorldInput(row, row.id));
   }
 
-  const favorites = await database.getWorldFavorites();
   for (const row of favorites) {
     if (row.groupName === null || row.worldId === null) {
       continue;

@@ -21,7 +21,13 @@ import type { useSharedFeedStore } from "../shared-feed";
 import type { useUiStore } from "../ui";
 import type { useUserStore } from "../user";
 import { hasStatus, logError } from "./errors";
-import { isFriendRequestType, loadFriendRequestHistory, recordFriendRequest, restoreFriendRequestRecord } from "./friend-request-history";
+import {
+  isFriendRequestOutcome,
+  isFriendRequestType,
+  loadFriendRequestHistory,
+  recordFriendRequest,
+  restoreFriendRequestRecord,
+} from "./friend-request-history";
 import { type InviteReply, recordInviteReply } from "./invite-reply-history";
 import {
   findLastStoredNotification,
@@ -54,6 +60,7 @@ type NotificationHandlerDeps = {
   unseenNotifications: Ref<string[]>;
   notificationInitStatus: Ref<boolean>;
   isNotificationsLoading: Ref<boolean>;
+  isNotificationHistoryLoading: Ref<boolean>;
   inventoryBundleDialog: Ref<InventoryBundleDialog>;
   freeStoreItemDialog: Ref<FreeStoreItemDialog>;
   shownBundleIds: Set<string>;
@@ -73,6 +80,7 @@ export function createNotificationHandlers({
   unseenNotifications,
   notificationInitStatus,
   isNotificationsLoading,
+  isNotificationHistoryLoading,
   inventoryBundleDialog,
   freeStoreItemDialog,
   shownBundleIds,
@@ -85,6 +93,13 @@ export function createNotificationHandlers({
   queueNotificationNoty,
   playNoty,
 }: NotificationHandlerDeps) {
+  let historySession = 0;
+  let historyPromise: Promise<void> | null = null;
+  let isHistoryLoaded = false;
+  const knownIds = new Map<string, string | null>();
+  const expiredIds = new Set<string>();
+  const seenIds = new Set<string>();
+
   async function init() {
     const raw: unknown = JSON.parse(await configRepository.getString("VRCX_notificationTableFilters", "[]"));
     notificationTable.value.filters[0].value = isStringArray(raw) ? raw : [];
@@ -111,10 +126,10 @@ export function createNotificationHandlers({
     }
     if (ref.senderUserId !== userStore.currentUser.id) {
       const isExcludedType = ref.type === "friendRequest" || ref.type === "ignoredFriendRequest" || ref.type.includes(".");
-      const isNotificationInitReady = !notificationInitStatus.value || !isNotificationsLoading.value;
+      const isNotificationInitReady = !knownIds.has(ref.id) && (!notificationInitStatus.value || !isNotificationsLoading.value);
       const isMatchingTypeFilter = notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
 
-      if (!isExcludedType) {
+      if (!isExcludedType && !knownIds.has(ref.id)) {
         database.addNotificationToDatabase(ref);
       }
       if (isNotificationInitReady) {
@@ -146,6 +161,7 @@ export function createNotificationHandlers({
   }
 
   function handleNotificationHide(notificationId: string) {
+    expiredIds.add(notificationId);
     const ref = findStoredNotification(notificationTable.value.data, notificationId);
     if (typeof ref === "undefined") {
       return;
@@ -189,6 +205,15 @@ export function createNotificationHandlers({
 
   function setNotificationInitStatus(isReady: boolean) {
     notificationInitStatus.value = isReady;
+    if (!isReady) {
+      historySession += 1;
+      historyPromise = null;
+      isNotificationHistoryLoading.value = false;
+      isHistoryLoaded = false;
+      knownIds.clear();
+      expiredIds.clear();
+      seenIds.clear();
+    }
   }
 
   function clearUnseenNotifications() {
@@ -196,6 +221,7 @@ export function createNotificationHandlers({
   }
 
   function handleNotificationSee(notificationId: string) {
+    seenIds.add(notificationId);
     removeFromArray(unseenNotifications.value, notificationId);
     if (unseenNotifications.value.length === 0) {
       uiStore.removeNotify("notification");
@@ -258,6 +284,10 @@ export function createNotificationHandlers({
       ref = existing;
     } else {
       ref = createDefaultNotificationRef(json);
+      const outcome = knownIds.get(ref.id);
+      if (isFriendRequestType(ref.type) && isFriendRequestOutcome(outcome)) {
+        ref.$friendRequestOutcome = outcome;
+      }
     }
     ref.details = parseNotificationDetails(ref.details);
     return ref;
@@ -288,15 +318,17 @@ export function createNotificationHandlers({
       return;
     }
 
-    const isNotificationInitReady = !notificationInitStatus.value || !isNotificationsLoading.value;
+    const isNotificationInitReady = !knownIds.has(ref.id) && (!notificationInitStatus.value || !isNotificationsLoading.value);
     const isMatchingTypeFilter = notificationTable.value.filters[0].value.length === 0 || notificationTable.value.filters[0].value.includes(ref.type);
     if (isNotificationInitReady && isMatchingTypeFilter) {
       uiStore.notifyMenu("notification");
     }
     database.addNotificationV2ToDatabase(ref);
     notificationTable.value.data.push(ref);
-    queueNotificationNoty(ref);
-    void sharedFeedStore.addEntry(ref).catch(logError);
+    if (!knownIds.has(ref.id)) {
+      queueNotificationNoty(ref);
+      void sharedFeedStore.addEntry(ref).catch(logError);
+    }
   }
 
   function handleNotificationV2Update(args: { params: { notificationId: string }; json: NotificationJson }) {
@@ -315,6 +347,8 @@ export function createNotificationHandlers({
   }
 
   function handleNotificationV2Hide(notificationId: string) {
+    expiredIds.add(notificationId);
+    seenIds.add(notificationId);
     database.expireNotificationV2(notificationId);
     const ref = notificationTable.value.data.find((n) => n.id === notificationId);
     if (ref) {
@@ -363,19 +397,36 @@ export function createNotificationHandlers({
     if (Date.now() < refreshNotificationsBlockedUntil) {
       return Promise.resolve();
     }
-    refreshNotificationsPromise = fetchAllNotifications().finally(() => {
-      refreshNotificationsPromise = null;
+    const request = fetchAllNotifications().finally(() => {
+      if (refreshNotificationsPromise === request) {
+        refreshNotificationsPromise = null;
+      }
     });
-    return refreshNotificationsPromise;
+    refreshNotificationsPromise = request;
+    return request;
+  }
+
+  async function readKnownNotifications<Row extends { id: string }>(call: Promise<{ json: Row[] }>, session: number): Promise<{ json: Row[] }> {
+    const result = await call;
+    for (const entry of await database.getNotificationHistoryState(result.json.map((row) => row.id))) {
+      if (session === historySession) {
+        knownIds.set(entry.id, entry.friendRequestOutcome);
+      }
+    }
+    return result;
   }
 
   async function fetchAllNotifications() {
+    const session = historySession;
     isNotificationsLoading.value = true;
     try {
       expireFriendRequestNotifications();
       await forEachNotificationPage(
-        (params) => notificationRequest.getNotifications(params),
+        (params) => readKnownNotifications(notificationRequest.getNotifications(params), session),
         (json) => {
+          if (session !== historySession) {
+            return;
+          }
           handleNotification({
             json,
             params: {
@@ -385,8 +436,11 @@ export function createNotificationHandlers({
         }
       );
       await forEachNotificationPage(
-        (params) => notificationRequest.getNotificationsV2(params),
+        (params) => readKnownNotifications(notificationRequest.getNotificationsV2(params), session),
         (json) => {
+          if (session !== historySession) {
+            return;
+          }
           handleNotificationV2({
             json,
             params: {
@@ -396,8 +450,11 @@ export function createNotificationHandlers({
         }
       );
       await forEachNotificationPage(
-        (params) => notificationRequest.getHiddenFriendRequests(params),
+        (params) => readKnownNotifications(notificationRequest.getHiddenFriendRequests(params), session),
         (json) => {
+          if (session !== historySession) {
+            return;
+          }
           handleNotification({
             json: { ...json, type: "ignoredFriendRequest" },
             params: {
@@ -412,17 +469,44 @@ export function createNotificationHandlers({
         refreshNotificationsBlockedUntil = Date.now() + 120000;
       }
     } finally {
-      isNotificationsLoading.value = false;
-      notificationInitStatus.value = true;
+      if (session === historySession) {
+        isNotificationsLoading.value = false;
+        notificationInitStatus.value = true;
+      }
     }
   }
 
-  async function initNotifications() {
-    notificationInitStatus.value = false;
+  async function initNotifications(): Promise<void> {
+    setNotificationInitStatus(false);
+    refreshNotificationsPromise = null;
+    await refreshNotifications();
+  }
+
+  function loadNotificationHistory(): Promise<void> {
+    if (isHistoryLoaded) {
+      return Promise.resolve();
+    }
+    if (historyPromise !== null) {
+      return historyPromise;
+    }
+    isNotificationHistoryLoading.value = true;
+    const request = readNotificationHistory().finally(() => {
+      if (historyPromise === request) {
+        historyPromise = null;
+        isNotificationHistoryLoading.value = false;
+      }
+    });
+    historyPromise = request;
+    return request;
+  }
+
+  async function readNotificationHistory(): Promise<void> {
+    const session = historySession;
     const v2Entries = toStoredNotifications(await database.getNotificationsV2());
     const legacyEntries = toStoredNotifications(await database.getNotifications()).map(restoreFriendRequestRecord);
-    const tableData = v2Entries.concat(legacyEntries.filter((n) => !v2Entries.some((t) => t.id === n.id)));
-    tableData.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+    const v2Ids = new Set(v2Entries.map((entry) => entry.id));
+    const tableData = [...v2Entries, ...legacyEntries.filter((entry) => !v2Ids.has(entry.id))];
+    tableData.sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
     tableData.splice(readMaxTableSize(dbVars));
     const shownIds = new Set(tableData.map((entry) => entry.id));
     for (const entry of await loadFriendRequestHistory()) {
@@ -430,8 +514,26 @@ export function createNotificationHandlers({
         tableData.push(entry);
       }
     }
-    notificationTable.value.data = tableData;
-    void refreshNotifications().catch(logError);
+    if (session !== historySession) {
+      return;
+    }
+    const live = notificationTable.value.data;
+    const liveIds = new Set(live.flatMap((entry) => (entry.id ? [entry.id] : [])));
+    const restored = tableData.filter((entry) => !liveIds.has(entry.id));
+    for (const entry of restored) {
+      if (expiredIds.has(entry.id)) {
+        entry.$isExpired = true;
+        if (entry.version === 2) {
+          entry.expiresAt = new Date().toJSON();
+          entry.seen = true;
+        }
+      }
+      if (seenIds.has(entry.id)) {
+        entry.seen = true;
+      }
+    }
+    notificationTable.value.data = [...live, ...restored];
+    isHistoryLoaded = true;
   }
 
   function checkInventoryBundles() {
@@ -457,6 +559,7 @@ export function createNotificationHandlers({
   return {
     init,
     initNotifications,
+    loadNotificationHistory,
     refreshNotifications,
     checkInventoryBundles,
     checkFreeStoreItems,

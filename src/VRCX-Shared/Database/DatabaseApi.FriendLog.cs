@@ -23,6 +23,42 @@ sealed partial class DatabaseApi
             ? Rows($"SELECT * FROM {UserTable("friend_log_history")} ORDER BY id DESC LIMIT @limit", ("@limit", limit))
             : Rows($"SELECT * FROM {UserTable("friend_log_history")} WHERE id < @beforeId ORDER BY id DESC LIMIT @limit", ("@beforeId", beforeId), ("@limit", limit));
 
+    private const string FriendHistoryFilter = """
+        (@types = '[]' OR lower(type) IN (SELECT lower(value) FROM json_each(@types)))
+        AND (@hideUnfriends = 0 OR type IS NOT 'Unfriend')
+        AND (@search = '' OR vrcx_contains(coalesce(display_name, ''), @search))
+        """;
+
+    public string GetFilteredFriendLogHistoryPage(long limit, long? beforeId, string? beforeDate, string[] types, string search, bool hideUnfriends, bool ascending)
+    {
+        string comparison = ascending ? ">" : "<";
+        string direction = ascending ? "ASC" : "DESC";
+        const string Timestamp = "coalesce(julianday(created_at), 0)";
+        return Rows($"""
+            SELECT * FROM {UserTable("friend_log_history")}
+            WHERE {FriendHistoryFilter} AND (
+                @beforeId IS NULL OR {Timestamp} {comparison} coalesce(julianday(@beforeDate), 0)
+                OR ({Timestamp} = coalesce(julianday(@beforeDate), 0) AND id < @beforeId)
+            )
+            ORDER BY {Timestamp} {direction}, id DESC LIMIT @limit
+            """, ("@types", System.Text.Json.JsonSerializer.Serialize(types)), ("@search", search), ("@hideUnfriends", hideUnfriends),
+            ("@beforeId", beforeId), ("@beforeDate", beforeDate), ("@limit", Math.Clamp(limit, 0, 1000)));
+    }
+
+    public string GetFilteredFriendLogHistoryPageAtOffset(long limit, long offset, string[] types, string search, bool hideUnfriends, bool ascending)
+    {
+        string direction = ascending ? "ASC" : "DESC";
+        return Rows($"""
+            SELECT * FROM {UserTable("friend_log_history")} WHERE {FriendHistoryFilter}
+            ORDER BY coalesce(julianday(created_at), 0) {direction}, id DESC LIMIT @limit OFFSET @offset
+            """, ("@types", System.Text.Json.JsonSerializer.Serialize(types)), ("@search", search), ("@hideUnfriends", hideUnfriends),
+            ("@limit", Math.Clamp(limit, 0, 1000)), ("@offset", Math.Max(offset, 0)));
+    }
+
+    public string GetFilteredFriendLogHistoryCount(string[] types, string search, bool hideUnfriends) =>
+        Rows($"SELECT COUNT(*) FROM {UserTable("friend_log_history")} WHERE {FriendHistoryFilter}",
+            ("@types", System.Text.Json.JsonSerializer.Serialize(types)), ("@search", search), ("@hideUnfriends", hideUnfriends));
+
     public void AddFriendLogHistory(string createdAt, string type, string userId, string? displayName, string? previousDisplayName, string? trustLevel, string? previousTrustLevel, long? friendNumber) => _ = Run($"INSERT OR IGNORE INTO {UserTable("friend_log_history")} (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, @user_id, @display_name, @previous_display_name, @trust_level, @previous_trust_level, @friend_number)", ("@created_at", createdAt), ("@type", type), ("@user_id", userId), ("@display_name", displayName), ("@previous_display_name", previousDisplayName), ("@trust_level", trustLevel), ("@previous_trust_level", previousTrustLevel), ("@friend_number", friendNumber));
 
     public void AddFriendLogHistoryArray(string?[] createdAt, string?[] type, string?[] userId, string?[] displayName, string?[] previousDisplayName, string?[] trustLevel, string?[] previousTrustLevel, string?[] friendNumber) => WriteRows($"INSERT OR IGNORE INTO {UserTable("friend_log_history")}", FriendLogHistoryColumns, [createdAt, type, userId, displayName, previousDisplayName, trustLevel, previousTrustLevel, friendNumber], FriendLogHistoryChunkRows);

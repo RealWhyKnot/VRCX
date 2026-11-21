@@ -41,6 +41,7 @@ type EntitiesBridge = {
   GetAvatarFavorites(): Promise<string>;
   RemoveAvatarFromCache(avatarId: string): Promise<void>;
   GetAvatarCache(): Promise<string>;
+  GetAvatarCacheForIds(ids: string): Promise<string>;
 
   AddWorldToCache(
     id: string,
@@ -63,6 +64,7 @@ type EntitiesBridge = {
   GetWorldFavorites(): Promise<string>;
   RemoveWorldFromCache(worldId: string): Promise<void>;
   GetWorldCache(): Promise<string>;
+  GetWorldCacheForIds(ids: string): Promise<string>;
   GetCachedWorldById(id: string): Promise<string>;
 
   AddFriendToLocalFavorites(userId: string, groupName: string, createdAt: string, name: string | null): Promise<void>;
@@ -77,6 +79,24 @@ type EntitiesBridge = {
 
   GetFriendLogHistory(): Promise<string>;
   GetFriendLogHistoryPage(limit: number, beforeId: number | null): Promise<string>;
+  GetFilteredFriendLogHistoryPage(
+    limit: number,
+    beforeId: number | null,
+    beforeDate: string | null,
+    types: string[],
+    search: string,
+    hideUnfriends: boolean,
+    ascending: boolean
+  ): Promise<string>;
+  GetFilteredFriendLogHistoryPageAtOffset(
+    limit: number,
+    offset: number,
+    types: string[],
+    search: string,
+    hideUnfriends: boolean,
+    ascending: boolean
+  ): Promise<string>;
+  GetFilteredFriendLogHistoryCount(types: string[], search: string, hideUnfriends: boolean): Promise<string>;
   AddFriendLogHistory(
     createdAt: string,
     type: string,

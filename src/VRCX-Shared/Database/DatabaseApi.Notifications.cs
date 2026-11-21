@@ -23,6 +23,14 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE INDEX IF NOT EXISTS {legacy}_group_notice_idx ON {legacy} (sender_user_id, created_at) WHERE {LegacyGroupNotificationFilter}");
     }
 
+    public string GetNotificationHistoryState(string ids) => Rows($"""
+        SELECT stored.id, stored.response_message FROM json_each(@ids) requested
+        JOIN {UserTable("notifications")} stored ON stored.id = requested.value
+        UNION ALL
+        SELECT stored.id, NULL FROM json_each(@ids) requested
+        JOIN {UserTable("notifications_v2")} stored ON stored.id = requested.value
+        """, ("@ids", ids));
+
     public string GetNotifications(long maxEntries) => Rows($"SELECT * FROM {UserTable("notifications")} ORDER BY created_at DESC LIMIT @maxEntries", ("@maxEntries", maxEntries));
 
     public string LookupNotifications(string search, string[] filters, string[] vipList, long maxEntries)

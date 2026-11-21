@@ -39,6 +39,7 @@ type ActivityBridge = {
     builtAt: string
   ): Promise<void>;
   GetNotifications(maxEntries: number): Promise<string>;
+  GetNotificationHistoryState(ids: string): Promise<string>;
   LookupNotifications(search: string, filters: string[], vipList: string[], maxEntries: number): Promise<string>;
   AddNotification(
     id: string,

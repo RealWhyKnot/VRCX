@@ -34,11 +34,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, onBeforeUnmount, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
-
-import dayjs from "dayjs";
 
 import Select from "../../components/ui/select/Select.vue";
 import SelectContent from "../../components/ui/select/SelectContent.vue";
@@ -58,11 +56,17 @@ import { removeFromArray } from "../../shared/utils/base/array";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
 
 import { configRepository } from "../../services/config";
+import { watchState } from "../../services/watch-state";
 
 const appearanceSettingsStore = useAppearanceSettingsStore();
 const modalStore = useModalStore();
 const { hideUnfriends } = storeToRefs(appearanceSettingsStore);
-const { friendLogTable } = storeToRefs(useFriendStore());
+let isViewMounted = true;
+onBeforeUnmount(() => {
+  isViewMounted = false;
+});
+const friendStore = useFriendStore();
+const { friendLogTable, friendLogHistoryTotal } = storeToRefs(friendStore);
 
 function toStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
@@ -79,35 +83,6 @@ const friendLogSearch = computed({
     const filter = friendLogTable.value.filters[1];
     if (filter) filter.value = value;
   },
-});
-
-const friendLogDisplayData = computed(() => {
-  const data = friendLogTable.value.data;
-  const typeSet = new Set(friendLogTypeFilter.value.map((value) => value.toLowerCase()));
-  const isHideUnfriendsFilter = friendLogTable.value.filters[2]?.value === true;
-  const searchValue = friendLogSearch.value.trim().toLowerCase();
-
-  const filtered = data.filter((row) => {
-    if (isHideUnfriendsFilter && row.type === "Unfriend") {
-      return false;
-    }
-    if (typeSet.size > 0 && !typeSet.has((row.type ?? "").toLowerCase())) {
-      return false;
-    }
-    if (searchValue && !(row.displayName ?? "").toLowerCase().includes(searchValue)) {
-      return false;
-    }
-    return true;
-  });
-
-  return filtered.slice().sort((a, b) => {
-    const aTs = dayjs(a.created_at ?? "").valueOf();
-    const bTs = dayjs(b.created_at ?? "").valueOf();
-    if (Number.isFinite(aTs) && Number.isFinite(bTs) && aTs !== bTs) {
-      return bTs - aTs;
-    }
-    return (b.rowId ?? 0) - (a.rowId ?? 0);
-  });
 });
 
 watch(
@@ -153,7 +128,10 @@ function deleteFriendLogPrompt(row: FriendLogHistoryRow) {
 function deleteFriendLog(row: FriendLogHistoryRow) {
   removeFromArray(friendLogTable.value.data, row);
   if (isDeletableFriendLogRow(row)) {
-    database.deleteFriendLogHistory(row);
+    void database
+      .deleteFriendLogHistory(row)
+      .then(() => loadPage(true))
+      .catch(logFriendLogError);
   }
 }
 
@@ -164,10 +142,10 @@ const columns = createColumns({
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-const { table, pagination } = useVrcxVueTable({
+const { table, pagination, sorting } = useVrcxVueTable({
   persistKey: "friendLog",
   get data() {
-    return friendLogDisplayData.value;
+    return friendLogTable.value.data;
   },
   columns,
   getRowId: (row) => `${row.type ?? ""}:${row.rowId ?? row.userId ?? row.created_at ?? ""}`,
@@ -178,12 +156,63 @@ const { table, pagination } = useVrcxVueTable({
   },
   tableOptions: {
     autoResetPageIndex: false,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    get rowCount() {
+      return friendLogHistoryTotal.value;
+    },
   },
 });
 
 const totalItems = computed(() => {
-  return table.getFilteredRowModel().rows.length;
+  return friendLogHistoryTotal.value;
 });
+
+function canLoadPage() {
+  return isViewMounted && watchState.isLoggedIn;
+}
+
+async function loadPage(shouldRefresh = false) {
+  if (!canLoadPage()) {
+    return;
+  }
+  await database.waitForFriendLogHistoryWrites();
+  if (!canLoadPage()) {
+    return;
+  }
+  await friendStore.loadFriendLogHistoryPage(
+    pagination.value.pageIndex,
+    pagination.value.pageSize,
+    sorting.value.some((entry) => entry.id === "created_at" && !entry.desc),
+    shouldRefresh
+  );
+}
+
+watch(
+  [() => watchState.isLoggedIn, friendLogTypeFilter, friendLogSearch, () => hideUnfriends.value, sorting, () => pagination.value.pageSize],
+  () => {
+    pagination.value = { ...pagination.value, pageIndex: 0 };
+    if (watchState.isLoggedIn) {
+      void loadPage(true).catch(logFriendLogError);
+    }
+  },
+  { deep: true, immediate: true }
+);
+
+watch(
+  () => pagination.value.pageIndex,
+  () => void loadPage().catch(logFriendLogError)
+);
+
+watch(
+  () => friendLogTable.value.data.some((row) => row.rowId == null),
+  (hasLiveRows) => {
+    if (hasLiveRows) {
+      void loadPage(true).catch(logFriendLogError);
+    }
+  }
+);
 
 const handlePageSizeChange = (size: number) => {
   pagination.value = {

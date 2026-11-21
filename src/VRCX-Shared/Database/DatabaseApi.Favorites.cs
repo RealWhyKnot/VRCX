@@ -37,6 +37,11 @@ sealed partial class DatabaseApi
 
     public string GetAvatarCache() => Rows("SELECT * FROM cache_avatar");
 
+    public string GetAvatarCacheForIds(string ids) => Rows("""
+        SELECT cache.* FROM json_each(@ids) items
+        JOIN cache_avatar cache ON cache.id = items.value
+        """, ("@ids", ids));
+
     public void AddWorldToCache(string id, string addedAt, string? authorId, string? authorName, string? createdAt, string? description, string? imageLink, string? name, string? releaseStatus, string? thumbnailImageLink, string? updatedAt, long? version) => _ = Run("INSERT OR REPLACE INTO cache_world (id, added_at, author_id, author_name, created_at, description, image_url, name, release_status, thumbnail_image_url, updated_at, version) VALUES (@id, @added_at, @author_id, @author_name, @created_at, @description, @image_url, @name, @release_status, @thumbnail_image_url, @updated_at, @version)", ("@id", id), ("@added_at", addedAt), ("@author_id", authorId), ("@author_name", authorName), ("@created_at", createdAt), ("@description", description), ("@image_url", imageLink), ("@name", name), ("@release_status", releaseStatus), ("@thumbnail_image_url", thumbnailImageLink), ("@updated_at", updatedAt), ("@version", version));
 
     public void AddWorldToFavorites(string worldId, string groupName, string createdAt, string? name) => ChangeLocalFavorite("world", "favorite_world", "world_id", worldId, groupName, name, createdAt, add: true);
@@ -52,6 +57,11 @@ sealed partial class DatabaseApi
     public void RemoveWorldFromCache(string worldId) => _ = Run("DELETE FROM cache_world WHERE id = @world_id", ("@world_id", worldId));
 
     public string GetWorldCache() => Rows("SELECT * FROM cache_world");
+
+    public string GetWorldCacheForIds(string ids) => Rows("""
+        SELECT cache.* FROM json_each(@ids) items
+        JOIN cache_world cache ON cache.id = items.value
+        """, ("@ids", ids));
 
     public string GetCachedWorldById(string id) => Rows("SELECT * FROM cache_world WHERE id = @id", ("@id", id));
 

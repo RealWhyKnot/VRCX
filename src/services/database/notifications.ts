@@ -170,6 +170,17 @@ function addNotificationCall(row: NotificationInput) {
 }
 
 const notifications = {
+  async getNotificationHistoryState(ids: string[]): Promise<{ id: string; friendRequestOutcome: string | null }[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await sqliteService.rows(DatabaseApi.GetNotificationHistoryState(JSON.stringify(ids)));
+    return rows.flatMap((row) => {
+      const id = cellText(row[0]);
+      return id === null ? [] : [{ id, friendRequestOutcome: cellText(row[1]) }];
+    });
+  },
+
   async getNotifications(): Promise<NotificationRow[]> {
     const rows = await sqliteService.rows(DatabaseApi.GetNotifications(dbVars.maxTableSize));
     return rows.map(mapNotificationRow).reverse();

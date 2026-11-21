@@ -127,7 +127,8 @@ export const useDashboardStore = defineStore("dashboard", () => {
   function getDashboard(id: string, panel: DashboardPanel | null = null) {
     const dashboard = dashboards.value.find((dashboard) => dashboard.id === id) ?? null;
     if (panel) {
-      return dashboard?.rows.find((row) => row.panels.includes(panel));
+      const key = typeof panel === "string" ? panel : panel.key;
+      return dashboard?.rows.find((row) => row.panels.some((entry) => (typeof entry === "string" ? entry : entry?.key) === key));
     }
     return dashboard;
   }

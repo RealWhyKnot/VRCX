@@ -27,6 +27,7 @@ internal static partial class DatabaseNative
                 CheckAccountMigration(db, api);
                 CheckSightingPrune(db, api);
                 CheckRetainedHistory(db, api);
+                CheckFriendHistoryPages(db, api);
                 Ensure(!File.Exists(DatabaseUpgrade.BackupPath(db.DataSource)), "Fresh startup created a backup");
                 await CheckTransactionsAsync(db, api).ConfigureAwait(false);
             }

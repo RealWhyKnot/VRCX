@@ -15,5 +15,6 @@
     <Compile Include="../../../src/VRCX-Shared/Database/*.cs" />
     <Compile Include="../../../src/VRCX-Shared/SQLiteDatabase.cs" />
     <Compile Include="../../../src/VRCX-Shared/SQLiteConnectionFactory.cs" />
+    <Compile Include="../../../src/VRCX-Shared/SQLiteContainsFunction.cs" />
   </ItemGroup>
 </Project>

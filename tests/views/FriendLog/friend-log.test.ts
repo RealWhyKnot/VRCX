@@ -16,7 +16,6 @@ type PaginationMock = {
 };
 
 type FriendLogVm = {
-  friendLogDisplayData: FriendLogHistoryRow[];
   deleteFriendLog: (row: FriendLogHistoryRow) => void;
 };
 
@@ -24,6 +23,9 @@ const mocks = vi.hoisted(() => {
   const makeRef = <T>(value: T) => ({ value, __v_isRef: true });
   return {
     hideUnfriends: makeRef(false),
+    friendLogHistoryTotal: makeRef(580),
+    sorting: makeRef<{ id: string; desc: boolean }[]>([]),
+    loadPage: vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined),
     friendLogTable: makeRef<FriendLogTableMock>({
       loading: false,
       data: [],
@@ -34,7 +36,7 @@ const mocks = vi.hoisted(() => {
       pageSize: 10,
     }),
     configSetString: vi.fn<(key: string, value: string) => Promise<void>>(),
-    deleteFriendLogHistory: vi.fn<(row: FriendLogHistoryRow) => void>(),
+    deleteFriendLogHistory: vi.fn<(row: FriendLogHistoryRow) => Promise<void>>().mockResolvedValue(undefined),
     removeFromArray: vi.fn((arr: FriendLogHistoryRow[], row: FriendLogHistoryRow) => {
       const idx = arr.indexOf(row);
       if (idx !== -1) {
@@ -68,6 +70,8 @@ vi.mock("../../../src/stores/settings/appearance", () => ({
 vi.mock("../../../src/stores/friend", () => ({
   useFriendStore: () => ({
     friendLogTable: mocks.friendLogTable,
+    friendLogHistoryTotal: mocks.friendLogHistoryTotal,
+    loadFriendLogHistoryPage: mocks.loadPage,
   }),
 }));
 vi.mock("../../../src/stores/modal", () => ({
@@ -87,6 +91,7 @@ vi.mock("../../../src/lib/table/use-vrcx-vue-table", () => ({
       getFilteredRowModel: () => ({ rows: options.data }),
     },
     pagination: mocks.pagination,
+    sorting: mocks.sorting,
   }),
 }));
 
@@ -145,12 +150,15 @@ vi.mock("../../../src/services/config", () => ({
 vi.mock("../../../src/services/database", () => ({
   database: {
     deleteFriendLogHistory: (row: FriendLogHistoryRow) => mocks.deleteFriendLogHistory(row),
+    waitForFriendLogHistoryWrites: () => Promise.resolve(),
   },
 }));
 
 vi.mock("../../../src/shared/utils/base/array", () => ({
   removeFromArray: (arr: FriendLogHistoryRow[], row: FriendLogHistoryRow) => mocks.removeFromArray(arr, row),
 }));
+
+vi.mock("../../../src/services/watch-state", () => ({ watchState: { isLoggedIn: true } }));
 
 import FriendLog from "../../../src/views/FriendLog/FriendLog.vue";
 
@@ -167,7 +175,7 @@ function makeRow(row: Partial<FriendLogHistoryRow>): FriendLogHistoryRow {
 }
 
 function isFriendLogVm(value: unknown): value is FriendLogVm {
-  return typeof value === "object" && value !== null && "friendLogDisplayData" in value && "deleteFriendLog" in value;
+  return typeof value === "object" && value !== null && "deleteFriendLog" in value;
 }
 
 function requireFriendLogVm(value: unknown): FriendLogVm {
@@ -180,6 +188,7 @@ function requireFriendLogVm(value: unknown): FriendLogVm {
 describe("FriendLog.vue", () => {
   beforeEach(() => {
     mocks.hideUnfriends.value = false;
+    mocks.loadPage.mockClear();
     mocks.friendLogTable.value = {
       loading: false,
       data: [],
@@ -191,7 +200,7 @@ describe("FriendLog.vue", () => {
     };
     mocks.configSetString.mockReset();
     mocks.configSetString.mockResolvedValue(undefined);
-    mocks.deleteFriendLogHistory.mockReset();
+    mocks.deleteFriendLogHistory.mockReset().mockResolvedValue(undefined);
     mocks.removeFromArray.mockClear();
   });
 
@@ -202,7 +211,7 @@ describe("FriendLog.vue", () => {
     expect(mocks.friendLogTable.value.filters[2]?.value).toBe(true);
   });
 
-  test("filters and sorts friend log data", () => {
+  test("loads a server page and displays the full filtered count", async () => {
     const alice = makeRow({
       rowId: 1,
       type: "Friend",
@@ -230,8 +239,8 @@ describe("FriendLog.vue", () => {
     mocks.friendLogTable.value.filters = [{ value: ["Friend"] }, { value: "ali" }, { value: true }];
     const wrapper = mount(FriendLog);
 
-    const vm = requireFriendLogVm(wrapper.vm);
-    expect(vm.friendLogDisplayData).toEqual([alice]);
+    await vi.waitFor(() => expect(mocks.loadPage).toHaveBeenCalledWith(0, 10, false, true));
+    expect(wrapper.get('[data-testid="total-items"]').text()).toBe("580");
   });
 
   test("updates type filter and persists filter selection", async () => {

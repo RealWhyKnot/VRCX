@@ -1,5 +1,7 @@
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
+import { useRouter } from "vue-router";
+import { useDashboardStore } from "../dashboard";
 import { useI18n } from "vue-i18n";
 
 import dayjs from "dayjs";
@@ -7,6 +9,7 @@ import dayjs from "dayjs";
 import { getNotificationCategory, getNotificationTs } from "../../shared/utils/notification-category";
 import { queryRequest } from "../../api/query-request";
 import { watchState } from "../../services/watch-state";
+import { prefetchAfterFriendsLoaded } from "../../services/friends-idle";
 import { createOverlayDispatch } from "./overlay-dispatch";
 import { createNotyPlayback, resolveNotyUserId } from "./noty-playback";
 import { createPipelineHandler } from "./pipeline";
@@ -46,6 +49,8 @@ export const useNotificationStore = defineStore("Notification", () => {
   const sharedFeedStore = useSharedFeedStore();
   const instanceStore = useInstanceStore();
   const modalStore = useModalStore();
+  const router = useRouter();
+  const dashboardStore = useDashboardStore();
 
   const notificationInitStatus = ref(false);
   const notificationTable = ref<NotificationTable>({
@@ -68,6 +73,8 @@ export const useNotificationStore = defineStore("Notification", () => {
   });
   const unseenNotifications = ref<string[]>([]);
   const isNotificationsLoading = ref(false);
+  const isNotificationHistoryLoading = ref(false);
+  const isNotificationDisplayLoading = computed(() => isNotificationsLoading.value || isNotificationHistoryLoading.value);
   const isNotificationCenterOpen = ref(false);
   const inventoryBundleDialog = ref<InventoryBundleDialog>({
     visible: false,
@@ -121,6 +128,7 @@ export const useNotificationStore = defineStore("Notification", () => {
   const {
     init,
     initNotifications,
+    loadNotificationHistory,
     refreshNotifications,
     checkInventoryBundles,
     checkFreeStoreItems,
@@ -145,6 +153,7 @@ export const useNotificationStore = defineStore("Notification", () => {
     unseenNotifications,
     notificationInitStatus,
     isNotificationsLoading,
+    isNotificationHistoryLoading,
     inventoryBundleDialog,
     freeStoreItemDialog,
     shownBundleIds,
@@ -203,6 +212,8 @@ export const useNotificationStore = defineStore("Notification", () => {
     (isLoggedIn) => {
       isNotificationsLoading.value = false;
       notificationTable.value.data = [];
+      unseenNotifications.value = [];
+      setNotificationInitStatus(false);
       inventoryBundleDialog.value.visible = false;
       freeStoreItemDialog.value.visible = false;
       if (isLoggedIn) {
@@ -210,6 +221,20 @@ export const useNotificationStore = defineStore("Notification", () => {
       }
     },
     { flush: "sync" }
+  );
+
+  prefetchAfterFriendsLoaded(loadNotificationHistory, logError);
+
+  watch(
+    [() => watchState.isLoggedIn, router.currentRoute, isNotificationCenterOpen, () => dashboardStore.dashboards, () => userStore.sendBoopDialog.visible],
+    ([isLoggedIn, route, isCenterOpen, , isBoopOpen]) => {
+      const id = route.params["id"];
+      const isDashboard = route.name === "dashboard" && typeof id === "string" && !!dashboardStore.getDashboard(id, "notification");
+      if (isLoggedIn && (route.name === "notification" || isCenterOpen || isDashboard || isBoopOpen)) {
+        void loadNotificationHistory().catch(logError);
+      }
+    },
+    { immediate: true, deep: true }
   );
 
   watch(
@@ -240,11 +265,13 @@ export const useNotificationStore = defineStore("Notification", () => {
     notificationInitStatus,
     notificationTable,
     unseenNotifications,
-    isNotificationsLoading,
+    isNotificationsLoading: isNotificationDisplayLoading,
+    isNotificationHistoryLoading,
     inventoryBundleDialog,
     freeStoreItemDialog,
 
     initNotifications,
+    loadNotificationHistory,
     expireNotification,
     refreshNotifications,
     checkInventoryBundles,

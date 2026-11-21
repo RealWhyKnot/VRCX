@@ -22,6 +22,7 @@ import { configRepository } from "../services/config";
 import * as workerTimers from "worker-timers";
 
 import { createSortedFriends } from "./friend-sorted";
+import { createFriendHistory } from "./friend-history";
 import { bulkRefreshFriends, refetchBrokenFriends, refreshRemainingFriends } from "./friend-refresh";
 import { tryApplyFriendOrder as applyFriendOrderFromApi } from "./friend-order";
 import {
@@ -135,18 +136,21 @@ export const useFriendStore = defineStore("Friend", () => {
     runInSortedFriendsBatch: sorted.runInBatch,
   };
 
+  const friendHistory = createFriendHistory(friendLogTable);
   watch(
-    [router.currentRoute, () => dashboardStore.dashboards],
-    ([value]) => {
-      const dashboardId = value.name === "dashboard" ? value.params["id"] : undefined;
-      const isDashboardPanel = value.name === "dashboard" && typeof dashboardId === "string" && dashboardStore.getDashboard(dashboardId, "friend-log");
-      if (value.name === "friend-log" || isDashboardPanel) {
-        initFriendLogHistoryTable().catch(logFailure);
-      } else {
-        friendLogTable.value.data = [];
-      }
+    [
+      () => watchState.isLoggedIn,
+      () => {
+        const route = router.currentRoute.value;
+        const id = route.params["id"];
+        return route.name === "friend-log" || (route.name === "dashboard" && typeof id === "string" && !!dashboardStore.getDashboard(id, "friend-log"));
+      },
+    ],
+    () => {
+      friendHistory.reset();
+      friendLogTable.value.data = [];
     },
-    { immediate: true, deep: true }
+    { immediate: true, flush: "sync" }
   );
 
   watch(
@@ -431,9 +435,7 @@ export const useFriendStore = defineStore("Friend", () => {
   }
 
   async function initFriendLogHistoryTable(): Promise<void> {
-    friendLogTable.value.loading = true;
-    friendLogTable.value.data = await database.getFriendLogHistory();
-    friendLogTable.value.loading = false;
+    await friendHistory.load(0, appearanceSettingsStore.tablePageSize);
   }
 
   function tryApplyFriendOrder(): Promise<void> {
@@ -489,6 +491,8 @@ export const useFriendStore = defineStore("Friend", () => {
     resetDerivedDebugCounters,
     getDerivedDebugCounters,
     initFriendLogHistoryTable,
+    loadFriendLogHistoryPage: friendHistory.load,
+    friendLogHistoryTotal: friendHistory.total,
     setIsRefreshFriendsLoading,
   };
 });

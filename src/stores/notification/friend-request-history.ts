@@ -6,7 +6,7 @@ const FRIEND_REQUEST_TYPES = ["friendRequest", "ignoredFriendRequest"];
 const FRIEND_REQUEST_HISTORY_LIMIT = 100000;
 const OUTCOMES: readonly string[] = ["", "accepted", "declined", "autoDeclined"];
 
-function isFriendRequestOutcome(value: unknown): value is FriendRequestOutcome {
+export function isFriendRequestOutcome(value: unknown): value is FriendRequestOutcome {
   return typeof value === "string" && OUTCOMES.includes(value);
 }
 

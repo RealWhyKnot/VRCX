@@ -106,6 +106,14 @@ const worldFavorites = {
     void sqliteService.run(DatabaseApi.RemoveWorldFromCache(worldId)).catch(logDatabaseError);
   },
 
+  async getWorldCacheForIds(ids: string[]) {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await sqliteService.rows(DatabaseApi.GetWorldCacheForIds(JSON.stringify(ids)));
+    return rows.map(toCachedWorld);
+  },
+
   async getWorldCache(): Promise<CachedWorld[]> {
     const rows = await sqliteService.rows(DatabaseApi.GetWorldCache());
     return rows.map(toCachedWorld);

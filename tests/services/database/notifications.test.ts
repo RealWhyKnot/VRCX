@@ -49,6 +49,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+test("loads IDs and request outcomes without display payloads", async () => {
+  mocks.rowQueue.push([
+    ["pending", ""],
+    ["declined", "autoDeclined"],
+    ["group_event", null],
+  ]);
+  expect(await notifications.getNotificationHistoryState(["pending", "declined", "group_event"])).toEqual([
+    { id: "pending", friendRequestOutcome: "" },
+    { id: "declined", friendRequestOutcome: "autoDeclined" },
+    { id: "group_event", friendRequestOutcome: null },
+  ]);
+  expect(callsTo("GetNotificationHistoryState")).toEqual([['["pending","declined","group_event"]']]);
+});
+
 describe("notifications v1 reads", () => {
   test("returns rows newest first and maps the expired flag and details", async () => {
     mocks.rowQueue.push([

@@ -18,6 +18,15 @@ type FriendLogHistoryEntry = {
   previousTrustLevel?: string | null;
 };
 
+type FriendLogHistoryOptions = {
+  beforeDate?: string | null;
+  offset?: number;
+  types: string[];
+  search: string;
+  hideUnfriends: boolean;
+  ascending: boolean;
+};
+
 type FriendLogHistoryInput = {
   created_at: string;
   type: string;
@@ -65,20 +74,52 @@ function toFriendLogHistoryEntry(row: DatabaseRow): FriendLogHistoryEntry {
   return entry;
 }
 
+const pendingHistoryWrites = new Set<Promise<unknown>>();
+
+function trackHistoryWrite(write: Promise<unknown>): void {
+  pendingHistoryWrites.add(write);
+  void write
+    .finally(() => {
+      pendingHistoryWrites.delete(write);
+    })
+    .catch(logDatabaseError);
+}
+
 const friendLogHistory = {
   async getFriendLogHistory(): Promise<FriendLogHistoryEntry[]> {
     const rows = await sqliteService.rows(DatabaseApi.GetFriendLogHistory());
     return rows.map(toFriendLogHistoryEntry).reverse();
   },
 
-  async getFriendLogHistoryPage(limit: number, beforeId: number | null = null): Promise<FriendLogHistoryEntry[]> {
-    const rows = await sqliteService.rows(DatabaseApi.GetFriendLogHistoryPage(limit, beforeId));
-    return rows.map(toFriendLogHistoryEntry);
+  async getFriendLogHistoryPage(limit: number, beforeId: number | null = null, options?: FriendLogHistoryOptions): Promise<FriendLogHistoryEntry[]> {
+    if (options?.offset !== undefined && options.offset > 0) {
+      const rows = await sqliteService.rows(
+        DatabaseApi.GetFilteredFriendLogHistoryPageAtOffset(limit, options.offset, options.types, options.search, options.hideUnfriends, options.ascending)
+      );
+      return rows.map(toFriendLogHistoryEntry);
+    }
+    const call = options
+      ? DatabaseApi.GetFilteredFriendLogHistoryPage(
+          limit,
+          beforeId,
+          options.beforeDate ?? null,
+          options.types,
+          options.search,
+          options.hideUnfriends,
+          options.ascending
+        )
+      : DatabaseApi.GetFriendLogHistoryPage(limit, beforeId);
+    return (await sqliteService.rows(call)).map(toFriendLogHistoryEntry);
+  },
+
+  async getFriendLogHistoryCount(options: FriendLogHistoryOptions): Promise<number> {
+    const rows = await sqliteService.rows(DatabaseApi.GetFilteredFriendLogHistoryCount(options.types, options.search, options.hideUnfriends));
+    return cellNumber(rows[0]?.[0]) ?? 0;
   },
 
   addFriendLogHistory(entry: FriendLogHistoryInput): void {
-    void sqliteService
-      .run(
+    trackHistoryWrite(
+      sqliteService.run(
         DatabaseApi.AddFriendLogHistory(
           entry.created_at,
           entry.type,
@@ -90,15 +131,15 @@ const friendLogHistory = {
           entry.friendNumber ?? null
         )
       )
-      .catch(logDatabaseError);
+    );
   },
 
   addFriendLogHistoryArray(inputData: FriendLogHistoryArrayRow[]): void {
     if (inputData.length === 0) {
       return;
     }
-    void sqliteService
-      .run(
+    trackHistoryWrite(
+      sqliteService.run(
         DatabaseApi.AddFriendLogHistoryArray(
           inputData.map((line) => cellText(line.created_at)),
           inputData.map((line) => cellText(line.type)),
@@ -110,7 +151,11 @@ const friendLogHistory = {
           inputData.map((line) => cellText(line.friendNumber))
         )
       )
-      .catch(logDatabaseError);
+    );
+  },
+
+  async waitForFriendLogHistoryWrites(): Promise<void> {
+    await Promise.all(pendingHistoryWrites);
   },
 
   async getFriendLogHistoryForUserId(userId: string, types: string[] = []): Promise<FriendLogHistoryEntry[]> {
@@ -118,13 +163,14 @@ const friendLogHistory = {
     return rows.map(toFriendLogHistoryEntry);
   },
 
-  deleteFriendLogHistory(entry: FriendLogHistoryDeleteEntry): void {
-    if (entry.rowId != null) {
-      void sqliteService.run(DatabaseApi.DeleteFriendLogHistoryById(entry.rowId)).catch(logDatabaseError);
-    } else {
-      void sqliteService.run(DatabaseApi.DeleteFriendLogHistoryByKey(entry.created_at, entry.type, entry.userId)).catch(logDatabaseError);
-    }
+  async deleteFriendLogHistory(entry: FriendLogHistoryDeleteEntry): Promise<void> {
+    const call =
+      entry.rowId != null
+        ? DatabaseApi.DeleteFriendLogHistoryById(entry.rowId)
+        : DatabaseApi.DeleteFriendLogHistoryByKey(entry.created_at, entry.type, entry.userId);
+    await sqliteService.run(call).catch(logDatabaseError);
   },
 };
 
 export { friendLogHistory };
+export type { FriendLogHistoryOptions };
