@@ -226,7 +226,13 @@ export const useNotificationStore = defineStore("Notification", () => {
   prefetchAfterFriendsLoaded(loadNotificationHistory, logError);
 
   watch(
-    [() => watchState.isLoggedIn, router.currentRoute, isNotificationCenterOpen, () => dashboardStore.dashboards, () => userStore.sendBoopDialog.visible],
+    [
+      () => watchState.isLoggedIn,
+      router.currentRoute,
+      isNotificationCenterOpen,
+      () => dashboardStore.dashboards,
+      () => (userStore as Partial<typeof userStore>).sendBoopDialog?.visible,
+    ],
     ([isLoggedIn, route, isCenterOpen, , isBoopOpen]) => {
       const id = route.params["id"];
       const isDashboard = route.name === "dashboard" && typeof id === "string" && !!dashboardStore.getDashboard(id, "notification");

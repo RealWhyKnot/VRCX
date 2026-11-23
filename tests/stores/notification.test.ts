@@ -503,3 +503,34 @@ describe("notification store - invites sent back", () => {
     });
   });
 });
+
+describe("notification store - setup order with the user store", () => {
+  it("builds when the user store is created first and reacts to sendBoopDialog.visible", async () => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    watchState.isLoggedIn = true;
+
+    const { useUserStore } = await import("../../src/stores/user");
+
+    let userStore!: ReturnType<typeof useUserStore>;
+    expect(() => {
+      userStore = useUserStore();
+    }).not.toThrow();
+    useNotificationStore();
+
+    await nextTick();
+    dbMocks.getNotifications.mockClear();
+    dbMocks.lookupNotificationDatabase.mockClear();
+    dbMocks.getNotificationsV2.mockClear();
+    dbMocks.getNotificationHistoryState.mockClear();
+    const historyCalls = () =>
+      dbMocks.getNotifications.mock.calls.length + dbMocks.getNotificationsV2.mock.calls.length + dbMocks.lookupNotificationDatabase.mock.calls.length;
+    const before = historyCalls();
+
+    userStore.sendBoopDialog.visible = true;
+    await nextTick();
+    await vi.waitFor(() => {
+      expect(historyCalls()).toBeGreaterThan(before);
+    });
+  });
+});
