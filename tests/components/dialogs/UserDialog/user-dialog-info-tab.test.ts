@@ -31,7 +31,7 @@ vi.mock("../../../../src/plugins/router", async () => {
       beforeEach: vi.fn(),
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
       isReady: vi.fn().mockResolvedValue(true),
     },
     initRouter: vi.fn(),
@@ -48,7 +48,7 @@ vi.mock("vue-router", async (importOriginal) => {
     useRouter: vi.fn(() => ({
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
     })),
   };
 });
@@ -241,6 +241,33 @@ describe("UserDialogInfoTab.vue", () => {
 
       expect(creditsSpy).toHaveBeenCalledExactlyOnceWith("vrchatCredits");
       expect(useUserStore().currentUserCredits).toBe(42);
+    });
+
+    test("translateBio translates the public profile bio", async () => {
+      const userDialog: Partial<UserDialogState> = {
+        ref: { ...createUserDialogState().ref, id: "usr_target", bio: "stale bio" },
+        publicProfileRef: { bio: "public bio" },
+      };
+      const wrapper = mountComponent({ userDialog });
+      const translateText = vi.mocked(useAdvancedSettingsStore().translateText);
+      translateText.mockResolvedValue("translated");
+
+      await wrapper.vm.translateBio();
+      await flushPromises();
+
+      expect(translateText).toHaveBeenCalledExactlyOnceWith("public bio\n\nTranslated by Google", "en");
+    });
+
+    test("translateBio does nothing without a public profile bio", async () => {
+      const userDialog: Partial<UserDialogState> = {
+        ref: { ...createUserDialogState().ref, id: "usr_target", bio: "stale bio" },
+      };
+      const wrapper = mountComponent({ userDialog });
+      const translateText = vi.mocked(useAdvancedSettingsStore().translateText);
+
+      await wrapper.vm.translateBio();
+
+      expect(translateText).not.toHaveBeenCalled();
     });
 
     test("does not fetch credits for another user", async () => {

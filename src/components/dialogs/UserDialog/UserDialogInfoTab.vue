@@ -470,7 +470,7 @@ async function translateBio() {
   if (translateLoading.value) {
     return;
   }
-  const bio = replaceBioSymbols(userDialog.value.ref.bio);
+  const bio = replaceBioSymbols(userDialog.value.publicProfileRef?.bio);
   if (!bio) {
     return;
   }
@@ -549,6 +549,7 @@ function showFullscreenImageDialog(imageUrl: string, fileName = "") {
 }
 
 defineExpose({
+  translateBio,
   onTabActivated,
   showEditNoteAndMemoDialog,
   showFullscreenImageDialog,
