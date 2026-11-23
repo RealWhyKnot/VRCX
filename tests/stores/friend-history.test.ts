@@ -7,7 +7,9 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn<(...args: unknown[]) => Promise<number>>(),
   page: vi.fn<(...args: unknown[]) => Promise<FriendLogHistoryRow[]>>(),
 }));
-vi.mock("../../src/services/database", () => ({ database: { getFriendLogHistoryCount: mocks.count, getFriendLogHistoryPage: mocks.page } }));
+vi.mock("../../src/services/database", () => ({
+  database: { getFriendLogHistoryCount: mocks.count, getFriendLogHistoryPage: mocks.page, waitForFriendLogHistoryWrites: () => Promise.resolve() },
+}));
 import { createFriendHistory } from "../../src/stores/friend-history";
 
 const makeRow = (rowId: number): FriendLogHistoryRow => ({
@@ -91,4 +93,55 @@ test("jumps to an uncached page in one read and resumes using its cursor", async
   expect(mocks.page).toHaveBeenCalledExactlyOnceWith(2, null, expect.objectContaining({ offset: 20 }));
   await history.load(11, 2);
   expect(mocks.page.mock.lastCall).toEqual([2, 12, expect.objectContaining({ offset: 0 })]);
+});
+
+test("keeps live rows until a fresh committed page includes them", async () => {
+  const table = createTable();
+  const history = createFriendHistory(table);
+  const oldPage = Promise.withResolvers<FriendLogHistoryRow[]>();
+  const refreshed = Promise.withResolvers<FriendLogHistoryRow[]>();
+  mocks.page.mockReturnValueOnce(oldPage.promise).mockReturnValueOnce(refreshed.promise);
+  const loading = history.load(0, 2);
+  await vi.waitFor(() => expect(mocks.page).toHaveBeenCalledOnce());
+  const live = { ...makeRow(10), rowId: null };
+  table.value.data.push(live);
+  oldPage.resolve([makeRow(9), makeRow(7)]);
+  await vi.waitFor(() => expect(mocks.page).toHaveBeenCalledTimes(2));
+  expect(table.value.data).toEqual([live]);
+  refreshed.resolve([makeRow(10), makeRow(9)]);
+  await loading;
+  expect(table.value.data.map((row) => row.rowId)).toEqual([10, 9]);
+  expect(mocks.count).toHaveBeenCalledTimes(2);
+  expect(table.value.loading).toBe(false);
+});
+
+test("handles a superseded count failure without replacing the newer page", async () => {
+  const table = createTable();
+  const history = createFriendHistory(table);
+  const oldCount = Promise.withResolvers<number>();
+  mocks.count.mockReturnValueOnce(oldCount.promise).mockResolvedValueOnce(1);
+  mocks.page.mockResolvedValueOnce([makeRow(4)]);
+  const first = history.load(0, 2);
+  const rejected = expect(first).rejects.toThrow("count failed");
+  await vi.waitFor(() => expect(mocks.count).toHaveBeenCalledOnce());
+  const search = table.value.filters[1];
+  if (search) search.value = "new";
+  await history.load(0, 2);
+  oldCount.reject(new Error("count failed"));
+  await rejected;
+  expect(table.value.data.map((row) => row.rowId)).toEqual([4]);
+  expect(history.total.value).toBe(1);
+  expect(table.value.loading).toBe(false);
+});
+
+test("reloads at most once when live rows keep arriving", async () => {
+  const table = createTable();
+  const history = createFriendHistory(table);
+  mocks.page.mockImplementation(() => {
+    table.value.data.push({ ...makeRow(10), rowId: null });
+    return Promise.resolve([makeRow(9), makeRow(7)]);
+  });
+  await history.load(0, 2);
+  expect(mocks.page).toHaveBeenCalledTimes(2);
+  expect(table.value.loading).toBe(false);
 });

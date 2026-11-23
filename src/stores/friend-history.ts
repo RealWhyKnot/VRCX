@@ -35,8 +35,9 @@ export function createFriendHistory(table: Ref<FriendLogTable>) {
     };
   }
 
-  async function load(page = 0, size = 50, isAscending = false, shouldRefresh = false): Promise<void> {
+  async function load(page = 0, size = 50, isAscending = false, shouldRefresh = false, retries = 1): Promise<void> {
     const request = ++version;
+    const existingRows = new Set(table.value.data);
     const filters = options(isAscending);
     const key = JSON.stringify(filters);
     const hasNewQuery = shouldRefresh || key !== query || size !== pageSize;
@@ -45,7 +46,7 @@ export function createFriendHistory(table: Ref<FriendLogTable>) {
       pageSize = size;
       cursors.clear();
       cursors.set(0, { id: null, date: null });
-      countPromise = database.getFriendLogHistoryCount(filters);
+      countPromise = database.waitForFriendLogHistoryWrites().then(() => database.getFriendLogHistoryCount(filters));
     }
     table.value.loading = true;
     try {
@@ -57,6 +58,9 @@ export function createFriendHistory(table: Ref<FriendLogTable>) {
         if (countPromise === pendingCount) {
           countPromise = undefined;
         }
+      } else {
+        await database.waitForFriendLogHistoryWrites();
+        if (request !== version) return;
       }
       const target = Math.min(page, Math.max(0, Math.ceil(total.value / size) - 1));
       const cursor = cursors.get(target);
@@ -66,6 +70,10 @@ export function createFriendHistory(table: Ref<FriendLogTable>) {
         offset: cursor === undefined ? target * size : 0,
       });
       if (request !== version) return;
+      if (retries > 0 && table.value.data.some((row) => row.rowId === null && !existingRows.has(row))) {
+        await load(page, size, isAscending, true, retries - 1);
+        return;
+      }
       const last = rows.at(-1);
       if (last !== undefined) {
         cursors.set(target + 1, { id: last.rowId, date: last.created_at });

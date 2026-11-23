@@ -32,6 +32,11 @@ export function getFriendLogFriendOrder(rows: readonly FriendLogHistoryRow[]): F
   return result;
 }
 
+async function getStoredFriendOrder(): Promise<FriendOrderEntry[]> {
+  await database.waitForFriendLogHistoryWrites();
+  return getFriendLogFriendOrder(await database.getFriendLogHistory());
+}
+
 export function parseFriendOrderBackup(
   friendLogOrder: readonly FriendOrderEntry[],
   createdAt: string,
@@ -138,7 +143,7 @@ export async function tryRestoreFriendNumber(ctx: FriendStoreContext, currentUse
       await restoreFriendNumber(ctx, currentUser);
     }
 
-    applyFriendLogFriendOrderInReverse(ctx);
+    await applyFriendLogFriendOrderInReverse(ctx);
   } catch (err) {
     console.error(err);
   }
@@ -161,7 +166,7 @@ export async function restoreFriendNumber(ctx: FriendStoreContext, currentUser: 
     return false;
   }
 
-  const friendLogOrder = getFriendLogFriendOrder(ctx.friendLogTable.data);
+  const friendLogOrder = await getStoredFriendOrder();
 
   const machList: FriendOrderBackup[] = [];
   for (const [createdAt, backupUserIds] of Object.entries<string[]>(storedData)) {
@@ -177,14 +182,14 @@ export async function restoreFriendNumber(ctx: FriendStoreContext, currentUser: 
   }
 
   applyFriendOrderBackup(ctx, bestBackup.table);
-  applyFriendLogFriendOrder(ctx);
+  applyStoredFriendOrder(ctx, friendLogOrder);
   await configRepository.setInt(`VRCX_friendNumber_${currentUser.id}`, ctx.state.friendNumber);
   return true;
 }
 
-export function applyFriendLogFriendOrderInReverse(ctx: FriendStoreContext): void {
+export async function applyFriendLogFriendOrderInReverse(ctx: FriendStoreContext): Promise<void> {
+  const friendLogOrder = await getStoredFriendOrder();
   ctx.state.friendNumber = ctx.friends.size + 1;
-  const friendLogOrder = getFriendLogFriendOrder(ctx.friendLogTable.data);
   for (const friendLogEntry of [...friendLogOrder].reverse()) {
     const ref = ctx.friendLog.get(friendLogEntry.id);
     if (!ref) {
@@ -226,8 +231,11 @@ export function applyFriendOrderBackup(ctx: FriendStoreContext, userIdOrder: rea
   }
 }
 
-export function applyFriendLogFriendOrder(ctx: FriendStoreContext): void {
-  const friendLogOrder = getFriendLogFriendOrder(ctx.friendLogTable.data);
+export async function applyFriendLogFriendOrder(ctx: FriendStoreContext): Promise<void> {
+  applyStoredFriendOrder(ctx, await getStoredFriendOrder());
+}
+
+function applyStoredFriendOrder(ctx: FriendStoreContext, friendLogOrder: readonly FriendOrderEntry[]): void {
   if (ctx.state.friendNumber === 0) {
     console.log("No backup applied, applying friend log in reverse");
 

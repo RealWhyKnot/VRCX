@@ -161,6 +161,12 @@ vi.mock("../../../src/shared/utils/base/array", () => ({
 vi.mock("../../../src/services/watch-state", () => ({ watchState: { isLoggedIn: true } }));
 
 import FriendLog from "../../../src/views/FriendLog/FriendLog.vue";
+import DashboardPanel from "../../../src/views/Dashboard/components/DashboardPanel.vue";
+
+vi.mock("../../../src/views/Dashboard/components/panel-registry", async () => ({
+  panelComponentMap: { "friend-log": (await import("../../../src/views/FriendLog/FriendLog.vue")).default },
+}));
+vi.mock("../../../src/views/Dashboard/components/PanelSelector.vue", () => ({ default: { template: "<div />" } }));
 
 function makeRow(row: Partial<FriendLogHistoryRow>): FriendLogHistoryRow {
   return {
@@ -202,6 +208,14 @@ describe("FriendLog.vue", () => {
     mocks.configSetString.mockResolvedValue(undefined);
     mocks.deleteFriendLogHistory.mockReset().mockResolvedValue(undefined);
     mocks.removeFromArray.mockClear();
+  });
+
+  test.each(["friend-log", { key: "friend-log", config: {} }])("loads inside a dashboard panel without a Friend Log route: %j", async (panelData) => {
+    const wrapper = mount(DashboardPanel, { props: { panelData } });
+    expect(wrapper.findComponent(FriendLog).exists()).toBe(true);
+    await vi.waitFor(() => expect(mocks.loadPage).toHaveBeenCalled());
+    expect(mocks.loadPage.mock.calls[0]?.slice(0, 2)).toEqual([0, 10]);
+    wrapper.unmount();
   });
 
   test("syncs hideUnfriends setting to table filter via watcher", () => {
