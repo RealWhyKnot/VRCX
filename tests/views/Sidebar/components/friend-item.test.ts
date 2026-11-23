@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
       activeFriends: [],
     },
   },
+  isActionRecent: vi.fn<(userId: string, action: string) => boolean>(() => false),
   showUserDialog: vi.fn<(userId: string) => void>(),
   confirmDeleteFriend: vi.fn<(friendId: string) => void>(),
 }));
@@ -40,6 +41,10 @@ vi.mock("../../../../src/stores/friend", () => ({
 }));
 vi.mock("../../../../src/stores/user", () => ({
   useUserStore: () => mocks.userStore,
+}));
+
+vi.mock("../../../../src/composables/use-recent-actions", () => ({
+  isActionRecent: (userId: string, action: string) => mocks.isActionRecent(userId, action),
 }));
 
 vi.mock("../../../../src/coordinators/user-coordinator", () => ({
@@ -125,6 +130,9 @@ vi.mock("lucide-vue-next", () => ({
   User: {
     template: '<span data-testid="icon-user" />',
   },
+  Clock: {
+    template: '<span data-testid="icon-clock" />',
+  },
   Trash2: {
     template: '<span data-testid="icon-trash" />',
   },
@@ -169,6 +177,8 @@ describe("FriendItem.vue", () => {
     mocks.friendStore.allFavoriteFriendIds = new Set();
     mocks.confirmDeleteFriend.mockReset();
     mocks.showUserDialog.mockReset();
+    mocks.isActionRecent.mockReset();
+    mocks.isActionRecent.mockReturnValue(false);
   });
 
   test("renders delete action for orphan friend and triggers confirmDeleteFriend", async () => {
@@ -207,6 +217,32 @@ describe("FriendItem.vue", () => {
     root.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
     expect(mocks.showUserDialog).toHaveBeenCalledWith("usr_1");
+  });
+
+  test("hides the clock icon when no invite action is recent", () => {
+    const wrapper = mountItem(makeFriend());
+
+    expect(wrapper.find('[data-testid="icon-clock"]').exists()).toBe(false);
+  });
+
+  test.each(["Invite", "Invite Photo", "Invite Message", "Request Invite", "Request Invite Photo", "Request Invite Message"])(
+    "shows the clock icon when %s is recent",
+    (action) => {
+      mocks.isActionRecent.mockImplementation((userId, recentAction) => userId === "usr_1" && recentAction === action);
+
+      expect(mountItem(makeFriend()).find('[data-testid="icon-clock"]').exists()).toBe(true);
+      expect(
+        mountItem(makeFriend({ $nickName: "" }))
+          .find('[data-testid="icon-clock"]')
+          .exists()
+      ).toBe(true);
+    }
+  );
+
+  test("ignores recent actions that are not invites", () => {
+    mocks.isActionRecent.mockImplementation((_userId, action) => action === "Send Friend Request");
+
+    expect(mountItem(makeFriend()).find('[data-testid="icon-clock"]').exists()).toBe(false);
   });
 
   test("orphan row is not a nested button", () => {

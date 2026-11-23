@@ -23,9 +23,13 @@
           class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]"
           :style="{ '--user-colour': friend.ref.$userColour }"
         >
-          {{ friend.ref.displayName }} ({{ friend.$nickName }})
+          <TooltipWrapper v-if="hasRecentInviteAction" :content="t('side_panel.recently_invited')" side="top"
+            ><Clock class="mr-1 inline size-3.5 align-[-2px] text-muted-foreground" /></TooltipWrapper
+          >{{ friend.ref.displayName }} ({{ friend.$nickName }})
         </span>
         <span v-else class="block truncate font-medium leading-[18px] [color:var(--user-colour,inherit)]" :style="{ '--user-colour': friend.ref.$userColour }"
+          ><TooltipWrapper v-if="hasRecentInviteAction" :content="t('side_panel.recently_invited')" side="top"
+            ><Clock class="mr-1 inline size-3.5 align-[-2px] text-muted-foreground" /></TooltipWrapper
           >{{ friend.ref.displayName }}{{ isGroupByInstance && isFavorite ? " ⭐" : "" }}</span
         >
 
@@ -59,7 +63,7 @@
 import Avatar from "@/components/ui/avatar/Avatar.vue";
 import AvatarFallback from "@/components/ui/avatar/AvatarFallback.vue";
 import AvatarImage from "@/components/ui/avatar/AvatarImage.vue";
-import { Trash2, User } from "lucide-vue-next";
+import { Clock, Trash2, User } from "lucide-vue-next";
 import Button from "@/components/ui/button/Button.vue";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
@@ -74,6 +78,7 @@ import IconFrame from "@/components/IconFrame.vue";
 import { useAppearanceSettingsStore } from "../../../stores/settings/appearance";
 import { useFriendStore } from "../../../stores/friend";
 import type { FriendContext } from "../../../stores/friend-types";
+import { isActionRecent } from "../../../composables/use-recent-actions";
 import { useUserDisplay } from "../../../composables/use-user-display";
 
 import "@/styles/status-icon.css";
@@ -94,6 +99,10 @@ const { t } = useI18n();
 
 const isFriendTraveling = computed(() => props.friend.ref?.location === "traveling");
 const isFriendActiveOrOffline = computed(() => props.friend.state === "active" || props.friend.state === "offline");
+
+const INVITE_ACTIONS = ["Invite", "Invite Photo", "Invite Message", "Request Invite", "Request Invite Photo", "Request Invite Message"];
+
+const hasRecentInviteAction = computed(() => INVITE_ACTIONS.some((action) => isActionRecent(props.friend.id, action)));
 
 const friendStatusClass = computed(() => {
   return userStatusClass(props.friend.ref, props.friend.pendingOffline);
