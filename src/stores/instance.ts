@@ -30,6 +30,7 @@ import { worldRequest } from "../api/world";
 import { instanceContentSettings } from "../shared/constants/instance";
 import { database } from "../services/database";
 import { useAppearanceSettingsStore } from "./settings/appearance";
+import { useNotificationsSettingsStore } from "./settings/notifications";
 import { useFriendStore } from "./friend";
 import { useGroupStore } from "./group";
 import { useLocationStore } from "./location";
@@ -56,6 +57,7 @@ export const useInstanceStore = defineStore("Instance", () => {
   const appearanceSettingsStore = useAppearanceSettingsStore();
   const groupStore = useGroupStore();
   const notificationStore = useNotificationStore();
+  const notificationsSettingsStore = useNotificationsSettingsStore();
   const uiStore = useUiStore();
   const userStore = useUserStore();
   const sharedFeedStore = useSharedFeedStore();
@@ -444,6 +446,7 @@ export const useInstanceStore = defineStore("Instance", () => {
   const { removeAllQueuedInstances, removeQueuedInstance, applyQueuedInstance, instanceQueueReady, instanceQueueUpdate } = createInstanceQueue({
     notificationStore,
     uiStore,
+    notificationsSettingsStore,
     sharedFeedStore,
     cachedGroupOf,
     queuedInstances,

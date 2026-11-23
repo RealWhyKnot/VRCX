@@ -64,6 +64,14 @@
           @update:model-value="setAfkDesktopToast"
         />
       </SettingsItem>
+
+      <SettingsItem :label="t('view.settings.notifications.notifications.desktop_notifications.queue_ready_alarm')" toggle>
+        <Switch
+          :model-value="queueReadyAlarm"
+          :aria-label="t('view.settings.notifications.notifications.desktop_notifications.queue_ready_alarm')"
+          @update:model-value="setQueueReadyAlarm"
+        />
+      </SettingsItem>
     </SettingsGroup>
 
     <SettingsGroup :title="t('view.settings.notifications.notifications.text_to_speech.header')">
@@ -161,6 +169,7 @@ const notificationsSettingsStore = useNotificationsSettingsStore();
 const {
   desktopToast,
   afkDesktopToast,
+  queueReadyAlarm,
   notificationTTS,
   notificationTTSNickName,
   inventoryBundleNotifications,
@@ -173,6 +182,7 @@ const {
 const {
   setDesktopToast,
   setAfkDesktopToast,
+  setQueueReadyAlarm,
   setNotificationTTSNickName,
   setInventoryBundleNotifications,
   setFreeStoreItemNotifications,

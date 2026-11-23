@@ -5,6 +5,8 @@ import { displayLocation, parseLocation } from "../shared/utils/location-parser"
 import { getGroupName } from "../shared/utils/group";
 import { getWorldName } from "../shared/utils/world";
 import { instanceRequest } from "../api/instance";
+import { logFailure } from "./log-failure";
+import type { useNotificationsSettingsStore } from "./settings/notifications";
 import type { useNotificationStore } from "./notification";
 import type { useUiStore } from "./ui";
 import type { useSharedFeedStore } from "./shared-feed";
@@ -13,14 +15,61 @@ import type { QueuedInstance } from "./instance-types";
 export type CreateInstanceQueueDeps = {
   notificationStore: ReturnType<typeof useNotificationStore>;
   uiStore: ReturnType<typeof useUiStore>;
+  notificationsSettingsStore: ReturnType<typeof useNotificationsSettingsStore>;
   sharedFeedStore: ReturnType<typeof useSharedFeedStore>;
   cachedGroupOf: (groupId: string | null) => { name: string; iconUrl: string | undefined } | undefined;
   queuedInstances: Map<string, QueuedInstance>;
   t: ReturnType<typeof useI18n>["t"];
 };
 
+const CHIME_TONES = [
+  { frequency: 880, start: 0, duration: 0.15 },
+  { frequency: 1320, start: 0.15, duration: 0.15 },
+];
+
+export function playQueueReadyChime() {
+  try {
+    const AudioContextCtor = globalThis.AudioContext;
+    if (typeof AudioContextCtor !== "function") {
+      return;
+    }
+    const context = new AudioContextCtor();
+    let isClosed = false;
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    const close = () => {
+      if (isClosed) {
+        return;
+      }
+      isClosed = true;
+      clearTimeout(fallback);
+      context.close().catch(logFailure("Closing the audio context failed:"));
+    };
+    try {
+      const now = context.currentTime;
+      CHIME_TONES.forEach((tone, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.frequency.value = tone.frequency;
+        gain.gain.value = 0.2;
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        if (index === CHIME_TONES.length - 1) {
+          oscillator.onended = close;
+        }
+        oscillator.start(now + tone.start);
+        oscillator.stop(now + tone.start + tone.duration);
+      });
+      fallback = setTimeout(close, 1000);
+    } catch {
+      close();
+    }
+  } catch (error) {
+    console.error("Playing the queue ready chime failed:", error);
+  }
+}
+
 export function createInstanceQueue(deps: CreateInstanceQueueDeps) {
-  const { notificationStore, uiStore, sharedFeedStore, cachedGroupOf, queuedInstances, t } = deps;
+  const { notificationStore, uiStore, notificationsSettingsStore, sharedFeedStore, cachedGroupOf, queuedInstances, t } = deps;
 
   function removeAllQueuedInstances() {
     queuedInstances.forEach((ref) => {
@@ -110,6 +159,10 @@ export function createInstanceQueue(deps: CreateInstanceQueueDeps) {
     });
     const notificationRows: unknown[] = notificationStore.notificationTable.data;
     notificationRows.push(noty);
+    if (notificationsSettingsStore.queueReadyAlarm) {
+      playQueueReadyChime();
+      AppApi.FlashWindow().catch(logFailure("Flashing the window failed:"));
+    }
   }
 
   async function instanceQueueUpdate(instanceId: string, position: number, queueSize: number) {
