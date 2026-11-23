@@ -22,6 +22,8 @@ type RetainedEventBridge = {
   GetProfileHistory(userId: string, beforeId: number | null, limit: number): Promise<string>;
   GetFavoriteHistory(beforeId: number | null, limit: number): Promise<string>;
   GetBadgeHistory(beforeId: number | null, limit: number): Promise<string>;
+  GetLatestBadgeById(badgeId: string): Promise<string>;
+  GetBadgeHistoryAt(createdAt: string): Promise<string>;
 };
 
 type DatabaseBridge = CoreBridge & ActivityBridge & EntitiesBridge & FeedBridge & GameLogBridge & TablesBridge & RetainedEventBridge;

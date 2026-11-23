@@ -16,6 +16,10 @@ sealed partial class DatabaseApi
     {
         string account = AccountPrefix(userId);
         using var batch = JsonDocument.Parse(payload);
+        if (batch.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
         if (batch.RootElement.GetArrayLength() > RetainedBatchLimit)
         {
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -25,11 +29,9 @@ sealed partial class DatabaseApi
         {
             foreach (JsonElement entry in batch.RootElement.EnumerateArray())
             {
-                string kind = RequiredText(entry, "kind");
-                string subject = RequiredText(entry, "subject");
-                string createdAt = RequiredText(entry, "createdAt");
-                JsonElement data = entry.GetProperty("data");
-                if (subject.Length == 0 || createdAt.Length == 0)
+                if (!TryRetainedText(entry, "kind", out string kind) || !TryRetainedText(entry, "subject", out string subject) ||
+                    !TryRetainedText(entry, "createdAt", out string createdAt) || subject.Length == 0 || createdAt.Length == 0 ||
+                    !entry.TryGetProperty("data", out JsonElement data) || !IsRetainedData(kind, data))
                 {
                     continue;
                 }
@@ -52,11 +54,39 @@ sealed partial class DatabaseApi
                         }
                         break;
                     default:
-                        throw new ArgumentException("Unknown history event kind.", nameof(payload));
+                        break;
                 }
             }
         });
     }
+
+    private static bool TryRetainedText(JsonElement data, string name, out string text)
+    {
+        text = string.Empty;
+        if (data.ValueKind != JsonValueKind.Object || !data.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        text = value.GetString() ?? string.Empty;
+        return true;
+    }
+
+    private static bool IsRetainedData(string kind, JsonElement data) => kind switch
+    {
+        "avatar" => TryRetainedText(data, "avatarName", out _) && TryRetainedText(data, "location", out _) &&
+            TryRetainedText(data, "displayName", out _) && TryRetainedText(data, "source", out string source) && source is "game-log" or "photon",
+        "profile" => data.ValueKind == JsonValueKind.Object && data.EnumerateObject().All(field => field.Name switch
+        {
+            "bio" or "pronouns" => field.Value.ValueKind == JsonValueKind.String,
+            "tags" => field.Value.ValueKind == JsonValueKind.Array && field.Value.EnumerateArray().All(tag => tag.ValueKind == JsonValueKind.String),
+            _ => true,
+        }),
+        "badge" => TryRetainedText(data, "badgeId", out string badge) && badge.Length > 0,
+        "remote-favorites" => data.ValueKind == JsonValueKind.Array && data.GetArrayLength() <= 10_000 &&
+            data.EnumerateArray().All(item => TryRetainedText(item, "type", out string type) && type.Length > 0 &&
+                TryRetainedText(item, "itemId", out string id) && id.Length > 0 && TryRetainedText(item, "group", out _)),
+        _ => false,
+    };
 
     private static string RequiredText(JsonElement data, string name) => data.GetProperty(name).GetString() ?? string.Empty;
 
@@ -95,7 +125,7 @@ sealed partial class DatabaseApi
         {
             using var stored = JsonDocument.Parse(Convert.ToString(row[3], CultureInfo.InvariantCulture) ?? "{}");
             JsonElement old = stored.RootElement;
-            string oldSource = RequiredText(old, "source");
+            string oldSource = OptionalText(old, "source") ?? string.Empty;
             string? oldId = OptionalText(old, "avatarId");
             string? oldName = OptionalText(old, "avatarName");
             bool sameAvatar = avatarId is not null && oldId is not null
@@ -214,6 +244,18 @@ sealed partial class DatabaseApi
     public string GetFavoriteHistory(long? beforeId, long limit) => ReadRetained("favorite", subject: null, beforeId, limit);
 
     public string GetBadgeHistory(long? beforeId, long limit) => ReadRetained("badge", subject: null, beforeId, limit);
+
+    public string GetLatestBadgeById(string badgeId) => Rows("""
+        SELECT id, subject, detail, created_at, data FROM retained_event
+        WHERE account = @account AND kind = 'badge' AND detail = @badgeId
+        ORDER BY id DESC LIMIT 1
+        """, ("@account", _userPrefix), ("@badgeId", badgeId));
+
+    public string GetBadgeHistoryAt(string createdAt) => Rows("""
+        SELECT id, subject, detail, created_at, data FROM retained_event
+        WHERE account = @account AND kind = 'badge' AND created_at = @createdAt
+        ORDER BY id DESC
+        """, ("@account", _userPrefix), ("@createdAt", createdAt));
 
     private string ReadRetained(string kind, string? subject, long? beforeId, long limit)
     {

@@ -3,6 +3,16 @@ import { defineComponent, ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { TooltipProvider } from "reka-ui";
 
+vi.mock("../../../src/stores/user", () => ({ useUserStore: () => ({ currentUser: { id: "usr_me", badges: [] } }) }));
+vi.mock("../../../src/services/database/retained-events", () => ({
+  retainedEvents: {
+    getBadgeHistoryAt: () =>
+      Promise.resolve([
+        { id: 1, detail: "bdg_1", createdAt: "2026-11-01T10:01:00.000Z", data: { action: "remove", name: "Pioneer", description: "First season" } },
+      ]),
+  },
+}));
+
 const mocks = vi.hoisted(() => ({
   showPreviousInstancesInfoDialog: vi.fn<(location: string) => void>(),
 }));
@@ -76,4 +86,19 @@ describe("Game Log action column", () => {
     expect(wrapper.findAll('[data-testid="gamelog-instance-info"]')).toHaveLength(1);
     wrapper.unmount();
   });
+});
+
+test("shows the full original badge event and its retained name and description on hover", async () => {
+  const message = "Badge removed: bdg_1";
+  const wrapper = await open([{ ...entry("Event", "", 1), data: message }]);
+  await vi.waitFor(() => expect(wrapper.text()).toContain("Badge removed: Pioneer"));
+  const label = wrapper.get("span.inline-flex.w-full");
+  await label.trigger("pointermove", { pointerType: "mouse" });
+  await vi.waitFor(() => {
+    const tip = document.querySelector('[role="tooltip"]');
+    expect(tip?.textContent).toContain(message);
+    expect(tip?.textContent).toContain("Badge removed: Pioneer");
+    expect(tip?.textContent).toContain("First season");
+  });
+  wrapper.unmount();
 });

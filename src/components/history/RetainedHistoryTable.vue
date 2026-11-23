@@ -1,17 +1,17 @@
 <template>
-  <div class="flex min-h-0 min-w-0 flex-col gap-2">
+  <div class="@container flex min-h-0 min-w-0 flex-col gap-2">
     <div class="min-h-0 overflow-y-auto" :aria-busy="isLoading">
       <Table class="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead scope="col" class="w-1/3">{{ t("table.friendLog.date") }}</TableHead>
+            <TableHead scope="col" class="w-1/3 @max-[19.5rem]:w-26">{{ t("table.friendLog.date") }}</TableHead>
             <TableHead scope="col">{{ columnLabel }}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-for="item in items" :key="item.id">
             <TableCell class="align-top"
-              ><time class="block truncate tabular-nums" :datetime="item.at" :title="item.date">{{ item.date }}</time></TableCell
+              ><time class="block whitespace-normal wrap-anywhere tabular-nums" :datetime="item.at" :title="item.date">{{ item.date }}</time></TableCell
             >
             <TableCell>
               <div class="flex min-w-0 items-center gap-2">

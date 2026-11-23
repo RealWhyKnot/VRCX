@@ -28,6 +28,7 @@ internal static partial class DatabaseNative
                 CheckSightingPrune(db, api);
                 CheckRetainedHistory(db, api);
                 CheckFriendHistoryPages(db, api);
+                CheckMalformedRetainedEvents(db, api);
                 Ensure(!File.Exists(DatabaseUpgrade.BackupPath(db.DataSource)), "Fresh startup created a backup");
                 await CheckTransactionsAsync(db, api).ConfigureAwait(false);
             }
@@ -48,6 +49,7 @@ internal static partial class DatabaseNative
         long previousVersion;
         using (var source = SQLiteDatabase.OpenReadOnly(legacy))
         {
+            Ensure(Number(source, "SELECT vrcx_contains('ÉLODIE', 'élo')") == 1, "Read-only search function was not bound");
             previousVersion = Number(source, "PRAGMA user_version");
             Ensure(previousVersion is >= 1 and <= 4, "Unexpected database copy version");
             Ensure(Number(source, "PRAGMA cache_size") != -32768, "Read-only source opened with the writable cache settings");

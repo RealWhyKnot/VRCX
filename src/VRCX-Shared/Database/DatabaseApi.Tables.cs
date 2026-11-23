@@ -7,7 +7,7 @@ internal
 #endif
 sealed partial class DatabaseApi
 {
-    private const long AccountSchemaVersion = 3;
+    private const long AccountSchemaVersion = 4;
 
     public void InitializeAccount(string userId) => Store.ExecuteExclusive(() =>
     {
@@ -19,6 +19,8 @@ sealed partial class DatabaseApi
     {
         Store.ExecuteExclusive(() =>
         {
+            _ = Run(RetainedBadgeDetailIndex);
+            _ = Run(RetainedBadgeTimeIndex);
             string account = _userPrefix;
             if (Store.Execute("SELECT 1 FROM account_schema WHERE account = @account AND version >= @version",
                 ToArguments([("@account", account), ("@version", AccountSchemaVersion)])).Length == 0)
@@ -103,6 +105,7 @@ sealed partial class DatabaseApi
         _ = Run($"CREATE TABLE IF NOT EXISTS {friendLogCurrent} (user_id TEXT PRIMARY KEY, display_name TEXT, trust_level TEXT, friend_number INTEGER)");
         _ = Run($"CREATE TABLE IF NOT EXISTS {friendLogHistory} (id INTEGER PRIMARY KEY, created_at TEXT, type TEXT, user_id TEXT, display_name TEXT, previous_display_name TEXT, trust_level TEXT, previous_trust_level TEXT, friend_number INTEGER)");
         _ = Run($"CREATE INDEX IF NOT EXISTS {friendLogHistory}_user_id_idx ON {friendLogHistory} (user_id)");
+        EnsureFriendHistoryOrderIndexes(friendLogHistory);
     }
 
     private void CreateNotificationAndProfileTables()

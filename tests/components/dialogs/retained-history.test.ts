@@ -15,7 +15,8 @@ const db = vi.hoisted(() => ({
   getProfileHistory: vi.fn<() => Promise<HistoryRow[]>>(),
   getFriendPlatformHistory: vi.fn<() => Promise<HistoryRow[]>>(),
   getFavoriteHistory: vi.fn<() => Promise<HistoryRow[]>>(),
-  getBadgeHistory: vi.fn<() => Promise<HistoryRow[]>>(),
+  getLatestBadgeById: vi.fn<() => Promise<HistoryRow | null>>(),
+  getBadgeHistoryAt: vi.fn<() => Promise<HistoryRow[]>>(),
 }));
 vi.mock("@/services/database/retained-events", () => ({ retainedEvents: db }));
 vi.mock("@/stores/settings/general", () => ({ useGeneralSettingsStore: () => ({ disableGpuAcceleration: ref(false) }) }));
@@ -49,7 +50,9 @@ const row = (id: number, detail: string, data: unknown): HistoryRow => ({ id, de
 beforeEach(() => {
   vi.resetAllMocks();
   queryClient.clear();
-  for (const read of Object.values(db)) read.mockResolvedValue([]);
+  const { getLatestBadgeById, ...lists } = db;
+  for (const read of Object.values(lists)) read.mockResolvedValue([]);
+  getLatestBadgeById.mockResolvedValue(null);
 });
 
 test("pages through avatar observations without skipping the lookahead row", async () => {
@@ -135,6 +138,7 @@ test("drops a late result after the user changes and retries a failed read", asy
   finish?.([row(1, "Wrong person", {})]);
   await flushPromises();
   expect(wrapper.text()).not.toContain("Wrong person");
+  expect(wrapper.get("[role=alert]").text()).toContain("Couldn't load this list.");
   await wrapper.get("[role=alert] button").trigger("click");
   await flushPromises();
   expect(wrapper.text()).toContain("No data");
@@ -162,12 +166,13 @@ test("opens local and remote favorite changes from the favorites menu", async ()
 });
 
 test("matches a removed badge by the original event and shares reads across rows", async () => {
-  db.getBadgeHistory.mockResolvedValue([row(9, "bdg_1", { action: "remove", name: "Pioneer", description: "First season", imageUrl: "pioneer.png" })]);
+  db.getBadgeHistoryAt.mockResolvedValue([row(9, "bdg_1", { action: "remove", name: "Pioneer", description: "First season", imageUrl: "pioneer.png" })]);
   const props = { message: "Badge removed: bdg_1", at };
   const first = mount(BadgeEventLabel, { props, global });
   const other = mount(BadgeEventLabel, { props: { message: "Badge earned: bdg_other", at }, global });
   await vi.waitFor(() => expect(first.find("img").exists()).toBe(true));
-  expect(db.getBadgeHistory).toHaveBeenCalledTimes(1);
+  expect(db.getBadgeHistoryAt).toHaveBeenCalledTimes(1);
+  expect(db.getBadgeHistoryAt).toHaveBeenCalledWith(at);
   expect(first.text()).toBe("Badge removed: Pioneer");
   expect(first.get("img").attributes("src")).toBe("pioneer.png");
   expect(first.attributes("title")).toContain("First season");
@@ -182,18 +187,37 @@ test("displays badge notifications directly when their data includes the image",
     global,
   });
   await flushPromises();
-  expect(db.getBadgeHistory).not.toHaveBeenCalled();
+  expect(db.getLatestBadgeById).not.toHaveBeenCalled();
+  expect(db.getBadgeHistoryAt).not.toHaveBeenCalled();
   expect(wrapper.get("img").attributes("src")).toBe("badge.png");
   expect(wrapper.get(".truncate").element.textContent).toBe(name);
 });
 
-test("finds an older badge on the next cursor page", async () => {
-  db.getBadgeHistory
-    .mockResolvedValueOnce(Array.from({ length: 250 }, (_, i) => row(500 - i, "bdg_other", { action: "add", name: "Other" })))
-    .mockResolvedValueOnce([row(250, "bdg_old", { action: "add", name: "Veteran", imageUrl: "old.png" })]);
-  const wrapper = mount(BadgeEventLabel, { props: { message: "Badge earned: Veteran", at }, global });
-  await vi.waitFor(() => expect(wrapper.find("img").attributes("src")).toBe("old.png"));
-  expect(db.getBadgeHistory).toHaveBeenNthCalledWith(2, 250, 251);
+test("looks a badge up by id and keeps the message when none is stored", async () => {
+  db.getLatestBadgeById.mockResolvedValueOnce(row(7, "bdg_new", { name: "Veteran", imageUrl: "old.png" })).mockResolvedValueOnce(null);
+  const found = mount(BadgeEventLabel, { props: { message: "Badge earned", data: { badgeId: "bdg_new" } }, global });
+  await vi.waitFor(() => expect(found.find("img").attributes("src")).toBe("old.png"));
+  const missing = mount(BadgeEventLabel, { props: { message: "Badge earned", data: { badgeId: "bdg_none" } }, global });
+  await flushPromises();
+  expect(db.getLatestBadgeById).toHaveBeenCalledWith("bdg_new");
+  expect(db.getLatestBadgeById).toHaveBeenCalledWith("bdg_none");
+  expect(missing.text()).toBe("Badge earned");
+  expect(missing.find("img").exists()).toBe(false);
+  found.unmount();
+  missing.unmount();
+});
+
+test("ignores a badge lookup that finishes after the row changes", async () => {
+  let finish: ((value: HistoryRow | null) => void) | undefined;
+  db.getLatestBadgeById.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+  const wrapper = mount(BadgeEventLabel, { props: { message: "Badge earned", data: { badgeId: "bdg_slow" } }, global });
+  await flushPromises();
+  await wrapper.setProps({ data: { badgeId: "bdg_slow", badgeName: "Direct", badgeImageUrl: "direct.png" } });
+  finish?.(row(1, "bdg_slow", { name: "Late", imageUrl: "late.png" }));
+  await flushPromises();
+  expect(wrapper.text()).toBe("Direct");
+  expect(wrapper.get("img").attributes("src")).toBe("direct.png");
+  wrapper.unmount();
 });
 
 test("keeps an uncached historical group location clickable without looking up names for the rows", async () => {
@@ -208,7 +232,7 @@ test("keeps an uncached historical group location clickable without looking up n
   wrapper.unmount();
 });
 
-test("starts Activity on Charts and resets the selected history when leaving the tab", async () => {
+test("remembers the Activity selection on return and resets it for a different user", async () => {
   const wrapper = mount(UserDialogHistoryTab, {
     props: { userId: "usr_a", isFriend: true, isActive: true },
     attachTo: document.body,
@@ -220,9 +244,41 @@ test("starts Activity on Charts and resets the selected history when leaving the
   await wrapper.get('button[value="profile"]').trigger("click");
   expect(wrapper.get("[data-chart]").element.parentElement?.style.display).toBe("none");
   await wrapper.setProps({ isActive: false });
-  await wrapper.setProps({ userId: "usr_b", isActive: true });
+  expect(wrapper.findComponent(RetainedHistoryTable).exists()).toBe(false);
+  await wrapper.setProps({ isActive: true });
+  expect(wrapper.get('button[value="profile"]').attributes("data-state")).toBe("on");
+  expect(db.getProfileHistory).toHaveBeenLastCalledWith("usr_a", 26, null);
+  await wrapper.setProps({ userId: "usr_b" });
   expect(wrapper.get("[data-chart]").isVisible()).toBe(true);
-  expect(db.getProfileHistory).toHaveBeenCalledTimes(1);
+  expect(db.getProfileHistory).toHaveBeenCalledTimes(2);
   expect(db.getPlayerAvatarHistory).not.toHaveBeenCalled();
+  wrapper.unmount();
+});
+
+test("uses the newest matching badge metadata even when its image is missing", async () => {
+  db.getLatestBadgeById.mockResolvedValueOnce(row(500, "bdg_one", { name: "Pioneer", description: "Updated description" }));
+  const wrapper = mount(BadgeEventLabel, { props: { message: "Badge earned", data: { badgeId: "bdg_one" } }, global });
+  await vi.waitFor(() => expect(wrapper.text()).toBe("Pioneer"));
+  expect(wrapper.attributes("title")).toContain("Updated description");
+  expect(wrapper.find("img").exists()).toBe(false);
+  expect(db.getLatestBadgeById).toHaveBeenCalledOnce();
+  wrapper.unmount();
+});
+
+test("keeps all four Activity choices and the full timestamp with an oversized platform name", async () => {
+  const platform = "new-platform".repeat(300);
+  db.getFriendPlatformHistory.mockResolvedValue([row(1, "Offline", { platform })]);
+  const wrapper = mount(UserDialogHistoryTab, { props: { userId: "usr_a", isFriend: true, isActive: true }, global });
+  const group = wrapper.get('[data-slot="toggle-group"]');
+  expect(group.classes()).toContain("flex-nowrap");
+  const choices = group.findAll("button");
+  expect(choices.map((button) => button.text())).toEqual(["Charts", "Avatars", "Profile", "Platform"]);
+  await wrapper.get('button[value="platform"]').trigger("click");
+  await flushPromises();
+  const time = wrapper.get("time");
+  expect(time.text()).toBe(at);
+  expect(time.attributes("datetime")).toBe(at);
+  expect(time.classes()).toContain("whitespace-normal");
+  expect(wrapper.get("tbody td:nth-child(2) .truncate").attributes("title")).toBe(platform);
   wrapper.unmount();
 });

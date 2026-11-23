@@ -1,6 +1,13 @@
 <template>
-  <div class="flex min-w-0 flex-col gap-2" :class="kind === 'charts' ? 'h-full min-h-80' : undefined">
-    <ToggleGroup class="max-w-full flex-wrap" type="single" variant="outline" size="sm" :model-value="kind" @update:model-value="selectKind">
+  <div class="@container flex min-w-0 flex-col gap-2" :class="kind === 'charts' ? 'h-full min-h-80' : undefined">
+    <ToggleGroup
+      class="max-w-full flex-nowrap @max-[23rem]:w-full @max-[23rem]:[&>button]:grow @max-[23rem]:[&>button]:px-0.5 @max-[23rem]:[&>button]:text-xs @max-[23rem]:[&>button]:tracking-tight"
+      type="single"
+      variant="outline"
+      size="sm"
+      :model-value="kind"
+      @update:model-value="selectKind"
+    >
       <ToggleGroupItem value="charts">{{ t("nav_tooltip.charts") }}</ToggleGroupItem>
       <ToggleGroupItem value="avatar">{{ t("dialog.user.avatars.header") }}</ToggleGroupItem>
       <ToggleGroupItem value="profile">{{ t("dialog.retained_history.profile") }}</ToggleGroupItem>
@@ -22,7 +29,7 @@ const props = defineProps<{ userId: string; isFriend: boolean; isActive: boolean
 const { t } = useI18n();
 const kind = ref<"charts" | "avatar" | "profile" | "platform">("charts");
 watch(
-  () => [props.userId, props.isActive],
+  () => props.userId,
   () => {
     kind.value = "charts";
   },

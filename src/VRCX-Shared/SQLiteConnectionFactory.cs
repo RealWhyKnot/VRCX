@@ -6,11 +6,6 @@ internal static class SQLiteConnectionFactory
 {
     private const string Pragmas = "PRAGMA locking_mode=NORMAL;PRAGMA busy_timeout=5000;PRAGMA journal_mode=WAL;PRAGMA synchronous=NORMAL;PRAGMA temp_store=MEMORY;PRAGMA cache_size=-32768;PRAGMA optimize=0x10002;";
 
-    static SQLiteConnectionFactory()
-    {
-        SQLiteFunction.RegisterFunction(typeof(SQLiteContainsFunction));
-    }
-
     public static SQLiteConnection Open(string dataSource)
     {
         SQLiteConnection connection = OpenConnection($"Data Source=\"{dataSource}\";Version=3;");
@@ -40,6 +35,8 @@ internal static class SQLiteConnectionFactory
         try
         {
             connection.Open();
+            connection.BindFunction(new SQLiteFunctionAttribute { Name = "vrcx_contains", Arguments = 2, FuncType = FunctionType.Scalar },
+                new Func<object[], object>(SQLiteContainsFunction.Invoke), callback2: null);
             isOpen = true;
             return connection;
         }

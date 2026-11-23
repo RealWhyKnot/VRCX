@@ -9,6 +9,8 @@ internal
 #endif
 sealed partial class DatabaseApi
 {
+    private const string RetainedBadgeDetailIndex = "CREATE INDEX IF NOT EXISTS retained_event_badge_detail_idx ON retained_event (account, kind, detail, id DESC) WHERE kind = 'badge'";
+    private const string RetainedBadgeTimeIndex = "CREATE INDEX IF NOT EXISTS retained_event_badge_time_idx ON retained_event (account, kind, created_at, id DESC) WHERE kind = 'badge'";
     private static readonly string[][] MigrationSteps =
     [
         [
@@ -31,6 +33,8 @@ sealed partial class DatabaseApi
             "CREATE INDEX IF NOT EXISTS retained_event_subject_idx ON retained_event (account, kind, subject, id DESC)",
             "CREATE INDEX IF NOT EXISTS retained_event_stream_idx ON retained_event (account, kind, id DESC)",
             "CREATE INDEX IF NOT EXISTS retained_event_retention_idx ON retained_event (kind, id DESC)",
+            RetainedBadgeDetailIndex,
+            RetainedBadgeTimeIndex,
             "CREATE TABLE IF NOT EXISTS retained_favorite_origin (account TEXT NOT NULL, kind TEXT NOT NULL, item_id TEXT NOT NULL, group_name TEXT NOT NULL, created_at TEXT, name TEXT, active INTEGER NOT NULL, touched_at TEXT NOT NULL, PRIMARY KEY (account, kind, item_id, group_name)) WITHOUT ROWID",
             "CREATE INDEX IF NOT EXISTS retained_favorite_inactive_idx ON retained_favorite_origin (touched_at) WHERE active = 0",
             "CREATE TABLE IF NOT EXISTS retained_favorite_snapshot (account TEXT PRIMARY KEY, touched_at TEXT NOT NULL) WITHOUT ROWID",

@@ -3,7 +3,10 @@ import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const { rows } = vi.hoisted(() => ({
-  rows: vi.fn(async (call: Promise<string>) => JSON.parse(await call)),
+  rows: vi.fn(async (call: Promise<string>): Promise<unknown> => {
+    const parsed: unknown = JSON.parse(await call);
+    return parsed;
+  }),
 }));
 
 vi.mock("../../../src/services/sqlite.ts", () => ({ sqliteService: { rows } }));
@@ -87,6 +90,7 @@ describe("game-log bulk insert with SQLite", () => {
   if (old === undefined || bulk === undefined || schema === undefined) {
     throw new Error("Missing game-log SQL");
   }
+  const oldSql = old;
 
   let before: DatabaseSync;
   let after: DatabaseSync;
@@ -123,7 +127,7 @@ describe("game-log bulk insert with SQLite", () => {
   }
 
   async function compare(entries: Parameters<typeof addGamelogJoinLeaveBulk>[0]) {
-    const statement = before.prepare(old);
+    const statement = before.prepare(oldSql);
     before.exec("BEGIN");
     const expected = entries.flatMap((entry) => {
       const result = insertOne(statement, entry);

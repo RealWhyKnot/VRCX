@@ -28,6 +28,13 @@ internal static partial class DatabaseNative
         Ensure(next.RootElement.EnumerateArray().Select(row => row[0].GetInt64()).SequenceEqual([4L, 1L, 8L]), "Ascending friend cursor changed tie order");
         using var jump = JsonDocument.Parse(api.GetFilteredFriendLogHistoryPageAtOffset(2, 2, [], "", hideUnfriends: false, ascending: false));
         Ensure(jump.RootElement.EnumerateArray().Select(row => row[0].GetInt64()).SequenceEqual([1L, 7L]), "Direct friend page jump differs from cursor order");
+        foreach (string direction in new[] { "ASC", "DESC" })
+        {
+            string suffix = string.Equals(direction, "ASC", StringComparison.Ordinal) ? "_date_asc_idx" : "_date_desc_idx";
+            object[][] plan = db.Execute($"EXPLAIN QUERY PLAN SELECT * FROM usrreview001_friend_log_history ORDER BY coalesce(julianday(created_at), 0) {direction}, id DESC LIMIT 2");
+            Ensure(plan.Any(row => row[^1] is string detail && detail.Contains(suffix, StringComparison.Ordinal)), "Friend history date index was not used");
+            Ensure(plan.All(row => row[^1] is not string detail || !detail.Contains("TEMP B-TREE", StringComparison.Ordinal)), "Friend history still sorted in memory");
+        }
         _ = db.ExecuteNonQuery("DELETE FROM usrreview001_friend_log_history");
         CheckNotificationState(db, api);
         Console.WriteLine("Passed friend history filters, Unicode search, date ordering, counts, cursor pages, and notification state");

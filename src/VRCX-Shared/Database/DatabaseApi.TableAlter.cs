@@ -43,6 +43,12 @@ sealed partial class DatabaseApi
         }
     }
 
+    private void EnsureFriendHistoryOrderIndexes(string table)
+    {
+        _ = Run($"CREATE INDEX IF NOT EXISTS {table}_date_desc_idx ON {table} ({FriendHistoryDateKey} DESC, id DESC)");
+        _ = Run($"CREATE INDEX IF NOT EXISTS {table}_date_asc_idx ON {table} ({FriendHistoryDateKey} ASC, id DESC)");
+    }
+
     private string[] TableNames(string sql) => [.. Store.Execute(sql).Select(row => Convert.ToString(row[0], CultureInfo.InvariantCulture) ?? string.Empty)];
 
     private void RunAll(IEnumerable<string> statements, string? expectedMessage)

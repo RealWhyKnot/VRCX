@@ -19,32 +19,26 @@ export async function findBadgeHistory(
   const event = parseBadgeSentence(message);
   if (!account || (!badgeId && (!event || !at))) return;
   const { retainedEvents } = await import("@/services/database/retained-events");
-  const pageSize = 250;
-  let cursor: number | null = null;
-  let fallback: unknown;
-  while (isCurrent()) {
-    const before: number | null = cursor;
-    const rows: HistoryRow[] = await queryClient.fetchQuery({
-      queryKey: ["retained-badges", account, before],
-      queryFn: () => retainedEvents.getBadgeHistory(pageSize, before),
-      staleTime: before === null ? (isRetry ? 0 : 1500) : 60_000,
+  if (!isCurrent()) return;
+  if (badgeId) {
+    const row: HistoryRow | null = await queryClient.fetchQuery({
+      queryKey: ["retained-badge", account, badgeId],
+      queryFn: () => retainedEvents.getLatestBadgeById(badgeId),
+      staleTime: isRetry ? 0 : 60_000,
       gcTime: 60_000,
       retry: false,
     });
-    const found = rows.find((row) => {
-      if (badgeId) return row.detail === badgeId && Boolean(historyText(row.data, "imageUrl"));
-      return (
-        event &&
-        row.createdAt === at &&
-        historyText(row.data, "action") === event.action &&
-        (row.detail === event.name || historyText(row.data, "name") === event.name)
-      );
-    });
-    if (found) return found.data;
-    if (badgeId && !fallback) fallback = rows.find((row) => row.detail === badgeId)?.data;
-    const last = rows.at(-1);
-    if (!last || rows.length < pageSize || (before !== null && last.id >= before)) return fallback;
-    cursor = last.id;
+    return isCurrent() ? row?.data : undefined;
   }
-  return undefined;
+  if (!event) return;
+  const rows: HistoryRow[] = await queryClient.fetchQuery({
+    queryKey: ["retained-badge-at", account, at],
+    queryFn: () => retainedEvents.getBadgeHistoryAt(at),
+    staleTime: isRetry ? 0 : 1500,
+    gcTime: 60_000,
+    retry: false,
+  });
+  if (!isCurrent()) return;
+  return rows.find((row) => historyText(row.data, "action") === event.action && (row.detail === event.name || historyText(row.data, "name") === event.name))
+    ?.data;
 }

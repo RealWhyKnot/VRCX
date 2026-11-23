@@ -1,16 +1,31 @@
 <template>
-  <span class="inline-flex w-full min-w-0 items-center gap-1.5 align-middle" :title="tooltip">
-    <img v-if="image" :src="image" alt="" loading="lazy" class="size-5 shrink-0 rounded-sm object-contain" />
-    <span class="min-w-0 truncate">{{ label }}</span>
-  </span>
+  <component
+    :is="hasEventTooltip ? TooltipWrapper : Slot"
+    v-bind="
+      hasEventTooltip
+        ? {
+            content: eventTooltip,
+            side: 'bottom',
+            contentClass: 'max-w-[min(30rem,calc(100vw-1rem))] max-h-[min(20rem,var(--reka-tooltip-content-available-height))] overflow-auto wrap-anywhere',
+          }
+        : {}
+    "
+  >
+    <span class="inline-flex w-full min-w-0 items-center gap-1.5 align-middle" :title="hasEventTooltip ? undefined : tooltip">
+      <img v-if="image" :src="image" alt="" loading="lazy" class="size-5 shrink-0 rounded-sm object-contain" />
+      <span class="min-w-0 truncate">{{ label }}</span>
+    </span>
+  </component>
 </template>
 <script setup lang="ts">
 import { computed, onWatcherCleanup, shallowRef, watch } from "vue";
+import { Slot } from "reka-ui";
+import TooltipWrapper from "@/components/ui/tooltip/TooltipWrapper.vue";
 import { useUserStore } from "@/stores/user";
 import { historyText } from "./history-text";
 import { findBadgeHistory, parseBadgeSentence } from "./badge-history";
 
-const props = defineProps<{ message: string; at?: string | undefined; data?: unknown; imageUrl?: string | null | undefined }>();
+const props = defineProps<{ message: string; hasEventTooltip?: boolean; at?: string | undefined; data?: unknown; imageUrl?: string | null | undefined }>();
 const userStore = useUserStore();
 const retained = shallowRef<unknown>();
 const event = computed(() => parseBadgeSentence(props.message));
@@ -23,6 +38,8 @@ const name = computed(() => historyText(props.data, "badgeName") || historyText(
 const label = computed(() => (name.value ? (event.value?.prefix ?? "") + name.value : props.message));
 const description = computed(() => historyText(props.data, "badgeDescription") || historyText(retained.value, "description") || owned.value?.badgeDescription);
 const tooltip = computed(() => [label.value, description.value].filter(Boolean).join("\n"));
+
+const eventTooltip = computed(() => [...new Set([props.message, label.value, description.value].filter(Boolean))].join("\n"));
 
 watch(
   () => [userStore.currentUser.id, props.message, props.at, props.data, props.imageUrl],

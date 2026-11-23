@@ -25,6 +25,7 @@ afterEach(() => {
   loginState.isFriendsLoaded = false;
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 test("batches observations by their original account and delays pruning", async () => {
@@ -68,6 +69,25 @@ test("passes page bounds through the bridge and decodes history payloads", async
     { id: 7, subject: "usr_player", detail: "bio", createdAt: "t", data: "Hello" },
   ]);
   expect(history).toHaveBeenCalledWith("usr_player", 12, 25);
+});
+
+test("reads one badge by id and badges at a time, returning null or an empty list when none match", async () => {
+  const latest = vi.fn(() => Promise.resolve(JSON.stringify([[8, "usr_me", "bdg_1", "t", '{"name":"Pioneer"}']])));
+  const at = vi.fn(() => Promise.resolve("[]"));
+  vi.stubGlobal("DatabaseApi", { GetLatestBadgeById: latest, GetBadgeHistoryAt: at });
+
+  await expect(retainedEvents.getLatestBadgeById("bdg_1")).resolves.toEqual({
+    id: 8,
+    subject: "usr_me",
+    detail: "bdg_1",
+    createdAt: "t",
+    data: { name: "Pioneer" },
+  });
+  expect(latest).toHaveBeenCalledWith("bdg_1");
+  await expect(retainedEvents.getBadgeHistoryAt("t")).resolves.toEqual([]);
+  expect(at).toHaveBeenCalledWith("t");
+  latest.mockResolvedValueOnce("[]");
+  await expect(retainedEvents.getLatestBadgeById("bdg_none")).resolves.toBeNull();
 });
 
 test("queues one baseline per profile after the friends list and only subsequent changed fields", async () => {
@@ -166,4 +186,98 @@ test("skips stored values at login and batches unseen users after login", async 
   expect(idles).toHaveLength(0);
   expect(baselines).toHaveBeenCalledTimes(2);
   expect(append).toHaveBeenCalledTimes(1);
+});
+
+function queuedSubjects(payload: string): string[] {
+  const data: unknown = JSON.parse(payload);
+  if (!Array.isArray(data)) throw new Error("Expected history events");
+  return data.map((entry: unknown) => {
+    if (typeof entry !== "object" || entry === null || !("subject" in entry) || typeof entry.subject !== "string") {
+      throw new Error("Expected a history subject");
+    }
+    return entry.subject;
+  });
+}
+
+function queueBadge(subject: string): void {
+  retainedEvents.queueRetainedEvent({ kind: "badge", subject, createdAt: "t", data: { badgeId: subject, action: "add" } });
+}
+
+test("isolates a permanent error and keeps later events moving", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  loginState.isLoggedIn = true;
+  const saved: string[] = [];
+  const append = vi.fn((_account: string, payload: string) => {
+    const subjects = queuedSubjects(payload);
+    if (subjects.includes("bad")) return Promise.reject(new Error("NOT NULL constraint failed"));
+    saved.push(...subjects);
+    return Promise.resolve();
+  });
+  vi.stubGlobal("DatabaseApi", { AppendRetainedEvents: append, PruneRetainedEvents: () => Promise.resolve() });
+  ["first", "bad", "last"].forEach(queueBadge);
+  await vi.advanceTimersByTimeAsync(250);
+  expect(saved).toEqual(["first", "last"]);
+  queueBadge("later");
+  await vi.advanceTimersByTimeAsync(250);
+  expect(saved).toEqual(["first", "last", "later"]);
+  const attempts = append.mock.calls.length;
+  await vi.runAllTimersAsync();
+  expect(append).toHaveBeenCalledTimes(attempts);
+});
+
+test.each([new Error("database is locked"), new Error("SQLITE_BUSY"), { code: 6 }, { resultCode: 517 }])(
+  "retries transient errors without dropping events: %j",
+  async (error) => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    loginState.isLoggedIn = true;
+    const append = vi.fn((_account: string, _payload: string) => Promise.resolve()).mockRejectedValueOnce(error);
+    vi.stubGlobal("DatabaseApi", { AppendRetainedEvents: append, PruneRetainedEvents: () => Promise.resolve() });
+    queueBadge("retry");
+    await vi.advanceTimersByTimeAsync(250);
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(append).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(append).toHaveBeenCalledTimes(2);
+    expect(append.mock.calls[1]).toEqual(append.mock.calls[0]);
+    await vi.runAllTimersAsync();
+  }
+);
+
+test("retries a singleton before treating its failure as permanent", async () => {
+  vi.useFakeTimers();
+  loginState.isLoggedIn = true;
+  const append = vi.fn((_account: string, _payload: string) => Promise.resolve()).mockRejectedValueOnce(new Error("One failed call"));
+  vi.stubGlobal("DatabaseApi", { AppendRetainedEvents: append, PruneRetainedEvents: () => Promise.resolve() });
+  queueBadge("retry_once");
+  await vi.advanceTimersByTimeAsync(250);
+  expect(append).toHaveBeenCalledTimes(2);
+  expect(append.mock.calls[1]).toEqual(append.mock.calls[0]);
+  await vi.runAllTimersAsync();
+});
+
+test("a transient failure during isolation retries only the unwritten suffix", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+  loginState.isLoggedIn = true;
+  const saved: string[] = [];
+  let isBusy = true;
+  const append = vi.fn((_account: string, payload: string) => {
+    const subjects = queuedSubjects(payload);
+    if (subjects.includes("bad")) return Promise.reject(new Error("Unknown kind"));
+    if (subjects.includes("last") && isBusy) {
+      isBusy = false;
+      return Promise.reject(new Error("database table is locked"));
+    }
+    saved.push(...subjects);
+    return Promise.resolve();
+  });
+  vi.stubGlobal("DatabaseApi", { AppendRetainedEvents: append, PruneRetainedEvents: () => Promise.resolve() });
+  ["first", "bad", "last", "later"].forEach(queueBadge);
+  await vi.advanceTimersByTimeAsync(250);
+  expect(saved).toEqual(["first"]);
+  await vi.advanceTimersByTimeAsync(5000);
+  expect(saved).toEqual(["first", "last", "later"]);
+  await vi.runAllTimersAsync();
 });

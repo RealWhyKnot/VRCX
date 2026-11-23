@@ -173,7 +173,7 @@ export const createColumns = ({ getCreatedAt, onDelete, onDeletePrompt }: GameLo
             <ContextMenu>
               <ContextMenuTrigger asChild>
                 {original.data && parseBadgeSentence(original.data) ? (
-                  <BadgeEventLabel message={original.data} at={original.created_at} />
+                  <BadgeEventLabel hasEventTooltip message={original.data} at={original.created_at} />
                 ) : (
                   <TooltipWrapper content={original.data ?? ""} side="bottom">
                     <span class="block w-full min-w-0 truncate">{original.data}</span>

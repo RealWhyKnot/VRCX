@@ -12,6 +12,7 @@ sealed partial class DatabaseApi
 {
     private const int FriendLogHistoryChunkRows = 500;
     private const int FriendLogCurrentChunkRows = 1000;
+    private const string FriendHistoryDateKey = "coalesce(julianday(created_at), 0)";
 
     private static readonly string[] FriendLogHistoryColumns = ["created_at", "type", "user_id", "display_name", "previous_display_name", "trust_level", "previous_trust_level", "friend_number"];
     private static readonly string[] FriendLogCurrentColumns = ["user_id", "display_name", "trust_level", "friend_number"];
@@ -33,14 +34,15 @@ sealed partial class DatabaseApi
     {
         string comparison = ascending ? ">" : "<";
         string direction = ascending ? "ASC" : "DESC";
-        const string Timestamp = "coalesce(julianday(created_at), 0)";
+        string bound = ascending ? ">=" : "<=";
+        string cursor = beforeId is null ? string.Empty : $"""
+            AND {FriendHistoryDateKey} {bound} coalesce(julianday(@beforeDate), 0)
+            AND ({FriendHistoryDateKey} {comparison} coalesce(julianday(@beforeDate), 0) OR id < @beforeId)
+            """;
         return Rows($"""
             SELECT * FROM {UserTable("friend_log_history")}
-            WHERE {FriendHistoryFilter} AND (
-                @beforeId IS NULL OR {Timestamp} {comparison} coalesce(julianday(@beforeDate), 0)
-                OR ({Timestamp} = coalesce(julianday(@beforeDate), 0) AND id < @beforeId)
-            )
-            ORDER BY {Timestamp} {direction}, id DESC LIMIT @limit
+            WHERE {FriendHistoryFilter} {cursor}
+            ORDER BY {FriendHistoryDateKey} {direction}, id DESC LIMIT @limit
             """, ("@types", System.Text.Json.JsonSerializer.Serialize(types)), ("@search", search), ("@hideUnfriends", hideUnfriends),
             ("@beforeId", beforeId), ("@beforeDate", beforeDate), ("@limit", Math.Clamp(limit, 0, 1000)));
     }
@@ -50,7 +52,7 @@ sealed partial class DatabaseApi
         string direction = ascending ? "ASC" : "DESC";
         return Rows($"""
             SELECT * FROM {UserTable("friend_log_history")} WHERE {FriendHistoryFilter}
-            ORDER BY coalesce(julianday(created_at), 0) {direction}, id DESC LIMIT @limit OFFSET @offset
+            ORDER BY {FriendHistoryDateKey} {direction}, id DESC LIMIT @limit OFFSET @offset
             """, ("@types", System.Text.Json.JsonSerializer.Serialize(types)), ("@search", search), ("@hideUnfriends", hideUnfriends),
             ("@limit", Math.Clamp(limit, 0, 1000)), ("@offset", Math.Max(offset, 0)));
     }

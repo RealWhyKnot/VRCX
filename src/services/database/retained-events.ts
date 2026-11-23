@@ -278,18 +278,56 @@ async function flush(): Promise<void> {
   const batch = queue.splice(0, count);
   let delay = 0;
   try {
-    await sqliteService.run(DatabaseApi.AppendRetainedEvents(first.account, JSON.stringify(batch.map(({ event }) => event))));
-    eventsSincePrune += batch.length - 1;
-    scheduleRetainedPrune();
-  } catch (error) {
-    queue.unshift(...batch);
-    delay = 5000;
-    console.error(error);
+    const pending = await appendBatch(batch);
+    if (pending.length > 0) {
+      queue.unshift(...pending);
+      delay = 5000;
+    }
   } finally {
     isFlushing = false;
     if (queue.length > 0) {
       scheduleFlush(delay);
     }
+  }
+}
+
+function isTransientWriteError(error: unknown): boolean {
+  if (typeof error === "object" && error !== null) {
+    const codes = ["code" in error ? error.code : undefined, "resultCode" in error ? error.resultCode : undefined];
+    if (codes.some((code) => (typeof code === "number" && [5, 6].includes(code & 255)) || (typeof code === "string" && /SQLITE_(BUSY|LOCKED)/iu.test(code)))) {
+      return true;
+    }
+  }
+  const message =
+    typeof error === "string"
+      ? error
+      : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+        ? error.message
+        : "";
+  return /SQLITE_(BUSY|LOCKED)|database(?: table| schema)? is (?:locked|busy)/iu.test(message);
+}
+
+async function appendBatch(batch: QueuedEvent[], hasRetriedSingle = false): Promise<QueuedEvent[]> {
+  const first = batch[0];
+  if (!first) return [];
+  try {
+    await sqliteService.run(DatabaseApi.AppendRetainedEvents(first.account, JSON.stringify(batch.map(({ event }) => event))));
+    eventsSincePrune += batch.length - 1;
+    scheduleRetainedPrune();
+    return [];
+  } catch (error) {
+    if (isTransientWriteError(error)) {
+      console.error(error);
+      return batch;
+    }
+    if (batch.length === 1) {
+      if (!hasRetriedSingle) return appendBatch(batch, true);
+      console.error(error);
+      return [];
+    }
+    const middle = Math.floor(batch.length / 2);
+    const pending = await appendBatch(batch.slice(0, middle));
+    return pending.length > 0 ? [...pending, ...batch.slice(middle)] : appendBatch(batch.slice(middle));
   }
 }
 
@@ -343,6 +381,14 @@ const retainedEvents = {
 
   getBadgeHistory(limit = 50, beforeId: number | null = null) {
     return readHistory(DatabaseApi.GetBadgeHistory(beforeId, limit));
+  },
+
+  async getLatestBadgeById(badgeId: string): Promise<HistoryRow | null> {
+    return (await readHistory(DatabaseApi.GetLatestBadgeById(badgeId)))[0] ?? null;
+  },
+
+  getBadgeHistoryAt(createdAt: string): Promise<HistoryRow[]> {
+    return readHistory(DatabaseApi.GetBadgeHistoryAt(createdAt));
   },
 };
 
