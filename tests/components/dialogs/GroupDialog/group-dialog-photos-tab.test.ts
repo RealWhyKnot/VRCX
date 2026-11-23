@@ -25,7 +25,7 @@ vi.mock("../../../../src/plugins/router", async () => {
       beforeEach: vi.fn(),
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
       isReady: vi.fn().mockResolvedValue(true),
     },
     initRouter: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock("vue-router", async (importOriginal) => {
     useRouter: vi.fn(() => ({
       push: vi.fn(),
       replace: vi.fn(),
-      currentRoute: ref({ path: "/", name: "", meta: {} }),
+      currentRoute: ref({ path: "/", name: "", meta: {}, params: {} }),
     })),
   };
 });
