@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Data.SQLite;
+using System.Globalization;
 using VRCX.Database;
 
 namespace VRCX;
@@ -10,6 +10,8 @@ internal static partial class DatabaseNative
 
     public static async Task Main(string[] args)
     {
+        AppDomain.CurrentDomain.UnhandledException += (_, exception) => Console.Error.WriteLine(exception.ExceptionObject);
+        TaskScheduler.UnobservedTaskException += (_, exception) => Console.Error.WriteLine(exception.Exception);
         if (args.Length != 1)
         {
             throw new ArgumentException("Pass the path to an existing database copy at an earlier schema version", nameof(args));
@@ -30,7 +32,7 @@ internal static partial class DatabaseNative
                 CheckFriendHistoryPages(db, api);
                 CheckMalformedRetainedEvents(db, api);
                 Ensure(!File.Exists(DatabaseUpgrade.BackupPath(db.DataSource)), "Fresh startup created a backup");
-                await CheckTransactionsAsync(db, api).ConfigureAwait(false);
+                await CheckTransactionsAsync(db, api, CancellationToken.None).ConfigureAwait(false);
             }
             Console.WriteLine("Passed fresh startup from an empty file and concurrent transaction rollback");
 
@@ -53,15 +55,17 @@ internal static partial class DatabaseNative
             previousVersion = Number(source, "PRAGMA user_version");
             Ensure(previousVersion is >= 1 and <= 4, "Unexpected database copy version");
             Ensure(Number(source, "PRAGMA cache_size") != -32768, "Read-only source opened with the writable cache settings");
+            bool isWriteRefused = false;
             try
             {
                 _ = source.ExecuteNonQuery("CREATE TABLE test_read_only (id)");
-                throw new InvalidOperationException("The source database allowed a write");
             }
             catch (SQLiteException error) when (error.Message.Contains("read only", StringComparison.OrdinalIgnoreCase) ||
                                                 error.Message.Contains("readonly", StringComparison.OrdinalIgnoreCase))
             {
+                isWriteRefused = true;
             }
+            Ensure(isWriteRefused, "The source database allowed a write");
             expected = Number(source, "SELECT COUNT(*) FROM gamelog_join_leave");
         }
 
@@ -149,14 +153,16 @@ internal static partial class DatabaseNative
             BEGIN SELECT RAISE(ABORT, 'account migration test'); END
             """);
         api.InitializeAccount("usr_review001");
+        bool isMigrationRefused = false;
         try
         {
             api.InitializeAccount("usr_review002");
-            throw new InvalidOperationException("The account migration unexpectedly succeeded");
         }
         catch (SQLiteException error) when (error.Message.Contains("account migration test", StringComparison.Ordinal))
         {
+            isMigrationRefused = true;
         }
+        Ensure(isMigrationRefused, "The account migration unexpectedly succeeded");
         Ensure(Number(db, "SELECT COUNT(*) FROM sqlite_schema WHERE name = 'usrreview002_friend_log_current'") == 0,
             "Failed account migration left tables behind");
         Ensure(Number(db, "SELECT COUNT(*) FROM account_schema") == 1, "Failed account migration recorded completion");
@@ -191,11 +197,12 @@ internal static partial class DatabaseNative
         Ensure(db.Execute("PRAGMA quick_check")[0][0] is "ok", "SQLite quick_check failed");
     }
 
-    private static async Task CheckTransactionsAsync(SQLiteDatabase db, DatabaseApi api)
+    private static async Task CheckTransactionsAsync(SQLiteDatabase db, DatabaseApi api, CancellationToken cancellationToken)
     {
         using var active = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         using var ready = new CountdownEvent(4);
+        bool isRolledBack = false;
         Task first = WorkerAsync(() =>
         {
             try
@@ -204,16 +211,17 @@ internal static partial class DatabaseNative
                 {
                     _ = db.ExecuteNonQuery("INSERT INTO configs VALUES ('rollback', 'marker')");
                     active.Set();
-                    Ensure(release.Wait(Timeout), "Timed out waiting to roll back");
+                    Ensure(release.Wait(Timeout, cancellationToken), "Timed out waiting to roll back");
                     throw new InvalidOperationException("rollback test");
                 });
             }
             catch (InvalidOperationException error) when (string.Equals(error.Message, "rollback test", StringComparison.Ordinal))
             {
+                isRolledBack = true;
             }
-        });
+        }, cancellationToken);
 
-        Ensure(active.Wait(Timeout), "The first transaction did not start");
+        Ensure(active.Wait(Timeout, cancellationToken), "The first transaction did not start");
         Task[] competitors =
         [
             CompeteAsync(() => _ = db.ExecuteNonQuery("INSERT INTO configs VALUES ('independent', 'marker')")),
@@ -227,15 +235,16 @@ internal static partial class DatabaseNative
         ];
         try
         {
-            Ensure(ready.Wait(Timeout), "Competing database calls did not start");
-            var pause = Task.Delay(TimeSpan.FromMilliseconds(150));
+            Ensure(ready.Wait(Timeout, cancellationToken), "Competing database calls did not start");
+            var pause = Task.Delay(TimeSpan.FromMilliseconds(150), cancellationToken);
             Ensure(await Task.WhenAny([pause, .. competitors]).ConfigureAwait(false) == pause, "A competing database call ran inside the first transaction");
         }
         finally
         {
             release.Set();
         }
-        await Task.WhenAll([first, .. competitors]).WaitAsync(Timeout).ConfigureAwait(false);
+        await Task.WhenAll([first, .. competitors]).WaitAsync(Timeout, cancellationToken).ConfigureAwait(false);
+        Ensure(isRolledBack, "The first transaction did not roll back");
         Ensure(Number(db, "SELECT COUNT(*) FROM configs WHERE key IN ('independent', 'second')") == 2, "Rollback lost a competing write");
         Ensure(Number(db, "SELECT COUNT(*) FROM gamelog_join_leave") == 2, "Rollback lost a game-log write");
 
@@ -243,10 +252,10 @@ internal static partial class DatabaseNative
         {
             ready.Signal();
             work();
-        });
+        }, cancellationToken);
     }
 
-    private static Task WorkerAsync(Action work) => Task.Factory.StartNew(work, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+    private static Task WorkerAsync(Action work, CancellationToken cancellationToken) => Task.Factory.StartNew(work, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
     private static long Number(SQLiteDatabase db, string sql) => Convert.ToInt64(db.Execute(sql)[0][0], CultureInfo.InvariantCulture);
 

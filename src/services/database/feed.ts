@@ -181,7 +181,7 @@ function mapFeedRow(dbRow: DatabaseRow): FeedRow {
         previousCurrentAvatarThumbnailImageUrl: cellText(dbRow[21]),
       };
     case "Online":
-    case "Offline":
+    case "Offline": {
       const platform = cellText(dbRow[24]);
       return {
         ...base,
@@ -192,6 +192,7 @@ function mapFeedRow(dbRow: DatabaseRow): FeedRow {
         groupName: cellText(dbRow[9]),
         ...(platform === null ? {} : { platform }),
       };
+    }
     case null:
     default:
       throw new Error("The feed returned a row with an unknown type");

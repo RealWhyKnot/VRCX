@@ -10,9 +10,9 @@
     <PackageReference Include="System.Data.SQLite" Version="2.0.4" />
     <PackageReference Include="SourceGear.sqlite3" Version="3.53.4" />
     <PackageReference Include="NLog" Version="6.2.2" />
-    <Compile Include="../../../src/VRCX-Shared/Database/*.cs" />
-    <Compile Include="../../../src/VRCX-Shared/SQLiteDatabase.cs" />
-    <Compile Include="../../../src/VRCX-Shared/SQLiteConnectionFactory.cs" />
-    <Compile Include="../../../src/VRCX-Shared/SQLiteContainsFunction.cs" />
+    <Compile Include="../VRCX-Shared/Database/*.cs" />
+    <Compile Include="../VRCX-Shared/SQLiteDatabase.cs" />
+    <Compile Include="../VRCX-Shared/SQLiteConnectionFactory.cs" />
+    <Compile Include="../VRCX-Shared/SQLiteContainsFunction.cs" />
   </ItemGroup>
 </Project>

@@ -26,27 +26,30 @@ function arrays(statement: StatementSync, bindings: Bindings = {}): unknown[] {
   return statement.all(bindings);
 }
 
-function compare(label: string, previous: unknown[], current: unknown[], ordered = true) {
-  const encode = (rows: unknown[]) => JSON.stringify(ordered ? rows : rows.map((row) => JSON.stringify(row)).sort());
+function compare(label: string, previous: unknown[], current: unknown[], isOrdered = true) {
+  const encode = (rows: unknown[]) => JSON.stringify(isOrdered ? rows : rows.map((row) => JSON.stringify(row)).sort());
   if (encode(previous) !== encode(current)) {
     throw new Error(`${label} differs`);
   }
   console.log(`${label}: ${current.length} matching rows`);
 }
 
-const pairs: Record<string, Bindings[]> = {
-  GetNotifications: [1, 25, 500, 100000].map((maxEntries) => ({ maxEntries })),
-  GetGroupNotificationStats: [{}],
-  GetUnresolvedSightingPictures: [
-    { retry_failed_before: "2026-11-19T18:00:00.000Z", limit: 20 },
-    { retry_failed_before: "1970-01-01T00:00:00.000Z", limit: 20 },
-    { retry_failed_before: "2099-01-01T00:00:00.000Z", limit: 20 },
+const pairs = new Map<string, Bindings[]>([
+  ["GetNotifications", [1, 25, 500, 100000].map((maxEntries) => ({ maxEntries }))],
+  ["GetGroupNotificationStats", [{}]],
+  [
+    "GetUnresolvedSightingPictures",
+    [
+      { retry_failed_before: "2026-11-19T18:00:00.000Z", limit: 20 },
+      { retry_failed_before: "1970-01-01T00:00:00.000Z", limit: 20 },
+      { retry_failed_before: "2099-01-01T00:00:00.000Z", limit: 20 },
+    ],
   ],
-  GetFriendGatherings: ["2026-10-21T18:00:00.000Z", "2026-08-22T18:00:00.000Z"].map((since) => ({ since })),
-  GetFriendPresenceSince: ["2026-10-21T18:00:00.000Z", "2026-08-22T18:00:00.000Z"].map((since) => ({ since })),
-  GetBrokenGameLogDisplayNames: [{}],
-};
-for (const [method, requests] of Object.entries(pairs)) {
+  ["GetFriendGatherings", ["2026-10-21T18:00:00.000Z", "2026-08-22T18:00:00.000Z"].map((since) => ({ since }))],
+  ["GetFriendPresenceSince", ["2026-10-21T18:00:00.000Z", "2026-08-22T18:00:00.000Z"].map((since) => ({ since }))],
+  ["GetBrokenGameLogDisplayNames", [{}]],
+]);
+for (const [method, requests] of pairs) {
   const old = oldSql.find((query) => query.method === method);
   const current = newSql.find((query) => query.method === method);
   if (old === undefined || current === undefined) {

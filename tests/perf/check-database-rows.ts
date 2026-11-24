@@ -46,31 +46,40 @@ function compare(reference: DatabaseSync, db: DatabaseSync): void {
   }
   const end = Date.parse(latest);
   const date = (days: number) => new Date(end - days * dayMs).toISOString();
-  const cases: Record<string, Bindings[]> = {
-    GetOnPlayerLeftRowsWithTime: [{}],
-    GetJoinLeaveTableSize: [{}],
-    GetRepeatEncounters: [
-      { selfId: userId, minPlaces: 3, limit: 500 },
-      { selfId: "", minPlaces: 1, limit: 15 },
-      { selfId: "", minPlaces: 5, limit: 1000 },
+  const cases = new Map<string, Bindings[]>([
+    ["GetOnPlayerLeftRowsWithTime", [{}]],
+    ["GetJoinLeaveTableSize", [{}]],
+    [
+      "GetRepeatEncounters",
+      [
+        { selfId: userId, minPlaces: 3, limit: 500 },
+        { selfId: "", minPlaces: 1, limit: 15 },
+        { selfId: "", minPlaces: 5, limit: 1000 },
+      ],
     ],
-    GetInstanceActivityRows: [
-      { utc_start_date: date(1), utc_end_date: date(0) },
-      { utc_start_date: date(30), utc_end_date: date(0) },
-      { utc_start_date: date(90), utc_end_date: date(89) },
-      { utc_start_date: date(180), utc_end_date: date(90) },
+    [
+      "GetInstanceActivityRows",
+      [
+        { utc_start_date: date(1), utc_end_date: date(0) },
+        { utc_start_date: date(30), utc_end_date: date(0) },
+        { utc_start_date: date(90), utc_end_date: date(89) },
+        { utc_start_date: date(180), utc_end_date: date(90) },
+      ],
     ],
-    GetFriendGatherings: [1, 30, 90, 180].map((days) => ({ since: date(days) })),
-    GetLastSeen: [{ userId, displayName, count: 50 }],
-    GetNotifications: [{ maxEntries: 500 }],
-    GetNotificationsV2: [{ maxEntries: 500 }],
-    GetPreviousInstancesByUserId: [
-      { userId, displayName },
-      { userId, displayName: null },
-      { userId: null, displayName },
-      { userId: null, displayName: null },
+    ["GetFriendGatherings", [1, 30, 90, 180].map((days) => ({ since: date(days) }))],
+    ["GetLastSeen", [{ userId, displayName, count: 50 }]],
+    ["GetNotifications", [{ maxEntries: 500 }]],
+    ["GetNotificationsV2", [{ maxEntries: 500 }]],
+    [
+      "GetPreviousInstancesByUserId",
+      [
+        { userId, displayName },
+        { userId, displayName: null },
+        { userId: null, displayName },
+        { userId: null, displayName: null },
+      ],
     ],
-  };
+  ]);
   const sample = sampleFor(db, prefix);
   const previousByMethod = Map.groupBy(before, (statement) => `${statement.file}/${statement.method}`);
   const checked = new Set<string>();
@@ -85,7 +94,7 @@ function compare(reference: DatabaseSync, db: DatabaseSync): void {
 
     const defaults = bindingsFor(sql, sample, end);
     const previousDefaults = bindingsFor(previous, sample, end);
-    const requests = cases[method];
+    const requests = cases.get(method);
     if (method === "GetRepeatEncounters") {
       const oldPlan = plan(reference, previous, previousDefaults);
       const newPlan = plan(db, sql, defaults);
@@ -121,7 +130,7 @@ function compare(reference: DatabaseSync, db: DatabaseSync): void {
     checked.add(method);
   }
 
-  for (const method of Object.keys(cases)) {
+  for (const method of cases.keys()) {
     if (!checked.has(method)) {
       throw new Error(`Missing current SQL for ${method}`);
     }

@@ -3,7 +3,7 @@ node_modules/
 build/
 obj/
 obj1/
-tests/perf/database-native/bin/
+src/DatabaseNative/bin/
 .idea/
 *.log
 *.DotSettings.user

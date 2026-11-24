@@ -107,9 +107,9 @@ describe("friendLogHistory", () => {
     expect(bridge.GetFriendLogHistoryForUserId).toHaveBeenNthCalledWith(2, "usr_a", []);
   });
 
-  test("deletes by row id when one is present, otherwise by created_at, type and user", () => {
-    friendLogHistory.deleteFriendLogHistory({ rowId: 7, created_at: "c", type: "Friend", userId: "usr_a" });
-    friendLogHistory.deleteFriendLogHistory({ rowId: null, created_at: "c", type: "Friend", userId: "usr_a" });
+  test("deletes by row id when one is present, otherwise by created_at, type and user", async () => {
+    await friendLogHistory.deleteFriendLogHistory({ rowId: 7, created_at: "c", type: "Friend", userId: "usr_a" });
+    await friendLogHistory.deleteFriendLogHistory({ rowId: null, created_at: "c", type: "Friend", userId: "usr_a" });
 
     expect(bridge.DeleteFriendLogHistoryById).toHaveBeenCalledWith(7);
     expect(bridge.DeleteFriendLogHistoryByKey).toHaveBeenCalledWith("c", "Friend", "usr_a");

@@ -22,5 +22,5 @@ test("queues unknown pictures and failed pictures past their retry time", () => 
     throw new Error("Missing picture queue SQL");
   }
   const result = db.prepare(query.sql).all({ retry_failed_before: "2026-11-18", limit: 20 });
-  expect(result.map(({ file_id }) => file_id)).toEqual(["unknown", "old-failure"]);
+  expect(result.map((row) => row["file_id"])).toEqual(["unknown", "old-failure"]);
 });

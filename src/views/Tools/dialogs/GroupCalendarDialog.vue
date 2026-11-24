@@ -449,7 +449,6 @@ function closeDialog() {
   justify-content: flex-end;
   align-items: center;
   margin-top: 8px;
-
   flex-wrap: wrap;
   row-gap: 8px;
 

@@ -210,20 +210,6 @@ const scheduleCloseEventPopover = () => {
   padding: 8px;
 }
 
-.event-card.compact-event-card .event-title {
-  margin-bottom: 4px;
-}
-
-.event-card.compact-event-card .event-info {
-  flex-wrap: wrap;
-  column-gap: 8px;
-}
-
-.event-card.compact-event-card .badges {
-  position: static;
-  align-self: flex-end;
-}
-
 .event-card.grouped-card {
   margin-bottom: 0;
 }
@@ -262,6 +248,11 @@ const scheduleCloseEventPopover = () => {
   font-size: 0.9375rem;
 }
 
+.event-card.compact-event-card .badges {
+  position: static;
+  align-self: flex-end;
+}
+
 .event-card .badges .badge {
   display: flex;
   align-items: center;
@@ -288,6 +279,10 @@ const scheduleCloseEventPopover = () => {
 .event-card .event-title {
   display: flex;
   flex-direction: column;
+}
+
+.event-card.compact-event-card .event-title {
+  margin-bottom: 4px;
 }
 
 .grid-view .event-card .event-title {
@@ -317,6 +312,11 @@ const scheduleCloseEventPopover = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.event-card.compact-event-card .event-info {
+  flex-wrap: wrap;
+  column-gap: 8px;
 }
 
 .timeline-view .event-info > :first-child {
