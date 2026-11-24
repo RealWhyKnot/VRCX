@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 shopt -s inherit_errexit
-source /etc/os-release 2>/dev/null || {
+[[ -r /etc/os-release ]] || {
   echo "This script requires /etc/os-release to detect the operating system." >&2
   exit 1
 }
+os_field() {
+  sed -n "s/^$1=//p" /etc/os-release | tr -d "\"'" | head -n 1
+}
+ID=$(os_field ID)
+VERSION_ID=$(os_field VERSION_ID)
 [[ ${EUID} -ne 0 ]] && {
   echo "Please run this script using sudo." >&2
   exit 1
