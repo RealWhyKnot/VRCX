@@ -89,7 +89,7 @@ export function extractStatements(prefix: string, sourceDir = SOURCE_DIR) {
 }
 
 export function extractHeadStatements(prefix: string) {
-  const git = (args: string[]) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  const git = (args: string[]) => execFileSync("git", args, { cwd: ROOT, encoding: "utf8", windowsHide: true });
   const revision = git(["rev-parse", "HEAD"]).trim();
   const files = git(["ls-tree", "--name-only", `${revision}:${SOURCE_PATH}`])
     .split("\n")
