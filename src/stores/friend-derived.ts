@@ -1,4 +1,4 @@
-import { computed, reactive } from "vue";
+import { computed } from "vue";
 import type { ShallowRef } from "vue";
 
 import { AppDebug } from "../services/app-config";
@@ -25,15 +25,15 @@ type DerivedDebugName = (typeof DERIVED_DEBUG_NAMES)[number];
 export type FriendDerivedDeps = {
   friends: ReadonlyMap<string, FriendContext>;
   sortedFriends: ShallowRef<FriendContext[]>;
-  appearanceSettingsStore: ReturnType<typeof useAppearanceSettingsStore>;
-  generalSettingsStore: ReturnType<typeof useGeneralSettingsStore>;
-  locationStore: ReturnType<typeof useLocationStore>;
+  appearanceSettingsStore: Pick<ReturnType<typeof useAppearanceSettingsStore>, "sidebarSortMethods">;
+  generalSettingsStore: Pick<ReturnType<typeof useGeneralSettingsStore>, "localFavoriteFriendsGroups">;
+  locationStore: Pick<ReturnType<typeof useLocationStore>, "lastLocation">;
 };
 
 export function createFriendDerived(deps: FriendDerivedDeps) {
   const { friends, sortedFriends, appearanceSettingsStore, generalSettingsStore, locationStore } = deps;
 
-  const derivedDebugCounters = reactive({
+  const derivedDebugCounters = {
     allFavoriteFriendIds: 0,
     allFavoriteOnlineFriends: 0,
     vipFriends: 0,
@@ -41,7 +41,7 @@ export function createFriendDerived(deps: FriendDerivedDeps) {
     activeFriends: 0,
     offlineFriends: 0,
     friendsInSameInstance: 0,
-  });
+  };
 
   function trackDerivedDebug(name: DerivedDebugName, resultSize: number): void {
     derivedDebugCounters[name] += 1;
