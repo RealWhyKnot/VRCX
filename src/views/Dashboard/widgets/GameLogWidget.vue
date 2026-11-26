@@ -29,8 +29,8 @@
       <Table v-if="filteredData.length" class="is-compact-table table-fixed">
         <TableBody>
           <TableRow
-            v-for="(item, index) in filteredData"
-            :key="`${item.type}-${item.created_at}-${index}`"
+            v-for="item in filteredData"
+            :key="rowKey(item)"
             class="cursor-default hover:bg-transparent"
             :class="{ 'border-l-2 border-l-chart-4': item.isFavorite }"
           >
@@ -137,6 +137,7 @@ import { useFriendStore } from "@/stores/friend";
 import { useGameLogStore } from "@/stores/gameLog";
 import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { openExternalLink } from "@/shared/utils/app-actions";
+import { createRowKeys } from "@/shared/utils/row-keys";
 import { watchState } from "@/services/watch-state";
 import { logFailure } from "@/stores/log-failure";
 
@@ -184,6 +185,7 @@ const props = withDefaults(
 const { t } = useI18n();
 const friendStore = useFriendStore();
 const gameLogStore = useGameLogStore();
+const rowKey = createRowKeys();
 
 const widgetData = shallowRef<GameLogWidgetRow[]>([]);
 const maxEntries = 200;

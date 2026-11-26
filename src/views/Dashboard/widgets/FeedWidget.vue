@@ -29,8 +29,8 @@
       <Table v-if="filteredData.length" class="">
         <TableBody>
           <TableRow
-            v-for="(item, index) in filteredData"
-            :key="`${item.type}-${item.created_at}-${index}`"
+            v-for="item in filteredData"
+            :key="rowKey(item)"
             class="cursor-default in-[.is-compact-table]:py-1! in-[.is-comfortable-table]:py-1.5!"
             :class="{ 'border-l-2 border-l-chart-4': isFavoriteRow(item) }"
           >
@@ -130,6 +130,7 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { Box, MapPin, Pencil, Settings } from "lucide-vue-next";
 
+import { createRowKeys } from "@/shared/utils/row-keys";
 import { statusClass } from "@/shared/utils/user";
 import { formatDateFilter } from "@/coordinators/date-coordinator";
 import { showUserDialog } from "@/coordinators/user-coordinator";
@@ -173,6 +174,7 @@ const props = withDefaults(
 const { t } = useI18n();
 const feedStore = useFeedStore();
 const friendStore = useFriendStore();
+const rowKey = createRowKeys();
 
 const activeFilters = computed(() => {
   const filters = props.config.filters;
