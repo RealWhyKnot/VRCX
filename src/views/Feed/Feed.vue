@@ -109,7 +109,7 @@ import RangeCalendar from "../../components/ui/range-calendar/RangeCalendar.vue"
 import Toggle from "../../components/ui/toggle/Toggle.vue";
 import { columns as baseColumns } from "./columns.tsx";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
-import type { FeedRow } from "../../services/database/feed";
+import { createTableRowIds } from "../../shared/utils/row-keys";
 
 defineOptions({ name: "FeedView" });
 
@@ -155,9 +155,7 @@ function clearDateFilter() {
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-function getFeedRowId(row: FeedRow) {
-  return `row:${row.rowId}:${row.type}`;
-}
+const getFeedRowId = createTableRowIds();
 
 const { table, pagination } = useVrcxVueTable({
   get data() {

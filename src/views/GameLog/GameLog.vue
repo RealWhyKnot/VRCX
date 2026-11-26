@@ -131,6 +131,7 @@ import TooltipWrapper from "../../components/ui/tooltip/TooltipWrapper.vue";
 import { createColumns } from "./columns.tsx";
 import { database } from "../../services/database";
 import { useVrcxVueTable } from "../../lib/table/use-vrcx-vue-table";
+import { createTableRowIds } from "../../shared/utils/row-keys";
 import GameLogSessions from "./components/GameLogSessions.vue";
 
 const { gameLogTableLookup, setSessionsViewMode } = useGameLogStore();
@@ -197,9 +198,7 @@ function handleGameLogFilterChange(value: unknown) {
 
 const pageSizes = computed(() => appearanceSettingsStore.tablePageSizes);
 
-function getGameLogRowId(row: GameLogEntry) {
-  return `row:${row.rowId}:${row.type}`;
-}
+const getGameLogRowId = createTableRowIds();
 
 const { table, pagination } = useVrcxVueTable({
   persistKey: "gameLog",
