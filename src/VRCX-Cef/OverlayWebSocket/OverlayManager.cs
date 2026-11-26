@@ -7,18 +7,23 @@ internal static class OverlayManager
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+    private static readonly Lock StartLock = new();
+
     private static Process? OverlayProcess;
 
     public static void StartOverlay()
     {
-        if (OverlayServer.IsConnected() ||
-            (OverlayProcess != null && !OverlayProcess.HasExited))
+        lock (StartLock)
         {
-            Logger.Error(System.Globalization.CultureInfo.InvariantCulture, "Overlay server already started");
-            return;
-        }
+            if (OverlayServer.IsConnected() ||
+                (OverlayProcess != null && !OverlayProcess.HasExited))
+            {
+                Logger.Debug(System.Globalization.CultureInfo.InvariantCulture, "Overlay process is already running or still starting");
+                return;
+            }
 
-        StartOverlayProcess();
+            StartOverlayProcess();
+        }
     }
 
     private static void StartOverlayProcess()
@@ -51,6 +56,7 @@ internal static class OverlayManager
             CreateNoWindow = true,
             WorkingDirectory = Program.BaseDirectory,
         };
+        OverlayProcess?.Dispose();
         OverlayProcess = Process.Start(startInfo);
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "Overlay process started");
     }

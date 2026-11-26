@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipes;
 using System.Management;
+using System.Security.Principal;
 using System.Text;
 using CefSharp.Internals;
 using VRCX.IPC;
@@ -15,6 +16,11 @@ internal sealed class StartupArgs
 {
     public static VrcxLaunchArguments LaunchArguments = new();
     public static string[]? Args;
+#if !LINUX
+    private static Mutex? OverlayInstanceMutex;
+
+    public static bool WasOverlayInstanceAbandoned { get; private set; }
+#endif
 
     public static void ArgsCheck(string[] args)
     {
@@ -49,7 +55,15 @@ internal sealed class StartupArgs
                                     !string.IsNullOrEmpty(CommandLineArgsParser.GetArgumentValue(args, CefSharpArguments.SubProcessTypeArgument));
 
 
-        if (!disableClosing && IsDuplicateProcessRunning(LaunchArguments))
+        if (!disableClosing && LaunchArguments.IsOverlay)
+        {
+            if (!TryAcquireOverlayInstance())
+            {
+                Console.WriteLine("Another overlay instance is already running. Exiting this instance.");
+                Environment.Exit(0);
+            }
+        }
+        else if (!disableClosing && IsDuplicateProcessRunning(LaunchArguments))
         {
             IPCToMain();
             Thread.Sleep(10);
@@ -59,6 +73,50 @@ internal sealed class StartupArgs
     }
 
 #if !LINUX
+    private static string GetOverlayInstanceName()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return $"Local\\VRCX-Overlay-{identity.User?.Value ?? Environment.UserName}";
+    }
+
+    private static bool TryAcquireOverlayInstance()
+    {
+        Mutex? mutex = null;
+        try
+        {
+            mutex = new Mutex(initiallyOwned: false, GetOverlayInstanceName());
+            if (!mutex.WaitOne(TimeSpan.Zero))
+            {
+                return false;
+            }
+
+            OverlayInstanceMutex = mutex;
+            mutex = null;
+            return true;
+        }
+        catch (AbandonedMutexException)
+        {
+            WasOverlayInstanceAbandoned = true;
+            OverlayInstanceMutex = mutex;
+            mutex = null;
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        finally
+        {
+            mutex?.Dispose();
+        }
+    }
+
+    public static void ReleaseOverlayInstance()
+    {
+        OverlayInstanceMutex?.Dispose();
+        OverlayInstanceMutex = null;
+    }
+
     private static bool IsDuplicateProcessRunning(VrcxLaunchArguments launchArguments)
     {
         Process[] processes = Process.GetProcessesByName("VRCX");
@@ -87,15 +145,6 @@ internal sealed class StartupArgs
                 }
                 if (commandLine.Contains(CefSharpArguments.SubProcessTypeArgument, StringComparison.Ordinal))
                 {
-                    continue;
-                }
-                if (launchArguments.IsOverlay)
-                {
-                    if (commandLine.Contains(VrcxLaunchArguments.Overlay, StringComparison.Ordinal))
-                    {
-                        Console.WriteLine("Another overlay instance is already running. Exiting this instance.");
-                        Environment.Exit(0);
-                    }
                     continue;
                 }
                 if (commandLine.Contains(VrcxLaunchArguments.Overlay, StringComparison.Ordinal))

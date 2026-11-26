@@ -35,23 +35,20 @@ internal static class CefService
 
     private static CefSettings CreateSettings(bool isOverlay, string userDataDir)
     {
+        string logDirectory = Path.Join(Program.AppDataDirectory, "logs");
+        Directory.CreateDirectory(logDirectory);
         var cefSettings = new CefSettings
         {
             RootCachePath = userDataDir,
             CachePath = Path.Join(userDataDir, "cache"),
             LogSeverity = Program.LaunchDebug ? LogSeverity.Verbose : LogSeverity.Error,
-            LogFile = Path.Join(Program.AppDataDirectory, "logs", "cef.log"),
+            LogFile = Path.Join(logDirectory, isOverlay ? "cef.overlay.log" : "cef.log"),
             WindowlessRenderingEnabled = true,
             PersistSessionCookies = true,
             UserAgent = Program.Version,
             BrowserSubprocessPath = Environment.ProcessPath,
             BackgroundColor = 0xFF0A0A0A,
         };
-        if (isOverlay)
-        {
-            cefSettings.LogFile = Path.Join(Program.AppDataDirectory, "overlay/logs/cef.log");
-        }
-
         cefSettings.RegisterScheme(new CefCustomScheme
         {
             SchemeName = "file",

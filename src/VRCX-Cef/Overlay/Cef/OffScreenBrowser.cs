@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using CefSharp;
 using CefSharp.Enums;
 using CefSharp.OffScreen;
 using CefSharp.Structs;
+using NLog;
 using Silk.NET.Core.Native;
 using Silk.NET.Direct3D11;
 using VRCX.Cef;
@@ -12,6 +14,8 @@ namespace VRCX.Overlay.Cef;
 
 internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
 {
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
     private ComPtr<ID3D11Device1> _device1;
     private ComPtr<ID3D11DeviceContext> _deviceContext;
     private ComPtr<ID3D11Query> _query;
@@ -24,6 +28,9 @@ internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
     private GCHandle _paintBuffer;
     private int _width;
     private int _height;
+    private readonly Lock _consoleMessageLock = new();
+    private string? _lastConsoleMessage;
+    private int _repeatedConsoleMessageCount;
 
     public OffScreenBrowser(string address, int width, int height, bool isLegacy)
         : base(address, automaticallyCreateBrowser: false)
@@ -42,6 +49,7 @@ internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         };
 
         RenderProcessMessageHandler = PlatformRenderProcessMessageHandler.Instance;
+        ConsoleMessage += LogConsoleMessage;
         CreateBrowser(_windowInfo, _browserSettings);
 
         Size = new System.Drawing.Size(width, height);
@@ -51,6 +59,37 @@ internal sealed class OffScreenBrowser : ChromiumWebBrowser, IRenderHandler
         JavascriptObjectRepository.Register("AppApiVr", AppApiVr.Instance);
     }
 
+    private void LogConsoleMessage(object? sender, ConsoleMessageEventArgs consoleMessage)
+    {
+        string text = $"{consoleMessage.Message} ({consoleMessage.Source}:{consoleMessage.Line})";
+        int repeatedCount;
+        lock (_consoleMessageLock)
+        {
+            if (string.Equals(text, _lastConsoleMessage, StringComparison.Ordinal))
+            {
+                _repeatedConsoleMessageCount++;
+                return;
+            }
+
+            repeatedCount = _repeatedConsoleMessageCount;
+            _lastConsoleMessage = text;
+            _repeatedConsoleMessageCount = 0;
+        }
+
+        if (repeatedCount > 0)
+        {
+            Logger.Debug(CultureInfo.InvariantCulture, "Previous overlay console message repeated {0} more times", repeatedCount);
+        }
+
+        LogLevel level = consoleMessage.Level switch
+        {
+            LogSeverity.Fatal or LogSeverity.Error => LogLevel.Error,
+            LogSeverity.Warning => LogLevel.Warn,
+            LogSeverity.Default or LogSeverity.Verbose or LogSeverity.Info or LogSeverity.Disable => LogLevel.Debug,
+            _ => LogLevel.Debug,
+        };
+        Logger.Log(level, CultureInfo.InvariantCulture, "Overlay console: {0}", text);
+    }
 
     public void UpdateRender(ComPtr<ID3D11Device> device, ComPtr<ID3D11DeviceContext> deviceContext, ComPtr<ID3D11Texture2D> renderTarget)
     {

@@ -15,6 +15,11 @@ internal static class OverlayProgram
     public static void OverlayMain()
     {
         Logger.Info(System.Globalization.CultureInfo.InvariantCulture, "VRCX Overlay starting...");
+        if (StartupArgs.WasOverlayInstanceAbandoned)
+        {
+            Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "Took over the overlay instance lock from an overlay process that exited without releasing it");
+        }
+
         CefService.Init();
         AppApiVr.Instance = new AppApiVrCef();
         bool isLegacy = string.Equals(VRCXStorage.Instance.Get("VRCX_DisableVrOverlayGpuAcceleration"), "true", StringComparison.Ordinal);
@@ -37,6 +42,7 @@ internal static class OverlayProgram
 
         OverlayClient.Exit();
         RequireVrInstance().Shutdown();
+        StartupArgs.ReleaseOverlayInstance();
         Environment.Exit(0);
     }
 

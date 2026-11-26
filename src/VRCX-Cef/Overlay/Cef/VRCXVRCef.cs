@@ -35,6 +35,7 @@ internal sealed partial class VRCXVRCef : VRCXVRInterface, IDisposable
     private bool _menuButton;
     private int _overlayHand;
     private DateTime _nextInit = DateTime.MinValue;
+    private EVRInitError _lastInitError = EVRInitError.None;
     private DateTime _nextDeviceUpdate = DateTime.MinValue;
     private DateTime _nextOverlayUpdate = DateTime.MinValue;
     private uint _overlayIndex = OpenVR.k_unTrackedDeviceIndexInvalid;
@@ -274,9 +275,16 @@ internal sealed partial class VRCXVRCef : VRCXVRInterface, IDisposable
         _nextInit = DateTime.UtcNow.AddSeconds(5);
         if (system == null)
         {
+            if (initError != _lastInitError)
+            {
+                Logger.Warn(CultureInfo.InvariantCulture, "OpenVR init failed with {0} ({1}), retrying every 5 seconds", initError, (int)initError);
+                _lastInitError = initError;
+            }
+
             return null;
         }
 
+        _lastInitError = EVRInitError.None;
         _openVrActive = true;
         SetupTextures();
         return system;
