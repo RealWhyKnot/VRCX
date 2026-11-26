@@ -21,6 +21,8 @@ internal sealed partial class MainForm : WinformBase
     private int _lastSizeWidth;
     private int _lastSizeHeight;
     private FormWindowState _lastWindowStateToRestore = FormWindowState.Normal;
+    private readonly bool _startsInTray;
+    private bool _isShowRequested;
 
     public MainForm()
     {
@@ -53,6 +55,33 @@ internal sealed partial class MainForm : WinformBase
 
         JavascriptBindings.ApplyAppJavascriptBindings(Browser.JavascriptObjectRepository);
         Controls.Add(Browser);
+
+        _startsInTray = StartupArgs.LaunchArguments.IsStartup &&
+            ReadStoredFlag("VRCX_StartAsMinimizedState") &&
+            ReadStoredFlag("VRCX_CloseToTray");
+        if (_startsInTray)
+        {
+            ReadStoredBounds();
+            FormWindowState storedState = ReadStoredWindowState();
+            if (Enum.IsDefined(storedState))
+            {
+                _lastWindowStateToRestore = storedState;
+            }
+
+            _ = Browser.Handle;
+        }
+    }
+
+    private bool IsHeldInTray => _startsInTray && !_isShowRequested;
+
+    protected override void SetVisibleCore(bool value)
+    {
+        if (value && IsHeldInTray)
+        {
+            return;
+        }
+
+        base.SetVisibleCore(value);
     }
 
     private static ChromiumWebBrowser CreateBrowser(string startUrl, CefCustomRequestHandler requestHandler)
@@ -119,10 +148,7 @@ internal sealed partial class MainForm : WinformBase
 
     private void MainForm_Load(object sender, EventArgs e)
     {
-        _lastLocationX = ReadStoredInt("VRCX_LocationX");
-        _lastLocationY = ReadStoredInt("VRCX_LocationY");
-        _lastSizeWidth = ReadStoredInt("VRCX_SizeWidth");
-        _lastSizeHeight = ReadStoredInt("VRCX_SizeHeight");
+        ReadStoredBounds();
         var location = new Point(_lastLocationX, _lastLocationY);
         var size = new Size(_lastSizeWidth, _lastSizeHeight);
         var screen = Screen.FromPoint(location);
@@ -138,30 +164,13 @@ internal sealed partial class MainForm : WinformBase
 
         try
         {
-            FormWindowState state = WindowState;
-            bool startAsMinimized = string.Equals(VRCXStorage.Instance.Get("VRCX_StartAsMinimizedState"), "true", StringComparison.Ordinal);
-            bool closeToTray = string.Equals(VRCXStorage.Instance.Get("VRCX_CloseToTray"), "true", StringComparison.Ordinal);
-            if (int.TryParse(VRCXStorage.Instance.Get("VRCX_WindowState"), CultureInfo.InvariantCulture, out int value))
-            {
-                state = (FormWindowState)value;
-            }
-            if (state == FormWindowState.Minimized)
-            {
-                state = FormWindowState.Normal;
-            }
-
+            FormWindowState state = ReadStoredWindowState();
             WindowState = state;
             _lastWindowStateToRestore = state;
 
-            if (StartupArgs.LaunchArguments.IsStartup && startAsMinimized)
+            if (!_startsInTray && StartupArgs.LaunchArguments.IsStartup && ReadStoredFlag("VRCX_StartAsMinimizedState"))
             {
-                if (closeToTray)
-                {
-                    BeginInvoke(Hide);
-                    return;
-                }
-                state = FormWindowState.Minimized;
-                WindowState = state;
+                WindowState = FormWindowState.Minimized;
             }
         }
         catch (ArgumentException ex)
@@ -172,11 +181,38 @@ internal sealed partial class MainForm : WinformBase
         Browser.Invalidate();
     }
 
+    private void ReadStoredBounds()
+    {
+        _lastLocationX = ReadStoredInt("VRCX_LocationX");
+        _lastLocationY = ReadStoredInt("VRCX_LocationY");
+        _lastSizeWidth = ReadStoredInt("VRCX_SizeWidth");
+        _lastSizeHeight = ReadStoredInt("VRCX_SizeHeight");
+    }
+
+    private FormWindowState ReadStoredWindowState()
+    {
+        FormWindowState state = WindowState;
+        if (int.TryParse(VRCXStorage.Instance.Get("VRCX_WindowState"), CultureInfo.InvariantCulture, out int value))
+        {
+            state = (FormWindowState)value;
+        }
+
+        return state == FormWindowState.Minimized ? FormWindowState.Normal : state;
+    }
+
+    private static bool ReadStoredFlag(string key) =>
+        string.Equals(VRCXStorage.Instance.Get(key), "true", StringComparison.Ordinal);
+
     private static int ReadStoredInt(string key) =>
         int.TryParse(VRCXStorage.Instance.Get(key), CultureInfo.InvariantCulture, out int value) ? value : 0;
 
     private void MainForm_Resize(object sender, EventArgs e)
     {
+        if (IsHeldInTray)
+        {
+            return;
+        }
+
         if (WindowState != FormWindowState.Minimized)
         {
             _lastWindowStateToRestore = WindowState;
@@ -201,7 +237,7 @@ internal sealed partial class MainForm : WinformBase
 
     private void MainForm_Move(object sender, EventArgs e)
     {
-        if (WindowState != FormWindowState.Normal)
+        if (IsHeldInTray || WindowState != FormWindowState.Normal)
         {
             return;
         }
@@ -245,6 +281,7 @@ internal sealed partial class MainForm : WinformBase
 
     public void Focus_Window()
     {
+        _isShowRequested = true;
         Show();
         if (WindowState == FormWindowState.Minimized)
         {

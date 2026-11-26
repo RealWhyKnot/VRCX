@@ -23,6 +23,11 @@ internal static partial class WinformThemer
             forms.Add(form);
         }
 
+        if (MainForm.Instance is { } mainForm && !forms.Contains(mainForm))
+        {
+            forms.Add(mainForm);
+        }
+
         SetThemeToGlobal(forms);
     }
 
