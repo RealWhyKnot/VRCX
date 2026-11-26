@@ -146,14 +146,20 @@ async function heapMb(session: Session): Promise<number> {
 }
 
 function slopePerMinute(samples: { atMs: number; mb: number }[]): number {
-  if (samples.length < 2) {
+  const slopes = samples.flatMap((earlier, index) =>
+    samples
+      .slice(index + 1)
+      .filter((later) => later.atMs !== earlier.atMs)
+      .map((later) => (later.mb - earlier.mb) / (later.atMs - earlier.atMs))
+  );
+  if (slopes.length === 0) {
     return 0;
   }
-  const meanX = samples.reduce((sum, sample) => sum + sample.atMs, 0) / samples.length;
-  const meanY = samples.reduce((sum, sample) => sum + sample.mb, 0) / samples.length;
-  const numerator = samples.reduce((sum, sample) => sum + (sample.atMs - meanX) * (sample.mb - meanY), 0);
-  const denominator = samples.reduce((sum, sample) => sum + (sample.atMs - meanX) ** 2, 0);
-  return denominator === 0 ? 0 : Math.round((numerator / denominator) * 60000 * 10) / 10;
+  slopes.sort((a, b) => a - b);
+  const middle = Math.floor(slopes.length / 2);
+  const upper = slopes[middle] ?? 0;
+  const lower = slopes.length % 2 === 1 ? upper : (slopes[middle - 1] ?? upper);
+  return Math.round(((lower + upper) / 2) * 60000 * 10) / 10;
 }
 
 function isHang(value: unknown): value is Hang {
