@@ -133,7 +133,7 @@ internal static class Program
 
 #if !LINUX
     [STAThread]
-    private static async Task Main()
+    private static void Main()
     {
         OpenVrLibrary.Register();
         AppDomain.CurrentDomain.UnhandledException += (_, unhandled) =>
@@ -162,7 +162,7 @@ internal static class Program
         }
         catch (FileNotFoundException exception)
         {
-            await HandleMissingCefAsync(exception, CancellationToken.None);
+            RunMissingCefRecovery(exception);
         }
         catch (SQLiteException exception)
         {
@@ -170,31 +170,54 @@ internal static class Program
         }
     }
 
+    private static void RunMissingCefRecovery(FileNotFoundException exception)
+    {
+        using WindowsFormsSynchronizationContext synchronizationContext = new();
+        SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+        Task recovery = HandleMissingCefAsync(exception, CancellationToken.None);
+        if (!recovery.IsCompleted)
+        {
+            Application.Run();
+        }
+
+        if (recovery.Exception is { } failure)
+        {
+            HandleUnhandledException(failure.GetBaseException());
+        }
+    }
+
     private static async Task HandleMissingCefAsync(FileNotFoundException exception, CancellationToken cancellationToken)
     {
-        Logger.Error(exception, CultureInfo.InvariantCulture, "Handled Exception, Missing file found in Handle Cef Explosion.");
+        try
+        {
+            Logger.Error(exception, CultureInfo.InvariantCulture, "Handled Exception, Missing file found in Handle Cef Explosion.");
 
-        DialogResult result = MessageBox.Show(
-            "VRCX has encountered an error with the CefSharp backend,\nthis is typically caused by missing files or dependencies.\nWould you like to try autofix by automatically installing vc_redist?.",
-            "VRCX CefSharp not found.", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
-        if (result == DialogResult.Yes)
-        {
-            Logger.Fatal(CultureInfo.InvariantCulture, "Handled Exception, user selected auto install of vc_redist.");
-            await Update.DownloadInstallRedistAsync(cancellationToken);
-            MessageBox.Show(
-                "vc_redist has finished installing, if the issue persists upon next restart, please reinstall VRCX From GitHub,\nVRCX Will now restart.",
-                "vc_redist installation complete", MessageBoxButtons.OK);
-            await Task.Delay(5000, cancellationToken);
-            AppApiInstance?.RestartApplication(isUpgrade: false);
+            DialogResult result = MessageBox.Show(
+                "VRCX has encountered an error with the CefSharp backend,\nthis is typically caused by missing files or dependencies.\nWould you like to try autofix by automatically installing vc_redist?.",
+                "VRCX CefSharp not found.", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
+            if (result == DialogResult.Yes)
+            {
+                Logger.Fatal(CultureInfo.InvariantCulture, "Handled Exception, user selected auto install of vc_redist.");
+                await Update.DownloadInstallRedistAsync(cancellationToken);
+                MessageBox.Show(
+                    "vc_redist has finished installing, if the issue persists upon next restart, please reinstall VRCX From GitHub,\nVRCX Will now restart.",
+                    "vc_redist installation complete", MessageBoxButtons.OK);
+                await Task.Delay(5000, cancellationToken);
+                AppApiInstance?.RestartApplication(isUpgrade: false);
+            }
+            else if (result == DialogResult.No)
+            {
+                Logger.Fatal(CultureInfo.InvariantCulture, "Handled Exception, user chose manual.");
+                MessageBox.Show(
+                    "VRCX will now close, try reinstalling VRCX using the setup from Github as a potential fix.",
+                    "VRCX CefSharp not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                await Task.Delay(5000, cancellationToken);
+                Environment.Exit(0);
+            }
         }
-        else if (result == DialogResult.No)
+        finally
         {
-            Logger.Fatal(CultureInfo.InvariantCulture, "Handled Exception, user chose manual.");
-            MessageBox.Show(
-                "VRCX will now close, try reinstalling VRCX using the setup from Github as a potential fix.",
-                "VRCX CefSharp not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            await Task.Delay(5000, cancellationToken);
-            Environment.Exit(0);
+            Application.ExitThread();
         }
     }
 
