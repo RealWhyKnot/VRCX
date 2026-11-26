@@ -20,4 +20,5 @@ timeout 600 dotnet build VRCX.slnx -c Release -p:Platform=x64 --no-restore
 timeout 600 dotnet run .github/lint/CSharpStyle.cs -- .
 bash .githooks/check-shell
 timeout 600 npm test
+timeout 600 npm run test:pages
 exit 0

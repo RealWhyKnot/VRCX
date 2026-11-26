@@ -20,6 +20,8 @@ npm test
 npm run prod
 ```
 
+`npm run test:pages` builds the web UI and opens every page in headless Chromium, using a fake host and a large made-up dataset. It fails if a page hangs, freezes, keeps re-rendering, throws an error or leaks memory. It takes about four minutes. Install its browser once with `npx playwright install --only-shell chromium`. `npm run test:pages:soak` also cold-loads each page and watches it for 30 seconds. CI runs the page check on PRs and pushes to master, and the soak only on pushes to master.
+
 `npm run format` and `npm run lint:fix` fix most findings for you. `npm run dev` serves the web UI on its own. For the full app, run `pwsh build-scripts/build-all.ps1`. It reinstalls `node_modules`, builds the Windows app, then makes the zip and installer, so it needs 7-Zip and NSIS 3.
 
 For the C# side:
@@ -33,7 +35,7 @@ dotnet run .github/lint/CSharpStyle.cs -- .
 
 There are no .NET test projects. The tests are the Vitest suites under `tests`.
 
-CI also runs a spelling check (`uv run --frozen typos --config .github/lint/typos.toml .`), workflow checks, a style check (`python -B .github/lint/style_check.py`), PowerShell style rules and shell style rules. The repo has git hooks in `.githooks`. Turn them on with `git config core.hooksPath .githooks`. The pre-push hook runs those checks, a secrets scan with `gitleaks`, the C# build and the tests before every push. It needs `uv`, `gitleaks`, PowerShell 7 and the shell lint tools.
+CI also runs a spelling check (`uv run --frozen typos --config .github/lint/typos.toml .`), workflow checks, a style check (`python -B .github/lint/style_check.py`), PowerShell style rules and shell style rules. The repo has git hooks in `.githooks`. Turn them on with `git config core.hooksPath .githooks`. The pre-push hook runs those checks, a secrets scan with `gitleaks`, the C# build, the tests and the page check before every push. It needs `uv`, `gitleaks`, PowerShell 7, the shell lint tools and the Playwright browser.
 
 Commit subjects must start with a type: `feat`, `fix`, `chore`, `ci`, `docs`, `refactor`, `revert`, `test`, `perf`, `diag` or `style`, such as `fix: stop the sidebar crash`. A subject can carry one build version in parentheses, never more. Commit messages can't contain `#123` style references or the name of the original project's organization. The commit hook and CI both enforce this. If a PR fails only that check, say so in the PR.
 
