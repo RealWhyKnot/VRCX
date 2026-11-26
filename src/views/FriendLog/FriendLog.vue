@@ -192,12 +192,14 @@ async function loadPage(shouldRefresh = false) {
 watch(
   [() => watchState.isLoggedIn, friendLogTypeFilter, friendLogSearch, () => hideUnfriends.value, sorting, () => pagination.value.pageSize],
   () => {
-    pagination.value = { ...pagination.value, pageIndex: 0 };
+    if (pagination.value.pageIndex !== 0) {
+      pagination.value = { ...pagination.value, pageIndex: 0 };
+    }
     if (watchState.isLoggedIn) {
       void loadPage(true).catch(logFriendLogError);
     }
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 );
 
 watch(

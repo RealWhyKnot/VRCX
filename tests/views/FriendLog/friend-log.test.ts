@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import type { FriendLogHistoryRow } from "../../../src/stores/friend-types";
 
 type TableFilterMock = { value: unknown };
@@ -19,19 +19,19 @@ type FriendLogVm = {
   deleteFriendLog: (row: FriendLogHistoryRow) => void;
 };
 
-const mocks = vi.hoisted(() => {
-  const makeRef = <T>(value: T) => ({ value, __v_isRef: true });
+const mocks = await vi.hoisted(async () => {
+  const { ref } = await import("vue");
   return {
-    hideUnfriends: makeRef(false),
-    friendLogHistoryTotal: makeRef(580),
-    sorting: makeRef<{ id: string; desc: boolean }[]>([]),
+    hideUnfriends: ref(false),
+    friendLogHistoryTotal: ref(580),
+    sorting: ref<{ id: string; desc: boolean }[]>([]),
     loadPage: vi.fn<(...args: unknown[]) => Promise<void>>().mockResolvedValue(undefined),
-    friendLogTable: makeRef<FriendLogTableMock>({
+    friendLogTable: ref<FriendLogTableMock>({
       loading: false,
       data: [],
       filters: [{ value: [] }, { value: "" }, { value: false }],
     }),
-    pagination: makeRef<PaginationMock>({
+    pagination: ref<PaginationMock>({
       pageIndex: 3,
       pageSize: 10,
     }),
@@ -191,6 +191,8 @@ function requireFriendLogVm(value: unknown): FriendLogVm {
   return value;
 }
 
+enableAutoUnmount(afterEach);
+
 describe("FriendLog.vue", () => {
   beforeEach(() => {
     mocks.hideUnfriends.value = false;
@@ -293,6 +295,42 @@ describe("FriendLog.vue", () => {
 
     expect(mocks.removeFromArray).toHaveBeenCalledWith(mocks.friendLogTable.value.data, row);
     expect(mocks.deleteFriendLogHistory).not.toHaveBeenCalled();
+  });
+
+  test("loads the first page once on mount without re-triggering its own watcher", async () => {
+    mount(FriendLog);
+    await flushPromises();
+
+    expect(mocks.loadPage).toHaveBeenCalledTimes(1);
+    expect(mocks.loadPage).toHaveBeenCalledWith(0, 10, false, true);
+    expect(mocks.pagination.value.pageIndex).toBe(0);
+  });
+
+  test("keeps the chosen page and loads it when the page index changes", async () => {
+    mount(FriendLog);
+    await flushPromises();
+    mocks.loadPage.mockClear();
+
+    mocks.pagination.value = { ...mocks.pagination.value, pageIndex: 2 };
+    await flushPromises();
+
+    expect(mocks.pagination.value.pageIndex).toBe(2);
+    expect(mocks.loadPage).toHaveBeenCalledTimes(1);
+    expect(mocks.loadPage).toHaveBeenCalledWith(2, 10, false, false);
+  });
+
+  test("returns to the first page and reloads when a filter changes", async () => {
+    mount(FriendLog);
+    await flushPromises();
+    mocks.pagination.value = { ...mocks.pagination.value, pageIndex: 4 };
+    await flushPromises();
+    mocks.loadPage.mockClear();
+
+    mocks.sorting.value = [{ id: "created_at", desc: false }];
+    await flushPromises();
+
+    expect(mocks.pagination.value.pageIndex).toBe(0);
+    expect(mocks.loadPage).toHaveBeenCalledWith(0, 10, true, true);
   });
 
   test("resets page index when page size changes", async () => {
