@@ -71,6 +71,9 @@
     <None Include="..\..\Version">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="crash_reporter.cfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\VRCX-Shared\libs\openvr_api.dll">
@@ -129,8 +132,55 @@
     <Touch Files="$(NvPatchMarker)" AlwaysCreate="true" />
   </Target>
 
+  <PropertyGroup>
+    <MainThreadStackReserve>8388608</MainThreadStackReserve>
+  </PropertyGroup>
+
+  <UsingTask TaskName="SetPeStackReserve" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ExecutablePath ParameterType="System.String" Required="true" />
+      <StackReserve ParameterType="System.Int64" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs">
+<![CDATA[
+using (FileStream stream = new FileStream(ExecutablePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+{
+    byte[] header = new byte[1024];
+    int headerLength = stream.Read(header, 0, header.Length);
+    int peOffset = BitConverter.ToInt32(header, 0x3C);
+    if (peOffset < 0 || peOffset + 24 + 80 > headerLength || BitConverter.ToUInt32(header, peOffset) != 0x00004550)
+    {
+        Log.LogError("{0} is not a PE executable", ExecutablePath);
+        return false;
+    }
+
+    int optionalHeader = peOffset + 24;
+    if (BitConverter.ToUInt16(header, optionalHeader) != 0x20B)
+    {
+        Log.LogError("{0} is not a PE32+ executable", ExecutablePath);
+        return false;
+    }
+
+    int stackReserveOffset = optionalHeader + 72;
+    long currentReserve = BitConverter.ToInt64(header, stackReserveOffset);
+    if (currentReserve != StackReserve)
+    {
+        byte[] reserveBytes = BitConverter.GetBytes(StackReserve);
+        stream.Position = stackReserveOffset;
+        stream.Write(reserveBytes, 0, reserveBytes.Length);
+        Log.LogMessage(MessageImportance.High, "Set {0} stack reserve from 0x{1} to 0x{2}", ExecutablePath, currentReserve.ToString("X"), StackReserve.ToString("X"));
+    }
+}
+]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" DependsOnTargets="RestoreNvPatch" Condition="$(IsWindows)">
     <Exec Command="&quot;$(NvPatchHost)&quot; exec --roll-forward Major &quot;$(NvPatchAssembly)&quot; --enable &quot;$(ProjectDir)..\..\build\Cef\VRCX.exe&quot;" />
+    <SetPeStackReserve ExecutablePath="$(ProjectDir)..\..\build\Cef\VRCX.exe" StackReserve="$(MainThreadStackReserve)" />
   </Target>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="$(IsWindows)">

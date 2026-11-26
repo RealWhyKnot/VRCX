@@ -12,6 +12,7 @@ internal sealed partial class MainForm : WinformBase
     public static NativeWindow? MainNativeWindow;
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     public readonly ChromiumWebBrowser Browser;
+    private readonly CefCustomRequestHandler _requestHandler;
     private readonly Icon? _appIcon;
     private readonly Icon? _appIconNoty;
     private readonly Timer _saveTimer;
@@ -45,21 +46,23 @@ internal sealed partial class MainForm : WinformBase
             Logger.Error(CultureInfo.InvariantCulture, ex);
         }
 
-        Browser = CreateBrowser();
+        string startUrl = Program.LaunchDebug ? "http://localhost:9000/index.html" : "file://vrcx/index.html";
+        _requestHandler = new CefCustomRequestHandler(startUrl, TimeProvider.System);
+        Browser = CreateBrowser(startUrl, _requestHandler);
         SubscribeBrowserEvents();
 
         JavascriptBindings.ApplyAppJavascriptBindings(Browser.JavascriptObjectRepository);
         Controls.Add(Browser);
     }
 
-    private static ChromiumWebBrowser CreateBrowser()
+    private static ChromiumWebBrowser CreateBrowser(string startUrl, CefCustomRequestHandler requestHandler)
     {
-        return new ChromiumWebBrowser(Program.LaunchDebug ? "http://localhost:9000/index.html" : "file://vrcx/index.html")
+        return new ChromiumWebBrowser(startUrl)
         {
             DragHandler = new CefCustomDragHandler(),
             MenuHandler = new CefCustomMenuHandler(),
             DownloadHandler = new CefCustomDownloadHandler(),
-            RequestHandler = new CefCustomRequestHandler(),
+            RequestHandler = requestHandler,
             BrowserSettings =
             {
                 DefaultEncoding = "UTF-8",
@@ -104,6 +107,7 @@ internal sealed partial class MainForm : WinformBase
                 Browser.ExecuteScriptAsync("window?.$pinia?.vrcx?.onBrowserFocus();");
             }
         };
+        Activated += (_, _) => _requestHandler.ResumeIfReloadingStopped(Browser);
         Deactivate += (_, _) =>
         {
             if (Browser != null && !Browser.IsLoading && Browser.CanExecuteJavascriptInMainFrame)
@@ -248,6 +252,7 @@ internal sealed partial class MainForm : WinformBase
         }
 
         Activate();
+        _requestHandler.ResumeIfReloadingStopped(Browser);
     }
 
     private void TrayMenu_DevTools_Click(object sender, EventArgs e) => Browser.ShowDevTools();
