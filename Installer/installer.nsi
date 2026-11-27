@@ -122,10 +122,21 @@ Function .onInit
     ${If} $R1 = 0
         MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "VRCX is still running. $\n$\nClick `OK` to kill the running process or `Cancel` to cancel this installer." /SD IDOK IDCANCEL cancel
             nsExec::ExecToStack "taskkill /IM VRCX.exe"
+            Pop $0
+            Pop $0
+            StrCpy $2 0
+            waitForExit:
+                Sleep 500
+                nsProcess::_FindProcess "$1"
+                Pop $R1
+                IntOp $2 $2 + 1
+                ${If} $R1 = 0
+                ${AndIf} $2 < 30
+                    Goto waitForExit
+                ${EndIf}
     ${Else}
         Goto done
     ${EndIf}
-    Sleep 1000
     Goto loop
 
     cancel:

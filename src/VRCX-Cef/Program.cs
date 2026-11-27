@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
 #if !LINUX
+using System.ComponentModel;
 using System.Data.SQLite;
+using System.Diagnostics;
 #endif
 using NLog;
 using NLog.Targets;
@@ -26,6 +28,9 @@ internal static class Program
     public static bool LaunchDebug;
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     public static AppApi? AppApiInstance { get; private set; }
+#if !LINUX
+    private static ProcessStartInfo? RestartStartInfo;
+#endif
 
     private static void SetProgramDirectories()
     {
@@ -314,6 +319,33 @@ internal static class Program
         VRCXStorage.Instance.Save();
         SQLiteDatabase.Instance.Exit();
         ProcessMonitor.Instance.Exit();
+        StartRequestedRestart();
+    }
+
+    public static bool TryRequestRestart(ProcessStartInfo startInfo) =>
+        Interlocked.CompareExchange(ref RestartStartInfo, startInfo, comparand: null) is null;
+
+    public static void CancelRestartRequest() => Interlocked.Exchange(ref RestartStartInfo, value: null);
+
+    private static void StartRequestedRestart()
+    {
+        if (Volatile.Read(ref RestartStartInfo) is not { } startInfo)
+        {
+            return;
+        }
+
+        Logger.Info(CultureInfo.InvariantCulture, "{0} Restarting...", Version);
+        try
+        {
+            using var process = Process.Start(startInfo);
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ObjectDisposedException)
+        {
+            Logger.Error(ex, CultureInfo.InvariantCulture, "Failed to restart");
+            return;
+        }
+
+        Environment.Exit(0);
     }
 #else
     public static VRCXVRInterface VRCXVRInstance

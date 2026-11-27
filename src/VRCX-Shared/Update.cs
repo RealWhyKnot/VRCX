@@ -18,6 +18,10 @@ static class Update
     private static readonly HttpClientHandler ClientHandler = CreateHttpClientHandler();
     private static readonly HttpClient Client = CreateClient();
     private static readonly Lock DownloadLock = new();
+#if !LINUX
+    private static readonly TimeSpan OtherInstanceExitTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan OtherInstancePollInterval = TimeSpan.FromMilliseconds(250);
+#endif
     private static CancellationTokenSource? DownloadCancellation;
     private static string AppImagePath = string.Empty;
     private static string AppImagePathOld = string.Empty;
@@ -89,6 +93,9 @@ static class Update
             }
 
             File.Move(UpdateExecutable, VrcxSetupExecutable);
+#if !LINUX
+            WaitForOtherInstancesToExit(OtherInstanceExitTimeout);
+#endif
             using var vrcxProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -112,6 +119,39 @@ static class Update
         }
     }
 
+#if !LINUX
+    private static void WaitForOtherInstancesToExit(TimeSpan timeout)
+    {
+        long deadline = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
+        while (IsOtherInstanceRunning())
+        {
+            if (Environment.TickCount64 >= deadline)
+            {
+                Logger.Warn(System.Globalization.CultureInfo.InvariantCulture, "VRCX is still running, starting the installer anyway");
+                return;
+            }
+
+            Thread.Sleep(OtherInstancePollInterval);
+        }
+    }
+
+    private static bool IsOtherInstanceRunning()
+    {
+        Process[] processes = Process.GetProcessesByName("VRCX");
+        try
+        {
+            return processes.Any(process => process.Id != Environment.ProcessId);
+        }
+        finally
+        {
+            foreach (Process process in processes)
+            {
+                process.Dispose();
+            }
+        }
+    }
+
+#endif
     public static async Task DownloadInstallRedistAsync(CancellationToken cancellationToken = default)
     {
         try

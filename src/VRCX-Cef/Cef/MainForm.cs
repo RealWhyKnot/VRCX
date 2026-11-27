@@ -23,6 +23,10 @@ internal sealed partial class MainForm : WinformBase
     private FormWindowState _lastWindowStateToRestore = FormWindowState.Normal;
     private readonly bool _startsInTray;
     private bool _isShowRequested;
+    private bool _isUserCloseRequested;
+    private const int WmSysCommand = 0x0112;
+    private const int ScClose = 0xF060;
+    private const int SysCommandMask = 0xFFF0;
 
     public MainForm()
     {
@@ -82,6 +86,25 @@ internal sealed partial class MainForm : WinformBase
         }
 
         base.SetVisibleCore(value);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg != WmSysCommand || ((int)m.WParam & SysCommandMask) != ScClose)
+        {
+            base.WndProc(ref m);
+            return;
+        }
+
+        _isUserCloseRequested = true;
+        try
+        {
+            base.WndProc(ref m);
+        }
+        finally
+        {
+            _isUserCloseRequested = false;
+        }
     }
 
     private static ChromiumWebBrowser CreateBrowser(string startUrl, CefCustomRequestHandler requestHandler)
@@ -249,7 +272,8 @@ internal sealed partial class MainForm : WinformBase
 
     private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
     {
-        if (e.CloseReason == CloseReason.UserClosing &&
+        if (_isUserCloseRequested &&
+            e.CloseReason == CloseReason.UserClosing &&
             string.Equals("true", VRCXStorage.Instance.Get("VRCX_CloseToTray"), StringComparison.Ordinal))
         {
             e.Cancel = true;
@@ -267,7 +291,11 @@ internal sealed partial class MainForm : WinformBase
         VRCXStorage.Instance.Save();
     }
 
-    private void MainForm_FormClosed(object sender, FormClosedEventArgs e) => SaveWindowState();
+    private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+    {
+        Logger.Info(CultureInfo.InvariantCulture, "Main window closed: {0}", e.CloseReason);
+        SaveWindowState();
+    }
 
     private void TrayIcon_MouseClick(object sender, MouseEventArgs e)
     {
@@ -296,7 +324,9 @@ internal sealed partial class MainForm : WinformBase
 
     private void TrayMenu_ForceCrash_Click(object sender, EventArgs e) => Browser.LoadUrl("chrome://crash");
 
-    private void TrayMenu_Quit_Click(object sender, EventArgs e)
+    private void TrayMenu_Quit_Click(object sender, EventArgs e) => Quit();
+
+    public void Quit()
     {
         SaveWindowState();
         Application.Exit();

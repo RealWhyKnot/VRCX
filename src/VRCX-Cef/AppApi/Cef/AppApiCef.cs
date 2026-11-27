@@ -92,18 +92,47 @@ internal sealed partial class AppApiCef : AppApi
             args.Add($"{StartupArgs.VrcxLaunchArguments.ProxyUrlPrefix}={StartupArgs.LaunchArguments.ProxyUrl}");
         }
 
-        using var vrcxProcess = new Process
+        var startInfo = new ProcessStartInfo
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = Path.Join(Program.BaseDirectory, "VRCX.exe"),
-                Arguments = string.Join(' ', args),
-                UseShellExecute = true,
-                WorkingDirectory = Program.BaseDirectory,
-            },
+            FileName = Path.Join(Program.BaseDirectory, "VRCX.exe"),
+            Arguments = string.Join(' ', args),
+            UseShellExecute = true,
+            WorkingDirectory = Program.BaseDirectory,
         };
+
+        if (TryQuitForRestart(startInfo))
+        {
+            return;
+        }
+
+        using var vrcxProcess = new Process { StartInfo = startInfo };
         vrcxProcess.Start();
         Environment.Exit(0);
+    }
+
+    private static bool TryQuitForRestart(ProcessStartInfo startInfo)
+    {
+        if (MainForm.Instance is not { IsHandleCreated: true, IsDisposed: false } mainForm)
+        {
+            return false;
+        }
+
+        if (!Program.TryRequestRestart(startInfo))
+        {
+            return true;
+        }
+
+        try
+        {
+            mainForm.BeginInvoke(mainForm.Quit);
+            return true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.Warn(ex, System.Globalization.CultureInfo.InvariantCulture, "Could not quit through the main window, restarting directly");
+            Program.CancelRestartRequest();
+            return false;
+        }
     }
 
     public override bool CheckForUpdateExe() => File.Exists(Path.Join(Program.AppDataDirectory, "update.exe"));
